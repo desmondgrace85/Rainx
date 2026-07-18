@@ -33,6 +33,102 @@ function extractMentions(text) {
   const matches = text.match(/@\w+/g) || [];
   return [...new Set(matches.map((m) => m.slice(1).toLowerCase()))];
 }
+
+// ---------- Mention Autocomplete Textarea ----------
+function MentionTextarea({ value, onChange, placeholder, rows, style, textareaRef, maxLength = 500 }) {
+  const [suggestions, setSuggestions] = useState([]);
+  const [queryStart, setQueryStart] = useState(null); // index of '@' in text
+  const [queryWord, setQueryWord] = useState("");
+  const innerRef = useRef(null);
+  const ref = textareaRef || innerRef;
+
+  const handleChange = async (e) => {
+    const val = e.target.value.slice(0, maxLength);
+    onChange(val);
+    const cursor = e.target.selectionStart;
+    const before = val.slice(0, cursor);
+    const match = before.match(/@(\w*)$/);
+    if (match) {
+      const q = match[1];
+      setQueryWord(q);
+      setQueryStart(cursor - q.length - 1);
+      const { data } = await supabase
+        .from("public_profiles")
+        .select("id, display_name, avatar_url")
+        .ilike("display_name", `${q}%`)
+        .order("display_name")
+        .limit(6);
+      setSuggestions(data || []);
+    } else {
+      setSuggestions([]);
+      setQueryStart(null);
+    }
+  };
+
+  const insertSuggestion = (displayName) => {
+    const before = value.slice(0, queryStart);
+    const after = value.slice(queryStart + 1 + queryWord.length);
+    const newVal = (before + "@" + displayName + " " + after).slice(0, maxLength);
+    onChange(newVal);
+    setSuggestions([]);
+    setQueryStart(null);
+    setTimeout(() => {
+      if (ref.current) {
+        const pos = queryStart + displayName.length + 2;
+        ref.current.setSelectionRange(pos, pos);
+        ref.current.focus();
+      }
+    }, 0);
+  };
+
+  return (
+    <div style={{ position: "relative" }}>
+      <textarea
+        ref={ref}
+        value={value}
+        onChange={handleChange}
+        onBlur={() => setTimeout(() => setSuggestions([]), 150)}
+        placeholder={placeholder}
+        rows={rows}
+        style={style}
+      />
+      {suggestions.length > 0 && (
+        <div style={{
+          position: "absolute", bottom: "calc(100% + 4px)", left: 0, right: 0,
+          background: "#1C1913", border: "1px solid #332C1F", borderRadius: 10,
+          zIndex: 999, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.6)",
+        }}>
+          {suggestions.map((s) => (
+            <div
+              key={s.id}
+              onMouseDown={(e) => { e.preventDefault(); insertSuggestion(s.display_name); }}
+              style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "9px 12px",
+                cursor: "pointer", transition: "background 0.12s",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "#2a231a"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+            >
+              <div style={{
+                width: 28, height: 28, borderRadius: "50%", background: "#C6A15B",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 11, fontWeight: 800, color: "#0F0E0B", flexShrink: 0,
+                overflow: "hidden",
+              }}>
+                {s.avatar_url
+                  ? <img src={s.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : (s.display_name?.[0] || "?").toUpperCase()}
+              </div>
+              <span style={{ color: "#E3C077", fontWeight: 700, fontSize: 13, fontFamily: "'Montserrat', sans-serif" }}>
+                @{s.display_name}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 async function goToMention(handle, onOpenProfile) {
   const { data } = await supabase.from("public_profiles").select("id").eq("display_name", handle).maybeSingle();
   if (data) onOpenProfile(data.id);
@@ -102,7 +198,8 @@ function Composer({ account, onPosted, compact }) {
   const taRef = useRef(null);
 
   const insertAt = (symbol) => {
-    setText((t) => t + (t.endsWith(" ") || t === "" ? "" : " ") + symbol);
+    const newVal = text + (text.endsWith(" ") || text === "" ? "" : " ") + symbol;
+    setText(newVal.slice(0, 500));
     taRef.current?.focus();
   };
 
@@ -137,12 +234,13 @@ function Composer({ account, onPosted, compact }) {
         <Avatar name={account.email} />
         <div style={{ flex: 1 }}>
           {!compact && <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 8 }}>What's on your mind today?</div>}
-          <textarea
-            ref={taRef}
+          <MentionTextarea
+            textareaRef={taRef}
             value={text}
-            onChange={(e) => setText(e.target.value.slice(0, 500))}
+            onChange={setText}
             placeholder="Share a market thought…"
             rows={compact ? 4 : 3}
+            maxLength={500}
             style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 10, color: T.paper, padding: 10, fontFamily: FONT_BODY, fontSize: 13, resize: "none" }}
           />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
@@ -253,9 +351,18 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
           </div>
         );
       })}
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <input value={text} onChange={(e) => setText(e.target.value.slice(0, 300))} onKeyDown={(e) => e.key === "Enter" && submitComment()} placeholder="Write a reply…" style={{ flex: 1, background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: "8px 10px", fontFamily: FONT_BODY, fontSize: 12 }} />
-        <button onClick={submitComment} disabled={!text.trim()} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 8, padding: "0 14px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}>Reply</button>
+      <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "flex-end" }}>
+        <div style={{ flex: 1 }}>
+          <MentionTextarea
+            value={text}
+            onChange={setText}
+            placeholder="Write a reply…"
+            rows={1}
+            maxLength={300}
+            style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: "8px 10px", fontFamily: FONT_BODY, fontSize: 12, resize: "none" }}
+          />
+        </div>
+        <button onClick={submitComment} disabled={!text.trim()} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 8, padding: "8px 14px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, cursor: "pointer", flexShrink: 0 }}>Reply</button>
       </div>
     </div>
   );
