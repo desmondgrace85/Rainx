@@ -1577,6 +1577,13 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [verification, setVerification] = useState(null);
   const [showLegal, setShowLegal] = useState(false);
 
+  // Map subscription tier → verification badge (single source of truth)
+  const tierToVerif = (t) => {
+    if (t === "biannual") return "golden";
+    if (t === "monthly" || t === "weekly") return "blue";
+    return null;
+  };
+
   useEffect(() => {
     if (!account?.id) return;
     supabase.from("profiles").select("username, bio, avatar_url, verification_status").eq("id", account.id).single().then(({ data }) => {
@@ -1584,13 +1591,21 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         setUsername(data.username || "");
         setBio(data.bio || "");
         setAvatarUrl(data.avatar_url || null);
-        setVerification(data.verification_status || null);
       }
     });
     supabase.from("site_content").select("value").eq("key", "more_benefits").single().then(({ data }) => {
       if (data?.value) { try { setBenefits(JSON.parse(data.value)); } catch { /* use defaults */ } }
     });
   }, [account?.id]);
+
+  // Derive verification from live entitlement and keep DB in sync
+  useEffect(() => {
+    if (!account?.id || entitlement.tier === "loading") return;
+    const expected = tierToVerif(entitlement.tier);
+    setVerification(expected);
+    // Sync the DB so community profile / other places stay consistent
+    supabase.from("profiles").update({ verification_status: expected }).eq("id", account.id).then(() => {});
+  }, [account?.id, entitlement.tier]);
 
   const compressImage = (file, maxDim = 300, quality = 0.7) => new Promise((resolve, reject) => {
     const img = new Image();
@@ -1633,15 +1648,31 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   };
 
   const rewardsPlan = entitlement.tier === "none" ? "Not enrolled" :
-    entitlement.tier === "weekly" ? "Weekly Rewards" :
-    entitlement.tier === "monthly" ? "Monthly Rewards" :
+    entitlement.tier === "weekly"   ? "Weekly Rewards"    :
+    entitlement.tier === "monthly"  ? "Monthly Rewards"   :
     entitlement.tier === "biannual" ? "Bi-Annual Rewards" : "Loading…";
 
-  const verificationLabel = !verification ? "Not verified" :
-    verification === "verified" ? "Verified" :
-    verification === "basic" ? "Verified (Basic)" :
-    verification === "blue" ? "Blue Verified" : verification;
-  const verificationColor = verification ? T.goldBright : T.muted;
+  const verificationLabel =
+    verification === "golden" ? "Golden Verified" :
+    verification === "blue"   ? "Blue Verified"   :
+    verification === "verified" || verification === "basic" ? "Verified" :
+    "Not Verified";
+
+  const BLUE = "#5B9CF6";
+  const verificationColor =
+    verification === "golden" ? T.goldBright :
+    verification === "blue"   ? BLUE         : T.muted;
+
+  const VerifBadgeIcon = ({ size = 16 }) =>
+    verification === "golden" ? (
+      <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+        <polygon points="8,1 10,6 15.5,6.5 11.5,10 13,15.5 8,12.5 3,15.5 4.5,10 0.5,6.5 6,6" fill={T.goldBright} />
+      </svg>
+    ) : verification === "blue" ? (
+      <ShieldCheck size={size} color={BLUE} />
+    ) : (
+      <ShieldCheck size={size} color={T.muted} />
+    );
 
   const profileInitial = (username || account?.email || "?")[0]?.toUpperCase();
 
@@ -1682,35 +1713,93 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     </MoreSubScreen>
   );
 
-  if (morePage === "verification") return (
-    <MoreSubScreen onBack={() => setMorePage(null)}>
-      <div style={{ padding: 16 }}>
-        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: 22, marginBottom: 16, textAlign: "center" }}>
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(198,161,91,0.12)", border: `2px solid ${T.gold}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
-            <ShieldCheck size={30} color={T.goldBright} />
+  if (morePage === "verification") {
+    const isGolden = verification === "golden";
+    const isBlue   = verification === "blue";
+    const isVerif  = isGolden || isBlue;
+    const badgeBg  = isGolden ? "rgba(198,161,91,0.12)" : isBlue ? "rgba(91,156,246,0.12)" : "rgba(100,100,100,0.10)";
+    const badgeBorder = isGolden ? T.gold : isBlue ? "#5B9CF6" : T.cardBorder;
+    const iconBg   = isGolden ? "rgba(198,161,91,0.15)" : isBlue ? "rgba(91,156,246,0.15)" : "rgba(100,100,100,0.08)";
+    const iconBorder = isGolden ? `2px solid ${T.gold}` : isBlue ? "2px solid #5B9CF6" : `1px solid ${T.cardBorder}`;
+
+    const tiers = [
+      { key: "weekly",   label: "Weekly",    verif: "Blue Verified",   icon: "blue",   desc: "Subscribers on the Weekly plan receive a Blue Verified badge." },
+      { key: "monthly",  label: "Monthly",   verif: "Blue Verified",   icon: "blue",   desc: "Subscribers on the Monthly plan receive a Blue Verified badge." },
+      { key: "biannual", label: "Bi-Annual", verif: "Golden Verified", icon: "golden", desc: "Premium Bi-Annual subscribers receive the exclusive Golden Verified badge." },
+    ];
+
+    return (
+      <MoreSubScreen onBack={() => setMorePage(null)} title="Verification" subtitle="Your identity & trust level">
+        <div style={{ padding: 16 }}>
+          {/* Status card */}
+          <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 18, padding: 24, marginBottom: 14, textAlign: "center" }}>
+            <div style={{ width: 70, height: 70, borderRadius: "50%", background: iconBg, border: iconBorder, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+              {isGolden ? (
+                <svg width="34" height="34" viewBox="0 0 16 16" fill="none">
+                  <polygon points="8,1 10,6 15.5,6.5 11.5,10 13,15.5 8,12.5 3,15.5 4.5,10 0.5,6.5 6,6" fill={T.goldBright} />
+                </svg>
+              ) : isBlue ? (
+                <ShieldCheck size={34} color="#5B9CF6" />
+              ) : (
+                <ShieldCheck size={34} color={T.muted} />
+              )}
+            </div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.paper, marginBottom: 10 }}>
+              {isVerif ? verificationLabel : "Not Verified"}
+            </div>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: badgeBg, border: `1px solid ${badgeBorder}`, borderRadius: 20, padding: "7px 18px" }}>
+              <VerifBadgeIcon size={13} />
+              <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: verificationColor }}>{verificationLabel}</span>
+            </div>
+            {isVerif && (
+              <div style={{ marginTop: 12, fontSize: 11.5, color: T.muted, lineHeight: 1.6 }}>
+                {isGolden ? "Premium Bi-Annual subscriber · highest trust level" : "Active subscriber · community trusted"}
+              </div>
+            )}
           </div>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, marginBottom: 8 }}>Verification Status</div>
-          <div style={{ display: "inline-block", background: verification ? "rgba(198,161,91,0.12)" : "rgba(156,148,127,0.1)", border: `1px solid ${verification ? T.gold : T.cardBorder}`, borderRadius: 20, padding: "6px 18px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: verificationColor }}>
-            {verificationLabel}
+
+          {/* Tier breakdown */}
+          <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: "6px 0", marginBottom: 14 }}>
+            <div style={{ padding: "12px 16px 8px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: T.goldBright, letterSpacing: 0.5 }}>HOW IT WORKS</div>
+            {tiers.map((t, i) => {
+              const active = entitlement.tier === t.key;
+              const tBlue = t.icon === "blue";
+              return (
+                <div key={t.key} style={{ padding: "12px 16px", borderTop: i > 0 ? `1px solid ${T.cardBorder}` : "none", display: "flex", alignItems: "center", gap: 12, background: active ? (tBlue ? "rgba(91,156,246,0.06)" : "rgba(198,161,91,0.06)") : "transparent" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: tBlue ? "rgba(91,156,246,0.12)" : "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {tBlue ? <ShieldCheck size={16} color="#5B9CF6" /> : (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <polygon points="8,1 10,6 15.5,6.5 11.5,10 13,15.5 8,12.5 3,15.5 4.5,10 0.5,6.5 6,6" fill={T.goldBright} />
+                      </svg>
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper }}>{t.label} Plan</span>
+                      {active && <span style={{ fontSize: 10, fontWeight: 700, color: tBlue ? "#5B9CF6" : T.goldBright, background: tBlue ? "rgba(91,156,246,0.15)" : "rgba(198,161,91,0.15)", borderRadius: 8, padding: "2px 7px" }}>ACTIVE</span>}
+                    </div>
+                    <div style={{ fontSize: 11, color: tBlue ? "#5B9CF6" : T.goldBright, marginTop: 2, fontWeight: 600 }}>{t.verif}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+
+          {/* CTA */}
+          {!isVerif && (
+            <button onClick={() => setMorePage("rewards")} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
+              Get Verified — View Plans
+            </button>
+          )}
+          {isVerif && (
+            <button onClick={() => setMorePage("rewards")} style={{ width: "100%", background: "none", border: `1px solid ${verificationColor}`, borderRadius: 13, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer", color: verificationColor }}>
+              View Rewards & Balance
+            </button>
+          )}
         </div>
-        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: 18 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.goldBright, marginBottom: 10 }}>About Verification</div>
-          <div style={{ fontSize: 12.5, color: T.paper, lineHeight: 1.8, marginBottom: 14 }}>
-            Your verification level is tied to your Trader Rewards Program status. Higher reward tiers unlock higher verification levels — giving you access to exclusive features, increased visibility, and additional platform benefits.
-          </div>
-          <div style={{ padding: "12px 14px", background: "rgba(198,161,91,0.06)", borderRadius: 10, border: `1px solid rgba(198,161,91,0.15)` }}>
-            <div style={{ fontSize: 11, color: T.muted, marginBottom: 4 }}>Connected to</div>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.goldBright }}>Trader Rewards Program</div>
-            <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>Upgrade your rewards plan to advance your verification level</div>
-          </div>
-          <button onClick={() => setMorePage("rewards")} style={{ marginTop: 14, width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-            View Trader Rewards Program
-          </button>
-        </div>
-      </div>
-    </MoreSubScreen>
-  );
+      </MoreSubScreen>
+    );
+  }
 
   if (morePage === "rewards") return entitlement.tier !== "none" ? (
     <MoreSubScreen onBack={() => setMorePage(null)} title="Rewards & Balance" subtitle="Track your earnings and rewards" rightElement={<Bell size={20} color={T.muted} style={{ cursor: "pointer" }} />}>
@@ -1804,12 +1893,14 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <MoreRowDivider />
         <div style={{ display: "flex" }}>
           <button onClick={() => setMorePage("verification")} style={{ flex: 1, display: "flex", alignItems: "center", padding: "12px 14px", background: "none", border: "none", borderRight: `1px solid ${T.cardBorder}`, cursor: "pointer", gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <ShieldCheck size={16} color={T.gold} />
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: verification === "golden" ? "rgba(198,161,91,0.12)" : verification === "blue" ? "rgba(91,156,246,0.12)" : "rgba(100,100,100,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <VerifBadgeIcon size={16} />
             </div>
             <div style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 12, color: T.paper }}>Verification</div>
-              <div style={{ fontSize: 10.5, color: verificationColor, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{verificationLabel}</div>
+              <div style={{ fontSize: 10.5, color: verificationColor, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 3 }}>
+                {verificationLabel}
+              </div>
             </div>
             <ChevronRight size={13} color={T.muted} style={{ flexShrink: 0 }} />
           </button>
