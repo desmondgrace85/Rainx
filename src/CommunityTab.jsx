@@ -109,11 +109,22 @@ function Composer({ account, onPosted, compact }) {
   const submit = async () => {
     if (!text.trim() || posting) return;
     setPosting(true);
-    const { data: post } = await supabase.from("community_posts").insert({ user_id: account.id, text: text.trim() }).select("id").single();
-    const mentions = extractMentions(text);
+    const trimmed = text.trim();
+    const { data: post } = await supabase.from("community_posts").insert({ user_id: account.id, text: trimmed }).select("id").single();
+    const mentions = extractMentions(trimmed);
     if (mentions.length && post) {
       const { data: mentioned } = await supabase.from("public_profiles").select("id, display_name").in("display_name", mentions);
       (mentioned || []).forEach((m) => notify(m.id, account.id, "mention", post.id));
+    }
+    // Trigger Raina AI reply when @rainaai is mentioned
+    if (post && mentions.includes("rainaai")) {
+      fetch("/api/community-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ post_id: post.id, post_text: trimmed, author_name: account.email }),
+      }).catch(() => {});
+      // Reload after a short delay so the AI comment appears
+      setTimeout(() => onPosted(), 4000);
     }
     setText("");
     setPosting(false);
@@ -177,12 +188,30 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
 
   const submitComment = async () => {
     if (!text.trim()) return;
-    const { data: c } = await supabase.from("post_comments").insert({ post_id: postId, user_id: account.id, text: text.trim() }).select("id").single();
+    const trimmed = text.trim();
+    const { data: c } = await supabase.from("post_comments").insert({ post_id: postId, user_id: account.id, text: trimmed }).select("id").single();
     notify(postAuthorId, account.id, "reply", postId);
-    const mentions = extractMentions(text);
+    const mentions = extractMentions(trimmed);
     if (mentions.length) {
       const { data: mentioned } = await supabase.from("public_profiles").select("id, display_name").in("display_name", mentions);
       (mentioned || []).forEach((m) => notify(m.id, account.id, "mention", postId));
+    }
+    // Trigger Raina AI reply when @rainaai is mentioned in a comment
+    if (mentions.includes("rainaai")) {
+      // Fetch the original post text for context
+      supabase.from("community_posts").select("text").eq("id", postId).single().then(({ data: postRow }) => {
+        fetch("/api/community-ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            post_id: postId,
+            post_text: postRow?.text || "",
+            comment_text: trimmed,
+            author_name: account.email,
+          }),
+        }).catch(() => {});
+        setTimeout(() => load(), 5000);
+      });
     }
     setText("");
     load();
