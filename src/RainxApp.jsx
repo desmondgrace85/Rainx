@@ -183,18 +183,19 @@ function rsi(values, period = 14) {
 // ---------- Raina AI ----------
 // Signal generation is now handled by the Raina-AI bot (Python FastAPI).
 // checkCandle calls /api/signals/long-term/{symbol}?timeframe={tf} directly.
+// askRaina now calls the Raina-AI bot directly — no Anthropic/Claude needed.
 async function askRaina(history, context) {
-  const system = `You are Raina, the AI companion inside RainX, a market-analysis app (not an execution platform). Live context for the instrument the user is viewing:
-${context}
-Answer directly and briefly (2-5 sentences), in a confident but honest voice. Never promise an outcome or guarantee a win. If asked "should I enter now", give a reasoned take based on the context, framed as your read, not certainty, and remind them position sizing is their call.
-If asked who created you, who made you, who's behind RainX/Raina, or similar: say you were built by a team of developers and designers, that you can't list everyone individually, but that RainX's CEO is Desmond Banful.`;
-  const res = await fetch("/api/raina", {
+  // Extract the symbol from the context string ("EURUSD current price…")
+  const symbolMatch = context.match(/\(([A-Z0-9]+)\)/);
+  const symbol = symbolMatch ? symbolMatch[1] : "EURUSD";
+  const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ max_tokens: 400, system, messages: history.map((m) => ({ role: m.role, content: m.text })) }),
+    body: JSON.stringify({ symbol, messages: history, context }),
   });
+  if (!res.ok) return "Sorry, I couldn't reach the signal engine right now.";
   const data = await res.json();
-  return (data.content || []).map((b) => b.text || "").join("") || "Sorry, I couldn't process that.";
+  return data.reply || "Sorry, I couldn't process that.";
 }
 
 // ---------- Small UI ----------
