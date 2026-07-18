@@ -2,12 +2,14 @@
   "buildCommand": "npm install && npx vite build --config vite.config.vercel.ts",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/signals/:path*", "destination": "https://raina-ai-production.up.railway.app/api/signals/:path*" },
-    { "source": "/api/scan/:path*",    "destination": "https://raina-ai-production.up.railway.app/api/scan/:path*" },
-    { "source": "/api/chat",           "destination": "https://raina-ai-production.up.railway.app/api/chat" },
-    { "source": "/api/price",          "destination": "https://raina-ai-production.up.railway.app/api/price" },
-    { "source": "/api/symbols",        "destination": "https://raina-ai-production.up.railway.app/api/symbols" },
-    { "source": "/api/health",         "destination": "https://raina-ai-production.up.railway.app/health" },
+    { "source": "/api/signals/:path*", "destination": "https://raina-ai-production.up.railway.app/signals/:path*" },
+    { "source": "/api/scan/:path*",    "destination": "https://raina-ai-production.up.railway.app/scan/:path*" },
+    { "source": "/api/chat",           "destination": "https://raina-ai-production.up.railway.app/chat" },
+    { "source": "/api/price",          "destination": "https://raina-ai-production.up.railway.app/price" },
+    { "source": "/api/symbols",        "destination": "https://raina-ai-production.up.railway.app/symbols" },
+    { "source": "/api/history/:path*", "destination": "https://raina-ai-production.up.railway.app/history/:path*" },
+    { "source": "/api/candles",        "destination": "https://raina-ai-production.up.railway.app/candles" },
+    { "source": "/webhook/:path*",     "destination": "https://raina-ai-production.up.railway.app/webhook/:path*" },
     { "source": "/(.*)",               "destination": "/index.html" }
   ]
 }
