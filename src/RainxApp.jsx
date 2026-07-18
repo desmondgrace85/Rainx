@@ -98,10 +98,7 @@ function seedSeries(inst) {
   }
   return arr;
 }
-// ---------- Live price engine (Twelve Data via secure /api/price proxy) ----------
-const TD_SYMBOL_MAP = {
-  XAUUSD: "XAU/USD", BTCUSD: "BTC/USD", ETHUSD: "ETH/USD",
-};
+// ---------- Live price engine (yfinance via Raina-AI bot — no API key needed) ----------
 function seedSeriesFromPrice(inst, price) {
   // Reuses the same wiggly shape as seedSeries() for a readable chart line,
   // then shifts every point so the series ends exactly at the real fetched price.
@@ -121,7 +118,7 @@ function useMultiPriceSeries() {
     const fetchOne = async (inst) => {
       if (!isMarketOpen(inst.cls)) return;
       try {
-        const res = await fetch(`/api/price?symbol=${encodeURIComponent(TD_SYMBOL_MAP[inst.symbol])}`);
+        const res = await fetch(`/api/price?symbol=${encodeURIComponent(inst.symbol)}`);
         const data = await res.json();
         const price = data && data.price ? Number(data.price) : null;
         if (price && !cancelled) {
@@ -143,14 +140,13 @@ function useMultiPriceSeries() {
         const inst = INSTRUMENTS[idx];
         if (!isMarketOpen(inst.cls)) continue;
         try {
-          const res = await fetch(`/api/price?symbol=${encodeURIComponent(TD_SYMBOL_MAP[inst.symbol])}`);
+          const res = await fetch(`/api/price?symbol=${encodeURIComponent(inst.symbol)}`);
           const data = await res.json();
           const price = data && data.price ? Number(data.price) : null;
           if (price && !cancelled) {
             setSeriesMap((prev) => ({ ...prev, [inst.symbol]: seedSeriesFromPrice(inst, price) }));
           }
         } catch { /* keep the placeholder shape for this one market if the seed fetch fails */ }
-        await new Promise((r) => setTimeout(r, 1500)); // stay well under free-tier per-minute limits
       }
     };
 
