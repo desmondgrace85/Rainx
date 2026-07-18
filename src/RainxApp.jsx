@@ -4,7 +4,7 @@ import {
   Bell, Home, Briefcase, MessageCircle, MoreHorizontal, Settings, X,
   TrendingUp, TrendingDown, Minus, Activity, Send, Calendar as CalendarIcon,
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
-  CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet,
+  CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet, Landmark, Gift, Trophy,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import CommunityTab from "./CommunityTab";
@@ -1327,82 +1327,243 @@ function MoreRowDivider() {
   return <div style={{ height: 1, background: T.cardBorder, marginLeft: 62 }} />;
 }
 
-function MoreSubScreen({ onBack, children }) {
+function GoldBarsIcon() {
+  return (
+    <svg width="96" height="78" viewBox="0 0 96 78" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g transform="translate(0,52)">
+        <path d="M10 0 L82 0 L92 9 L92 24 L20 24 L10 15 Z" fill="url(#bf1)"/>
+        <path d="M82 0 L92 9 L92 24 L82 15 Z" fill="url(#bs1)"/>
+        <path d="M10 0 L82 0 L92 9 L20 9 Z" fill="url(#bt1)"/>
+      </g>
+      <g transform="translate(0,27)">
+        <path d="M10 0 L82 0 L92 9 L92 24 L20 24 L10 15 Z" fill="url(#bf2)"/>
+        <path d="M82 0 L92 9 L92 24 L82 15 Z" fill="url(#bs2)"/>
+        <path d="M10 0 L82 0 L92 9 L20 9 Z" fill="url(#bt2)"/>
+      </g>
+      <g transform="translate(0,2)">
+        <path d="M10 0 L82 0 L92 9 L92 24 L20 24 L10 15 Z" fill="url(#bf3)"/>
+        <path d="M82 0 L92 9 L92 24 L82 15 Z" fill="url(#bs3)"/>
+        <path d="M10 0 L82 0 L92 9 L20 9 Z" fill="url(#bt3)"/>
+      </g>
+      <defs>
+        <linearGradient id="bf1" x1="10" y1="0" x2="10" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#B8932A"/><stop offset="1" stopColor="#6B4A0A"/></linearGradient>
+        <linearGradient id="bs1" x1="82" y1="0" x2="92" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#8A6B18"/><stop offset="1" stopColor="#4A3205"/></linearGradient>
+        <linearGradient id="bt1" x1="10" y1="0" x2="92" y2="9" gradientUnits="userSpaceOnUse"><stop stopColor="#F5D96A"/><stop offset="0.5" stopColor="#E8C450"/><stop offset="1" stopColor="#C8A030"/></linearGradient>
+        <linearGradient id="bf2" x1="10" y1="0" x2="10" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#C8A030"/><stop offset="1" stopColor="#7A5515"/></linearGradient>
+        <linearGradient id="bs2" x1="82" y1="0" x2="92" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#9A7820"/><stop offset="1" stopColor="#553A08"/></linearGradient>
+        <linearGradient id="bt2" x1="10" y1="0" x2="92" y2="9" gradientUnits="userSpaceOnUse"><stop stopColor="#FAE478"/><stop offset="0.5" stopColor="#EDCE60"/><stop offset="1" stopColor="#D4AC40"/></linearGradient>
+        <linearGradient id="bf3" x1="10" y1="0" x2="10" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#D8AE40"/><stop offset="1" stopColor="#8A6020"/></linearGradient>
+        <linearGradient id="bs3" x1="82" y1="0" x2="92" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#AA8828"/><stop offset="1" stopColor="#5F4010"/></linearGradient>
+        <linearGradient id="bt3" x1="10" y1="0" x2="92" y2="9" gradientUnits="userSpaceOnUse"><stop stopColor="#FFF0A0"/><stop offset="0.5" stopColor="#F8E080"/><stop offset="1" stopColor="#DEC058"/></linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+function MoreSubScreen({ onBack, title, subtitle, rightElement, children }) {
   return (
     <div style={{ minHeight: "100%", animation: "slideInRight 0.2s ease" }}>
-      <style>{`@keyframes slideInRight { from { transform: translateX(24px); opacity:0; } to { transform: translateX(0); opacity:1; } }`}</style>
-      <div style={{ display: "flex", alignItems: "center", padding: "4px 16px 10px", borderBottom: `1px solid ${T.cardBorder}` }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", display: "flex", alignItems: "center", gap: 2, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, padding: "8px 0" }}>
-          <ChevronLeft size={20} /> Back
+      <style>{"@keyframes slideInRight { from { transform: translateX(24px); opacity:0; } to { transform: translateX(0); opacity:1; } }"}</style>
+      <div style={{ display: "flex", alignItems: "center", padding: "10px 16px 10px", borderBottom: `1px solid ${T.cardBorder}` }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: T.paper, cursor: "pointer", display: "flex", alignItems: "center", padding: "4px", borderRadius: 8, flexShrink: 0 }}>
+          <ChevronLeft size={22} />
         </button>
+        <div style={{ flex: 1, textAlign: "center" }}>
+          {title && <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 16, color: T.goldBright, lineHeight: 1.2 }}>{title}</div>}
+          {subtitle && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{subtitle}</div>}
+        </div>
+        <div style={{ flexShrink: 0, width: 30, display: "flex", justifyContent: "flex-end" }}>
+          {rightElement || null}
+        </div>
       </div>
       {children}
     </div>
   );
 }
 
-function WalletScreen({ account }) {
-  const [walletData, setWalletData] = useState(null);
+function RewardsScreen({ account, entitlement }) {
+  const [rewardsData, setRewardsData] = useState(null);
   const [txns, setTxns] = useState([]);
+  const [quickPage, setQuickPage] = useState(null);
 
   useEffect(() => {
     if (!account?.id) return;
     supabase.from("wallet_balances").select("*").eq("user_id", account.id).single()
-      .then(({ data }) => { if (data) setWalletData(data); }).catch(() => {});
+      .then(({ data }) => { if (data) setRewardsData(data); }).catch(() => {});
     supabase.from("wallet_transactions").select("*").eq("user_id", account.id)
       .order("created_at", { ascending: false }).limit(20)
       .then(({ data }) => { if (data) setTxns(data); }).catch(() => {});
   }, [account?.id]);
 
-  const balance = walletData?.balance ?? 0;
-  const available = walletData?.available ?? balance;
-  const pending = walletData?.pending ?? 0;
+  const totalBalance    = rewardsData?.balance         ?? 0;
+  const totalEarned     = rewardsData?.total_earned    ?? 0;
+  const totalWithdrawn  = rewardsData?.total_withdrawn ?? 0;
+  const pending         = rewardsData?.pending         ?? 0;
+  const weeklyPct       = rewardsData?.weekly_change_pct ?? 0;
+
+  const fmtGHS = (n) =>
+    `GHS ${Number(n).toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const quickItems = [
+    { icon: Landmark,       label: "Bank\nAccounts",       page: "bank"      },
+    { icon: Gift,           label: "My\nRewards",          page: "myRewards" },
+    { icon: Trophy,         label: "Post\nGifts",          page: "postGifts" },
+    { icon: CreditCardIcon, label: "Payout\nMethods",      page: "payout"    },
+    { icon: ScrollText,     label: "Transaction\nHistory", page: "txHistory" },
+  ];
+
+  const activityIcon = (type) => {
+    if (!type) return Gift;
+    const t = type.toLowerCase();
+    if (t.includes("gift") || t.includes("post")) return Gift;
+    if (t.includes("reward") || t.includes("bonus") || t.includes("earn")) return Trophy;
+    if (t.includes("withdraw") || t.includes("bank") || t.includes("payout")) return Landmark;
+    return CreditCardIcon;
+  };
+
+  const fmtDate = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = now - d;
+    if (diff < 86400000)  return `Today, ${d.toLocaleTimeString("en-GH", { hour: "2-digit", minute: "2-digit" })}`;
+    if (diff < 172800000) return `Yesterday, ${d.toLocaleTimeString("en-GH", { hour: "2-digit", minute: "2-digit" })}`;
+    return d.toLocaleDateString("en-GH");
+  };
+
+  const DEMO_TXN = [
+    { id: "d1", type: "Post Gift Received",  description: "From: Kofi Mensah",         amount:  150, created_at: new Date(Date.now() - 1000 * 60 * 75).toISOString()  },
+    { id: "d2", type: "Reward Earned",        description: "Daily Check-in Bonus",      amount:   20, created_at: new Date(Date.now() - 1000 * 60 * 165).toISOString() },
+    { id: "d3", type: "Bank Withdrawal",      description: "To: GCB Bank •••• 1234",   amount: -300, created_at: new Date(Date.now() - 86400000).toISOString()         },
+  ];
+  const displayTxns = txns.length > 0 ? txns : DEMO_TXN;
+
+  if (quickPage) {
+    const titles = {
+      bank: "Bank Accounts", myRewards: "My Rewards", postGifts: "Post Gifts",
+      payout: "Payout Methods", txHistory: "Transaction History",
+    };
+    return (
+      <div style={{ padding: 16 }}>
+        <button onClick={() => setQuickPage(null)} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, marginBottom: 16 }}>
+          <ChevronLeft size={18} /> Back
+        </button>
+        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: 32, textAlign: "center" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(198,161,91,0.12)", border: `1px solid ${T.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+            <Trophy size={26} color={T.goldBright} />
+          </div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper, marginBottom: 8 }}>{titles[quickPage]}</div>
+          <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.7 }}>This feature is coming soon. Check back for updates.</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: 16 }}>
-      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: 22, marginBottom: 18 }}>
-        <div style={{ fontSize: 11, color: T.muted, fontWeight: 600, marginBottom: 6 }}>Total Balance</div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 18 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 30, color: T.paper }}>${balance.toFixed(2)}</div>
-          <div style={{ fontSize: 13, color: T.muted, fontWeight: 500 }}>USD</div>
-        </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <div style={{ flex: 1, background: "rgba(198,161,91,0.08)", border: `1px solid rgba(198,161,91,0.15)`, borderRadius: 10, padding: "10px 12px" }}>
-            <div style={{ fontSize: 10, color: T.muted, marginBottom: 3 }}>Available</div>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.goldBright }}>${available.toFixed(2)}</div>
-          </div>
-          <div style={{ flex: 1, background: "rgba(198,161,91,0.08)", border: `1px solid rgba(198,161,91,0.15)`, borderRadius: 10, padding: "10px 12px" }}>
-            <div style={{ fontSize: 10, color: T.muted, marginBottom: 3 }}>Pending</div>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.muted }}>${pending.toFixed(2)}</div>
+    <div style={{ overflowY: "auto", paddingBottom: 32 }}>
+
+      {/* Balance Card */}
+      <div style={{ margin: "16px 16px 0" }}>
+        <div style={{ background: "linear-gradient(135deg, #1C1A14 0%, #151309 100%)", border: `1px solid ${T.cardBorder}`, borderRadius: 18, padding: "22px 20px 20px", position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", inset: 0, borderRadius: 18, background: "linear-gradient(135deg, rgba(198,161,91,0.07) 0%, transparent 60%)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11.5, color: T.goldBright, fontWeight: 600, marginBottom: 8, letterSpacing: 0.3 }}>Total Rewards Balance</div>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 32, color: T.paper, letterSpacing: -0.5, lineHeight: 1.15 }}>{fmtGHS(totalBalance)}</div>
+              <div style={{ marginTop: 14 }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.4)", border: "1px solid rgba(198,161,91,0.25)", borderRadius: 20, padding: "5px 12px", fontSize: 11.5, color: weeklyPct >= 0 ? T.goldBright : T.rust, fontWeight: 600 }}>
+                  <span style={{ fontSize: 9 }}>✦</span>
+                  {weeklyPct >= 0 ? `+${weeklyPct.toFixed(2)}%` : `${weeklyPct.toFixed(2)}%`} this week
+                </span>
+              </div>
+            </div>
+            <div style={{ marginLeft: 8, marginTop: -4, flexShrink: 0 }}>
+              <GoldBarsIcon />
+            </div>
           </div>
         </div>
       </div>
 
-      <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.goldBright, marginBottom: 8 }}>Transaction History</div>
-      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, overflow: "hidden" }}>
-        {txns.length === 0 ? (
-          <div style={{ padding: 28, textAlign: "center" }}>
-            <div style={{ fontSize: 26, marginBottom: 8 }}>📭</div>
-            <div style={{ fontSize: 12, color: T.muted }}>No transactions yet</div>
-          </div>
-        ) : txns.map((tx, i) => (
-          <div key={tx.id} style={{ padding: "13px 16px", borderBottom: i < txns.length - 1 ? `1px solid ${T.cardBorder}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 12.5, color: T.paper }}>{tx.type || "Transaction"}</div>
-              <div style={{ fontSize: 10.5, color: T.muted, marginTop: 2 }}>{tx.description || ""}</div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: (tx.amount || 0) >= 0 ? T.sage : T.rust }}>
-                {(tx.amount || 0) >= 0 ? "+" : ""}${Math.abs(tx.amount || 0).toFixed(2)}
+      {/* Quick Access */}
+      <div style={{ padding: "22px 16px 0" }}>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 16 }}>Quick Access</div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          {quickItems.map(({ icon: Icon, label, page }) => (
+            <button key={page} onClick={() => setQuickPage(page)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: 0, flex: 1 }}>
+              <div style={{ width: 54, height: 54, borderRadius: "50%", background: "#1C1A14", border: "1px solid rgba(198,161,91,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Icon size={22} color={T.goldBright} strokeWidth={1.5} />
               </div>
-              <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>{tx.created_at ? new Date(tx.created_at).toLocaleDateString() : ""}</div>
+              <div style={{ fontSize: 10.5, color: T.paper, textAlign: "center", fontWeight: 500, whiteSpace: "pre-line", lineHeight: 1.35 }}>{label}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Your Overview */}
+      <div style={{ padding: "20px 16px 0" }}>
+        <div style={{ background: "#131108", border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: "18px 16px 16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
+            <span style={{ fontSize: 16, color: T.goldBright }}>↗</span>
+            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>Your Overview</span>
+          </div>
+          <div style={{ display: "flex" }}>
+            <div style={{ flex: 1, textAlign: "center" }}>
+              <div style={{ fontSize: 10.5, color: T.muted, marginBottom: 5 }}>Total Earned</div>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.paper }}>{fmtGHS(totalEarned)}</div>
+              <div style={{ fontSize: 10, color: T.muted, marginTop: 3 }}>All time</div>
+            </div>
+            <div style={{ width: 1, background: T.cardBorder }} />
+            <div style={{ flex: 1, textAlign: "center" }}>
+              <div style={{ fontSize: 10.5, color: T.muted, marginBottom: 5 }}>Total Withdrawn</div>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.paper }}>{fmtGHS(totalWithdrawn)}</div>
+              <div style={{ fontSize: 10, color: T.muted, marginTop: 3 }}>All time</div>
+            </div>
+            <div style={{ width: 1, background: T.cardBorder }} />
+            <div style={{ flex: 1, textAlign: "center" }}>
+              <div style={{ fontSize: 10.5, color: T.muted, marginBottom: 5 }}>Pending Balance</div>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.paper }}>{fmtGHS(pending)}</div>
+              <div style={{ fontSize: 10, color: T.muted, marginTop: 3 }}>Processing</div>
             </div>
           </div>
-        ))}
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div style={{ padding: "20px 16px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.goldBright }}>Recent Activity</span>
+          <button onClick={() => setQuickPage("txHistory")} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", display: "flex", alignItems: "center", gap: 2, fontSize: 12, fontFamily: FONT_HEAD, fontWeight: 600 }}>
+            View all <ChevronRight size={14} />
+          </button>
+        </div>
+        <div>
+          {displayTxns.map((tx, i) => {
+            const IconComp = activityIcon(tx.type);
+            const isPos = (tx.amount || 0) >= 0;
+            return (
+              <button key={tx.id || i} onClick={() => setQuickPage("txHistory")} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 14, padding: "13px 0", borderBottom: i < displayTxns.length - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(198,161,91,0.12)", border: "1px solid rgba(198,161,91,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <IconComp size={20} color={T.goldBright} strokeWidth={1.6} />
+                </div>
+                <div style={{ flex: 1, textAlign: "left" }}>
+                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 13, color: T.paper }}>{tx.type || "Transaction"}</div>
+                  <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{tx.description || ""}</div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: isPos ? T.goldBright : T.rust }}>
+                    {isPos ? `+${fmtGHS(Math.abs(tx.amount || 0))}` : `-${fmtGHS(Math.abs(tx.amount || 0))}`}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: T.muted, marginTop: 2 }}>{fmtDate(tx.created_at)}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
+
 
 function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, setTab, entitlement }) {
   const [morePage, setMorePage] = useState(null);
@@ -1551,15 +1712,19 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     </MoreSubScreen>
   );
 
-  if (morePage === "rewards") return (
-    <MoreSubScreen onBack={() => setMorePage(null)}>
+  if (morePage === "rewards") return entitlement.tier !== "none" ? (
+    <MoreSubScreen onBack={() => setMorePage(null)} title="Rewards & Balance" subtitle="Track your earnings and rewards" rightElement={<Bell size={20} color={T.muted} style={{ cursor: "pointer" }} />}>
+      <RewardsScreen account={account} entitlement={entitlement} />
+    </MoreSubScreen>
+  ) : (
+    <MoreSubScreen onBack={() => setMorePage(null)} title="Trader Rewards Program" subtitle="Choose a plan to get started">
       <SubscribeScreen account={account} entitlement={entitlement} onBack={() => setMorePage(null)} />
     </MoreSubScreen>
   );
 
   if (morePage === "wallet") return (
-    <MoreSubScreen onBack={() => setMorePage(null)}>
-      <WalletScreen account={account} />
+    <MoreSubScreen onBack={() => setMorePage(null)} title="Rewards & Balance" subtitle="Track your earnings and rewards" rightElement={<Bell size={20} color={T.muted} style={{ cursor: "pointer" }} />}>
+      <RewardsScreen account={account} entitlement={entitlement} />
     </MoreSubScreen>
   );
 
