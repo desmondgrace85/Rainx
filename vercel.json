@@ -1,5 +1,12 @@
 {
   "buildCommand": "npm install && npx vite build --config vite.config.vercel.ts",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/api/signals/:path*", "destination": "/api/proxy" },
+    { "source": "/api/chat",           "destination": "/api/proxy" },
+    { "source": "/api/price",          "destination": "/api/proxy" },
+    { "source": "/api/scan/:path*",    "destination": "/api/proxy" },
+    { "source": "/api/symbols",        "destination": "/api/proxy" },
+    { "source": "/(.*)",               "destination": "/index.html" }
+  ]
 }
