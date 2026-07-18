@@ -4,7 +4,7 @@ import {
   Bell, Home, Briefcase, MessageCircle, MoreHorizontal, Settings, X,
   TrendingUp, TrendingDown, Minus, Activity, Send, Calendar as CalendarIcon,
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
-  CreditCard as CreditCardIcon, Zap, ArrowRight,
+  CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import CommunityTab from "./CommunityTab";
@@ -517,6 +517,7 @@ function SubscribeScreen({ account, entitlement, onBack }) {
     entitlement.refresh();
   };
 
+  const screenTitle = 'Trader Rewards Program';
   if (entitlement.pendingPlan || submitted) {
     return (
       <div style={{ padding: 16 }}>
@@ -1275,24 +1276,158 @@ function ScalpingTab({ account, entitlement, onSubscribe }) {
   );
 }
 
+
+// ---------- More Tab helpers ----------
+
+const DEFAULT_BENEFITS = [
+  { id: "swap-free", icon: "swap", title: "Swap-free", status: "Qualified" },
+  { id: "neg-balance", icon: "shield", title: "Negative Balance Protection", status: null },
+  { id: "vps", icon: "server", title: "Virtual Private Server", status: null },
+];
+
+function BenefitIcon({ type }) {
+  const s = { width: 36, height: 36, borderRadius: 10, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 };
+  if (type === "swap") return <div style={s}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C6A15B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>;
+  if (type === "shield") return <div style={s}><ShieldCheck size={18} color="#C6A15B" /></div>;
+  return <div style={s}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C6A15B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>;
+}
+
+function MoreRow({ icon: Icon, iconType, title, subtitle, badge, badgeColor, onPress }) {
+  return (
+    <button onClick={onPress} style={{ display: "flex", alignItems: "center", width: "100%", background: "none", border: "none", padding: "13px 14px", cursor: "pointer", gap: 12 }}>
+      {iconType ? <BenefitIcon type={iconType} /> : (
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Icon size={18} color={T.gold} />
+        </div>
+      )}
+      <div style={{ flex: 1, textAlign: "left" }}>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 13, color: T.paper }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{subtitle}</div>}
+      </div>
+      {badge && (
+        <span style={{ fontSize: 10.5, fontWeight: 700, color: badgeColor || T.muted, border: `1px solid ${badgeColor ? badgeColor + "55" : T.cardBorder}`, borderRadius: 20, padding: "3px 9px", flexShrink: 0 }}>{badge}</span>
+      )}
+      <ChevronRight size={16} color={T.muted} style={{ flexShrink: 0 }} />
+    </button>
+  );
+}
+
+function MoreSection({ title, children }) {
+  return (
+    <div style={{ marginBottom: 22 }}>
+      <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.goldBright, marginBottom: 8, paddingLeft: 2 }}>{title}</div>
+      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, overflow: "hidden" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function MoreRowDivider() {
+  return <div style={{ height: 1, background: T.cardBorder, marginLeft: 62 }} />;
+}
+
+function MoreSubScreen({ onBack, children }) {
+  return (
+    <div style={{ minHeight: "100%", animation: "slideInRight 0.2s ease" }}>
+      <style>{`@keyframes slideInRight { from { transform: translateX(24px); opacity:0; } to { transform: translateX(0); opacity:1; } }`}</style>
+      <div style={{ display: "flex", alignItems: "center", padding: "4px 16px 10px", borderBottom: `1px solid ${T.cardBorder}` }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", display: "flex", alignItems: "center", gap: 2, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, padding: "8px 0" }}>
+          <ChevronLeft size={20} /> Back
+        </button>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function WalletScreen({ account }) {
+  const [walletData, setWalletData] = useState(null);
+  const [txns, setTxns] = useState([]);
+
+  useEffect(() => {
+    if (!account?.id) return;
+    supabase.from("wallet_balances").select("*").eq("user_id", account.id).single()
+      .then(({ data }) => { if (data) setWalletData(data); }).catch(() => {});
+    supabase.from("wallet_transactions").select("*").eq("user_id", account.id)
+      .order("created_at", { ascending: false }).limit(20)
+      .then(({ data }) => { if (data) setTxns(data); }).catch(() => {});
+  }, [account?.id]);
+
+  const balance = walletData?.balance ?? 0;
+  const available = walletData?.available ?? balance;
+  const pending = walletData?.pending ?? 0;
+
+  return (
+    <div style={{ padding: 16 }}>
+      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: 22, marginBottom: 18 }}>
+        <div style={{ fontSize: 11, color: T.muted, fontWeight: 600, marginBottom: 6 }}>Total Balance</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 18 }}>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 30, color: T.paper }}>${balance.toFixed(2)}</div>
+          <div style={{ fontSize: 13, color: T.muted, fontWeight: 500 }}>USD</div>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ flex: 1, background: "rgba(198,161,91,0.08)", border: `1px solid rgba(198,161,91,0.15)`, borderRadius: 10, padding: "10px 12px" }}>
+            <div style={{ fontSize: 10, color: T.muted, marginBottom: 3 }}>Available</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.goldBright }}>${available.toFixed(2)}</div>
+          </div>
+          <div style={{ flex: 1, background: "rgba(198,161,91,0.08)", border: `1px solid rgba(198,161,91,0.15)`, borderRadius: 10, padding: "10px 12px" }}>
+            <div style={{ fontSize: 10, color: T.muted, marginBottom: 3 }}>Pending</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.muted }}>${pending.toFixed(2)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.goldBright, marginBottom: 8 }}>Transaction History</div>
+      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, overflow: "hidden" }}>
+        {txns.length === 0 ? (
+          <div style={{ padding: 28, textAlign: "center" }}>
+            <div style={{ fontSize: 26, marginBottom: 8 }}>📭</div>
+            <div style={{ fontSize: 12, color: T.muted }}>No transactions yet</div>
+          </div>
+        ) : txns.map((tx, i) => (
+          <div key={tx.id} style={{ padding: "13px 16px", borderBottom: i < txns.length - 1 ? `1px solid ${T.cardBorder}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 12.5, color: T.paper }}>{tx.type || "Transaction"}</div>
+              <div style={{ fontSize: 10.5, color: T.muted, marginTop: 2 }}>{tx.description || ""}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: (tx.amount || 0) >= 0 ? T.sage : T.rust }}>
+                {(tx.amount || 0) >= 0 ? "+" : ""}${Math.abs(tx.amount || 0).toFixed(2)}
+              </div>
+              <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>{tx.created_at ? new Date(tx.created_at).toLocaleDateString() : ""}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, setTab, entitlement }) {
-  const [accountSize, setAccountSize] = useState(1000);
-  const [riskPct, setRiskPct] = useState(1);
-  const [showLegal, setShowLegal] = useState(false);
+  const [morePage, setMorePage] = useState(null);
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [profileMsg, setProfileMsg] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
-  const slDistance = analysis ? Math.abs(last - analysis.stop_loss) : null;
-  const riskAmount = (accountSize * riskPct) / 100;
-  const lotSuggestion = slDistance ? (riskAmount / slDistance).toFixed(4) : null;
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [benefits, setBenefits] = useState(DEFAULT_BENEFITS);
+  const [verification, setVerification] = useState(null);
+  const [showLegal, setShowLegal] = useState(false);
 
   useEffect(() => {
     if (!account?.id) return;
-    supabase.from("profiles").select("username, bio, avatar_url").eq("id", account.id).single().then(({ data }) => {
-      if (data) { setUsername(data.username || ""); setBio(data.bio || ""); setAvatarUrl(data.avatar_url || null); }
+    supabase.from("profiles").select("username, bio, avatar_url, verification_status").eq("id", account.id).single().then(({ data }) => {
+      if (data) {
+        setUsername(data.username || "");
+        setBio(data.bio || "");
+        setAvatarUrl(data.avatar_url || null);
+        setVerification(data.verification_status || null);
+      }
+    });
+    supabase.from("site_content").select("value").eq("key", "more_benefits").single().then(({ data }) => {
+      if (data?.value) { try { setBenefits(JSON.parse(data.value)); } catch { /* use defaults */ } }
     });
   }, [account?.id]);
 
@@ -1336,116 +1471,239 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     setProfileMsg(error ? (error.code === "23505" ? "That username is taken." : "Something went wrong.") : "Saved.");
   };
 
+  const rewardsPlan = entitlement.tier === "none" ? "Not enrolled" :
+    entitlement.tier === "weekly" ? "Weekly Rewards" :
+    entitlement.tier === "monthly" ? "Monthly Rewards" :
+    entitlement.tier === "biannual" ? "Bi-Annual Rewards" : "Loading…";
 
-  return (
-    <div style={{ padding: 16 }}>
-      <div style={{ fontFamily: FONT_HEAD, fontSize: 18, color: T.goldBright, fontWeight: 800, marginBottom: 12 }}>More</div>
+  const verificationLabel = !verification ? "Not verified" :
+    verification === "verified" ? "Verified" :
+    verification === "basic" ? "Verified (Basic)" :
+    verification === "blue" ? "Blue Verified" : verification;
+  const verificationColor = verification ? T.goldBright : T.muted;
 
-      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 6, marginBottom: 16 }}>
-        {[
-          ["subscribe", CreditCardIcon, "Subscription", entitlement.tier === "none" ? "Not subscribed" : `${PLAN_LABELS[entitlement.tier]} plan`],
-          ["history", ScrollText, "Trade History", null],
-          ["scalping", Zap, "Scalping", hasAccess(entitlement.tier, "monthly") ? "Unlocked" : "Locked"],
-        ].map(([key, Icon, label, sub]) => (
-          <button key={key} onClick={() => setTab(key)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "none", border: "none", padding: "12px 10px", cursor: "pointer" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Icon size={16} color={T.gold} />
-              <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper }}>{label}</span>
-            </div>
-            {sub && <span style={{ fontSize: 10.5, color: T.muted }}>{sub}</span>}
-          </button>
-        ))}
-      </div>
+  const profileInitial = (username || account?.email || "?")[0]?.toUpperCase();
 
-      <Section title="Account" icon={ShieldCheck}>
-        <div style={{ fontSize: 12.5, fontWeight: 600 }}>{account?.email}</div>
-        <div style={{ fontSize: 10.5, color: T.muted, marginTop: 6 }}>Member since {new Date(account?.joinedAt || Date.now()).toLocaleDateString()}</div>
-        <button onClick={onLogout} style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 8, padding: "8px 12px", color: T.rust, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-          <LogOut size={14} /> Log out
-        </button>
-      </Section>
-
-      <Section title="Connect Telegram" icon={Send}>
-        <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.6, marginBottom: 10 }}>
-          Receive live signals directly in Telegram. Open the bot, tap <strong style={{ color: T.paper }}>Start</strong>, choose <strong style={{ color: T.paper }}>Log in</strong>, and enter your RainX email and password to link your account.
-        </div>
-        <a
-          href="https://t.me/RainaAIBot"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#229ED9", color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer", textDecoration: "none" }}
-        >
-          <Send size={14} /> Open @RainaAIBot
-        </a>
-        <div style={{ fontSize: 10, color: T.muted, marginTop: 8 }}>
-          Already linked? Your signals will arrive automatically when confidence ≥ 65%.
-        </div>
-      </Section>
-
-      <Section title="Community Profile" icon={Users2}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="avatar" style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover" }} />
-          ) : (
-            <div style={{ width: 56, height: 56, borderRadius: "50%", background: T.gold, display: "flex", alignItems: "center", justifyContent: "center", color: T.ink, fontWeight: 800, fontFamily: FONT_HEAD }}>{(username || account.email)[0]?.toUpperCase()}</div>
-          )}
-          <label style={{ background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 8, padding: "7px 12px", color: T.paper, fontSize: 11.5, cursor: "pointer" }}>
-            {uploadingAvatar ? "Uploading…" : "Change photo"}
-            <input type="file" accept="image/*" onChange={(e) => e.target.files[0] && uploadAvatar(e.target.files[0])} style={{ display: "none" }} disabled={uploadingAvatar} />
-          </label>
-        </div>
-        <label style={{ fontSize: 11, color: T.muted, fontWeight: 600 }}>Username (shown on Community posts)</label>
-        <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Leave blank to show your email instead" style={{ ...inputStyle, width: "100%", marginTop: 4, marginBottom: 10 }} />
-        <label style={{ fontSize: 11, color: T.muted, fontWeight: 600 }}>Bio</label>
-        <input value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Say something about yourself" style={{ ...inputStyle, width: "100%", marginTop: 4, marginBottom: 10 }} />
-        {profileMsg && <div style={{ fontSize: 11, color: profileMsg === "Saved." ? T.sage : T.rust, marginBottom: 8 }}>{profileMsg}</div>}
-        <button onClick={saveProfile} disabled={savingProfile} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 8, padding: "8px 14px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-          {savingProfile ? "Saving…" : "Save"}
-        </button>
-      </Section>
-
-      <Section title="Settings" icon={Settings}>
-        <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12.5, padding: "6px 0", fontWeight: 500 }}>
-          Background scan (checks for new 15M/1H candles automatically)
-          <input type="checkbox" checked={autoScan} onChange={(e) => setAutoScan(e.target.checked)} />
-        </label>
-        {typeof Notification !== "undefined" && Notification.permission !== "granted" && (
-          <button onClick={() => Notification.requestPermission()} style={{ marginTop: 6, fontSize: 11, color: T.gold, background: "none", border: `1px solid ${T.gold}`, borderRadius: 6, padding: "6px 10px", cursor: "pointer", fontWeight: 600 }}>Enable push notifications</button>
-        )}
-      </Section>
-
-      <Section title="Risk calculator" icon={Calculator}>
-        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-          <label style={{ flex: 1, fontSize: 11, color: T.muted, fontWeight: 600 }}>Account ($)<input type="number" value={accountSize} onChange={(e) => setAccountSize(Number(e.target.value) || 0)} style={{ ...inputStyle, width: "100%", marginTop: 4 }} /></label>
-          <label style={{ flex: 1, fontSize: 11, color: T.muted, fontWeight: 600 }}>Risk / trade (%)<input type="number" value={riskPct} onChange={(e) => setRiskPct(Number(e.target.value) || 0)} style={{ ...inputStyle, width: "100%", marginTop: 4 }} /></label>
-        </div>
-        {analysis && slDistance ? (
-          <>
-            <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.6, fontWeight: 500 }}>Based on {inst.symbol}'s current stop distance, risking ${riskAmount.toFixed(2)} suggests:</div>
-            <div style={{ fontFamily: FONT_HEAD, fontSize: 22, color: T.goldBright, fontWeight: 800 }}>{lotSuggestion} units</div>
-          </>
-        ) : <div style={{ fontSize: 12, color: T.muted, fontWeight: 500 }}>Open an active signal on Home to size a position.</div>}
-      </Section>
-
-      <Section title="Economic calendar" icon={CalendarIcon}>
-        {SAMPLE_CALENDAR.map((e, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "5px 0", borderBottom: i < SAMPLE_CALENDAR.length - 1 ? `1px solid ${T.cardBorder}` : "none", fontWeight: 500 }}>
-            <span style={{ color: T.muted, width: 70 }}>{e.time}</span>
-            <span style={{ color: T.paper, flex: 1 }}>{e.currency} · {e.event}</span>
-            <span style={{ color: e.impact === "High" ? T.rust : e.impact === "Medium" ? T.gold : T.muted, fontWeight: 700 }}>{e.impact}</span>
+  // ---- Sub-screens ----
+  if (morePage === "profile") return (
+    <MoreSubScreen onBack={() => setMorePage(null)}>
+      <div style={{ padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20, padding: 18, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16 }}>
+          {avatarUrl
+            ? <img src={avatarUrl} alt="avatar" style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover" }} />
+            : <div style={{ width: 64, height: 64, borderRadius: "50%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, display: "flex", alignItems: "center", justifyContent: "center", color: T.ink, fontWeight: 800, fontFamily: FONT_HEAD, fontSize: 22 }}>{profileInitial}</div>
+          }
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>{username || account?.email}</div>
+            <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>Member since {new Date(account?.joinedAt || Date.now()).toLocaleDateString()}</div>
+            <label style={{ display: "inline-block", marginTop: 6, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 8, padding: "5px 10px", color: T.goldBright, fontSize: 11, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 600 }}>
+              {uploadingAvatar ? "Uploading…" : "Change photo"}
+              <input type="file" accept="image/*" onChange={(e) => e.target.files[0] && uploadAvatar(e.target.files[0])} style={{ display: "none" }} disabled={uploadingAvatar} />
+            </label>
           </div>
-        ))}
-        <div style={{ fontSize: 10, color: T.muted, marginTop: 6 }}>Sample events shown pending a live calendar connection.</div>
-      </Section>
-
-      <Section title="Legal" icon={FileText}>
-        <button onClick={() => setShowLegal(true)} style={{ background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 8, padding: "8px 12px", color: T.paper, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-          Terms & Risk Disclosure
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 4 }}>Username</label>
+          <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Leave blank to show email" style={{ ...inputStyle, width: "100%" }} />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 4 }}>Bio</label>
+          <input value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Say something about yourself" style={{ ...inputStyle, width: "100%" }} />
+        </div>
+        {profileMsg && <div style={{ fontSize: 11, color: profileMsg === "Saved." ? T.sage : T.rust, marginBottom: 10 }}>{profileMsg}</div>}
+        <button onClick={saveProfile} disabled={savingProfile} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
+          {savingProfile ? "Saving…" : "Save Profile"}
         </button>
-      </Section>
+        <button onClick={onLogout} style={{ width: "100%", marginTop: 12, background: "none", border: `1px solid rgba(176,96,74,0.4)`, borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.rust, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          <LogOut size={15} /> Log out
+        </button>
+      </div>
+    </MoreSubScreen>
+  );
 
-      <div style={{ fontSize: 10, color: T.muted, lineHeight: 1.6, textAlign: "center", marginTop: 10, fontWeight: 500 }}>
-        RainX is an analysis tool, not a broker. Nothing here is financial advice, and no outcome is guaranteed.
+  if (morePage === "verification") return (
+    <MoreSubScreen onBack={() => setMorePage(null)}>
+      <div style={{ padding: 16 }}>
+        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: 22, marginBottom: 16, textAlign: "center" }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(198,161,91,0.12)", border: `2px solid ${T.gold}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+            <ShieldCheck size={30} color={T.goldBright} />
+          </div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, marginBottom: 8 }}>Verification Status</div>
+          <div style={{ display: "inline-block", background: verification ? "rgba(198,161,91,0.12)" : "rgba(156,148,127,0.1)", border: `1px solid ${verification ? T.gold : T.cardBorder}`, borderRadius: 20, padding: "6px 18px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: verificationColor }}>
+            {verificationLabel}
+          </div>
+        </div>
+        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: 18 }}>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.goldBright, marginBottom: 10 }}>About Verification</div>
+          <div style={{ fontSize: 12.5, color: T.paper, lineHeight: 1.8, marginBottom: 14 }}>
+            Your verification level is tied to your Trader Rewards Program status. Higher reward tiers unlock higher verification levels — giving you access to exclusive features, increased visibility, and additional platform benefits.
+          </div>
+          <div style={{ padding: "12px 14px", background: "rgba(198,161,91,0.06)", borderRadius: 10, border: `1px solid rgba(198,161,91,0.15)` }}>
+            <div style={{ fontSize: 11, color: T.muted, marginBottom: 4 }}>Connected to</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.goldBright }}>Trader Rewards Program</div>
+            <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>Upgrade your rewards plan to advance your verification level</div>
+          </div>
+          <button onClick={() => setMorePage("rewards")} style={{ marginTop: 14, width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+            View Trader Rewards Program
+          </button>
+        </div>
+      </div>
+    </MoreSubScreen>
+  );
+
+  if (morePage === "rewards") return (
+    <MoreSubScreen onBack={() => setMorePage(null)}>
+      <SubscribeScreen account={account} entitlement={entitlement} onBack={() => setMorePage(null)} />
+    </MoreSubScreen>
+  );
+
+  if (morePage === "wallet") return (
+    <MoreSubScreen onBack={() => setMorePage(null)}>
+      <WalletScreen account={account} />
+    </MoreSubScreen>
+  );
+
+  if (morePage === "history") return (
+    <MoreSubScreen onBack={() => setMorePage(null)}>
+      <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => setMorePage("rewards")} />
+    </MoreSubScreen>
+  );
+
+  if (morePage === "scalping") return (
+    <MoreSubScreen onBack={() => setMorePage(null)}>
+      <ScalpingTab account={account} entitlement={entitlement} onSubscribe={() => setMorePage("rewards")} />
+    </MoreSubScreen>
+  );
+
+  if (morePage === "telegram") return (
+    <MoreSubScreen onBack={() => setMorePage(null)}>
+      <div style={{ padding: 16 }}>
+        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: 22, marginBottom: 14 }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#229ED9", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+            <Send size={22} color="#fff" />
+          </div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper, marginBottom: 8 }}>Connect to Telegram</div>
+          <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.8, marginBottom: 18 }}>
+            Receive live signals directly in Telegram. Open the bot, tap <strong style={{ color: T.paper }}>Start</strong>, choose <strong style={{ color: T.paper }}>Log in</strong>, and enter your RainX email and password to link your account.
+          </div>
+          <a href="https://t.me/RainaAIBot" target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "#229ED9", color: "#fff", border: "none", borderRadius: 12, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: "pointer", textDecoration: "none", boxSizing: "border-box" }}>
+            <Send size={16} /> Open @RainaAIBot
+          </a>
+        </div>
+        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 16px" }}>
+          <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.7 }}>Already linked? Your signals will arrive automatically when confidence ≥ 65%.</div>
+        </div>
+      </div>
+    </MoreSubScreen>
+  );
+
+  if (morePage === "community-profile") return (
+    <MoreSubScreen onBack={() => setMorePage(null)}>
+      <div style={{ padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20, padding: 18, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16 }}>
+          {avatarUrl
+            ? <img src={avatarUrl} alt="avatar" style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover" }} />
+            : <div style={{ width: 64, height: 64, borderRadius: "50%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, display: "flex", alignItems: "center", justifyContent: "center", color: T.ink, fontWeight: 800, fontFamily: FONT_HEAD, fontSize: 22 }}>{profileInitial}</div>
+          }
+          <div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>{username || account?.email}</div>
+            <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>RainX Community Member</div>
+          </div>
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 4 }}>Display Name</label>
+          <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Your community name" style={{ ...inputStyle, width: "100%" }} />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 4 }}>Bio</label>
+          <input value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell the community about yourself" style={{ ...inputStyle, width: "100%" }} />
+        </div>
+        {profileMsg && <div style={{ fontSize: 11, color: profileMsg === "Saved." ? T.sage : T.rust, marginBottom: 10 }}>{profileMsg}</div>}
+        <button onClick={saveProfile} disabled={savingProfile} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
+          {savingProfile ? "Saving…" : "Save Profile"}
+        </button>
+      </div>
+    </MoreSubScreen>
+  );
+
+  // ---- Main More Page ----
+  return (
+    <div style={{ padding: "8px 16px 28px" }}>
+      <MoreSection title="Account">
+        <MoreRow
+          icon={Users2}
+          title={username || account?.email || "Profile"}
+          subtitle={`Member since ${new Date(account?.joinedAt || Date.now()).toLocaleDateString()}`}
+          onPress={() => setMorePage("profile")}
+        />
+        <MoreRowDivider />
+        <div style={{ display: "flex" }}>
+          <button onClick={() => setMorePage("verification")} style={{ flex: 1, display: "flex", alignItems: "center", padding: "12px 14px", background: "none", border: "none", borderRight: `1px solid ${T.cardBorder}`, cursor: "pointer", gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <ShieldCheck size={16} color={T.gold} />
+            </div>
+            <div style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 12, color: T.paper }}>Verification</div>
+              <div style={{ fontSize: 10.5, color: verificationColor, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{verificationLabel}</div>
+            </div>
+            <ChevronRight size={13} color={T.muted} style={{ flexShrink: 0 }} />
+          </button>
+          <button onClick={() => setMorePage("rewards")} style={{ flex: 1, display: "flex", alignItems: "center", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <CreditCardIcon size={16} color={T.gold} />
+            </div>
+            <div style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 12, color: T.paper }}>Trader Rewards</div>
+              <div style={{ fontSize: 10.5, color: T.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rewardsPlan}</div>
+            </div>
+            <ChevronRight size={13} color={T.muted} style={{ flexShrink: 0 }} />
+          </button>
+        </div>
+      </MoreSection>
+
+      <MoreSection title="Benefits">
+        {benefits.map((b, i) => (
+          <React.Fragment key={b.id}>
+            {i > 0 && <MoreRowDivider />}
+            <MoreRow
+              iconType={b.icon}
+              title={b.title}
+              badge={b.status}
+              badgeColor={b.status === "Qualified" ? T.goldBright : undefined}
+              onPress={() => {}}
+            />
+          </React.Fragment>
+        ))}
+      </MoreSection>
+
+      <MoreSection title="Wallet">
+        <MoreRow
+          icon={Wallet}
+          title="Crypto Wallet Balance"
+          subtitle="0.00 USD"
+          onPress={() => setMorePage("wallet")}
+        />
+      </MoreSection>
+
+      <MoreSection title="More">
+        <MoreRow icon={ScrollText} title="Trade History" onPress={() => setMorePage("history")} />
+        <MoreRowDivider />
+        <MoreRow
+          icon={Zap}
+          title="Scalping"
+          badge={hasAccess(entitlement.tier, "monthly") ? "Unlocked" : "Locked"}
+          badgeColor={hasAccess(entitlement.tier, "monthly") ? T.sage : T.muted}
+          onPress={() => setMorePage("scalping")}
+        />
+        <MoreRowDivider />
+        <MoreRow icon={Send} title="Connect Telegram" onPress={() => setMorePage("telegram")} />
+        <MoreRowDivider />
+        <MoreRow icon={Users2} title="Community Profile" onPress={() => setMorePage("community-profile")} />
+      </MoreSection>
+
+      <div style={{ textAlign: "center", marginTop: 4 }}>
+        <button onClick={() => setShowLegal(true)} style={{ background: "none", border: "none", color: T.muted, fontSize: 10.5, cursor: "pointer", textDecoration: "underline", fontFamily: FONT_BODY }}>Terms & Risk Disclosure</button>
+        <div style={{ fontSize: 10, color: T.muted, marginTop: 4, lineHeight: 1.6 }}>RainX is an analysis tool, not a broker.</div>
       </div>
 
       {showLegal && (
@@ -1457,10 +1715,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             </div>
             <div style={{ fontSize: 12, color: T.paper, lineHeight: 1.7, fontWeight: 500 }}>
               <p><strong>Not financial advice.</strong> RainX and Raina AI provide market analysis and educational commentary only. Nothing in this app is a recommendation to buy, sell, or hold any financial instrument.</p>
-              <p><strong>No guaranteed outcomes.</strong> Trading forex, metals, indices, and crypto carries a high level of risk and may not be suitable for all investors. Past performance and AI-generated confidence scores do not guarantee future results. You can lose some or all of your invested capital.</p>
+              <p><strong>No guaranteed outcomes.</strong> Trading forex, metals, indices, and crypto carries a high level of risk and may not be suitable for all investors. Past performance and AI-generated confidence scores do not guarantee future results.</p>
               <p><strong>Your responsibility.</strong> You are solely responsible for your own trading decisions, position sizing, and risk management. RainX does not execute trades and is not a broker.</p>
               <p><strong>Data.</strong> Market data and analysis in this app may be simulated or delayed pending a live data connection. Always verify prices with your broker before acting.</p>
-              <p><strong>Account data.</strong> Your email and a securely hashed password are stored to provide account access. We do not sell your data.</p>
               <p style={{ color: T.muted, fontSize: 10.5 }}>This is placeholder legal text and not a substitute for review by a qualified lawyer before public launch.</p>
             </div>
           </div>
@@ -1469,6 +1726,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     </div>
   );
 }
+
 function Section({ title, icon: Icon, children }) {
   return (
     <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: 14, marginBottom: 12 }}>
