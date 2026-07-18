@@ -61,9 +61,9 @@ async function storageDelete(key, shared) {
 
 // ---------- Instruments ----------
 const INSTRUMENTS = [
-  { symbol: "XAUUSD", name: "Gold", base: 3365, vol: 6, digits: 2, cls: "metal", unit: "points" },
-  { symbol: "BTCUSD", name: "Bitcoin", base: 63500, vol: 220, digits: 1, cls: "crypto", unit: "points" },
-  { symbol: "ETHUSD", name: "Ethereum", base: 3420, vol: 18, digits: 2, cls: "crypto", unit: "points" },
+  { symbol: "XAUUSD", name: "Gold", base: 4020, vol: 8, digits: 2, cls: "metal", unit: "points" },
+  { symbol: "BTCUSD", name: "Bitcoin", base: 64000, vol: 250, digits: 1, cls: "crypto", unit: "points" },
+  { symbol: "ETHUSD", name: "Ethereum", base: 1850, vol: 15, digits: 2, cls: "crypto", unit: "points" },
 ];
 
 function isMarketOpen(cls) {
@@ -131,14 +131,12 @@ function useMultiPriceSeries() {
       } catch { return null; }
     };
 
-    // Seed every market with a REAL price right away (staggered to stay under
-    // free-tier rate limits) instead of waiting up to ~18 minutes of rotation
-    // for a market's first real tick to arrive.
+    // Seed ALL markets in parallel immediately — no staggering needed since
+    // we hit our own Railway backend (no rate limits).
     const seedAll = async () => {
-      for (let idx = 0; idx < INSTRUMENTS.length; idx++) {
+      await Promise.all(INSTRUMENTS.map(async (inst) => {
         if (cancelled) return;
-        const inst = INSTRUMENTS[idx];
-        if (!isMarketOpen(inst.cls)) continue;
+        if (!isMarketOpen(inst.cls)) return;
         try {
           const res = await fetch(`/api/price?symbol=${encodeURIComponent(inst.symbol)}`);
           const data = await res.json();
@@ -147,14 +145,14 @@ function useMultiPriceSeries() {
             setSeriesMap((prev) => ({ ...prev, [inst.symbol]: seedSeriesFromPrice(inst, price) }));
           }
         } catch { /* keep the placeholder shape for this one market if the seed fetch fails */ }
-      }
+      }));
     };
 
     let i = 0;
     const rotate = () => { fetchOne(INSTRUMENTS[i % INSTRUMENTS.length]); i += 1; };
 
     seedAll();
-    const id = setInterval(rotate, 400000);
+    const id = setInterval(rotate, 8000);
     return () => { cancelled = true; clearInterval(id); };
   }, []);
   return seriesMap;
@@ -1355,6 +1353,23 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <button onClick={onLogout} style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 6, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 8, padding: "8px 12px", color: T.rust, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
           <LogOut size={14} /> Log out
         </button>
+      </Section>
+
+      <Section title="Connect Telegram" icon={Send}>
+        <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.6, marginBottom: 10 }}>
+          Receive live signals directly in Telegram. Open the bot, tap <strong style={{ color: T.paper }}>Start</strong>, choose <strong style={{ color: T.paper }}>Log in</strong>, and enter your RainX email and password to link your account.
+        </div>
+        <a
+          href="https://t.me/RainaAIBot"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#229ED9", color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer", textDecoration: "none" }}
+        >
+          <Send size={14} /> Open @RainaAIBot
+        </a>
+        <div style={{ fontSize: 10, color: T.muted, marginTop: 8 }}>
+          Already linked? Your signals will arrive automatically when confidence ≥ 65%.
+        </div>
       </Section>
 
       <Section title="Community Profile" icon={Users2}>
