@@ -2,11 +2,12 @@
   "buildCommand": "npm install && npx vite build --config vite.config.vercel.ts",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/signals/:path*", "destination": "/api/proxy" },
-    { "source": "/api/chat",           "destination": "/api/proxy" },
-    { "source": "/api/price",          "destination": "/api/proxy" },
-    { "source": "/api/scan/:path*",    "destination": "/api/proxy" },
-    { "source": "/api/symbols",        "destination": "/api/proxy" },
+    { "source": "/api/signals/:path*", "destination": "https://raina-ai-production.up.railway.app/api/signals/:path*" },
+    { "source": "/api/scan/:path*",    "destination": "https://raina-ai-production.up.railway.app/api/scan/:path*" },
+    { "source": "/api/chat",           "destination": "https://raina-ai-production.up.railway.app/api/chat" },
+    { "source": "/api/price",          "destination": "https://raina-ai-production.up.railway.app/api/price" },
+    { "source": "/api/symbols",        "destination": "https://raina-ai-production.up.railway.app/api/symbols" },
+    { "source": "/api/health",         "destination": "https://raina-ai-production.up.railway.app/health" },
     { "source": "/(.*)",               "destination": "/index.html" }
   ]
 }
