@@ -139,9 +139,17 @@ function renderTextWithTags(text, onOpenProfile) {
     if (/^#\w+/.test(part)) return <span key={i} style={{ color: T.gold, fontWeight: 600 }}>{part}</span>;
     if (/^@\w+/.test(part)) {
       const handle = part.match(/^@(\w+)/)[1];
+      const isRaina = handle.toLowerCase() === "rainaai";
       return (
-        <span key={i} style={{ color: T.sage, fontWeight: 600, cursor: onOpenProfile ? "pointer" : "default", textDecoration: onOpenProfile ? "underline" : "none" }}
-          onClick={onOpenProfile ? (e) => { e.stopPropagation(); goToMention(handle, onOpenProfile); } : undefined}>
+        <span key={i}
+          style={{
+            color: isRaina ? T.goldBright : T.sage,
+            fontWeight: 800,
+            fontSize: "1.05em",
+            cursor: "pointer",
+            letterSpacing: 0.2,
+          }}
+          onClick={(e) => { e.stopPropagation(); goToMention(handle, onOpenProfile); }}>
           {part}
         </span>
       );
@@ -218,7 +226,7 @@ function Composer({ account, onPosted, compact }) {
       fetch("/api/community-ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ post_id: post.id, post_text: trimmed, author_name: account.email }),
+        body: JSON.stringify({ post_id: post.id, post_text: trimmed, author_name: account.email, user_id: account.id }),
       }).catch(() => {});
       // Reload after a short delay so the AI comment appears
       setTimeout(() => onPosted(), 4000);
@@ -306,6 +314,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
             post_text: postRow?.text || "",
             comment_text: trimmed,
             author_name: account.email,
+            user_id: account.id,
           }),
         }).catch(() => {});
         setTimeout(() => load(), 5000);
