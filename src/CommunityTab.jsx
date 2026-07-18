@@ -672,7 +672,9 @@ function CommunityNotifBell({ account }) {
 }
 
 // ---------- Main feed ----------
-export default function CommunityTab({ account }) {
+export default function CommunityTab({ account, themeTokens }) {
+  // Sync theme tokens from parent so T reflects the active theme
+  if (themeTokens) Object.assign(T, themeTokens);
   const [posts, setPosts] = useState(null);
   const [profilesMap, setProfilesMap] = useState({});
   const [likeData, setLikeData] = useState({});

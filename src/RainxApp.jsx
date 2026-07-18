@@ -21,6 +21,9 @@ const T = {
   paper: "#F2EDE0",
   muted: "#9C947F",
 };
+// Light and dark token palettes – applied by mutating T in-place inside MainAppContent
+const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#C6A15B", goldBright:"#E3C077", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
+const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#C6A15B", goldBright:"#9E7B35", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
 const FONT_HEAD = "'Montserrat', sans-serif";
 const FONT_BODY = "'Montserrat', sans-serif";
 
@@ -261,7 +264,7 @@ function Toast({ toast, onDone }) {
     </div>
   );
 }
-const inputStyle = { flex: 1, background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: 10, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 500 };
+const getInputStyle = () => ({ flex: 1, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: 10, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 500 });
 
 // ---------- Auth (real Supabase accounts) ----------
 async function recordActivity(userId, action, meta) {
@@ -523,7 +526,7 @@ function SubscribeScreen({ account, entitlement, onBack }) {
       <div style={{ padding: 16 }}>
         <button onClick={onBack} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 12, marginBottom: 14 }}>← Back</button>
         <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 22, textAlign: "center" }}>
-          <div style={{ fontSize: 28 }}>⏳</div>
+          
           <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, marginTop: 8, color: T.paper }}>Payment pending confirmation</div>
           <div style={{ fontSize: 12, color: T.muted, marginTop: 6, lineHeight: 1.6 }}>
             Your {PLAN_LABELS[entitlement.pendingPlan || selectedPlan]} plan request has been submitted. Access unlocks automatically once an admin confirms your payment.
@@ -544,7 +547,7 @@ function SubscribeScreen({ account, entitlement, onBack }) {
             <img src={selectedMethod.image_url} alt="Payment details" style={{ width: "100%", borderRadius: 10, marginBottom: 14 }} />
           )}
           <label style={{ fontSize: 11, color: T.muted, fontWeight: 600 }}>Payment reference (optional)</label>
-          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. transaction ID" style={{ ...inputStyle, width: "100%", marginTop: 4, marginBottom: 14 }} />
+          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. transaction ID" style={{ ...getInputStyle(), width: "100%", marginTop: 4, marginBottom: 14 }} />
           <button onClick={submitPayment} disabled={busy} style={{ width: "100%", background: T.gold, color: T.ink, border: "none", borderRadius: 10, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
             {busy ? "Submitting…" : "I've paid — submit for confirmation"}
           </button>
@@ -621,6 +624,13 @@ function MainAppContent({ account, onLogout }) {
   const [activeToast, setActiveToast] = useState(null);
   const [autoScan, setAutoScan] = useState(true);
   const lastCandleTimeRef = useRef({}); // `${symbol}_${tfKey}` -> datetime string of the last candle we saw
+
+  // ─── Theme ─────────────────────────────────────────────────────────────────
+  const [themeMode, setThemeMode] = useState(() => lsGet("rainx-theme") || "light");
+  const isDark = themeMode === "dark" || (themeMode === "system" && typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches);
+  // Mutate T in-place BEFORE children render — all 200+ T.xxx refs in child components pick up new values automatically
+  Object.assign(T, isDark ? DARK_TOKENS : LIGHT_TOKENS);
+  useEffect(() => { document.body.style.background = T.ink; }, [isDark]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -889,11 +899,11 @@ function MainAppContent({ account, onLogout }) {
       <div style={{ paddingBottom: 78 }}>
         {tab === "home" && <HomeTab inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} sma20={sma20} sma50={sma50} rsiVal={rsiVal} activeSignal={activeSignal} loading={loadingKey === `${activeSymbol}_${selectedTf}`} onRefresh={() => checkCandle(inst, TIMEFRAMES.find((t) => t.key === selectedTf))} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} signalsMap={signalsMap} selectedTf={selectedTf} setSelectedTf={setSelectedTf} entitlement={entitlement} onSubscribe={() => setTab("subscribe")} />}
         {tab === "markets" && <MarketsTab seriesMap={seriesMap} signalsMap={signalsMap} activeSymbol={activeSymbol} onSelect={(s) => { setActiveSymbol(s); setTab("home"); }} />}
-        {tab === "community" && <CommunityTab account={account} />}
+        {tab === "community" && <CommunityTab account={account} themeTokens={T} />}
         {tab === "history" && <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => setTab("subscribe")} />}
         {tab === "scalping" && <ScalpingTab account={account} entitlement={entitlement} onSubscribe={() => setTab("subscribe")} />}
         {tab === "subscribe" && <SubscribeScreen account={account} entitlement={entitlement} onBack={() => setTab("more")} />}
-        {tab === "more" && <MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} setTab={setTab} entitlement={entitlement} />}
+        {tab === "more" && <MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} setTab={setTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} />}
       </div>
 
       {showNotifPanel && (
@@ -922,7 +932,7 @@ function MainAppContent({ account, onLogout }) {
         {[["home", Home, "Home"], ["markets", Briefcase, "Markets"], ["community", Users2, "Community"], ["more", MoreHorizontal, "More"]].map(([key, Icon, label]) => (
           <button key={key} onClick={() => setTab(key)} style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, color: tab === key ? T.gold : T.muted, cursor: "pointer" }}>
             <Icon size={20} />
-            <span style={{ fontSize: 10, fontFamily: FONT_HEAD, fontWeight: 600 }}>{label}</span>
+            <span style={{ fontSize: 10, fontFamily: FONT_HEAD, fontWeight: 700 }}>{label}</span>
           </button>
         ))}
       </div>
@@ -1170,7 +1180,7 @@ function ChatTab({ inst, analysis, last, account }) {
         {busy && <div style={{ color: T.muted, fontSize: 12, fontWeight: 500 }}>Raina is thinking…</div>}
       </div>
       <div style={{ display: "flex", gap: 8 }}>
-        <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder={recording ? "Listening…" : "Should I enter now?"} style={{ ...inputStyle }} />
+        <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder={recording ? "Listening…" : "Should I enter now?"} style={{ ...getInputStyle() }} />
         <button onClick={toggleRecording} disabled={!SpeechRecognitionCtor} title={SpeechRecognitionCtor ? "Voice input" : "Voice input not supported in this browser"} style={{ background: recording ? T.rust : T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 8, padding: "0 12px", cursor: SpeechRecognitionCtor ? "pointer" : "not-allowed", opacity: SpeechRecognitionCtor ? 1 : 0.4 }}>
           {recording ? <Square size={16} color="#fff" /> : <Mic size={16} color={T.paper} />}
         </button>
@@ -1301,7 +1311,7 @@ function MoreRow({ icon: Icon, iconType, title, subtitle, badge, badgeColor, onP
         </div>
       )}
       <div style={{ flex: 1, textAlign: "left" }}>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 13, color: T.paper }}>{title}</div>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>{title}</div>
         {subtitle && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{subtitle}</div>}
       </div>
       {badge && (
@@ -1369,7 +1379,7 @@ function MoreSubScreen({ onBack, title, subtitle, rightElement, children }) {
           <ChevronLeft size={22} />
         </button>
         <div style={{ flex: 1, textAlign: "center" }}>
-          {title && <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 16, color: T.goldBright, lineHeight: 1.2 }}>{title}</div>}
+          {title && <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright, lineHeight: 1.2 }}>{title}</div>}
           {subtitle && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{subtitle}</div>}
         </div>
         <div style={{ flexShrink: 0, width: 30, display: "flex", justifyContent: "flex-end" }}>
@@ -1472,7 +1482,6 @@ function RewardsScreen({ account, entitlement }) {
               <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 32, color: T.paper, letterSpacing: -0.5, lineHeight: 1.15 }}>{fmtGHS(totalBalance)}</div>
               <div style={{ marginTop: 14 }}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.4)", border: "1px solid rgba(198,161,91,0.25)", borderRadius: 20, padding: "5px 12px", fontSize: 11.5, color: weeklyPct >= 0 ? T.goldBright : T.rust, fontWeight: 600 }}>
-                  <span style={{ fontSize: 9 }}>✦</span>
                   {weeklyPct >= 0 ? `+${weeklyPct.toFixed(2)}%` : `${weeklyPct.toFixed(2)}%`} this week
                 </span>
               </div>
@@ -1565,7 +1574,7 @@ function RewardsScreen({ account, entitlement }) {
 }
 
 
-function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, setTab, entitlement }) {
+function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, setTab, entitlement, themeMode, setThemeMode }) {
   const [morePage, setMorePage] = useState(null);
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
@@ -1699,11 +1708,11 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         </div>
         <div style={{ marginBottom: 12 }}>
           <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 4 }}>Username</label>
-          <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Leave blank to show email" style={{ ...inputStyle, width: "100%" }} />
+          <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Leave blank to show email" style={{ ...getInputStyle(), width: "100%" }} />
         </div>
         <div style={{ marginBottom: 16 }}>
           <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 4 }}>Bio</label>
-          <input value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Say something about yourself" style={{ ...inputStyle, width: "100%" }} />
+          <input value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Say something about yourself" style={{ ...getInputStyle(), width: "100%" }} />
         </div>
         {profileMsg && <div style={{ fontSize: 11, color: profileMsg === "Saved." ? T.sage : T.rust, marginBottom: 10 }}>{profileMsg}</div>}
         <button onClick={saveProfile} disabled={savingProfile} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
@@ -1875,11 +1884,11 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         </div>
         <div style={{ marginBottom: 12 }}>
           <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 4 }}>Display Name</label>
-          <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Your community name" style={{ ...inputStyle, width: "100%" }} />
+          <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Your community name" style={{ ...getInputStyle(), width: "100%" }} />
         </div>
         <div style={{ marginBottom: 16 }}>
           <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 4 }}>Bio</label>
-          <input value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell the community about yourself" style={{ ...inputStyle, width: "100%" }} />
+          <input value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell the community about yourself" style={{ ...getInputStyle(), width: "100%" }} />
         </div>
         {profileMsg && <div style={{ fontSize: 11, color: profileMsg === "Saved." ? T.sage : T.rust, marginBottom: 10 }}>{profileMsg}</div>}
         <button onClick={saveProfile} disabled={savingProfile} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
@@ -1906,7 +1915,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               <VerifBadgeIcon size={16} />
             </div>
             <div style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 12, color: T.paper }}>Verification</div>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, color: T.paper, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Verification</div>
               <div style={{ fontSize: 10.5, color: verificationColor, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 3 }}>
                 {verificationLabel}
               </div>
@@ -1918,7 +1927,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               <CreditCardIcon size={16} color={T.gold} />
             </div>
             <div style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 12, color: T.paper }}>Trader Rewards</div>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, color: T.paper, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Rewards</div>
               <div style={{ fontSize: 10.5, color: T.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{rewardsPlan}</div>
             </div>
             <ChevronRight size={13} color={T.muted} style={{ flexShrink: 0 }} />
@@ -1964,6 +1973,23 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <MoreRow icon={Send} title="Connect Telegram" onPress={() => setMorePage("telegram")} />
         <MoreRowDivider />
         <MoreRow icon={Users2} title="Community Profile" onPress={() => setMorePage("community-profile")} />
+      </MoreSection>
+
+      <MoreSection title="Appearance">
+        {[["light","Light","Sun — white background"],["dark","Dark","Moon — dark background"],["system","System","Match device setting"]].map(([val, label, desc]) => (
+          <React.Fragment key={val}>
+            <button onClick={() => { lsSet("rainx-theme", val); setThemeMode(val); }} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: "13px 16px", gap: 12 }}>
+              <div style={{ flex: 1, textAlign: "left" }}>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, color: T.paper }}>{label}</div>
+                <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{desc}</div>
+              </div>
+              <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${themeMode === val ? T.gold : T.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {themeMode === val && <div style={{ width: 10, height: 10, borderRadius: "50%", background: T.gold }} />}
+              </div>
+            </button>
+            {val !== "system" && <MoreRowDivider />}
+          </React.Fragment>
+        ))}
       </MoreSection>
 
       <div style={{ textAlign: "center", marginTop: 4 }}>
