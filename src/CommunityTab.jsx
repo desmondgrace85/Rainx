@@ -194,7 +194,7 @@ function Badge({ isAdmin, badge, isPro }) {
   if (isAdmin) return <GoldBadge />;
   if (badge === "golden") return <GoldenBadge />;
   if (badge === "blue")   return <BlueBadge />;
-  if (isPro) return <span style={{ fontSize: 8.5, fontWeight: 800, color: T.gold, border: `1px solid ${T.gold}`, borderRadius: 4, padding: "1px 4px", flexShrink: 0 }}>PRO</span>;
+  if (isPro) return <BlueBadge />;   // weekly / monthly fallback
   return null;
 }
 function Avatar({ name, size = 34, avatarUrl }) {
@@ -692,6 +692,19 @@ export default function CommunityTab({ account, themeTokens }) {
     if (!missing.length) return;
     missing.forEach((id) => seenProfileIdsRef.current.add(id));
     const extra = await fetchProfilesMap(missing);
+    // Enrich badges from subscriptions so comment authors also show verified badges
+    if (missing.length) {
+      const { data: subRows } = await supabase.from("subscriptions").select("user_id, status, expires_at, plan").eq("status", "active").in("user_id", missing);
+      (subRows || []).forEach((s) => {
+        if (!extra[s.user_id]) return;
+        const active = s.plan === "vip_lifetime" || (s.expires_at && new Date(s.expires_at) > new Date());
+        if (!active) return;
+        if (!extra[s.user_id].badge) {
+          extra[s.user_id].badge = s.plan === "biannual" ? "golden" : "blue";
+        }
+        extra[s.user_id].isPro = true;
+      });
+    }
     setProfilesMap((m) => ({ ...m, ...extra }));
   }, []);
 
@@ -717,11 +730,16 @@ export default function CommunityTab({ account, themeTokens }) {
     const pMap = await fetchProfilesMap(userIds);
     if (userIds.length) {
       const { data: subRows } = await supabase.from("subscriptions").select("user_id, status, expires_at, plan").eq("status", "active").in("user_id", userIds);
-      const proSet = new Set();
       (subRows || []).forEach((s) => {
-        if (s.plan === "vip_lifetime" || (s.expires_at && new Date(s.expires_at) > new Date())) proSet.add(s.user_id);
+        if (!pMap[s.user_id]) return;
+        const active = s.plan === "vip_lifetime" || (s.expires_at && new Date(s.expires_at) > new Date());
+        if (!active) return;
+        // Only set badge from subscriptions if the DB hasn't already set one
+        if (!pMap[s.user_id].badge) {
+          pMap[s.user_id].badge = s.plan === "biannual" ? "golden" : "blue";
+        }
+        pMap[s.user_id].isPro = true;
       });
-      userIds.forEach((id) => { if (pMap[id]) pMap[id].isPro = proSet.has(id); });
     }
     setProfilesMap((m) => ({ ...m, ...pMap }));
 
