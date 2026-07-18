@@ -1650,7 +1650,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
   const saveProfile = async () => {
     setSavingProfile(true); setProfileMsg("");
-    const clean = username.trim() ? username.trim().toLowerCase().replace(/[^a-z0-9_]/g, "") : null;
+    const clean = username.trim() ? username.trim().replace(/[\x00-\x1F\x7F]/g, "").slice(0, 30) : null;
     const { error } = await supabase.from("profiles").update({ username: clean, bio: bio.trim() }).eq("id", account.id);
     setSavingProfile(false);
     setProfileMsg(error ? (error.code === "23505" ? "That username is taken." : "Something went wrong.") : "Saved.");
