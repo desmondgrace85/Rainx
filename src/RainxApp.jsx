@@ -320,7 +320,17 @@ function AuthScreen({ onAuthed }) {
 
     if (mode === "signup") {
       const { data, error: signErr } = await supabase.auth.signUp({ email: cleanEmail, password });
-      if (signErr) { setError(signErr.message); setBusy(false); return; }
+      if (signErr) {
+        const msg = signErr.message || "";
+        setError(
+          msg.toLowerCase().includes("rate limit")
+            ? "Too many signup attempts right now — Supabase limits confirmation emails. Please try again in a few minutes."
+            : msg.toLowerCase().includes("already registered") || msg.toLowerCase().includes("already been registered")
+            ? "An account with this email already exists. Try signing in instead."
+            : msg || "Signup failed. Please try again."
+        );
+        setBusy(false); return;
+      }
       if (data.user && !data.session) {
         setNotice("Account created. Check your email to confirm, then sign in.");
         setMode("signin");
