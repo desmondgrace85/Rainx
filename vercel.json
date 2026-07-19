@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm install && npx vite build --config vite.config.vercel.ts",
+  "buildCommand": "npm install --include=dev && npx vite build --config vite.config.vercel.ts",
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/signals/:path*", "destination": "https://raina-ai-production.up.railway.app/signals/:path*" },
