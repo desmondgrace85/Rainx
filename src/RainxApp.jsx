@@ -853,6 +853,27 @@ function MainAppContent({ account, onLogout }) {
   const [autoScan, setAutoScan] = useState(true);
   const lastCandleTimeRef = useRef({}); // `${symbol}_${tfKey}` -> datetime string of the last candle we saw
 
+  // ─── Active markets (max 3 the user explicitly monitors) ────────────────────
+  const [activeMarkets, setActiveMarkets] = useState(() => {
+    try { return JSON.parse(lsGet("rainx-active-markets") || "[]"); } catch { return []; }
+  });
+  const MAX_ACTIVE_MARKETS = 3;
+  const addActiveMarket = useCallback((symbol) => {
+    setActiveMarkets(prev => {
+      if (prev.includes(symbol) || prev.length >= MAX_ACTIVE_MARKETS) return prev;
+      const next = [...prev, symbol];
+      lsSet("rainx-active-markets", JSON.stringify(next));
+      return next;
+    });
+  }, []);
+  const removeActiveMarket = useCallback((symbol) => {
+    setActiveMarkets(prev => {
+      const next = prev.filter(s => s !== symbol);
+      lsSet("rainx-active-markets", JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   // ─── Analysis session step progression engine
   useEffect(() => {
     if (!session || session.state !== "analyzing") return;
@@ -969,28 +990,14 @@ function MainAppContent({ account, onLogout }) {
   }, [session?.state]);
 
   // Session countdown
-  const [sessionSecsLeft, setSessionSecsLeft] = useState(0);
-  useEffect(() => {
-    if (!session) return;
-    const id = setInterval(() => {
-      const left = Math.max(0, Math.round((session.endTime - Date.now()) / 1000));
-      setSessionSecsLeft(left);
-      if (left === 0) {
-        setSession(prev => prev ? { ...prev, state: "completed" } : prev);
-        clearInterval(id);
-      }
-    }, 1000);
-    return () => clearInterval(id);
-  }, [session?.endTime]);
+  const [sessionSecsLeft] = useState(0); // Session runs continuously — no countdown
 
-  const startAnalysisSession = useCallback((asset, duration) => {
+  const startAnalysisSession = useCallback((asset) => {
     const now = Date.now();
     setSession({
       symbol: asset.symbol,
       name: asset.name,
-      duration,
       startTime: now,
-      endTime: now + duration.secs * 1000,
       stepIndex: 0,
       steps: STEP_DEFS.map((s, i) => ({ ...s, status: i === 0 ? "active" : "pending" })),
       activities: [{ time: new Date().toLocaleTimeString(), text: `Raina AI starting analysis on ${asset.symbol}. Studying market structure…` }],
@@ -1020,6 +1027,25 @@ function MainAppContent({ account, onLogout }) {
     setNotifications((list) => [entry, ...list].slice(0, 50));
     setToastQueue((q) => [...q, entry]);
   }, [account]);
+
+  // ─── Register service worker push subscription ──────────────────────────
+  useEffect(() => {
+    if (!account?.id || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    (async () => {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const existing = await reg.pushManager.getSubscription();
+        if (existing) {
+          // Re-sync existing subscription with backend on login
+          fetch("/api/push/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ subscription: existing.toJSON(), userId: account.id }),
+          }).catch(() => {});
+        }
+      } catch { /* push not supported in this environment */ }
+    })();
+  }, [account?.id]);
 
   useEffect(() => {
     if (!activeToast && toastQueue.length > 0) {
@@ -1156,7 +1182,12 @@ function MainAppContent({ account, onLogout }) {
   }, [pushNotification]);
 
   const allCombos = [];
-  INSTRUMENTS.forEach((inst) => TIMEFRAMES.forEach((tf) => allCombos.push({ inst, tf })));
+  INSTRUMENTS.forEach((inst) => {
+    // Only scan markets the user has explicitly activated (or all if none active yet)
+    if (activeMarkets.length === 0 || activeMarkets.includes(inst.symbol)) {
+      TIMEFRAMES.forEach((tf) => allCombos.push({ inst, tf }));
+    }
+  });
 
   useEffect(() => {
     (async () => {
@@ -1323,7 +1354,7 @@ function MainAppContent({ account, onLogout }) {
       </div>}
 
       <div style={{ paddingBottom: 78 }}>
-        {tab === "home" && <HomeTab inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => setTab("subscribe")} session={session} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} setSession={setSession} seriesMap={seriesMap} themeMode={themeMode} />}
+        {tab === "home" && <HomeTab inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => setTab("subscribe")} session={session} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} setSession={setSession} seriesMap={seriesMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} maxActiveMarkets={MAX_ACTIVE_MARKETS} />}
         {tab === "markets" && <MarketsTab seriesMap={seriesMap} signalsMap={signalsMap} activeSymbol={activeSymbol} onSelect={(s) => { setActiveSymbol(s); setTab("home"); }} />}
         {tab === "community" && <CommunityTab account={account} themeTokens={T} />}
         {tab === "history" && <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => setTab("subscribe")} />}
@@ -1395,22 +1426,64 @@ function MainAppContent({ account, onLogout }) {
 
       {showNotifPanel && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 60, display: "flex", justifyContent: "flex-end" }}>
-          <div style={{ background: T.card, width: "88%", maxWidth: 380, height: "100%", padding: 18, overflowY: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div style={{ background: T.card, width: "88%", maxWidth: 380, height: "100%", display: "flex", flexDirection: "column" }}>
+            {/* Header */}
+            <div style={{ padding: "16px 18px 10px", borderBottom: `1px solid ${T.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
               <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.goldBright, fontWeight: 700 }}>Notifications</div>
-              <button onClick={() => setShowNotifPanel(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><X size={20} /></button>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {notifications.length > 0 && (
+                  <button onClick={() => {
+                    setNotifications([]);
+                    if (account?.id) supabase.from("user_notifications").delete().eq("user_id", account.id).then(() => {}, () => {});
+                  }} style={{ background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 7, padding: "4px 10px", fontSize: 11, color: T.muted, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 600 }}>Clear all</button>
+                )}
+                <button onClick={() => setShowNotifPanel(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><X size={20} /></button>
+              </div>
             </div>
-            <BlurGate unlocked={hasAccess(entitlement.tier, "weekly")} requiredLabel="Weekly" onSubscribe={() => { setShowNotifPanel(false); setTab("subscribe"); }} minHeight={140}>
-              {notifications.length === 0 ? (
-                <div style={{ fontSize: 12, color: T.muted }}>Nothing yet. You'll only be notified for strong setups and trade updates — not every tick.</div>
-              ) : notifications.map((n) => (
-                <div key={n.id} style={{ borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 0" }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 700, color: n.type === "warning" ? T.rust : n.type === "update" ? T.sage : T.gold }}>{n.title}</div>
-                  <div style={{ fontSize: 12, color: T.paper, marginTop: 2, fontWeight: 500 }}>{n.body}</div>
-                  <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>{n.time}</div>
-                </div>
-              ))}
-            </BlurGate>
+            {/* Body */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "10px 18px 18px" }}>
+              <BlurGate unlocked={hasAccess(entitlement.tier, "weekly")} requiredLabel="Weekly" onSubscribe={() => { setShowNotifPanel(false); setTab("subscribe"); }} minHeight={140}>
+                {notifications.length === 0 ? (
+                  <div style={{ fontSize: 12, color: T.muted, paddingTop: 8 }}>Nothing yet. You'll only be notified for strong setups and trade updates — not every tick.</div>
+                ) : (() => {
+                  const nowDate = new Date();
+                  const todayStr = nowDate.toDateString();
+                  const yestStr = new Date(nowDate - 86400000).toDateString();
+                  const getGroup = (n) => {
+                    const d = new Date(n.created_at || Date.now()).toDateString();
+                    if (d === todayStr) return "Today";
+                    if (d === yestStr) return "Yesterday";
+                    return "Earlier";
+                  };
+                  const groups = ["Today", "Yesterday", "Earlier"].map(label => ({
+                    label, items: notifications.filter(n => getGroup(n) === label)
+                  })).filter(g => g.items.length > 0);
+                  const allUngrouped = groups.length === 0;
+                  const list = allUngrouped ? [{ label: null, items: notifications }] : groups;
+                  return list.map(group => (
+                    <div key={group.label || "all"}>
+                      {group.label && <div style={{ fontSize: 10, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, padding: "12px 0 6px" }}>{group.label}</div>}
+                      {group.items.map((n) => (
+                        <div key={n.id} style={{ borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 0", display: "flex", justifyContent: "space-between", gap: 8, opacity: n.read ? 0.65 : 1 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                              {!n.read && <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.gold, flexShrink: 0 }} />}
+                              <div style={{ fontSize: 12.5, fontWeight: 700, color: n.type === "warning" ? T.rust : n.type === "update" ? T.sage : T.gold }}>{n.title}</div>
+                            </div>
+                            <div style={{ fontSize: 12, color: T.paper, marginTop: 2, fontWeight: 500 }}>{n.body}</div>
+                            <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>{n.time}</div>
+                          </div>
+                          <button onClick={() => {
+                            setNotifications(list => list.filter(x => x.id !== n.id));
+                            if (account?.id) supabase.from("user_notifications").delete().eq("id", n.id).then(() => {}, () => {});
+                          }} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: "2px 4px", flexShrink: 0, alignSelf: "flex-start" }}><X size={14} /></button>
+                        </div>
+                      ))}
+                    </div>
+                  ));
+                })()}
+              </BlurGate>
+            </div>
           </div>
         </div>
       )}
@@ -1710,8 +1783,9 @@ function roundRect(ctx, x, y, w, h, r) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Add Market bottom sheet
 // ─────────────────────────────────────────────────────────────────────────────
-function AddMarketSheet({ onClose, onSelect, activeSessions }) {
+function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets = [], maxActiveMarkets = 3 }) {
   const [category, setCategory] = useState(null);
+  const atLimit = activeMarkets.length >= maxActiveMarkets;
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
@@ -1724,10 +1798,15 @@ function AddMarketSheet({ onClose, onSelect, activeSessions }) {
             <div style={{ padding:"0 20px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
                 <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>Add Market</div>
-                <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Choose a market category</div>
+                <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Choose a market · {activeMarkets.length}/{maxActiveMarkets} active</div>
               </div>
               <button onClick={onClose} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><X size={20} /></button>
             </div>
+            {atLimit && (
+              <div style={{ margin:"0 16px 14px", background:`${T.rust}18`, border:`1px solid ${T.rust}44`, borderRadius:10, padding:"10px 14px", fontSize:12, color:T.rust, fontFamily:FONT_HEAD, fontWeight:600 }}>
+                Maximum {maxActiveMarkets} active markets reached. Close a market to add another.
+              </div>
+            )}
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 16px" }}>
               {ASSET_CATALOG.map(cat => (
                 <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"18px 14px", textAlign:"left", cursor:"pointer" }}>
@@ -1748,15 +1827,21 @@ function AddMarketSheet({ onClose, onSelect, activeSessions }) {
               </div>
             </div>
             <div style={{ padding:"0 16px", display:"flex", flexDirection:"column", gap:8 }}>
-              {category.assets.map(asset => (
-                <button key={asset.symbol} onClick={() => onSelect(asset)} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
-                  <div style={{ textAlign:"left" }}>
-                    <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{asset.symbol}</div>
-                    <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{asset.name}</div>
-                  </div>
-                  <ChevronRight size={16} color={T.muted} />
-                </button>
-              ))}
+              {category.assets.map(asset => {
+                const alreadyActive = activeMarkets.includes(asset.symbol);
+                const blocked = atLimit && !alreadyActive;
+                return (
+                  <button key={asset.symbol} onClick={() => { if (!blocked) onSelect(asset); }} style={{ background:T.card, border:`1px solid ${alreadyActive ? T.gold : T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:blocked ? "not-allowed" : "pointer", opacity:blocked ? 0.45 : 1 }}>
+                    <div style={{ textAlign:"left" }}>
+                      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{asset.symbol}</div>
+                      <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{asset.name}</div>
+                    </div>
+                    {alreadyActive
+                      ? <div style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.gold}22`, borderRadius:6, padding:"3px 8px" }}>Active</div>
+                      : <ChevronRight size={16} color={blocked ? T.cardBorder : T.muted} />}
+                  </button>
+                );
+              })}
             </div>
           </>
         )}
@@ -1768,34 +1853,11 @@ function AddMarketSheet({ onClose, onSelect, activeSessions }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Duration picker modal
 // ─────────────────────────────────────────────────────────────────────────────
+// DurationPicker retained for reference but no longer shown in the UI.
+// Raina AI analyzes continuously — users do not select an analysis duration.
 function DurationPicker({ asset, onSelect, onClose }) {
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:82, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
-        <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}>
-          <div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} />
-        </div>
-        <div style={{ padding:"0 20px 4px", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-          <div>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>Analyze This Market</div>
-            <div style={{ fontFamily:FONT_HEAD, fontSize:15, color:T.goldBright, fontWeight:700, marginTop:4 }}>{asset.symbol}</div>
-            <div style={{ fontSize:12, color:T.muted }}>{asset.name}</div>
-            <div style={{ fontSize:12, color:T.muted, marginTop:8 }}>How long should Raina AI focus on this market?</div>
-          </div>
-          <button onClick={onClose} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><X size={20} /></button>
-        </div>
-        <div style={{ padding:"16px", display:"flex", flexDirection:"column", gap:10 }}>
-          {ANALYSIS_DURATIONS.map(dur => (
-            <button key={dur.key} onClick={() => onSelect(dur)} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"16px 18px", display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer" }}>
-              <div style={{ textAlign:"left" }}>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.paper }}>{dur.label}</div>
-                <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{dur.sublabel}</div>
-              </div>
-              <div style={{ background:T.gold, color:T.ink, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, borderRadius:8, padding:"6px 14px" }}>Select</div>
-            </button>
-          ))}
-        </div>
-      </div>
+    <div style={{ display:"none" }}>
     </div>
   );
 }
@@ -1830,13 +1892,13 @@ function fmtTime(secs) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Home Tab — main redesigned screen
 // ─────────────────────────────────────────────────────────────────────────────
-function HomeTab({ inst, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessionSecsLeft, startAnalysisSession, setSession, seriesMap, themeMode }) {
+function HomeTab({ inst, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessionSecsLeft, startAnalysisSession, setSession, seriesMap, themeMode, activeMarkets = [], addActiveMarket, removeActiveMarket, maxActiveMarkets = 3 }) {
   const [showAddMarket, setShowAddMarket] = useState(false);
-  const [pendingAsset, setPendingAsset] = useState(null);       // waiting for duration
   const [showChangeDlg, setShowChangeDlg] = useState(false);   // confirm change market
   const [pendingChange, setPendingChange] = useState(null);     // asset user tried to switch to
   const [showActivity, setShowActivity] = useState(false);
   const [showFullChart, setShowFullChart] = useState(false);
+  const [activeChartTf, setActiveChartTf] = useState("15m");   // chart candle timeframe — does NOT control AI analysis duration
 
   // Sync dark canvas flag
   setIsDarkCanvas(T.ink === "#0F0E0B");
@@ -1858,25 +1920,25 @@ function HomeTab({ inst, last, changePct, series, activeSymbol, setActiveSymbol,
 
   function handleAssetSelect(asset) {
     setShowAddMarket(false);
-    if (session && session.state !== "completed") {
+    if (session && session.state !== "completed" && session.symbol !== asset.symbol) {
       setPendingChange(asset);
       setShowChangeDlg(true);
     } else {
-      setPendingAsset(asset);
+      if (addActiveMarket) addActiveMarket(asset.symbol);
+      startAnalysisSession(asset);
+      setActiveSymbol(asset.symbol);
     }
-  }
-
-  function handleDurationSelect(dur) {
-    if (!pendingAsset) return;
-    startAnalysisSession(pendingAsset, dur);
-    setActiveSymbol(pendingAsset.symbol);
-    setPendingAsset(null);
   }
 
   function handleConfirmChange() {
     setShowChangeDlg(false);
-    setPendingAsset(pendingChange);
+    const asset = pendingChange;
     setPendingChange(null);
+    if (asset) {
+      if (addActiveMarket) addActiveMarket(asset.symbol);
+      startAnalysisSession(asset);
+      setActiveSymbol(asset.symbol);
+    }
   }
 
   return (
@@ -1983,12 +2045,12 @@ function HomeTab({ inst, last, changePct, series, activeSymbol, setActiveSymbol,
         />
       )}
 
-      {/* ── Timeframe selector ───────────────────────────────────────────── */}
+      {/* ── Timeframe selector (chart candle timeframe — M15 = 15-min candles, not AI analysis duration) ── */}
       <div className="hide-scroll" style={{ display:"flex", gap:6, padding:"10px 14px 0", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
         {["15m","30m","1H","2H","4H","1D"].map(tf => {
-          const active = tf === "15m";
+          const active = tf === activeChartTf;
           return (
-            <button key={tf} style={{ flexShrink:0, minWidth:44, padding:"7px 0", borderRadius:8, border:`1px solid ${active ? T.gold : T.cardBorder}`, background:active ? T.gold : T.card, color:active ? T.ink : T.paper, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11, cursor:"pointer" }}>
+            <button key={tf} onClick={() => setActiveChartTf(tf)} style={{ flexShrink:0, minWidth:44, padding:"7px 0", borderRadius:8, border:`1px solid ${active ? T.gold : T.cardBorder}`, background:active ? T.gold : T.card, color:active ? T.ink : T.paper, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11, cursor:"pointer" }}>
               {tf}
             </button>
           );
@@ -2002,6 +2064,16 @@ function HomeTab({ inst, last, changePct, series, activeSymbol, setActiveSymbol,
             <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, color:T.paper }}>Raina AI Analysis Progress</div>
             <button onClick={() => {/* view full */}} style={{ background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:8, padding:"4px 10px", fontFamily:FONT_HEAD, fontSize:11, fontWeight:700, color:T.gold, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>View Full <ChevronRight size={12} /></button>
           </div>
+          {/* ── AI status indicator — shown when analyzing but no signal yet ── */}
+          {!session.setup && session.state === "analyzing" && (
+            <div style={{ background:`${T.gold}11`, border:`1px solid ${T.gold}33`, borderRadius:10, padding:"10px 14px", marginBottom:12, display:"flex", alignItems:"center", gap:10 }}>
+              <div style={{ width:8, height:8, borderRadius:"50%", background:T.gold, flexShrink:0, animation:"pulse 1.5s infinite" }} />
+              <div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.gold }}>Hold — No confirmed setup yet</div>
+                <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>Raina AI is still analyzing. A signal will appear when a strong setup is confirmed.</div>
+              </div>
+            </div>
+          )}
           {/* Step row */}
           <div style={{ display:"flex", gap:0, alignItems:"flex-start" }}>
             {(session.steps || STEP_DEFS.map(s => ({...s, status:"pending"}))).map((step, i, arr) => {
@@ -2118,8 +2190,7 @@ function HomeTab({ inst, last, changePct, series, activeSymbol, setActiveSymbol,
       </div>
 
       {/* ── Modals ───────────────────────────────────────────────────────── */}
-      {showAddMarket && <AddMarketSheet onClose={() => setShowAddMarket(false)} onSelect={handleAssetSelect} />}
-      {pendingAsset && <DurationPicker asset={pendingAsset} onSelect={handleDurationSelect} onClose={() => setPendingAsset(null)} />}
+      {showAddMarket && <AddMarketSheet onClose={() => setShowAddMarket(false)} onSelect={handleAssetSelect} activeMarkets={activeMarkets} maxActiveMarkets={maxActiveMarkets} />}
       {showChangeDlg && <ChangeMarketDialog current={session?.symbol} onConfirm={handleConfirmChange} onCancel={() => { setShowChangeDlg(false); setPendingChange(null); }} />}
     </div>
   );
@@ -2390,6 +2461,104 @@ function SecuritySection({ icon: Icon, title, desc, onPress, label, comingSoon }
       <button onClick={onPress} style={{ background: comingSoon ? "transparent" : T.gold, border: `1px solid ${comingSoon ? T.cardBorder : T.gold}`, borderRadius: 9, padding: "7px 13px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, color: comingSoon ? T.muted : T.ink, cursor: "pointer", flexShrink: 0 }}>
         {label}
       </button>
+    </div>
+  );
+}
+
+// ── Notification Settings Screen ──────────────────────────────────────────
+const NOTIF_CATEGORIES = [
+  { key: "trading",   label: "Trading & Raina AI",  desc: "Signals, entries, TP/SL alerts" },
+  { key: "news",      label: "Market News",          desc: "CPI, NFP, FOMC, rate decisions" },
+  { key: "community", label: "Community",            desc: "Likes, comments, follows, mentions" },
+  { key: "money",     label: "Money & Rewards",      desc: "Transfers, rewards, wallet updates" },
+  { key: "system",    label: "System",               desc: "Security, account, announcements" },
+];
+function NotificationSettingsScreen({ account }) {
+  const [prefs, setPrefs] = useState(() => {
+    try { return JSON.parse(lsGet("rainx-notif-prefs") || "{}"); } catch { return {}; }
+  });
+  const masterOn = prefs.master !== false;
+  const toggle = (key) => {
+    setPrefs(prev => {
+      const next = key === "master"
+        ? { ...prev, master: !masterOn }
+        : { ...prev, [key]: prev[key] === false ? true : false };
+      lsSet("rainx-notif-prefs", JSON.stringify(next));
+      return next;
+    });
+  };
+  const SwitchToggle = ({ on, onChange }) => (
+    <div onClick={onChange} style={{ width: 44, height: 24, borderRadius: 12, background: on ? T.sage : T.cardBorder, position: "relative", cursor: "pointer", transition: "background 0.2s", flexShrink: 0 }}>
+      <div style={{ position: "absolute", top: 3, left: on ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
+    </div>
+  );
+  return (
+    <div style={{ padding: 16 }}>
+      {/* Master toggle */}
+      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>All Notifications</div>
+            <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2 }}>Master on/off for all alerts</div>
+          </div>
+          <SwitchToggle on={masterOn} onChange={() => toggle("master")} />
+        </div>
+      </div>
+      {/* Category toggles */}
+      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, overflow: "hidden" }}>
+        {NOTIF_CATEGORIES.map((cat, i) => {
+          const catOn = masterOn && prefs[cat.key] !== false;
+          return (
+            <div key={cat.key} style={{ padding: "14px 16px", borderBottom: i < NOTIF_CATEGORIES.length - 1 ? `1px solid ${T.cardBorder}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center", opacity: masterOn ? 1 : 0.5 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 13, color: T.paper }}>{cat.label}</div>
+                <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{cat.desc}</div>
+              </div>
+              <SwitchToggle on={catOn} onChange={() => masterOn && toggle(cat.key)} />
+            </div>
+          );
+        })}
+      </div>
+      {/* Push notifications */}
+      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginTop: 16 }}>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 8 }}>Push Notifications</div>
+        <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.7, marginBottom: 12 }}>Enable push notifications to receive trading signals and alerts even when RainX is not open.</div>
+        <button onClick={async () => {
+          if (!("Notification" in window)) { alert("Notifications are not supported in this browser."); return; }
+          const permission = await Notification.requestPermission();
+          if (permission === "granted") {
+            try {
+              if ("serviceWorker" in navigator) {
+                const reg = await navigator.serviceWorker.ready;
+                const existing = await reg.pushManager.getSubscription();
+                const sub = existing || await (async () => {
+                  const res = await fetch("/api/push/keys");
+                  if (!res.ok) return null;
+                  const { publicKey } = await res.json();
+                  return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: publicKey });
+                })();
+                if (sub) {
+                  await fetch("/api/push/subscribe", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ subscription: sub.toJSON(), userId: account?.id }),
+                  });
+                  alert("Push notifications enabled!");
+                }
+              }
+            } catch (e) { alert("Could not enable push: " + e.message); }
+          } else {
+            alert("Permission denied. Enable notifications in your browser settings.");
+          }
+        }} style={{ width: "100%", background: T.gold, color: T.ink, border: "none", borderRadius: 10, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+          Enable Push Notifications
+        </button>
+      </div>
+      {/* Sounds note */}
+      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginTop: 16 }}>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 6 }}>Notification Sounds</div>
+        <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.7 }}>Custom RainX notification sounds play for trading signals, TP alerts, and risk warnings. Sounds follow your device's notification settings.</div>
+      </div>
     </div>
   );
 }
@@ -3146,6 +3315,12 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     return null;
   }
 
+  if (morePage === "notifications") return (
+    <MoreSubScreen onBack={() => setMorePage(null)} title="Notifications" subtitle="Alert preferences &amp; push settings">
+      <NotificationSettingsScreen account={account} />
+    </MoreSubScreen>
+  );
+
   if (morePage === "security") return (
     <MoreSubScreen onBack={() => setMorePage(null)} title="Security" subtitle="Protect your account">
       <div style={{ padding: 16 }}>
@@ -3277,6 +3452,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <MoreRow icon={Send} title="Connect Telegram" onPress={() => setMorePage("telegram")} />
         <MoreRowDivider />
         <MoreRow icon={Lock} title="Security" onPress={() => setMorePage("security")} />
+        <MoreRowDivider />
+        <MoreRow icon={Bell} title="Notifications" subtitle="Alerts, sounds, categories" onPress={() => setMorePage("notifications")} />
       </MoreSection>
 
       <MoreSection title="Appearance">
