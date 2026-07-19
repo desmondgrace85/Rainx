@@ -673,6 +673,9 @@ function MainAppContent({ account, onLogout }) {
 
   const [tab, setTab] = useState("home");
   const [activeSymbol, setActiveSymbol] = useState("XAUUSD");
+  // ─── Analysis session (declared early — used in activeInst derivation below) ─
+  const [session, setSession] = useState(null);
+  // session = { symbol, name, duration, startTime, endTime, stepIndex, steps, activities, overlays, setup, state }
   const activeInst = ALL_ASSETS.find(i => i.symbol === (session?.symbol || activeSymbol)) || ALL_ASSETS.find(i => i.symbol === "XAUUSD");
   const inst = activeInst;
   const marketOpen = isMarketOpen(inst.cls);
@@ -696,11 +699,7 @@ function MainAppContent({ account, onLogout }) {
   const [autoScan, setAutoScan] = useState(true);
   const lastCandleTimeRef = useRef({}); // `${symbol}_${tfKey}` -> datetime string of the last candle we saw
 
-  // ─── Analysis session ──────────────────────────────────────────────────────
-  const [session, setSession] = useState(null);
-  // session = { symbol, name, duration, startTime, endTime, stepIndex, steps, activities, overlays, setup, state }
-
-  // Step progression engine
+  // ─── Analysis session step progression engine
   useEffect(() => {
     if (!session || session.state !== "analyzing") return;
     if (session.stepIndex >= STEP_DEFS.length) return;
