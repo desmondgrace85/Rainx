@@ -1063,11 +1063,16 @@ function MainAppContent({ account, onLogout }) {
         body { margin:0; }
         @keyframes slideDown { from { transform: translateY(-30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+        @keyframes priceFlash { 0% { opacity:0.4; } 100% { opacity:1; } }
+        .hide-scroll::-webkit-scrollbar { display:none; }
+        .hide-scroll { -ms-overflow-style:none; scrollbar-width:none; }
+        .scroll-hint::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,rgba(198,161,91,0.5),transparent); opacity:0; transition:opacity 0.3s; pointer-events:none; }
+        .scroll-hint.scrolling::after { opacity:1; }
       `}</style>
 
       <Toast toast={activeToast} onDone={() => setActiveToast(null)} />
 
-      <div style={{ background: T.card, borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
+      {(tab === "home" || tab === "markets") && <div style={{ background: T.card, borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
         <div>
           <div style={{ fontFamily: FONT_HEAD, fontSize: 19, fontWeight: 800, color: T.goldBright, letterSpacing: -0.3 }}>RainX</div>
           <div style={{ fontSize: 9.5, color: T.muted, fontWeight: 600, marginTop: -2 }}>Powered by Raina AI</div>
@@ -1087,7 +1092,7 @@ function MainAppContent({ account, onLogout }) {
             </span>
           )}
         </button>
-      </div>
+      </div>}
 
       <div style={{ paddingBottom: 78 }}>
         {tab === "home" && <HomeTab inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => setTab("subscribe")} session={session} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} setSession={setSession} seriesMap={seriesMap} />}
@@ -1134,11 +1139,31 @@ function MainAppContent({ account, onLogout }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Candlestick chart (canvas-based, no extra deps)
+// Candlestick chart — swipeable, MT5-style, black & blue colour scheme
 // ─────────────────────────────────────────────────────────────────────────────
-function CandlestickChart({ candles, overlays, inst, containerHeight = 240 }) {
+let isDarkCanvas = false;
+function setIsDarkCanvas(v) { isDarkCanvas = v; }
+
+function CandlestickChart({ candles, overlays, inst, containerHeight = 260 }) {
   const canvasRef = useRef(null);
-  const rafRef = useRef(null);
+  const rafRef    = useRef(null);
+  const [panOffset, setPanOffset] = React.useState(0);
+  const touchX   = useRef(null);
+  const touchOff = useRef(0);
+  const VISIBLE  = 55; // max candles shown at once
+
+  const onTouchStart = e => {
+    touchX.current   = e.touches[0].clientX;
+    touchOff.current = panOffset;
+  };
+  const onTouchMove = e => {
+    if (touchX.current === null) return;
+    const dx    = touchX.current - e.touches[0].clientX; // positive → see older
+    const delta = Math.round(dx / 4.5);
+    const maxOff = Math.max(0, candles.length - VISIBLE);
+    setPanOffset(Math.max(0, Math.min(maxOff, touchOff.current + delta)));
+  };
+  const onTouchEnd = () => { touchX.current = null; };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -1146,177 +1171,242 @@ function CandlestickChart({ candles, overlays, inst, containerHeight = 240 }) {
     cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
       const dpr = window.devicePixelRatio || 1;
-      const W = canvas.offsetWidth || 340;
-      const H = canvas.offsetHeight || containerHeight;
+      const W   = canvas.offsetWidth  || 340;
+      const H   = canvas.offsetHeight || containerHeight;
       canvas.width  = W * dpr;
       canvas.height = H * dpr;
       const ctx = canvas.getContext("2d");
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, W, H);
 
-      // Padding
-      const pad = { top: 16, bottom: 28, left: 4, right: 56 };
-      const cW = W - pad.left - pad.right;
-      const cH = H - pad.top - pad.bottom;
+      // Visible window
+      const endIdx   = Math.max(VISIBLE, candles.length - panOffset);
+      const startIdx = Math.max(0, endIdx - VISIBLE);
+      const vis      = candles.slice(startIdx, endIdx);
+      if (vis.length < 2) return;
 
-      // Price range
-      const allPrices = candles.flatMap(c => [c.high, c.low]);
+      const pad = { top: 10, bottom: 22, left: 2, right: 66 };
+      const cW  = W - pad.left - pad.right;
+      const cH  = H - pad.top  - pad.bottom;
+
+      // Price range — include overlay prices + 10% vertical margin
+      const allP = vis.flatMap(c => [c.high, c.low]);
       overlays.forEach(o => {
-        if (o.price) allPrices.push(o.price);
-        if (o.priceHigh) allPrices.push(o.priceHigh, o.priceLow);
-        if (o.target) allPrices.push(o.target);
+        if (o.price)     allP.push(o.price);
+        if (o.priceHigh) allP.push(o.priceHigh, o.priceLow);
+        if (o.target)    allP.push(o.target);
+        if (o.price1 != null) allP.push(o.price1, o.price2);
       });
-      const minP = Math.min(...allPrices), maxP = Math.max(...allPrices);
-      const pRange = maxP - minP || 1;
-      const toY = p => pad.top + cH - ((p - minP) / pRange) * cH;
-      const gap = cW / candles.length;
-      const bW = Math.max(2, gap * 0.65);
-      const toX = i => pad.left + i * gap + gap / 2;
+      const rawMin = Math.min(...allP), rawMax = Math.max(...allP);
+      const mg  = (rawMax - rawMin) * 0.1;
+      const minP = rawMin - mg, maxP = rawMax + mg;
+      const pR   = maxP - minP || 1;
+      const toY  = p => pad.top  + cH - ((p - minP) / pR) * cH;
+      const gap  = cW / vis.length;
+      const bW   = Math.max(2, gap * 0.72);
+      const toX  = i => pad.left + i * gap + gap / 2;
 
-      // Grid lines (faint)
-      ctx.strokeStyle = isDarkCanvas ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)";
-      ctx.lineWidth = 1;
-      for (let i = 1; i < 5; i++) {
-        const y = pad.top + (cH / 5) * i;
-        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+      // Colours — modern black & blue
+      const BULL  = "#1D6FE8";
+      const BEAR  = isDarkCanvas ? "#bfc4ce" : "#131722";
+      const WBULL = "#1D6FE8";
+      const WBEAR = isDarkCanvas ? "#9ca3af" : "#374151";
+      const GRID  = isDarkCanvas ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.065)";
+      const TLBL  = isDarkCanvas ? "rgba(220,225,235,0.55)" : "rgba(18,18,42,0.5)";
+      const GOLD  = T.gold || "#C6A15B";
+
+      // ── Dashed horizontal grid lines ─────────────────────────────────────
+      ctx.setLineDash([3, 4]); ctx.strokeStyle = GRID; ctx.lineWidth = 1;
+      for (let i = 1; i <= 5; i++) {
+        const gy = pad.top + (cH / 6) * i;
+        ctx.beginPath(); ctx.moveTo(pad.left, gy); ctx.lineTo(W - pad.right, gy); ctx.stroke();
       }
+      ctx.setLineDash([]);
 
-      // ── Draw overlays BELOW candles ──────────────────────────────────────
-      const BULL_COLOR = "#22c55e", BEAR_COLOR = "#ef4444";
-      const GOLD = T.gold || "#C6A15B";
+      // ── Label anti-overlap helper ─────────────────────────────────────────
+      const usedY = [];
+      const fits  = (y, h = 14) => usedY.every(r => Math.abs(r.y - y) > (r.h + h) / 2 + 3);
+      const grab  = (y, h = 14) => { usedY.push({ y, h }); };
 
+      // ── Draw overlays ─────────────────────────────────────────────────────
+      // Support zone (blue tint)
       overlays.forEach(o => {
-        if (o.type === "support_zone") {
-          const y1 = toY(o.priceHigh), y2 = toY(o.priceLow);
-          ctx.fillStyle = "rgba(34,197,94,0.08)";
-          ctx.fillRect(pad.left, y1, cW, y2 - y1);
-          ctx.strokeStyle = "rgba(34,197,94,0.4)";
-          ctx.lineWidth = 1; ctx.setLineDash([]);
-          ctx.strokeRect(pad.left, y1, cW, y2 - y1);
-          // Label
-          ctx.fillStyle = "#16a34a"; ctx.font = `bold 8.5px sans-serif`;
-          ctx.fillText("Support Zone", pad.left + cW * 0.28 + 4, (y1 + y2) / 2 + 4);
-          // Price pill
-          const midY = (y1 + y2) / 2;
-          ctx.fillStyle = "#16a34a";
-          roundRect(ctx, W - pad.right + 2, midY - 9, pad.right - 2, 18, 3); ctx.fill();
-          ctx.fillStyle = "#fff"; ctx.font = "bold 8px sans-serif"; ctx.textAlign = "center";
-          ctx.fillText(o.priceHigh.toFixed(Math.min(inst.digits, 2)), W - pad.right/2, midY + 3);
-          ctx.textAlign = "left";
+        if (o.type !== "support_zone") return;
+        const y1 = toY(o.priceHigh), y2 = toY(o.priceLow), midY = (y1 + y2) / 2;
+        ctx.fillStyle = "rgba(29,111,232,0.07)";
+        ctx.fillRect(pad.left, y1, cW, y2 - y1);
+        ctx.strokeStyle = "rgba(29,111,232,0.3)"; ctx.lineWidth = 1; ctx.setLineDash([]);
+        ctx.strokeRect(pad.left, y1, cW, y2 - y1);
+        if (fits(midY)) {
+          ctx.fillStyle = BULL; ctx.font = "bold 8px sans-serif";
+          ctx.fillText("Support Zone", pad.left + 5, midY + 3); grab(midY);
+        }
+        // right pill
+        if (fits(midY + 0.1, 20)) {
+          ctx.fillStyle = BULL;
+          roundRect(ctx, W - pad.right + 2, midY - 9, pad.right - 3, 18, 3); ctx.fill();
+          ctx.fillStyle = "#fff"; ctx.font = "bold 7.5px sans-serif"; ctx.textAlign = "center";
+          ctx.fillText(o.priceLow.toFixed(Math.min(inst.digits, 2)), W - pad.right / 2, midY + 3);
+          ctx.textAlign = "left"; grab(midY, 20);
         }
       });
 
+      // Resistance (red dashed line)
       overlays.forEach(o => {
-        if (o.type === "resistance") {
-          const y = toY(o.price);
-          ctx.beginPath(); ctx.strokeStyle = BEAR_COLOR; ctx.lineWidth = 1.5;
-          ctx.setLineDash([6, 4]);
+        if (o.type !== "resistance") return;
+        const y = toY(o.price);
+        ctx.beginPath(); ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 4]); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+        ctx.setLineDash([]);
+        const lY = y - 6;
+        if (fits(lY, 10)) {
+          ctx.fillStyle = "#ef4444"; ctx.font = "bold 8px sans-serif";
+          ctx.fillText(o.label || "Resistance Zone", pad.left + 5, lY); grab(lY, 10);
+        }
+        if (fits(y, 20)) {
+          ctx.fillStyle = "#ef4444";
+          roundRect(ctx, W - pad.right + 2, y - 9, pad.right - 3, 18, 3); ctx.fill();
+          ctx.fillStyle = "#fff"; ctx.font = "bold 7.5px sans-serif"; ctx.textAlign = "center";
+          ctx.fillText(o.price.toFixed(Math.min(inst.digits, 2)), W - pad.right / 2, y + 3);
+          ctx.textAlign = "left"; grab(y, 20);
+        }
+      });
+
+      // Trendline (gold dashed diagonal)
+      overlays.forEach(o => {
+        if (o.type !== "trendline") return;
+        const x2 = Math.min(toX(vis.length - 6), W - pad.right - 10);
+        ctx.beginPath(); ctx.strokeStyle = GOLD; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+        ctx.moveTo(pad.left, toY(o.price1)); ctx.lineTo(x2, toY(o.price2)); ctx.stroke();
+        ctx.setLineDash([]);
+        const lY = toY(o.price2) - 7;
+        if (fits(lY, 10)) {
+          ctx.fillStyle = GOLD; ctx.font = "bold 8px sans-serif";
+          ctx.fillText("Uptrend Line", pad.left + 5, lY); grab(lY, 10);
+        }
+      });
+
+      // Entry zone (gold shaded)
+      overlays.forEach(o => {
+        if (o.type !== "entry_zone") return;
+        const y1 = toY(o.priceHigh), y2 = toY(o.priceLow);
+        ctx.fillStyle = "rgba(198,161,91,0.09)";
+        ctx.fillRect(pad.left, y1, cW, y2 - y1);
+        [y1, y2].forEach(y => {
+          ctx.beginPath(); ctx.strokeStyle = GOLD; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
           ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
           ctx.setLineDash([]);
-          ctx.fillStyle = BEAR_COLOR; ctx.font = `bold 8.5px sans-serif`;
-          ctx.fillText(o.label || "Resistance Zone", pad.left + 4, y - 5);
-          // Price pill
-          ctx.fillStyle = BEAR_COLOR;
-          roundRect(ctx, W - pad.right + 2, y - 9, pad.right - 2, 18, 3); ctx.fill();
-          ctx.fillStyle = "#fff"; ctx.font = "bold 8px sans-serif"; ctx.textAlign = "center";
-          ctx.fillText(o.price.toFixed(Math.min(inst.digits, 2)), W - pad.right/2, y + 3);
-          ctx.textAlign = "left";
-        }
-        if (o.type === "trendline") {
-          const x1 = pad.left, x2 = toX(candles.length - 10);
-          ctx.beginPath(); ctx.strokeStyle = GOLD; ctx.lineWidth = 1.5;
-          ctx.setLineDash([7, 4]);
-          ctx.moveTo(x1, toY(o.price1)); ctx.lineTo(x2, toY(o.price2)); ctx.stroke();
-          ctx.setLineDash([]);
-          ctx.fillStyle = GOLD; ctx.font = `bold 8.5px sans-serif`;
-          ctx.fillText("Uptrend Line", x1 + 6, toY(o.price2) - 6);
-        }
-        if (o.type === "entry_zone") {
-          const y1 = toY(o.priceHigh), y2 = toY(o.priceLow);
-          ctx.fillStyle = "rgba(198,161,91,0.10)";
-          ctx.fillRect(pad.left, y1, cW, y2 - y1);
-          [y1, y2].forEach(y => {
-            ctx.beginPath(); ctx.strokeStyle = GOLD; ctx.lineWidth = 1; ctx.setLineDash([4,3]);
-            ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
-            ctx.setLineDash([]);
-          });
-        }
-        if (o.type === "current_price") {
-          const y = toY(o.price);
-          ctx.beginPath(); ctx.strokeStyle = GOLD; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
-          ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
-          ctx.setLineDash([]);
+        });
+      });
+
+      // Current price crosshair (gold dashed + pill)
+      overlays.forEach(o => {
+        if (o.type !== "current_price") return;
+        const y = toY(o.price);
+        ctx.beginPath(); ctx.strokeStyle = GOLD; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+        ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke(); ctx.setLineDash([]);
+        if (fits(y, 20)) {
           ctx.fillStyle = GOLD;
-          roundRect(ctx, W - pad.right + 2, y - 9, pad.right - 2, 18, 3); ctx.fill();
-          ctx.fillStyle = T.ink || "#fff"; ctx.font = "bold 8px sans-serif"; ctx.textAlign = "center";
-          ctx.fillText(o.price.toFixed(Math.min(inst.digits, 2)), W - pad.right/2, y + 3);
-          ctx.textAlign = "left";
-        }
-        if (o.type === "projection") {
-          const lastX = toX(candles.length - 1);
-          const lastY = toY(candles[candles.length - 1]?.close || o.target);
-          const endX = lastX + gap * 5;
-          const endY = toY(o.target);
-          ctx.beginPath(); ctx.strokeStyle = BULL_COLOR; ctx.lineWidth = 2; ctx.setLineDash([]);
-          ctx.moveTo(lastX, lastY);
-          ctx.bezierCurveTo(lastX + (endX - lastX)/2, lastY, lastX + (endX - lastX)/2, endY, endX, endY);
-          ctx.stroke();
-          // Arrowhead
-          ctx.fillStyle = BULL_COLOR; ctx.beginPath();
-          ctx.moveTo(endX, endY); ctx.lineTo(endX - 8, endY - 5); ctx.lineTo(endX - 8, endY + 5);
-          ctx.closePath(); ctx.fill();
-          // AI Projection box
-          const bx = Math.min(endX - 90, W - pad.right - 92), by = endY + 8;
-          ctx.fillStyle = "rgba(240,253,244,0.95)"; ctx.strokeStyle = "rgba(34,197,94,0.3)"; ctx.lineWidth = 1;
-          roundRect(ctx, bx, by, 90, 42, 6); ctx.fill(); ctx.stroke();
-          ctx.fillStyle = "#16a34a"; ctx.font = "bold 8px sans-serif";
-          ctx.fillText("AI Projection", bx + 6, by + 12);
-          ctx.fillStyle = "#333"; ctx.font = "7.5px sans-serif";
-          const lines2 = ["Price expected to bounce", "from support towards", "the resistance zone."];
-          lines2.forEach((l, i) => ctx.fillText(l, bx + 6, by + 22 + i * 9));
+          roundRect(ctx, W - pad.right + 2, y - 9, pad.right - 3, 18, 3); ctx.fill();
+          ctx.fillStyle = isDarkCanvas ? "#000" : "#fff";
+          ctx.font = "bold 7.5px sans-serif"; ctx.textAlign = "center";
+          ctx.fillText(o.price.toFixed(Math.min(inst.digits, 2)), W - pad.right / 2, y + 3);
+          ctx.textAlign = "left"; grab(y, 20);
         }
       });
 
-      // ── Draw candles ──────────────────────────────────────────────────────
-      candles.forEach((c, i) => {
-        const x = toX(i), yO = toY(c.open), yC = toY(c.close), yH = toY(c.high), yL = toY(c.low);
+      // AI Projection arrow + annotation
+      overlays.forEach(o => {
+        if (o.type !== "projection") return;
+        const lastX = toX(vis.length - 1);
+        const lastY = toY(vis[vis.length - 1]?.close || o.target);
+        const endX  = Math.min(lastX + gap * 4, W - pad.right - 12);
+        const endY  = toY(o.target);
+        ctx.beginPath(); ctx.strokeStyle = BULL; ctx.lineWidth = 2; ctx.setLineDash([]);
+        ctx.moveTo(lastX, lastY);
+        ctx.bezierCurveTo(lastX + (endX - lastX) * 0.5, lastY, lastX + (endX - lastX) * 0.5, endY, endX, endY);
+        ctx.stroke();
+        ctx.fillStyle = BULL; ctx.beginPath();
+        ctx.moveTo(endX, endY); ctx.lineTo(endX - 7, endY - 4); ctx.lineTo(endX - 7, endY + 4);
+        ctx.closePath(); ctx.fill();
+        // annotation box — try below arrow, then above if it would clip
+        const boxW = 84, boxH = 38;
+        const bx = Math.max(pad.left + 4, Math.min(endX - boxW + 10, W - pad.right - boxW - 2));
+        let by = endY + 7;
+        if (by + boxH > H - pad.bottom - 2) by = endY - boxH - 7;
+        if (fits(by + boxH / 2, boxH)) {
+          const bgFill = isDarkCanvas ? "rgba(20,30,55,0.93)" : "rgba(235,244,255,0.96)";
+          ctx.fillStyle = bgFill; ctx.strokeStyle = "rgba(29,111,232,0.4)"; ctx.lineWidth = 1;
+          roundRect(ctx, bx, by, boxW, boxH, 5); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = BULL; ctx.font = "bold 7.5px sans-serif";
+          ctx.fillText("AI Projection", bx + 5, by + 12);
+          ctx.fillStyle = TLBL; ctx.font = "7px sans-serif";
+          ["Price expected to reach", "next resistance zone."].forEach((l, li) =>
+            ctx.fillText(l, bx + 5, by + 21 + li * 9)
+          );
+          grab(by + boxH / 2, boxH);
+        }
+      });
+
+      // ── Draw candles (both bull and bear are FILLED) ──────────────────────
+      vis.forEach((c, i) => {
+        const x  = toX(i);
         const bull = c.close >= c.open;
-        const color = bull ? BULL_COLOR : BEAR_COLOR;
+        const yO = toY(c.open), yC = toY(c.close), yH = toY(c.high), yL = toY(c.low);
         // Wick
-        ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.strokeStyle = bull ? WBULL : WBEAR; ctx.lineWidth = 1;
         ctx.moveTo(x, yH); ctx.lineTo(x, yL); ctx.stroke();
-        // Body
-        const top = Math.min(yO, yC), bh = Math.max(1.5, Math.abs(yO - yC));
-        if (bull) { ctx.fillStyle = color; ctx.fillRect(x - bW/2, top, bW, bh); }
-        else { ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.strokeRect(x - bW/2, top, bW, bh); }
+        // Body — filled solid
+        const top = Math.min(yO, yC);
+        const bh  = Math.max(1.5, Math.abs(yO - yC));
+        ctx.fillStyle = bull ? BULL : BEAR;
+        ctx.fillRect(x - bW / 2, top, bW, bh);
       });
 
-      // ── Price axis labels ────────────────────────────────────────────────
-      const textColor = isDarkCanvas ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)";
-      ctx.fillStyle = textColor; ctx.font = "8px sans-serif"; ctx.textAlign = "right";
-      for (let i = 0; i <= 4; i++) {
-        const p = minP + (pRange / 4) * i, y = toY(p);
-        ctx.fillText(p.toFixed(Math.min(inst.digits, 2)), W - pad.right - 2, y + 3);
+      // ── Price axis labels (right column) ─────────────────────────────────
+      ctx.fillStyle = TLBL; ctx.font = "8.5px sans-serif"; ctx.textAlign = "right";
+      const nL = 5;
+      for (let i = 0; i <= nL; i++) {
+        const p = minP + (pR / nL) * i, y = toY(p);
+        if (y < pad.top + 6 || y > H - pad.bottom - 2) continue;
+        ctx.fillText(p.toFixed(Math.min(inst.digits, 2)), W - pad.right - 3, y + 3);
       }
-      // ── Time axis labels ─────────────────────────────────────────────────
-      ctx.textAlign = "center"; ctx.font = "8px sans-serif";
-      const step = Math.max(1, Math.floor(candles.length / 6));
-      candles.forEach((c, i) => {
-        if (i % step !== 0) return;
-        const d = new Date(c.t);
-        const label = `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
-        ctx.fillText(label, toX(i), H - 4);
+
+      // ── Time axis labels (bottom) ─────────────────────────────────────────
+      ctx.textAlign = "center"; ctx.font = "8px sans-serif"; ctx.fillStyle = TLBL;
+      const tStep = Math.max(1, Math.floor(vis.length / 5));
+      vis.forEach((c, i) => {
+        if (i % tStep !== 0) return;
+        const d   = new Date(c.t);
+        const lbl = `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
+        const x   = toX(i);
+        if (x < 18 || x > W - pad.right - 8) return;
+        ctx.fillText(lbl, x, H - 5);
       });
       ctx.textAlign = "left";
+
+      // ── Pan progress bar (small indicator when panned back) ──────────────
+      if (panOffset > 0 && candles.length > VISIBLE) {
+        const ratio = (candles.length - VISIBLE - panOffset) / (candles.length - VISIBLE);
+        const bLen  = Math.max(30, cW * 0.22);
+        const bX    = pad.left + (cW - bLen) * (1 - Math.max(0, Math.min(1, ratio)));
+        ctx.fillStyle = "rgba(29,111,232,0.32)";
+        roundRect(ctx, bX, H - pad.bottom + 5, bLen, 3, 1.5); ctx.fill();
+      }
     });
     return () => cancelAnimationFrame(rafRef.current);
-  }, [candles, overlays, inst]);
+  }, [candles, overlays, inst, panOffset]);
 
-  return <canvas ref={canvasRef} style={{ width:"100%", height:"100%", display:"block" }} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width:"100%", height:"100%", display:"block", touchAction:"none" }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    />
+  );
 }
-// Need isDarkCanvas in canvas scope — read from global T
-let isDarkCanvas = false;
-function setIsDarkCanvas(v) { isDarkCanvas = v; }
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -1502,7 +1592,7 @@ function HomeTab({ inst, last, changePct, series, activeSymbol, setActiveSymbol,
   return (
     <div style={{ paddingBottom: 4 }}>
       {/* ── Asset tab bar ──────────────────────────────────────────────── */}
-      <div style={{ display:"flex", gap:6, padding:"12px 14px 0", overflowX:"auto" }}>
+      <div className="hide-scroll" style={{ display:"flex", gap:6, padding:"12px 14px 6px", overflowX:"auto", overflowY:"hidden", WebkitOverflowScrolling:"touch", position:"relative" }}>
         {(session ? [ALL_ASSETS.find(a => a.symbol === session.symbol) || ALL_ASSETS[0]] : []).concat(
           ALL_ASSETS.filter(a => a.symbol === "XAUUSD" || a.symbol === "BTCUSD" || a.symbol === "ETHUSD")
             .filter(a => !session || a.symbol !== session.symbol)
@@ -1517,8 +1607,25 @@ function HomeTab({ inst, last, changePct, series, activeSymbol, setActiveSymbol,
         <button onClick={() => setShowAddMarket(true)} style={{ flexShrink:0, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"6px 12px", fontFamily:FONT_HEAD, fontSize:14, fontWeight:700, color:T.gold, cursor:"pointer" }}>+</button>
       </div>
 
+      {/* ── Live market mini-strip ──────────────────────────────────────── */}
+      <div className="hide-scroll" style={{ display:"flex", gap:8, padding:"10px 14px 0", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
+        {ALL_ASSETS.filter(a => ["BTCUSD","ETHUSD","XAUUSD","EURUSD","NAS100","SOLUSD"].includes(a.symbol)).map(a => {
+          const arr = seriesMap[a.symbol] || [];
+          const p  = arr.length ? arr[arr.length-1].price : a.base;
+          const p2 = arr.length > 1 ? arr[arr.length-2].price : p;
+          const up = p >= p2;
+          return (
+            <button key={a.symbol} onClick={() => handleAssetSelect(a)}
+              style={{ flexShrink:0, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", textAlign:"left" }}>
+              <div style={{ fontFamily:FONT_HEAD, fontSize:9, fontWeight:700, color:T.muted }}>{a.symbol}</div>
+              <div style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:800, color:up ? "#1D6FE8" : T.rust, fontVariantNumeric:"tabular-nums" }}>{p.toFixed(Math.min(a.digits,2))}</div>
+            </button>
+          );
+        })}
+      </div>
+
       {/* ── Price header ─────────────────────────────────────────────────── */}
-      <div style={{ padding:"12px 16px 0" }}>
+      <div style={{ padding:"8px 16px 0" }}>
         <div style={{ display:"flex", alignItems:"baseline", gap:10 }}>
           <span style={{ fontFamily:FONT_HEAD, fontSize:34, fontWeight:800, fontVariantNumeric:"tabular-nums", color:T.paper }}>{last?.toFixed(inst.digits) ?? "—"}</span>
           <span style={{ fontSize:14, fontWeight:700, color: changePct >= 0 ? T.sage : T.rust }}>{changePct >= 0 ? "▲" : "▼"} {Math.abs(changePct || 0).toFixed(3)}%</span>
@@ -1551,17 +1658,17 @@ function HomeTab({ inst, last, changePct, series, activeSymbol, setActiveSymbol,
         )}
 
         {/* Candlestick chart */}
-        <div style={{ height:240, padding:"0 0 0 0" }}>
-          <CandlestickChart candles={candles} overlays={session?.overlays || []} inst={inst} containerHeight={240} />
+        <div style={{ height:260 }}>
+          <CandlestickChart candles={candles} overlays={session?.overlays || []} inst={inst} containerHeight={260} panEnabled />
         </div>
       </div>
 
       {/* ── Timeframe selector ───────────────────────────────────────────── */}
-      <div style={{ display:"flex", gap:6, padding:"10px 14px 0" }}>
-        {["15m","1H","4H","1D","More"].map(tf => {
+      <div className="hide-scroll" style={{ display:"flex", gap:6, padding:"10px 14px 0", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
+        {["15m","30m","1H","2H","4H","1D"].map(tf => {
           const active = tf === "15m";
           return (
-            <button key={tf} style={{ flex:1, padding:"7px 0", borderRadius:8, border:`1px solid ${active ? T.gold : T.cardBorder}`, background:active ? T.gold : T.card, color:active ? T.ink : T.paper, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11, cursor:"pointer" }}>
+            <button key={tf} style={{ flexShrink:0, minWidth:44, padding:"7px 0", borderRadius:8, border:`1px solid ${active ? T.gold : T.cardBorder}`, background:active ? T.gold : T.card, color:active ? T.ink : T.paper, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11, cursor:"pointer" }}>
               {tf}
             </button>
           );
