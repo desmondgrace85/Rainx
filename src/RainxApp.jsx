@@ -5,11 +5,12 @@ import {
   TrendingUp, TrendingDown, Minus, Activity, Send, Calendar as CalendarIcon,
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
   CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet, Landmark, Gift, Trophy,
-  Maximize2,
+  Maximize2, Menu, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import CommunityTab from "./CommunityTab";
 import FullChartView from "./FullChartView";
+import LightweightChart from "./LightweightChart";
 
 // ---------- Design tokens ----------
 const T = {
@@ -571,9 +572,61 @@ function BlurGate({ unlocked, requiredLabel, onSubscribe, children, minHeight = 
 }
 
 // ---------- Subscribe screen ----------
+// ── Subscribe screen plan definitions ──────────────────────────────────────
+const SUB_PLANS = [
+  {
+    key: "weekly",
+    label: "Weekly",
+    tag: "Best for short term",
+    price: "¢120.00",
+    period: "/ week",
+    billing: "Billed every week",
+    features: [
+      { text: "Free Daily Trade Signals",        sub: "60–90% accuracy signals to help you trade smarter" },
+      { text: "Blue Verification Badge",         sub: "Stand out with a verified premium profile" },
+      { text: "Access to Post Gift Rewards",     sub: "Receive and send exclusive gift rewards" },
+      { text: "Advanced Market Insights",        sub: "Get deeper analysis and market trends" },
+      { text: "Priority Support",                sub: "Faster response, anytime you need help" },
+      { text: "Cancel Anytime",                  sub: "No long-term commitment. Cancel anytime." },
+    ],
+  },
+  {
+    key: "monthly",
+    label: "Monthly",
+    tag: "Most popular",
+    price: "¢380.00",
+    period: "/ month",
+    billing: "Billed every month",
+    features: [
+      { text: "Everything in Weekly" },
+      { text: "Golden Verification Badge",       sub: "Exclusive premium tier recognition" },
+      { text: "Scalping Setups",                 sub: "Advanced short-term trade setups" },
+      { text: "Priority Signal Alerts",          sub: "Telegram + in-app push notifications" },
+      { text: "Exclusive Market Reports",        sub: "Weekly professional analysis reports" },
+      { text: "Cancel Anytime",                  sub: "No long-term commitment. Cancel anytime." },
+    ],
+  },
+  {
+    key: "biannual",
+    label: "Bi-Annually",
+    tag: "Best value",
+    price: "¢680.00",
+    period: "/ 6 months",
+    billing: "Billed every 6 months",
+    features: [
+      { text: "Everything in Monthly" },
+      { text: "Bi-Annual Premium Badge",         sub: "Highest verification tier on RainX" },
+      { text: "VIP Community Access",            sub: "Exclusive trader lounge & signals group" },
+      { text: "Personal AI Analysis Sessions",   sub: "Extended Raina AI session time" },
+      { text: "Highest Rewards Multiplier",      sub: "2× points on all activity" },
+      { text: "Cancel Anytime",                  sub: "No long-term commitment. Cancel anytime." },
+    ],
+  },
+];
+
 function SubscribeScreen({ account, entitlement, onBack }) {
   const [methods, setMethods] = useState(null);
-  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [activePlanIdx, setActivePlanIdx] = useState(0);
   const [selectedMethod, setSelectedMethod] = useState(null);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -583,81 +636,180 @@ function SubscribeScreen({ account, entitlement, onBack }) {
     supabase.from("payment_methods").select("*").eq("enabled", true).order("sort_order").then(({ data }) => setMethods(data || []));
   }, []);
 
+  const plan = SUB_PLANS[activePlanIdx];
+
   const submitPayment = async () => {
     setBusy(true);
-    await supabase.from("payments").insert({ user_id: account.id, plan: selectedPlan, reference_note: note || null });
-    recordActivity(account.id, "payment_submitted", { plan: selectedPlan });
+    await supabase.from("payments").insert({ user_id: account.id, plan: plan.key, reference_note: note || null });
+    recordActivity(account.id, "payment_submitted", { plan: plan.key });
     setBusy(false);
     setSubmitted(true);
     entitlement.refresh();
   };
 
-  const screenTitle = 'Trader Rewards Program';
+  // Pending / submitted state
   if (entitlement.pendingPlan || submitted) {
     return (
-      <div style={{ padding: 16 }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 12, marginBottom: 14 }}>← Back</button>
-        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 22, textAlign: "center" }}>
-          
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, marginTop: 8, color: T.paper }}>Payment pending confirmation</div>
-          <div style={{ fontSize: 12, color: T.muted, marginTop: 6, lineHeight: 1.6 }}>
-            Your {PLAN_LABELS[entitlement.pendingPlan || selectedPlan]} plan request has been submitted. Access unlocks automatically once an admin confirms your payment.
-          </div>
+      <div style={{ padding: 20, textAlign: "center" }}>
+        <div style={{ width: 64, height: 64, borderRadius: "50%", background: `rgba(198,161,91,0.12)`, border: `2px solid ${T.gold}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+          <ShieldCheck size={30} color={T.gold} />
         </div>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.paper, marginBottom: 8 }}>Payment Submitted!</div>
+        <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, marginBottom: 20 }}>
+          Your {PLAN_LABELS[entitlement.pendingPlan || plan.key]} plan request is awaiting confirmation. Access unlocks automatically once an admin approves your payment.
+        </div>
+        <button onClick={onBack} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: "12px 32px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+          Back to More
+        </button>
       </div>
     );
   }
 
-  if (selectedPlan && selectedMethod) {
+  // Payment method detail
+  if (selectedMethod) {
     return (
       <div style={{ padding: 16 }}>
-        <button onClick={() => setSelectedMethod(null)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 12, marginBottom: 14 }}>← Back</button>
-        <div style={{ fontFamily: FONT_HEAD, fontSize: 17, fontWeight: 800, color: T.goldBright, marginBottom: 12 }}>{selectedMethod.name}</div>
-        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 18 }}>
-          <div style={{ fontSize: 13, color: T.paper, lineHeight: 1.6, marginBottom: 14, whiteSpace: "pre-wrap" }}>{selectedMethod.instructions}</div>
+        <button onClick={() => setSelectedMethod(null)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: FONT_HEAD, fontSize: 13, fontWeight: 700, marginBottom: 16 }}>
+          <ChevronLeft size={16} /> Back
+        </button>
+        <div style={{ fontFamily: FONT_HEAD, fontSize: 16, fontWeight: 800, color: T.goldBright, marginBottom: 12 }}>{selectedMethod.name}</div>
+        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 18, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, color: T.paper, lineHeight: 1.7, marginBottom: 14, whiteSpace: "pre-wrap" }}>{selectedMethod.instructions}</div>
           {selectedMethod.image_url && (
             <img src={selectedMethod.image_url} alt="Payment details" style={{ width: "100%", borderRadius: 10, marginBottom: 14 }} />
           )}
-          <label style={{ fontSize: 11, color: T.muted, fontWeight: 600 }}>Payment reference (optional)</label>
-          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. transaction ID" style={{ ...getInputStyle(), width: "100%", marginTop: 4, marginBottom: 14 }} />
-          <button onClick={submitPayment} disabled={busy} style={{ width: "100%", background: T.gold, color: T.ink, border: "none", borderRadius: 10, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-            {busy ? "Submitting…" : "I've paid — submit for confirmation"}
-          </button>
         </div>
+        <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 4 }}>Payment reference (optional)</label>
+        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. transaction ID" style={{ ...getInputStyle(), width: "100%", marginBottom: 14 }} />
+        <button onClick={submitPayment} disabled={busy} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+          {busy ? "Submitting…" : "I've Paid — Confirm →"}
+        </button>
       </div>
     );
   }
 
-  if (selectedPlan) {
-    return (
-      <div style={{ padding: 16 }}>
-        <button onClick={() => setSelectedPlan(null)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 12, marginBottom: 14 }}>← Back</button>
-        <div style={{ fontFamily: FONT_HEAD, fontSize: 17, fontWeight: 800, color: T.goldBright, marginBottom: 12 }}>Choose payment method</div>
-        {methods === null ? <div style={{ color: T.muted, fontSize: 13 }}>Loading…</div> : methods.map((m) => (
-          <button key={m.id} onClick={() => setSelectedMethod(m)} style={{ display: "block", width: "100%", textAlign: "left", background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: 14, marginBottom: 10, color: T.paper, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-            {m.name}
+  // Choose payment method
+  if (false) { /* handled below inline */ }
+
+  // Main plan picker
+  return (
+    <div style={{ background: T.ink, minHeight: "100%", paddingBottom: 24 }}>
+      {/* Header */}
+      <div style={{ textAlign: "center", padding: "24px 20px 16px" }}>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 20, color: T.goldBright, marginBottom: 4 }}>Upgrade Plan</div>
+        <div style={{ fontSize: 12.5, color: T.muted }}>Choose the plan that works best for you</div>
+      </div>
+
+      {/* Gold badge icon */}
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+        <div style={{ width: 80, height: 80, borderRadius: "50%", background: `radial-gradient(circle, ${T.goldBright}, ${T.gold})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 28px ${T.gold}55` }}>
+          <ShieldCheck size={38} color="#fff" strokeWidth={1.8} />
+        </div>
+      </div>
+      <div style={{ textAlign: "center", marginBottom: 24, padding: "0 20px" }}>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 19, color: T.paper, marginBottom: 5 }}>Unlock More. Earn More.</div>
+        <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.6 }}>Get premium tools, rewards, and insights{"\n"}to stay ahead in the market.</div>
+      </div>
+
+      {/* Plan tabs */}
+      <div style={{ margin: "0 16px 16px", background: T.card, borderRadius: 14, padding: 4, display: "flex", gap: 2 }}>
+        {SUB_PLANS.map((p, i) => (
+          <button
+            key={p.key}
+            onClick={() => setActivePlanIdx(i)}
+            style={{
+              flex: 1, padding: "10px 4px", borderRadius: 11,
+              background: activePlanIdx === i ? T.gold : "transparent",
+              border: "none", cursor: "pointer",
+              fontFamily: FONT_HEAD, fontWeight: 700,
+              color: activePlanIdx === i ? T.ink : T.muted,
+              fontSize: 11.5, lineHeight: 1.3, textAlign: "center",
+            }}
+          >
+            <div>{p.label}</div>
+            <div style={{ fontSize: 9.5, fontWeight: 600, marginTop: 1, opacity: 0.85 }}>{p.tag}</div>
           </button>
         ))}
       </div>
-    );
-  }
 
-  return (
-    <div style={{ padding: 16 }}>
-      <div style={{ fontFamily: FONT_HEAD, fontSize: 20, fontWeight: 800, color: T.goldBright, marginBottom: 4 }}>Choose your plan</div>
-      <div style={{ fontSize: 12, color: T.muted, marginBottom: 16 }}>Unlock Raina's signals, history, and alerts.</div>
-      {Object.entries(PLAN_FEATURES).map(([key, f]) => (
-        <div key={key} style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 18, marginBottom: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <div style={{ fontFamily: FONT_HEAD, fontSize: 15, fontWeight: 800, color: T.goldBright }}>{PLAN_LABELS[key]}</div>
-            <div style={{ fontFamily: FONT_HEAD, fontSize: 18, fontWeight: 800, color: T.paper }}>GHS {f.price}</div>
+      {/* Plan card */}
+      <div style={{ margin: "0 16px 16px", background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 18, padding: 20, position: "relative", overflow: "hidden" }}>
+        {/* Price + gold bars */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+          <div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.goldBright, marginBottom: 6 }}>{plan.label} Plan</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+              <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 30, color: T.paper }}>{plan.price}</span>
+              <span style={{ fontSize: 13, color: T.muted, fontFamily: FONT_HEAD }}>{plan.period}</span>
+            </div>
+            <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>{plan.billing}</div>
           </div>
-          <div style={{ fontSize: 12, color: T.muted, marginTop: 8, lineHeight: 1.6 }}>{f.blurb}</div>
-          <button onClick={() => setSelectedPlan(key)} style={{ width: "100%", marginTop: 12, background: T.gold, color: T.ink, border: "none", borderRadius: 10, padding: "10px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>
-            Choose {PLAN_LABELS[key]}
-          </button>
+          <GoldBarsIcon />
         </div>
-      ))}
+
+        {/* Feature list */}
+        <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 10 }}>
+          {plan.features.map((f, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+              <div style={{ width: 22, height: 22, borderRadius: "50%", background: `rgba(198,161,91,0.15)`, border: `1px solid ${T.gold}44`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                <span style={{ fontSize: 11, color: T.gold, fontWeight: 800 }}>✓</span>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper }}>{f.text}</div>
+                {f.sub && <div style={{ fontSize: 11, color: T.muted, marginTop: 1, lineHeight: 1.5 }}>{f.sub}</div>}
+              </div>
+              <div style={{ width: 20, height: 20, borderRadius: "50%", background: T.gold, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                <span style={{ fontSize: 10, color: T.ink, fontWeight: 800 }}>✓</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Payment methods secure strip */}
+      <div style={{ margin: "0 16px 16px", background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+        <ShieldCheck size={18} color={T.goldBright} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: T.goldBright }}>Secure &amp; Trusted Payments</div>
+          <div style={{ fontSize: 10.5, color: T.muted, marginTop: 1 }}>Your payment information is fully encrypted</div>
+        </div>
+        {/* Payment logos */}
+        <div style={{ display: "flex", gap: 6 }}>
+          {["VISA", "MC", "MTN"].map(m => (
+            <div key={m} style={{ background: m === "VISA" ? "#1434CB" : m === "MC" ? "#EB001B" : "#FFCC00", borderRadius: 4, padding: "3px 6px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 9, color: m === "MTN" ? "#000" : "#fff" }}>{m}</div>
+          ))}
+        </div>
+      </div>
+
+      {/* CTA */}
+      {methods === null ? (
+        <div style={{ margin: "0 16px", background: T.gold, borderRadius: 14, padding: "15px 0", textAlign: "center", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.ink, cursor: "pointer" }}>
+          Loading…
+        </div>
+      ) : methods.length === 0 ? (
+        <div style={{ margin: "0 16px 8px", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, borderRadius: 14, padding: "15px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
+          onClick={() => alert("No payment methods configured. Please contact support.")}>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.ink }}>Subscribe Now</span>
+          <span style={{ fontSize: 20, color: T.ink }}>→</span>
+        </div>
+      ) : methods.length === 1 ? (
+        <button onClick={() => setSelectedMethod(methods[0])} style={{ margin: "0 16px 8px", width: "calc(100% - 32px)", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 14, padding: "15px 20px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span>Subscribe Now</span><span style={{ fontSize: 20 }}>→</span>
+        </button>
+      ) : (
+        <div style={{ margin: "0 16px 8px", display: "flex", flexDirection: "column", gap: 8 }}>
+          {methods.map(m => (
+            <button key={m.id} onClick={() => setSelectedMethod(m)} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 14, padding: "13px 20px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Subscribe via {m.name}</span><span style={{ fontSize: 18 }}>→</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 10 }}>
+        <ShieldCheck size={12} color={T.muted} />
+        <span style={{ fontSize: 11, color: T.muted, fontFamily: FONT_HEAD }}>14-Day Money Back Guarantee</span>
+      </div>
     </div>
   );
 }
@@ -850,6 +1002,7 @@ function MainAppContent({ account, onLogout }) {
 
   // ─── Theme ─────────────────────────────────────────────────────────────────
   const [themeMode, setThemeMode] = useState(() => lsGet("rainx-theme") || "light");
+  const [showSidebar, setShowSidebar] = useState(false);
   const isDark = themeMode === "dark" || (themeMode === "system" && typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches);
   // Mutate T in-place BEFORE children render — all 200+ T.xxx refs in child components pick up new values automatically
   Object.assign(T, isDark ? DARK_TOKENS : LIGHT_TOKENS);
@@ -1142,7 +1295,13 @@ function MainAppContent({ account, onLogout }) {
       <Toast toast={activeToast} onDone={() => setActiveToast(null)} />
 
       {(tab === "home" || tab === "markets") && <div style={{ background: T.card, borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
-        <div>
+        {/* ── Hamburger / sidebar trigger ── */}
+        <button onClick={() => setShowSidebar(true)} style={{ background: "none", border: "none", color: T.paper, cursor: "pointer", padding: 2, display: "flex", flexDirection: "column", gap: 4.5 }}>
+          <span style={{ display: "block", width: 22, height: 2.5, borderRadius: 2, background: T.paper }} />
+          <span style={{ display: "block", width: 16, height: 2.5, borderRadius: 2, background: T.gold }} />
+          <span style={{ display: "block", width: 22, height: 2.5, borderRadius: 2, background: T.paper }} />
+        </button>
+        <div style={{ textAlign: "center" }}>
           <div style={{ fontFamily: FONT_HEAD, fontSize: 19, fontWeight: 800, color: T.goldBright, letterSpacing: -0.3 }}>RainX</div>
           <div style={{ fontSize: 9.5, color: T.muted, fontWeight: 600, marginTop: -2 }}>Powered by Raina AI</div>
         </div>
@@ -1172,6 +1331,67 @@ function MainAppContent({ account, onLogout }) {
         {tab === "subscribe" && <SubscribeScreen account={account} entitlement={entitlement} onBack={() => setTab("more")} />}
         {tab === "more" && <MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} setTab={setTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} />}
       </div>
+
+      {/* ── Sidebar drawer (hamburger menu) ──────────────────────────────── */}
+      {showSidebar && (
+        <div style={{ position:"fixed", inset:0, zIndex:80, display:"flex" }}>
+          {/* Backdrop */}
+          <div onClick={() => setShowSidebar(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.45)", backdropFilter:"blur(2px)" }} />
+          {/* Panel */}
+          <div style={{
+            position:"relative", width:"82%", maxWidth:320, height:"100%",
+            background:T.card, borderRight:`1px solid ${T.cardBorder}`,
+            display:"flex", flexDirection:"column", overflow:"hidden",
+            animation:"slideInLeft 0.22s ease",
+          }}>
+            <style>{"@keyframes slideInLeft { from { transform:translateX(-100%); } to { transform:translateX(0); } }"}</style>
+
+            {/* Header */}
+            <div style={{ padding:"22px 20px 16px", borderBottom:`1px solid ${T.cardBorder}`, background:`linear-gradient(135deg,${T.gold}18,transparent)` }}>
+              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.goldBright, letterSpacing:-0.3, marginBottom:2 }}>RainX</div>
+              <div style={{ fontSize:10, color:T.muted, fontWeight:600 }}>Powered by Raina AI</div>
+              {/* Account mini-card */}
+              <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:18, background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"12px 14px" }}>
+                <div style={{ width:44, height:44, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>
+                  {(account?.email || "?")[0].toUpperCase()}
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{account?.email}</div>
+                  <div style={{ fontSize:10.5, color:T.muted, marginTop:2 }}>Member since {new Date(account?.joinedAt || Date.now()).toLocaleDateString()}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Nav items */}
+            <div style={{ flex:1, overflowY:"auto", padding:"8px 0" }}>
+              {[
+                { icon:Home,        label:"Home",          action:() => { setTab("home"); setShowSidebar(false); } },
+                { icon:Briefcase,   label:"Markets",       action:() => { setTab("markets"); setShowSidebar(false); } },
+                { icon:Users2,      label:"Community",     action:() => { setTab("community"); setShowSidebar(false); } },
+                { icon:ScrollText,  label:"Trade History", action:() => { setTab("history"); setShowSidebar(false); } },
+                null, // divider
+                { icon:Users2,      label:"Edit Profile",  action:() => { setTab("more"); setShowSidebar(false); } },
+                { icon:ShieldCheck, label:"Security",      action:() => { setTab("more"); setShowSidebar(false); } },
+                { icon:Settings,    label:"Appearance",    action:() => { setTab("more"); setShowSidebar(false); } },
+                null,
+                { icon:LogOut,      label:"Log out",       action:onLogout, danger:true },
+              ].map((item, i) => item === null ? (
+                <div key={`div-${i}`} style={{ height:1, background:T.cardBorder, margin:"6px 16px" }} />
+              ) : (
+                <button key={item.label} onClick={item.action} style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"13px 20px", background:"none", border:"none", cursor:"pointer" }}>
+                  <item.icon size={18} color={item.danger ? T.rust : T.gold} />
+                  <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:item.danger ? T.rust : T.paper }}>{item.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding:"14px 20px", borderTop:`1px solid ${T.cardBorder}` }}>
+              <div style={{ fontSize:10, color:T.muted, lineHeight:1.7 }}>RainX is an analysis tool, not a broker. AI analysis is not financial advice.</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showNotifPanel && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 60, display: "flex", justifyContent: "flex-end" }}>
@@ -1727,9 +1947,16 @@ function HomeTab({ inst, last, changePct, series, activeSymbol, setActiveSymbol,
           </div>
         )}
 
-        {/* Preview candlestick chart — smaller height, real candles */}
-        <div style={{ height:175 }}>
-          <CandlestickChart candles={candles} overlays={session?.overlays || []} inst={inst} containerHeight={175} panEnabled />
+        {/* Preview chart — powered by lightweight-charts */}
+        <div style={{ height:200 }}>
+          <LightweightChart
+            candles={candles}
+            overlays={session?.overlays || []}
+            inst={inst}
+            containerHeight={200}
+            compact={true}
+            isDark={T.ink === "#0F0E0B"}
+          />
         </div>
 
         {/* "Open Full Chart" button — always visible at bottom of chart */}
@@ -2116,16 +2343,15 @@ function ScalpingTab({ account, entitlement, onSubscribe }) {
 // ---------- More Tab helpers ----------
 
 const DEFAULT_BENEFITS = [
-  { id: "swap-free", icon: "swap", title: "Swap-free", status: "Qualified" },
-  { id: "neg-balance", icon: "shield", title: "Negative Balance Protection", status: null },
-  { id: "vps", icon: "server", title: "Virtual Private Server", status: null },
+  { id: "verification", icon: "shield", title: "Verification & Badge", status: null },
+  { id: "rewards",      icon: "trophy", title: "Trader Rewards Programme", status: null },
 ];
 
 function BenefitIcon({ type }) {
   const s = { width: 36, height: 36, borderRadius: 10, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 };
-  if (type === "swap") return <div style={s}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C6A15B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>;
+  if (type === "trophy") return <div style={s}><Trophy size={18} color="#C6A15B" /></div>;
   if (type === "shield") return <div style={s}><ShieldCheck size={18} color="#C6A15B" /></div>;
-  return <div style={s}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C6A15B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>;
+  return <div style={s}><ShieldCheck size={18} color="#C6A15B" /></div>;
 }
 
 function MoreRow({ icon: Icon, iconType, title, subtitle, badge, badgeColor, onPress }) {
@@ -2145,6 +2371,26 @@ function MoreRow({ icon: Icon, iconType, title, subtitle, badge, badgeColor, onP
       )}
       <ChevronRight size={16} color={T.muted} style={{ flexShrink: 0 }} />
     </button>
+  );
+}
+
+function SecuritySection({ icon: Icon, title, desc, onPress, label, comingSoon }) {
+  return (
+    <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <Icon size={19} color={T.gold} />
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>{title}</span>
+          {comingSoon && <span style={{ fontSize: 9.5, fontWeight: 700, color: T.muted, border: `1px solid ${T.cardBorder}`, borderRadius: 6, padding: "2px 6px", fontFamily: FONT_HEAD }}>SOON</span>}
+        </div>
+        <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2 }}>{desc}</div>
+      </div>
+      <button onClick={onPress} style={{ background: comingSoon ? "transparent" : T.gold, border: `1px solid ${comingSoon ? T.cardBorder : T.gold}`, borderRadius: 9, padding: "7px 13px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, color: comingSoon ? T.muted : T.ink, cursor: "pointer", flexShrink: 0 }}>
+        {label}
+      </button>
+    </div>
   );
 }
 
@@ -2298,16 +2544,16 @@ function RewardsScreen({ account, entitlement }) {
   return (
     <div style={{ overflowY: "auto", paddingBottom: 32 }}>
 
-      {/* Balance Card */}
+      {/* Balance Card — uses theme tokens, no hardcoded dark colors */}
       <div style={{ margin: "16px 16px 0" }}>
-        <div style={{ background: "linear-gradient(135deg, #1C1A14 0%, #151309 100%)", border: `1px solid ${T.cardBorder}`, borderRadius: 18, padding: "22px 20px 20px", position: "relative", overflow: "hidden" }}>
+        <div style={{ background: `linear-gradient(135deg, ${T.card} 0%, ${T.ink} 100%)`, border: `1px solid ${T.cardBorder}`, borderRadius: 18, padding: "22px 20px 20px", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", inset: 0, borderRadius: 18, background: "linear-gradient(135deg, rgba(198,161,91,0.07) 0%, transparent 60%)", pointerEvents: "none" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11.5, color: T.goldBright, fontWeight: 600, marginBottom: 8, letterSpacing: 0.3 }}>Total Rewards Balance</div>
               <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 32, color: T.paper, letterSpacing: -0.5, lineHeight: 1.15 }}>{fmtGHS(totalBalance)}</div>
               <div style={{ marginTop: 14 }}>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(0,0,0,0.4)", border: "1px solid rgba(198,161,91,0.25)", borderRadius: 20, padding: "5px 12px", fontSize: 11.5, color: weeklyPct >= 0 ? T.goldBright : T.rust, fontWeight: 600 }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: `${T.cardBorder}88`, border: `1px solid ${T.gold}44`, borderRadius: 20, padding: "5px 12px", fontSize: 11.5, color: weeklyPct >= 0 ? T.goldBright : T.rust, fontWeight: 600 }}>
                   {weeklyPct >= 0 ? `+${weeklyPct.toFixed(2)}%` : `${weeklyPct.toFixed(2)}%`} this week
                 </span>
               </div>
@@ -2325,7 +2571,7 @@ function RewardsScreen({ account, entitlement }) {
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           {quickItems.map(({ icon: Icon, label, page }) => (
             <button key={page} onClick={() => setQuickPage(page)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: 0, flex: 1 }}>
-              <div style={{ width: 54, height: 54, borderRadius: "50%", background: "#1C1A14", border: "1px solid rgba(198,161,91,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 54, height: 54, borderRadius: "50%", background: T.card, border: `1px solid ${T.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Icon size={22} color={T.goldBright} strokeWidth={1.5} />
               </div>
               <div style={{ fontSize: 10.5, color: T.paper, textAlign: "center", fontWeight: 500, whiteSpace: "pre-line", lineHeight: 1.35 }}>{label}</div>
@@ -2336,7 +2582,7 @@ function RewardsScreen({ account, entitlement }) {
 
       {/* Your Overview */}
       <div style={{ padding: "20px 16px 0" }}>
-        <div style={{ background: "#131108", border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: "18px 16px 16px" }}>
+        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: "18px 16px 16px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
             <span style={{ fontSize: 16, color: T.goldBright }}>↗</span>
             <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>Your Overview</span>
@@ -2355,7 +2601,7 @@ function RewardsScreen({ account, entitlement }) {
             </div>
             <div style={{ width: 1, background: T.cardBorder }} />
             <div style={{ flex: 1, textAlign: "center" }}>
-              <div style={{ fontSize: 10.5, color: T.muted, marginBottom: 5 }}>Pending Balance</div>
+              <div style={{ fontSize: 10.5, color: T.muted, marginBottom: 5 }}>Pending</div>
               <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.paper }}>{fmtGHS(pending)}</div>
               <div style={{ fontSize: 10, color: T.muted, marginTop: 3 }}>Processing</div>
             </div>
@@ -2377,7 +2623,7 @@ function RewardsScreen({ account, entitlement }) {
             const isPos = (tx.amount || 0) >= 0;
             return (
               <button key={tx.id || i} onClick={() => setQuickPage("txHistory")} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 14, padding: "13px 0", borderBottom: i < displayTxns.length - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(198,161,91,0.12)", border: "1px solid rgba(198,161,91,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: `rgba(198,161,91,0.12)`, border: `1px solid ${T.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <IconComp size={20} color={T.goldBright} strokeWidth={1.6} />
                 </div>
                 <div style={{ flex: 1, textAlign: "left" }}>
@@ -2399,6 +2645,202 @@ function RewardsScreen({ account, entitlement }) {
   );
 }
 
+
+// ── Creator Wallet Screen ─────────────────────────────────────────────────
+function CreatorWalletScreen({ account }) {
+  const [walletData, setWalletData] = useState(null);
+  const [txns, setTxns] = useState([]);
+  const [walletPage, setWalletPage] = useState(null); // "topup" | "withdraw" | "history"
+  const [payStep, setPayStep] = useState(null);   // chosen payment method
+  const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    if (!account?.id) return;
+    supabase.from("wallet_balances").select("*").eq("user_id", account.id).single()
+      .then(({ data }) => { if (data) setWalletData(data); }).catch(() => {});
+    supabase.from("wallet_transactions").select("*").eq("user_id", account.id)
+      .order("created_at", { ascending: false }).limit(15)
+      .then(({ data }) => { if (data) setTxns(data); }).catch(() => {});
+  }, [account?.id]);
+
+  const balance = walletData?.balance ?? 0;
+  const fmtGHS  = (n) => `GHS ${Number(n).toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtDate = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const diff = Date.now() - d;
+    if (diff < 86400000) return `Today, ${d.toLocaleTimeString("en-GH", { hour: "2-digit", minute: "2-digit" })}`;
+    if (diff < 172800000) return `Yesterday`;
+    return d.toLocaleDateString("en-GH");
+  };
+
+  const PAYMENT_METHODS = [
+    { id: "momo", label: "Mobile Money (MTN MoMo)", icon: "📱" },
+    { id: "bank", label: "Bank Transfer", icon: "🏦" },
+    { id: "card", label: "Visa / Mastercard", icon: "💳" },
+  ];
+
+  const handleSubmit = async () => {
+    if (!amount || isNaN(+amount) || +amount <= 0) { setMsg("Enter a valid amount."); return; }
+    setBusy(true); setMsg("");
+    await supabase.from("wallet_transactions").insert({
+      user_id: account.id,
+      type: walletPage === "topup" ? "Top Up" : "Withdrawal",
+      amount: walletPage === "topup" ? +amount : -(+amount),
+      description: `Via ${payStep?.label || "—"}`,
+      status: "pending",
+    });
+    setBusy(false);
+    setMsg(walletPage === "topup" ? "Top-up request submitted! You will be notified once confirmed." : "Withdrawal request submitted! Processing within 24h.");
+    setPayStep(null); setAmount("");
+  };
+
+  // Top-up or withdraw flow
+  if (walletPage && payStep) {
+    return (
+      <div style={{ padding: 16 }}>
+        <button onClick={() => setPayStep(null)} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, marginBottom: 16 }}>
+          <ChevronLeft size={16} /> Back
+        </button>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, marginBottom: 4 }}>{walletPage === "topup" ? "Top Up Wallet" : "Withdraw Funds"}</div>
+        <div style={{ fontSize: 12, color: T.muted, marginBottom: 20 }}>Via {payStep.label}</div>
+        {msg ? (
+          <div style={{ background: `rgba(122,158,134,0.12)`, border: `1px solid ${T.sage}44`, borderRadius: 14, padding: 18, marginBottom: 16, fontSize: 13, color: T.sage, lineHeight: 1.6 }}>{msg}</div>
+        ) : null}
+        <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 6 }}>Amount (GHS)</label>
+        <input
+          type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)}
+          placeholder="0.00"
+          style={{ ...getInputStyle(), width: "100%", marginBottom: 16, fontSize: 20, fontFamily: FONT_HEAD, fontWeight: 700, textAlign: "center" }}
+        />
+        {!msg && (
+          <button onClick={handleSubmit} disabled={busy} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+            {busy ? "Processing…" : walletPage === "topup" ? `Top Up ${amount ? fmtGHS(+amount) : ""}` : `Withdraw ${amount ? fmtGHS(+amount) : ""}`}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (walletPage) {
+    return (
+      <div style={{ padding: 16 }}>
+        <button onClick={() => setWalletPage(null)} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, marginBottom: 16 }}>
+          <ChevronLeft size={16} /> Back
+        </button>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, marginBottom: 16 }}>{walletPage === "topup" ? "Select Top-Up Method" : walletPage === "withdraw" ? "Select Withdrawal Method" : "Transaction History"}</div>
+        {walletPage === "history" ? (
+          txns.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "32px 0", color: T.muted, fontSize: 13 }}>No transactions yet.</div>
+          ) : txns.map((tx, i) => {
+            const isPos = (tx.amount || 0) > 0;
+            return (
+              <div key={tx.id || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 0", borderBottom: i < txns.length - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
+                <div>
+                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper }}>{tx.type || "Transaction"}</div>
+                  <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{fmtDate(tx.created_at)} · {tx.status || "pending"}</div>
+                </div>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: isPos ? T.goldBright : T.rust }}>
+                  {isPos ? "+" : ""}{fmtGHS(Math.abs(tx.amount || 0))}
+                </div>
+              </div>
+            );
+          })
+        ) : PAYMENT_METHODS.map(m => (
+          <button key={m.id} onClick={() => setPayStep(m)} style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10, cursor: "pointer" }}>
+            <span style={{ fontSize: 24 }}>{m.icon}</span>
+            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>{m.label}</span>
+            <ChevronRight size={16} color={T.muted} style={{ marginLeft: "auto" }} />
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  // Main wallet screen
+  const DEMO_TXN = [
+    { id: "w1", type: "Top Up",    description: "Via MTN MoMo", amount:  500, created_at: new Date(Date.now() - 3600000).toISOString() },
+    { id: "w2", type: "Withdrawal", description: "To: GCB Bank", amount: -200, created_at: new Date(Date.now() - 172800000).toISOString() },
+  ];
+  const displayTxns = txns.length > 0 ? txns : DEMO_TXN;
+
+  return (
+    <div style={{ paddingBottom: 32 }}>
+      {/* Virtual card */}
+      <div style={{ margin: "16px 16px 0" }}>
+        <div style={{
+          background: `linear-gradient(135deg, ${T.gold} 0%, ${T.goldBright} 40%, #8B6914 100%)`,
+          borderRadius: 20, padding: "26px 22px 22px", position: "relative", overflow: "hidden", minHeight: 170,
+          boxShadow: `0 8px 32px ${T.gold}44`,
+        }}>
+          {/* Decorative circles */}
+          <div style={{ position: "absolute", top: -30, right: -30, width: 130, height: 130, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
+          <div style={{ position: "absolute", bottom: -20, right: 30, width: 90, height: 90, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
+
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11, color: "rgba(0,0,0,0.55)", letterSpacing: 1.5, marginBottom: 24 }}>CREATOR WALLET</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 30, color: T.ink, letterSpacing: -0.5 }}>{fmtGHS(balance)}</div>
+          <div style={{ fontSize: 11, color: "rgba(0,0,0,0.55)", marginTop: 4, fontFamily: FONT_HEAD }}>Available Balance</div>
+          <div style={{ position: "absolute", bottom: 20, right: 22, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, color: "rgba(0,0,0,0.4)" }}>RainX</div>
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div style={{ margin: "16px 16px 0", display: "flex", gap: 10 }}>
+        <button onClick={() => setWalletPage("topup")} style={{ flex: 1, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "16px 0", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 44, height: 44, borderRadius: "50%", background: `rgba(198,161,91,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <ArrowUpCircle size={22} color={T.gold} />
+          </div>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper }}>Top Up</span>
+        </button>
+        <button onClick={() => setWalletPage("withdraw")} style={{ flex: 1, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "16px 0", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 44, height: 44, borderRadius: "50%", background: `rgba(176,96,74,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <ArrowDownCircle size={22} color={T.rust} />
+          </div>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper }}>Withdraw</span>
+        </button>
+        <button onClick={() => setWalletPage("history")} style={{ flex: 1, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "16px 0", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 44, height: 44, borderRadius: "50%", background: `rgba(91,156,246,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <ScrollText size={22} color="#5B9CF6" />
+          </div>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper }}>History</span>
+        </button>
+      </div>
+
+      {/* Recent transactions */}
+      <div style={{ padding: "22px 16px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>Recent Transactions</span>
+          <button onClick={() => setWalletPage("history")} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", fontSize: 12, fontFamily: FONT_HEAD, fontWeight: 600, display: "flex", alignItems: "center", gap: 2 }}>
+            View all <ChevronRight size={14} />
+          </button>
+        </div>
+        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, overflow: "hidden" }}>
+          {displayTxns.slice(0, 5).map((tx, i) => {
+            const isPos = (tx.amount || 0) > 0;
+            return (
+              <div key={tx.id || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: i < Math.min(displayTxns.length, 5) - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: isPos ? `rgba(198,161,91,0.12)` : `rgba(176,96,74,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {isPos ? <ArrowUpCircle size={18} color={T.gold} /> : <ArrowDownCircle size={18} color={T.rust} />}
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper }}>{tx.type}</div>
+                    <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{tx.description || ""} · {fmtDate(tx.created_at)}</div>
+                  </div>
+                </div>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: isPos ? T.goldBright : T.rust }}>
+                  {isPos ? "+" : ""}{fmtGHS(Math.abs(tx.amount || 0))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, setTab, entitlement, themeMode, setThemeMode }) {
   const [morePage, setMorePage] = useState(null);
@@ -2544,7 +2986,10 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <button onClick={saveProfile} disabled={savingProfile} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
           {savingProfile ? "Saving…" : "Save Profile"}
         </button>
-        <button onClick={onLogout} style={{ width: "100%", marginTop: 12, background: "none", border: `1px solid rgba(176,96,74,0.4)`, borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.rust, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        <button onClick={() => setMorePage("security")} style={{ width: "100%", marginTop: 10, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          <Lock size={15} color={T.gold} /> Security Settings
+        </button>
+        <button onClick={onLogout} style={{ width: "100%", marginTop: 10, background: "none", border: `1px solid rgba(176,96,74,0.4)`, borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.rust, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
           <LogOut size={15} /> Log out
         </button>
       </div>
@@ -2656,8 +3101,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   );
 
   if (morePage === "wallet") return (
-    <MoreSubScreen onBack={() => setMorePage(null)} title="Rewards & Balance" subtitle="Track your earnings and rewards" rightElement={<Bell size={20} color={T.muted} style={{ cursor: "pointer" }} />}>
-      <RewardsScreen account={account} entitlement={entitlement} />
+    <MoreSubScreen onBack={() => setMorePage(null)} title="Creator Wallet" subtitle="Your personal trading wallet">
+      <CreatorWalletScreen account={account} />
     </MoreSubScreen>
   );
 
@@ -2695,31 +3140,64 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     </MoreSubScreen>
   );
 
-  if (morePage === "community-profile") return (
-    <MoreSubScreen onBack={() => setMorePage(null)}>
+  // Community profile = redirect to main profile (same data)
+  if (morePage === "community-profile") {
+    setMorePage("profile");
+    return null;
+  }
+
+  if (morePage === "security") return (
+    <MoreSubScreen onBack={() => setMorePage(null)} title="Security" subtitle="Protect your account">
       <div style={{ padding: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20, padding: 18, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16 }}>
-          {avatarUrl
-            ? <img src={avatarUrl} alt="avatar" style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover" }} />
-            : <div style={{ width: 64, height: 64, borderRadius: "50%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, display: "flex", alignItems: "center", justifyContent: "center", color: T.ink, fontWeight: 800, fontFamily: FONT_HEAD, fontSize: 22 }}>{profileInitial}</div>
-          }
-          <div>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>{username || account?.email}</div>
-            <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>RainX Community Member</div>
-          </div>
+        {/* Reset password */}
+        <SecuritySection
+          icon={Key}
+          title="Change Password"
+          desc="Update your account password"
+          onPress={async () => {
+            const { error } = await supabase.auth.resetPasswordForEmail(account?.email || "");
+            if (!error) alert("Password reset link sent to your email.");
+            else alert("Could not send reset email. Try again.");
+          }}
+          label="Send Reset Email"
+        />
+        {/* 2FA */}
+        <SecuritySection
+          icon={Smartphone}
+          title="Two-Step Authentication"
+          desc="Add an extra layer of protection to your account"
+          onPress={() => alert("2FA setup is coming soon. Check back for updates.")}
+          label="Set Up 2FA"
+          comingSoon
+        />
+        {/* Phone number */}
+        <SecuritySection
+          icon={Smartphone}
+          title="Phone Number"
+          desc="Add a phone number for account recovery"
+          onPress={() => alert("Phone verification is coming soon.")}
+          label="Add Phone"
+          comingSoon
+        />
+        {/* Active sessions */}
+        <SecuritySection
+          icon={Eye}
+          title="Active Sessions"
+          desc="View and manage your active login sessions"
+          onPress={() => alert("Session management coming soon.")}
+          label="View Sessions"
+          comingSoon
+        />
+        {/* Delete account */}
+        <div style={{ marginTop: 24 }}>
+          <button onClick={() => {
+            if (window.confirm("Are you sure you want to delete your account? This cannot be undone.")) {
+              alert("Please contact support to delete your account.");
+            }
+          }} style={{ width: "100%", background: "none", border: `1px solid ${T.rust}44`, borderRadius: 13, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.rust, cursor: "pointer" }}>
+            Delete Account
+          </button>
         </div>
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 4 }}>Display Name</label>
-          <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Your community name" style={{ ...getInputStyle(), width: "100%" }} />
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 4 }}>Bio</label>
-          <input value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell the community about yourself" style={{ ...getInputStyle(), width: "100%" }} />
-        </div>
-        {profileMsg && <div style={{ fontSize: 11, color: profileMsg === "Saved." ? T.sage : T.rust, marginBottom: 10 }}>{profileMsg}</div>}
-        <button onClick={saveProfile} disabled={savingProfile} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
-          {savingProfile ? "Saving…" : "Save Profile"}
-        </button>
       </div>
     </MoreSubScreen>
   );
@@ -2761,7 +3239,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         </div>
       </MoreSection>
 
-      <MoreSection title="Benefits">
+      <MoreSection title="Trader Rewards Programme">
         {benefits.map((b, i) => (
           <React.Fragment key={b.id}>
             {i > 0 && <MoreRowDivider />}
@@ -2770,7 +3248,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               title={b.title}
               badge={b.status}
               badgeColor={b.status === "Qualified" ? T.goldBright : undefined}
-              onPress={() => {}}
+              onPress={() => b.id === "verification" ? setMorePage("verification") : setMorePage("rewards")}
             />
           </React.Fragment>
         ))}
@@ -2779,8 +3257,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       <MoreSection title="Wallet">
         <MoreRow
           icon={Wallet}
-          title="Crypto Wallet Balance"
-          subtitle="0.00 USD"
+          title="Creator Wallet"
+          subtitle="Your personal trading wallet"
           onPress={() => setMorePage("wallet")}
         />
       </MoreSection>
@@ -2798,7 +3276,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <MoreRowDivider />
         <MoreRow icon={Send} title="Connect Telegram" onPress={() => setMorePage("telegram")} />
         <MoreRowDivider />
-        <MoreRow icon={Users2} title="Community Profile" onPress={() => setMorePage("community-profile")} />
+        <MoreRow icon={Lock} title="Security" onPress={() => setMorePage("security")} />
       </MoreSection>
 
       <MoreSection title="Appearance">
