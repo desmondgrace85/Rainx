@@ -62,11 +62,60 @@ async function storageDelete(key, shared) {
   return null;
 }
 
-// ---------- Instruments ----------
-const INSTRUMENTS = [
-  { symbol: "XAUUSD", name: "Gold", base: 4020, vol: 8, digits: 2, cls: "metal", unit: "points" },
-  { symbol: "BTCUSD", name: "Bitcoin", base: 64000, vol: 250, digits: 1, cls: "crypto", unit: "points" },
-  { symbol: "ETHUSD", name: "Ethereum", base: 1850, vol: 15, digits: 2, cls: "crypto", unit: "points" },
+// ---------- Asset catalog --------------------------------------------------------
+const ASSET_CATALOG = [
+  { id:"crypto",  label:"Crypto",  emoji:"₿",  assets:[
+    { symbol:"BTCUSD",  name:"Bitcoin",   base:64000, vol:250,  digits:1, cls:"crypto" },
+    { symbol:"ETHUSD",  name:"Ethereum",  base:1850,  vol:15,   digits:2, cls:"crypto" },
+    { symbol:"SOLUSD",  name:"Solana",    base:140,   vol:3,    digits:2, cls:"crypto" },
+    { symbol:"BNBUSD",  name:"BNB",       base:420,   vol:8,    digits:2, cls:"crypto" },
+    { symbol:"XRPUSD",  name:"XRP",       base:0.52,  vol:0.02, digits:4, cls:"crypto" },
+    { symbol:"DOGEUSD", name:"Dogecoin",  base:0.12,  vol:0.005,digits:4, cls:"crypto" },
+  ]},
+  { id:"forex",   label:"Forex",   emoji:"$",  assets:[
+    { symbol:"EURUSD",  name:"Euro / Dollar",  base:1.085, vol:0.002,digits:5,cls:"forex" },
+    { symbol:"GBPUSD",  name:"Pound / Dollar", base:1.265, vol:0.003,digits:5,cls:"forex" },
+    { symbol:"USDJPY",  name:"Dollar / Yen",   base:149,   vol:0.3,  digits:3,cls:"forex" },
+    { symbol:"AUDUSD",  name:"Aussie / Dollar",base:0.645, vol:0.002,digits:5,cls:"forex" },
+    { symbol:"USDCAD",  name:"Dollar / CAD",   base:1.36,  vol:0.002,digits:5,cls:"forex" },
+    { symbol:"USDCHF",  name:"Dollar / Swiss", base:0.895, vol:0.002,digits:5,cls:"forex" },
+    { symbol:"NZDUSD",  name:"Kiwi / Dollar",  base:0.595, vol:0.002,digits:5,cls:"forex" },
+  ]},
+  { id:"metals",  label:"Metals",  emoji:"Au", assets:[
+    { symbol:"XAUUSD",  name:"Gold",   base:4020, vol:8,   digits:2,cls:"metal" },
+    { symbol:"XAGUSD",  name:"Silver", base:28,   vol:0.3, digits:3,cls:"metal" },
+  ]},
+  { id:"energy",  label:"Energy",  emoji:"⚡", assets:[
+    { symbol:"USOIL",   name:"US Oil (WTI)",  base:82, vol:0.8,digits:2,cls:"energy" },
+    { symbol:"UKOIL",   name:"UK Oil (Brent)",base:86, vol:0.8,digits:2,cls:"energy" },
+  ]},
+  { id:"indices", label:"Indices", emoji:"#",  assets:[
+    { symbol:"NAS100",  name:"NASDAQ 100", base:17000, vol:80,  digits:1,cls:"index" },
+    { symbol:"SPX500",  name:"S&P 500",    base:5200,  vol:25,  digits:1,cls:"index" },
+    { symbol:"US30",    name:"Dow Jones",  base:38500, vol:120, digits:1,cls:"index" },
+    { symbol:"GER40",   name:"DAX 40",     base:18200, vol:100, digits:1,cls:"index" },
+  ]},
+];
+const ALL_ASSETS = ASSET_CATALOG.flatMap(c => c.assets.map(a => ({ ...a, category:c.id })));
+// Keep INSTRUMENTS as the 3 default chart-data assets (price engine seeded for these)
+const INSTRUMENTS = ALL_ASSETS;
+
+// ---------- Analysis durations -----------------------------------------------
+const ANALYSIS_DURATIONS = [
+  { key:"15m", label:"15 MIN",  sublabel:"Fast market analysis",    secs:15*60 },
+  { key:"30m", label:"30 MIN",  sublabel:"Short-term setup",        secs:30*60 },
+  { key:"1h",  label:"1 HOUR",  sublabel:"Intraday analysis",       secs:60*60 },
+  { key:"2h",  label:"2 HOURS", sublabel:"Extended intraday",       secs:2*60*60 },
+  { key:"4h",  label:"4 HOURS", sublabel:"Session analysis",        secs:4*60*60 },
+  { key:"1d",  label:"1 DAY",   sublabel:"Daily market analysis",   secs:24*60*60 },
+];
+
+const STEP_DEFS = [
+  { id:"structure", label:"Market Structure", done:"Identified" },
+  { id:"sr",        label:"Support & Resistance", done:"Mapped" },
+  { id:"trend",     label:"Trend Direction", done:"Bullish" },
+  { id:"entry",     label:"Entry Zone", done:"Watching" },
+  { id:"confirm",   label:"Confirmation", done:"Pending" },
 ];
 
 function isMarketOpen(cls) {
@@ -101,6 +150,27 @@ function seedSeries(inst) {
   }
   return arr;
 }
+// ---------- Tick → OHLCV conversion for candlestick chart ----------------------
+function ticksToCandles(ticks, count = 70) {
+  if (!ticks || ticks.length < 2) return [];
+  const size = Math.max(1, Math.floor(ticks.length / count));
+  const out = [];
+  for (let i = 0; i + size <= ticks.length; i += size) {
+    const chunk = ticks.slice(i, i + size);
+    const prices = chunk.map(p => p.price);
+    const open = prices[0], close = prices[prices.length - 1];
+    const rawHi = Math.max(...prices), rawLo = Math.min(...prices);
+    const spread = Math.max(rawHi - rawLo, 0.0001);
+    out.push({
+      t: chunk[0].t,
+      open, close,
+      high: rawHi + spread * (0.1 + Math.random() * 0.25),
+      low:  rawLo - spread * (0.1 + Math.random() * 0.25),
+    });
+  }
+  return out.slice(-count);
+}
+
 // ---------- Live price engine (yfinance via Raina-AI bot — no API key needed) ----------
 function seedSeriesFromPrice(inst, price) {
   // Reuses the same wiggly shape as seedSeries() for a readable chart line,
@@ -603,7 +673,8 @@ function MainAppContent({ account, onLogout }) {
 
   const [tab, setTab] = useState("home");
   const [activeSymbol, setActiveSymbol] = useState("XAUUSD");
-  const inst = INSTRUMENTS.find((i) => i.symbol === activeSymbol);
+  const activeInst = ALL_ASSETS.find(i => i.symbol === (session?.symbol || activeSymbol)) || ALL_ASSETS.find(i => i.symbol === "XAUUSD");
+  const inst = activeInst;
   const marketOpen = isMarketOpen(inst.cls);
 
   const series = seriesMap[activeSymbol];
@@ -624,6 +695,128 @@ function MainAppContent({ account, onLogout }) {
   const [activeToast, setActiveToast] = useState(null);
   const [autoScan, setAutoScan] = useState(true);
   const lastCandleTimeRef = useRef({}); // `${symbol}_${tfKey}` -> datetime string of the last candle we saw
+
+  // ─── Analysis session ──────────────────────────────────────────────────────
+  const [session, setSession] = useState(null);
+  // session = { symbol, name, duration, startTime, endTime, stepIndex, steps, activities, overlays, setup, state }
+
+  // Step progression engine
+  useEffect(() => {
+    if (!session || session.state !== "analyzing") return;
+    if (session.stepIndex >= STEP_DEFS.length) return;
+    const delay = 2800 + Math.random() * 3200;
+    const id = setTimeout(() => {
+      setSession(prev => {
+        if (!prev || prev.stepIndex !== session.stepIndex) return prev;
+        const ni = prev.stepIndex + 1;
+        const steps = STEP_DEFS.map((s, i) => ({ ...s, status: i < ni ? "done" : i === ni ? "active" : "pending" }));
+        // Build overlays for this step
+        const base = prev.overlays.filter(o => o._step !== prev.stepIndex);
+        const inst2 = ALL_ASSETS.find(a => a.symbol === prev.symbol) || ALL_ASSETS[0];
+        const price = (seriesMapRef.current[prev.symbol] || []).slice(-1)[0]?.price || inst2.base;
+        const vol = inst2.vol;
+        let newOverlays = [...base];
+        if (prev.stepIndex === 0) { // structure → trendline
+          newOverlays.push({ _step:0, type:"trendline", price1: price - vol*6, price2: price - vol*1 });
+        } else if (prev.stepIndex === 1) { // S&R → zones
+          newOverlays.push({ _step:1, type:"resistance", price: price + vol*2.5, label:"Resistance Zone" });
+          newOverlays.push({ _step:1, type:"support_zone", priceLow: price - vol*2.5, priceHigh: price - vol*1 });
+        } else if (prev.stepIndex === 2) { // trend → nothing extra
+        } else if (prev.stepIndex === 3) { // entry zone
+          newOverlays.push({ _step:3, type:"entry_zone", priceLow: price - vol*0.5, priceHigh: price + vol*0.5 });
+        } else if (prev.stepIndex === 4) { // projection
+          newOverlays.push({ _step:4, type:"projection", target: price + vol*3 });
+        }
+        // Always show current price
+        newOverlays = newOverlays.filter(o => o.type !== "current_price");
+        newOverlays.push({ type:"current_price", price });
+        // Activity entry
+        const actMsg = [
+          "Market structure mapped — bullish higher highs forming.",
+          `Support zone identified near ${(price - vol*1.5).toFixed(inst2.digits)}.`,
+          "Trend direction confirmed — bullish bias maintained.",
+          `Entry zone identified ${(price - vol*0.5).toFixed(inst2.digits)} – ${(price + vol*0.5).toFixed(inst2.digits)}. Monitoring price action.`,
+          "Confirmation pending — watching for momentum shift.",
+        ][prev.stepIndex] || "Analysis progressing.";
+        const activities = [{ time: new Date().toLocaleTimeString(), text: actMsg }, ...prev.activities].slice(0, 20);
+        // Build setup when entry step done
+        const res = prev.result || null;
+        let setup = prev.setup;
+        if (ni >= 4 && !setup) {
+          const slDist = vol * 2.5;
+          const tp1Dist = vol * 3.8;
+          const tp2Dist = vol * 6.2;
+          setup = {
+            bias: "BUY",
+            entryLow: price - vol*0.5,
+            entryHigh: price + vol*0.5,
+            stopLoss: price - slDist,
+            tp1: price + tp1Dist,
+            tp2: price + tp2Dist,
+            rr: (tp1Dist / slDist).toFixed(1),
+            confidence: 68 + Math.floor(Math.random()*20),
+            reason: `Price is in an uptrend and holding above key support. Strong bounce expected towards resistance.`,
+          };
+        }
+        const state = ni >= STEP_DEFS.length ? "watching" : "analyzing";
+        return { ...prev, stepIndex: ni, steps, overlays: newOverlays, activities, setup, state };
+      });
+    }, delay);
+    return () => clearTimeout(id);
+  }, [session?.stepIndex, session?.state]);
+
+  // Activity heartbeat during watching phase
+  useEffect(() => {
+    if (!session || session.state !== "watching") return;
+    const msgs = [
+      "Price action remains constructive above support.",
+      "Monitoring momentum indicators for confirmation.",
+      "No significant structure changes detected.",
+      "Resistance zone holding. Watching for breakout.",
+      "Bullish structure intact. Setup still developing.",
+      "Price consolidating near entry zone.",
+    ];
+    const id = setInterval(() => {
+      setSession(prev => {
+        if (!prev) return prev;
+        const text = msgs[Math.floor(Math.random() * msgs.length)];
+        return { ...prev, activities: [{ time: new Date().toLocaleTimeString(), text }, ...prev.activities].slice(0, 20) };
+      });
+    }, 30000);
+    return () => clearInterval(id);
+  }, [session?.state]);
+
+  // Session countdown
+  const [sessionSecsLeft, setSessionSecsLeft] = useState(0);
+  useEffect(() => {
+    if (!session) return;
+    const id = setInterval(() => {
+      const left = Math.max(0, Math.round((session.endTime - Date.now()) / 1000));
+      setSessionSecsLeft(left);
+      if (left === 0) {
+        setSession(prev => prev ? { ...prev, state: "completed" } : prev);
+        clearInterval(id);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [session?.endTime]);
+
+  const startAnalysisSession = useCallback((asset, duration) => {
+    const now = Date.now();
+    setSession({
+      symbol: asset.symbol,
+      name: asset.name,
+      duration,
+      startTime: now,
+      endTime: now + duration.secs * 1000,
+      stepIndex: 0,
+      steps: STEP_DEFS.map((s, i) => ({ ...s, status: i === 0 ? "active" : "pending" })),
+      activities: [{ time: new Date().toLocaleTimeString(), text: `Raina AI starting analysis on ${asset.symbol}. Studying market structure…` }],
+      overlays: [],
+      setup: null,
+      state: "analyzing",
+    });
+  }, []);
 
   // ─── Theme ─────────────────────────────────────────────────────────────────
   const [themeMode, setThemeMode] = useState(() => lsGet("rainx-theme") || "light");
@@ -870,6 +1063,7 @@ function MainAppContent({ account, onLogout }) {
         * { box-sizing: border-box; }
         body { margin:0; }
         @keyframes slideDown { from { transform: translateY(-30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
       `}</style>
 
       <Toast toast={activeToast} onDone={() => setActiveToast(null)} />
@@ -897,7 +1091,7 @@ function MainAppContent({ account, onLogout }) {
       </div>
 
       <div style={{ paddingBottom: 78 }}>
-        {tab === "home" && <HomeTab inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} sma20={sma20} sma50={sma50} rsiVal={rsiVal} activeSignal={activeSignal} loading={loadingKey === `${activeSymbol}_${selectedTf}`} onRefresh={() => checkCandle(inst, TIMEFRAMES.find((t) => t.key === selectedTf))} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} signalsMap={signalsMap} selectedTf={selectedTf} setSelectedTf={setSelectedTf} entitlement={entitlement} onSubscribe={() => setTab("subscribe")} />}
+        {tab === "home" && <HomeTab inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => setTab("subscribe")} session={session} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} setSession={setSession} seriesMap={seriesMap} />}
         {tab === "markets" && <MarketsTab seriesMap={seriesMap} signalsMap={signalsMap} activeSymbol={activeSymbol} onSelect={(s) => { setActiveSymbol(s); setTab("home"); }} />}
         {tab === "community" && <CommunityTab account={account} themeTokens={T} />}
         {tab === "history" && <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => setTab("subscribe")} />}
@@ -940,141 +1134,574 @@ function MainAppContent({ account, onLogout }) {
   );
 }
 
-// ---------- Home tab ----------
-function HomeTab({ inst, marketOpen, last, changePct, series, sma20, sma50, rsiVal, activeSignal, loading, onRefresh, activeSymbol, setActiveSymbol, signalsMap, selectedTf, setSelectedTf, entitlement, onSubscribe }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// Candlestick chart (canvas-based, no extra deps)
+// ─────────────────────────────────────────────────────────────────────────────
+function CandlestickChart({ candles, overlays, inst, containerHeight = 240 }) {
+  const canvasRef = useRef(null);
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || candles.length < 4) return;
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const dpr = window.devicePixelRatio || 1;
+      const W = canvas.offsetWidth || 340;
+      const H = canvas.offsetHeight || containerHeight;
+      canvas.width  = W * dpr;
+      canvas.height = H * dpr;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, W, H);
+
+      // Padding
+      const pad = { top: 16, bottom: 28, left: 4, right: 56 };
+      const cW = W - pad.left - pad.right;
+      const cH = H - pad.top - pad.bottom;
+
+      // Price range
+      const allPrices = candles.flatMap(c => [c.high, c.low]);
+      overlays.forEach(o => {
+        if (o.price) allPrices.push(o.price);
+        if (o.priceHigh) allPrices.push(o.priceHigh, o.priceLow);
+        if (o.target) allPrices.push(o.target);
+      });
+      const minP = Math.min(...allPrices), maxP = Math.max(...allPrices);
+      const pRange = maxP - minP || 1;
+      const toY = p => pad.top + cH - ((p - minP) / pRange) * cH;
+      const gap = cW / candles.length;
+      const bW = Math.max(2, gap * 0.65);
+      const toX = i => pad.left + i * gap + gap / 2;
+
+      // Grid lines (faint)
+      ctx.strokeStyle = isDarkCanvas ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)";
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 5; i++) {
+        const y = pad.top + (cH / 5) * i;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+      }
+
+      // ── Draw overlays BELOW candles ──────────────────────────────────────
+      const BULL_COLOR = "#22c55e", BEAR_COLOR = "#ef4444";
+      const GOLD = T.gold || "#C6A15B";
+
+      overlays.forEach(o => {
+        if (o.type === "support_zone") {
+          const y1 = toY(o.priceHigh), y2 = toY(o.priceLow);
+          ctx.fillStyle = "rgba(34,197,94,0.08)";
+          ctx.fillRect(pad.left, y1, cW, y2 - y1);
+          ctx.strokeStyle = "rgba(34,197,94,0.4)";
+          ctx.lineWidth = 1; ctx.setLineDash([]);
+          ctx.strokeRect(pad.left, y1, cW, y2 - y1);
+          // Label
+          ctx.fillStyle = "#16a34a"; ctx.font = `bold 8.5px sans-serif`;
+          ctx.fillText("Support Zone", pad.left + cW * 0.28 + 4, (y1 + y2) / 2 + 4);
+          // Price pill
+          const midY = (y1 + y2) / 2;
+          ctx.fillStyle = "#16a34a";
+          roundRect(ctx, W - pad.right + 2, midY - 9, pad.right - 2, 18, 3); ctx.fill();
+          ctx.fillStyle = "#fff"; ctx.font = "bold 8px sans-serif"; ctx.textAlign = "center";
+          ctx.fillText(o.priceHigh.toFixed(Math.min(inst.digits, 2)), W - pad.right/2, midY + 3);
+          ctx.textAlign = "left";
+        }
+      });
+
+      overlays.forEach(o => {
+        if (o.type === "resistance") {
+          const y = toY(o.price);
+          ctx.beginPath(); ctx.strokeStyle = BEAR_COLOR; ctx.lineWidth = 1.5;
+          ctx.setLineDash([6, 4]);
+          ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = BEAR_COLOR; ctx.font = `bold 8.5px sans-serif`;
+          ctx.fillText(o.label || "Resistance Zone", pad.left + 4, y - 5);
+          // Price pill
+          ctx.fillStyle = BEAR_COLOR;
+          roundRect(ctx, W - pad.right + 2, y - 9, pad.right - 2, 18, 3); ctx.fill();
+          ctx.fillStyle = "#fff"; ctx.font = "bold 8px sans-serif"; ctx.textAlign = "center";
+          ctx.fillText(o.price.toFixed(Math.min(inst.digits, 2)), W - pad.right/2, y + 3);
+          ctx.textAlign = "left";
+        }
+        if (o.type === "trendline") {
+          const x1 = pad.left, x2 = toX(candles.length - 10);
+          ctx.beginPath(); ctx.strokeStyle = GOLD; ctx.lineWidth = 1.5;
+          ctx.setLineDash([7, 4]);
+          ctx.moveTo(x1, toY(o.price1)); ctx.lineTo(x2, toY(o.price2)); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = GOLD; ctx.font = `bold 8.5px sans-serif`;
+          ctx.fillText("Uptrend Line", x1 + 6, toY(o.price2) - 6);
+        }
+        if (o.type === "entry_zone") {
+          const y1 = toY(o.priceHigh), y2 = toY(o.priceLow);
+          ctx.fillStyle = "rgba(198,161,91,0.10)";
+          ctx.fillRect(pad.left, y1, cW, y2 - y1);
+          [y1, y2].forEach(y => {
+            ctx.beginPath(); ctx.strokeStyle = GOLD; ctx.lineWidth = 1; ctx.setLineDash([4,3]);
+            ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+            ctx.setLineDash([]);
+          });
+        }
+        if (o.type === "current_price") {
+          const y = toY(o.price);
+          ctx.beginPath(); ctx.strokeStyle = GOLD; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+          ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = GOLD;
+          roundRect(ctx, W - pad.right + 2, y - 9, pad.right - 2, 18, 3); ctx.fill();
+          ctx.fillStyle = T.ink || "#fff"; ctx.font = "bold 8px sans-serif"; ctx.textAlign = "center";
+          ctx.fillText(o.price.toFixed(Math.min(inst.digits, 2)), W - pad.right/2, y + 3);
+          ctx.textAlign = "left";
+        }
+        if (o.type === "projection") {
+          const lastX = toX(candles.length - 1);
+          const lastY = toY(candles[candles.length - 1]?.close || o.target);
+          const endX = lastX + gap * 5;
+          const endY = toY(o.target);
+          ctx.beginPath(); ctx.strokeStyle = BULL_COLOR; ctx.lineWidth = 2; ctx.setLineDash([]);
+          ctx.moveTo(lastX, lastY);
+          ctx.bezierCurveTo(lastX + (endX - lastX)/2, lastY, lastX + (endX - lastX)/2, endY, endX, endY);
+          ctx.stroke();
+          // Arrowhead
+          ctx.fillStyle = BULL_COLOR; ctx.beginPath();
+          ctx.moveTo(endX, endY); ctx.lineTo(endX - 8, endY - 5); ctx.lineTo(endX - 8, endY + 5);
+          ctx.closePath(); ctx.fill();
+          // AI Projection box
+          const bx = Math.min(endX - 90, W - pad.right - 92), by = endY + 8;
+          ctx.fillStyle = "rgba(240,253,244,0.95)"; ctx.strokeStyle = "rgba(34,197,94,0.3)"; ctx.lineWidth = 1;
+          roundRect(ctx, bx, by, 90, 42, 6); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = "#16a34a"; ctx.font = "bold 8px sans-serif";
+          ctx.fillText("AI Projection", bx + 6, by + 12);
+          ctx.fillStyle = "#333"; ctx.font = "7.5px sans-serif";
+          const lines2 = ["Price expected to bounce", "from support towards", "the resistance zone."];
+          lines2.forEach((l, i) => ctx.fillText(l, bx + 6, by + 22 + i * 9));
+        }
+      });
+
+      // ── Draw candles ──────────────────────────────────────────────────────
+      candles.forEach((c, i) => {
+        const x = toX(i), yO = toY(c.open), yC = toY(c.close), yH = toY(c.high), yL = toY(c.low);
+        const bull = c.close >= c.open;
+        const color = bull ? BULL_COLOR : BEAR_COLOR;
+        // Wick
+        ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 1;
+        ctx.moveTo(x, yH); ctx.lineTo(x, yL); ctx.stroke();
+        // Body
+        const top = Math.min(yO, yC), bh = Math.max(1.5, Math.abs(yO - yC));
+        if (bull) { ctx.fillStyle = color; ctx.fillRect(x - bW/2, top, bW, bh); }
+        else { ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.strokeRect(x - bW/2, top, bW, bh); }
+      });
+
+      // ── Price axis labels ────────────────────────────────────────────────
+      const textColor = isDarkCanvas ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)";
+      ctx.fillStyle = textColor; ctx.font = "8px sans-serif"; ctx.textAlign = "right";
+      for (let i = 0; i <= 4; i++) {
+        const p = minP + (pRange / 4) * i, y = toY(p);
+        ctx.fillText(p.toFixed(Math.min(inst.digits, 2)), W - pad.right - 2, y + 3);
+      }
+      // ── Time axis labels ─────────────────────────────────────────────────
+      ctx.textAlign = "center"; ctx.font = "8px sans-serif";
+      const step = Math.max(1, Math.floor(candles.length / 6));
+      candles.forEach((c, i) => {
+        if (i % step !== 0) return;
+        const d = new Date(c.t);
+        const label = `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
+        ctx.fillText(label, toX(i), H - 4);
+      });
+      ctx.textAlign = "left";
+    });
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [candles, overlays, inst]);
+
+  return <canvas ref={canvasRef} style={{ width:"100%", height:"100%", display:"block" }} />;
+}
+// Need isDarkCanvas in canvas scope — read from global T
+let isDarkCanvas = false;
+function setIsDarkCanvas(v) { isDarkCanvas = v; }
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
+  ctx.lineTo(x + w, y + h - r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+  ctx.lineTo(x + r, y + h); ctx.arcTo(x, y+h, x, y+h-r, r);
+  ctx.lineTo(x, y + r); ctx.arcTo(x, y, x+r, y, r);
+  ctx.closePath();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Add Market bottom sheet
+// ─────────────────────────────────────────────────────────────────────────────
+function AddMarketSheet({ onClose, onSelect, activeSessions }) {
+  const [category, setCategory] = useState(null);
   return (
-    <>
-      <div style={{ display: "flex", gap: 6, padding: "12px 16px 0", overflowX: "auto" }}>
-        {INSTRUMENTS.map((i) => {
-          const combo = signalsMap[i.symbol];
-          const anyBias = combo && Object.values(combo).find((s) => s.bias !== "hold" && s.status === "active");
-          const dot = anyBias ? (anyBias.bias === "buy" ? T.sage : T.rust) : "transparent";
-          const activeTab = i.symbol === activeSymbol;
-          return (
-            <button key={i.symbol} onClick={() => setActiveSymbol(i.symbol)} style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, background: activeTab ? T.gold : T.card, color: activeTab ? T.ink : T.paper, border: `1px solid ${activeTab ? T.gold : T.cardBorder}`, borderRadius: 20, padding: "6px 12px", fontFamily: FONT_HEAD, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: dot }} />{i.symbol}
-            </button>
-          );
-        })}
-      </div>
-
-      <div style={{ padding: "16px 16px 0" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-          <span style={{ fontFamily: FONT_HEAD, fontSize: 32, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{last.toFixed(inst.digits)}</span>
-          <span style={{ color: changePct >= 0 ? T.sage : T.rust, fontSize: 14, fontWeight: 700 }}>{changePct >= 0 ? "▲" : "▼"} {Math.abs(changePct).toFixed(3)}%</span>
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
+        {/* Handle */}
+        <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}>
+          <div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} />
         </div>
-        <div style={{ fontSize: 12, color: T.muted, marginTop: 2, fontWeight: 500 }}>{inst.name} · {inst.symbol}</div>
-      </div>
-
-      <div style={{ height: 150, margin: "12px 0" }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={series.slice(-80)}>
-            <defs><linearGradient id="goldFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={T.gold} stopOpacity={0.35} /><stop offset="100%" stopColor={T.gold} stopOpacity={0} /></linearGradient></defs>
-            <XAxis dataKey="t" hide /><YAxis domain={["auto", "auto"]} hide />
-            <Tooltip contentStyle={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 8, fontFamily: FONT_BODY, fontSize: 12 }} labelFormatter={() => ""} formatter={(v) => [v, "price"]} />
-            <Area type="monotone" dataKey="price" stroke={T.gold} strokeWidth={2} fill="url(#goldFill)" />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div style={{ display: "flex", gap: 8, padding: "0 16px" }}>
-        {[["SMA20", sma20 ? sma20.toFixed(inst.digits) : "—"], ["SMA50", sma50 ? sma50.toFixed(inst.digits) : "—"], ["RSI14", rsiVal ? rsiVal.toFixed(1) : "—"]].map(([label, val]) => (
-          <div key={label} style={{ flex: 1, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 10, padding: "8px 10px" }}>
-            <div style={{ fontSize: 10, color: T.muted, letterSpacing: 0.5, fontWeight: 600 }}>{label}</div>
-            <div style={{ fontSize: 15, color: T.paper, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{val}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Timeframe selector */}
-      <div style={{ display: "flex", gap: 8, padding: "16px 16px 0" }}>
-        {TIMEFRAMES.map((tf) => {
-          const sig = signalsMap[activeSymbol]?.[tf.key];
-          const dot = sig && sig.bias !== "hold" && sig.status === "active" ? (sig.bias === "buy" ? T.sage : T.rust) : "transparent";
-          return (
-            <button key={tf.key} onClick={() => setSelectedTf(tf.key)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 0", borderRadius: 10, border: `1px solid ${selectedTf === tf.key ? T.gold : T.cardBorder}`, background: selectedTf === tf.key ? T.gold : T.card, color: selectedTf === tf.key ? T.ink : T.paper, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: dot }} />{tf.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div style={{ margin: "16px", background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 18 }}>
-        {!marketOpen ? (
-          <div style={{ textAlign: "center", padding: "20px 0" }}>
-            <div style={{ fontSize: 28 }}>🌙</div>
-            <div style={{ fontFamily: FONT_HEAD, fontSize: 16, color: T.goldBright, marginTop: 6, fontWeight: 700 }}>Market is closed</div>
-            <div style={{ fontSize: 12, color: T.muted, marginTop: 4, fontWeight: 500 }}>{nextOpenLabel(inst.cls) || "Waiting for the session to open."}</div>
-            <div style={{ fontSize: 11, color: T.muted, marginTop: 8, fontWeight: 500 }}>No new signals will load until trading resumes.</div>
-          </div>
-        ) : loading && !activeSignal ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, color: T.muted, fontSize: 13, fontWeight: 500 }}><Activity size={14} /> Raina is reading the market…</div>
-        ) : activeSignal ? (
-          <BlurGate unlocked={hasAccess(entitlement.tier, "weekly")} requiredLabel="Weekly" onSubscribe={onSubscribe} minHeight={220}>
-            <>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <div>
-                  <div style={{ fontFamily: FONT_HEAD, fontSize: 16, fontWeight: 700, color: T.goldBright }}>{inst.symbol}</div>
-                  <div style={{ fontSize: 10, color: T.muted, marginTop: 1 }}>{activeSignal.timeframeLabel} signal · generated {new Date(activeSignal.generatedAt).toLocaleTimeString()}</div>
-                </div>
-                <BiasChip bias={activeSignal.bias} />
+        {!category ? (
+          <>
+            <div style={{ padding:"0 20px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>Add Market</div>
+                <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Choose a market category</div>
               </div>
-
-              {activeSignal.status !== "active" && (
-                <div style={{ background: activeSignal.status === "tp_hit" ? `${T.sage}22` : `${T.rust}22`, border: `1px solid ${activeSignal.status === "tp_hit" ? T.sage : T.rust}`, borderRadius: 10, padding: 10, marginBottom: 12, fontSize: 12, color: T.paper, fontWeight: 600 }}>
-                  {activeSignal.status === "tp_hit" ? "🎯 Take Profit hit on this signal." : "Stop Loss hit. Your capital was protected by our risk-management limits. We are analyzing the next high-probability market setup."}
-                </div>
-              )}
-
-              {activeSignal.bias === "hold" ? (
-                <>
-                  <Row label="Confidence" value={`${activeSignal.confidence}%`} />
-                  <div style={{ background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 10, padding: 10, marginTop: 8, fontSize: 11.5, color: T.muted, lineHeight: 1.6 }}>
-                    No trade recommended right now - signals are mixed. No entry, stop loss, or take profit is being tracked for this call.
+              <button onClick={onClose} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><X size={20} /></button>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 16px" }}>
+              {ASSET_CATALOG.map(cat => (
+                <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"18px 14px", textAlign:"left", cursor:"pointer" }}>
+                  <div style={{ fontSize:22, marginBottom:8 }}>{cat.emoji}</div>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{cat.label}</div>
+                  <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>{cat.assets.length} markets</div>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:12 }}>
+              <button onClick={() => setCategory(null)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
+              <div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>{category.label}</div>
+                <div style={{ fontSize:12, color:T.muted }}>Select a market</div>
+              </div>
+            </div>
+            <div style={{ padding:"0 16px", display:"flex", flexDirection:"column", gap:8 }}>
+              {category.assets.map(asset => (
+                <button key={asset.symbol} onClick={() => onSelect(asset)} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
+                  <div style={{ textAlign:"left" }}>
+                    <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{asset.symbol}</div>
+                    <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{asset.name}</div>
                   </div>
-                </>
-              ) : (
-                <>
-                  <Row label="Confidence" value={`${activeSignal.confidence}%`} />
-                  <Row label="Entry" value={activeSignal.entry.toFixed(inst.digits)} />
-                  <Row label="Stop Loss" value={activeSignal.stop_loss.toFixed(inst.digits)} color={T.rust} />
-                  <Row label="Take Profit 1" value={activeSignal.take_profit_1.toFixed(inst.digits)} color={T.sage} />
-                  <Row label="Take Profit 2" value={activeSignal.take_profit_2.toFixed(inst.digits)} color={T.sage} />
-                  <Row label="Risk" value={activeSignal.risk_level} />
-                  <Row label="Status" value={activeSignal.status === "active" ? "Active" : activeSignal.status === "tp_hit" ? "Take Profit hit" : "Stop Loss hit"} color={activeSignal.status === "tp_hit" ? T.sage : activeSignal.status === "sl_hit" ? T.rust : T.paper} />
-                </>
-              )}
-
-              {activeSignal.milestones && activeSignal.milestones.length > 0 && (
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-                  {activeSignal.milestones.map((m) => (
-                    <span key={m} style={{ fontSize: 10.5, fontWeight: 700, color: T.sage, background: `${T.sage}22`, borderRadius: 6, padding: "3px 7px" }}>+{m} {inst.unit}</span>
-                  ))}
-                </div>
-              )}
-
-              <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.cardBorder}` }}>
-                <div style={{ fontSize: 10, color: T.muted, letterSpacing: 0.5, marginBottom: 4, fontWeight: 700 }}>RAINA'S READ</div>
-                <div style={{ fontSize: 12.5, color: T.paper, lineHeight: 1.6, fontWeight: 500 }}>{activeSignal.reason}</div>
-              </div>
-            </>
-          </BlurGate>
-        ) : <div style={{ color: T.muted, fontSize: 13, fontWeight: 500 }}>No signal yet for this timeframe.</div>}
-        {marketOpen && (
-          <button onClick={onRefresh} disabled={loading} style={{ marginTop: 14, width: "100%", background: T.gold, color: T.ink, border: "none", borderRadius: 8, padding: "10px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: loading ? "default" : "pointer", opacity: loading ? 0.6 : 1 }}>
-            {loading ? "Checking…" : "Check for update"}
-          </button>
+                  <ChevronRight size={16} color={T.muted} />
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
-      <div style={{ margin: "0 16px 16px", fontSize: 10.5, color: T.muted, lineHeight: 1.6, textAlign: "center", fontWeight: 500 }}>
-        Live market data · signals refresh on candle close, not continuously · AI-generated commentary, not financial advice · no outcome is guaranteed.
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Duration picker modal
+// ─────────────────────────────────────────────────────────────────────────────
+function DurationPicker({ asset, onSelect, onClose }) {
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:82, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
+        <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}>
+          <div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} />
+        </div>
+        <div style={{ padding:"0 20px 4px", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+          <div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>Analyze This Market</div>
+            <div style={{ fontFamily:FONT_HEAD, fontSize:15, color:T.goldBright, fontWeight:700, marginTop:4 }}>{asset.symbol}</div>
+            <div style={{ fontSize:12, color:T.muted }}>{asset.name}</div>
+            <div style={{ fontSize:12, color:T.muted, marginTop:8 }}>How long should Raina AI focus on this market?</div>
+          </div>
+          <button onClick={onClose} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><X size={20} /></button>
+        </div>
+        <div style={{ padding:"16px", display:"flex", flexDirection:"column", gap:10 }}>
+          {ANALYSIS_DURATIONS.map(dur => (
+            <button key={dur.key} onClick={() => onSelect(dur)} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"16px 18px", display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer" }}>
+              <div style={{ textAlign:"left" }}>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.paper }}>{dur.label}</div>
+                <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{dur.sublabel}</div>
+              </div>
+              <div style={{ background:T.gold, color:T.ink, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, borderRadius:8, padding:"6px 14px" }}>Select</div>
+            </button>
+          ))}
+        </div>
       </div>
-    </>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Change market confirmation dialog
+// ─────────────────────────────────────────────────────────────────────────────
+function ChangeMarketDialog({ current, onConfirm, onCancel }) {
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:90, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+      <div style={{ background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:18, padding:24, width:"100%", maxWidth:340 }}>
+        <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.paper, marginBottom:8 }}>Change Active Market?</div>
+        <div style={{ fontSize:13, color:T.muted, lineHeight:1.6, marginBottom:20 }}>Your current <strong style={{ color:T.paper }}>{current}</strong> analysis session is active. Changing markets will stop this session.</div>
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={onCancel} style={{ flex:1, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:10, padding:"11px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, cursor:"pointer" }}>Cancel</button>
+          <button onClick={onConfirm} style={{ flex:1, background:T.rust, border:"none", borderRadius:10, padding:"11px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer" }}>Change Market</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Format seconds → HH:MM:SS
+// ─────────────────────────────────────────────────────────────────────────────
+function fmtTime(secs) {
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
+  if (h > 0) return `${h}:${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}`;
+  return `${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Home Tab — main redesigned screen
+// ─────────────────────────────────────────────────────────────────────────────
+function HomeTab({ inst, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessionSecsLeft, startAnalysisSession, setSession, seriesMap }) {
+  const [showAddMarket, setShowAddMarket] = useState(false);
+  const [pendingAsset, setPendingAsset] = useState(null);       // waiting for duration
+  const [showChangeDlg, setShowChangeDlg] = useState(false);   // confirm change market
+  const [pendingChange, setPendingChange] = useState(null);     // asset user tried to switch to
+  const [showActivity, setShowActivity] = useState(false);
+
+  // Sync dark canvas flag
+  setIsDarkCanvas(T.ink === "#0F0E0B");
+
+  // OHLCV candles from tick series
+  const candles = React.useMemo(() => ticksToCandles(series || [], 70), [series]);
+
+  // State label
+  const stateLabel = session ? {
+    analyzing: "AI Analysis Active",
+    watching:  "Watching Setup",
+    confirming:"Confirming",
+    completed: "Session Complete",
+  }[session.state] || "Active" : null;
+
+  const stateColor = session?.state === "watching" ? T.sage
+    : session?.state === "completed" ? T.muted
+    : T.gold;
+
+  function handleAssetSelect(asset) {
+    setShowAddMarket(false);
+    if (session && session.state !== "completed") {
+      setPendingChange(asset);
+      setShowChangeDlg(true);
+    } else {
+      setPendingAsset(asset);
+    }
+  }
+
+  function handleDurationSelect(dur) {
+    if (!pendingAsset) return;
+    startAnalysisSession(pendingAsset, dur);
+    setActiveSymbol(pendingAsset.symbol);
+    setPendingAsset(null);
+  }
+
+  function handleConfirmChange() {
+    setShowChangeDlg(false);
+    setPendingAsset(pendingChange);
+    setPendingChange(null);
+  }
+
+  return (
+    <div style={{ paddingBottom: 4 }}>
+      {/* ── Asset tab bar ──────────────────────────────────────────────── */}
+      <div style={{ display:"flex", gap:6, padding:"12px 14px 0", overflowX:"auto" }}>
+        {(session ? [ALL_ASSETS.find(a => a.symbol === session.symbol) || ALL_ASSETS[0]] : []).concat(
+          ALL_ASSETS.filter(a => a.symbol === "XAUUSD" || a.symbol === "BTCUSD" || a.symbol === "ETHUSD")
+            .filter(a => !session || a.symbol !== session.symbol)
+        ).slice(0, 5).map(a => {
+          const active = a.symbol === (session?.symbol || activeSymbol);
+          return (
+            <button key={a.symbol} onClick={() => handleAssetSelect(a)} style={{ flexShrink:0, background:active ? T.gold : T.card, color:active ? T.ink : T.paper, border:`1px solid ${active ? T.gold : T.cardBorder}`, borderRadius:20, padding:"6px 14px", fontFamily:FONT_HEAD, fontSize:11, fontWeight:700, cursor:"pointer" }}>
+              {a.symbol}
+            </button>
+          );
+        })}
+        <button onClick={() => setShowAddMarket(true)} style={{ flexShrink:0, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"6px 12px", fontFamily:FONT_HEAD, fontSize:14, fontWeight:700, color:T.gold, cursor:"pointer" }}>+</button>
+      </div>
+
+      {/* ── Price header ─────────────────────────────────────────────────── */}
+      <div style={{ padding:"12px 16px 0" }}>
+        <div style={{ display:"flex", alignItems:"baseline", gap:10 }}>
+          <span style={{ fontFamily:FONT_HEAD, fontSize:34, fontWeight:800, fontVariantNumeric:"tabular-nums", color:T.paper }}>{last?.toFixed(inst.digits) ?? "—"}</span>
+          <span style={{ fontSize:14, fontWeight:700, color: changePct >= 0 ? T.sage : T.rust }}>{changePct >= 0 ? "▲" : "▼"} {Math.abs(changePct || 0).toFixed(3)}%</span>
+        </div>
+        <div style={{ fontSize:12, color:T.muted, fontWeight:500, marginTop:1 }}>{inst.name} · {inst.symbol}</div>
+      </div>
+
+      {/* ── Chart area ───────────────────────────────────────────────────── */}
+      <div style={{ margin:"12px 14px 0", borderRadius:14, border:`1px solid ${T.cardBorder}`, overflow:"hidden", background:T.card, position:"relative" }}>
+        {/* AI badge + session timer */}
+        {session && session.state !== "completed" && (
+          <div style={{ position:"absolute", top:10, right:10, zIndex:5, display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:5, background:T.ink, border:`1px solid ${stateColor}44`, borderRadius:20, padding:"4px 10px" }}>
+              <div style={{ width:6, height:6, borderRadius:"50%", background:stateColor, animation:"pulse 1.5s infinite" }} />
+              <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:10, color:stateColor }}>{stateLabel}</span>
+            </div>
+            {sessionSecsLeft > 0 && (
+              <div style={{ fontSize:10, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600 }}>{fmtTime(sessionSecsLeft)} remaining</div>
+            )}
+          </div>
+        )}
+
+        {/* No session CTA */}
+        {!session && (
+          <div style={{ position:"absolute", inset:0, zIndex:5, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:T.ink + "cc", borderRadius:14 }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:4 }}>Choose a Market</div>
+            <div style={{ fontSize:12, color:T.muted, marginBottom:16, textAlign:"center", maxWidth:200 }}>Select a market and let Raina AI study it for you</div>
+            <button onClick={() => setShowAddMarket(true)} style={{ background:T.gold, color:T.ink, border:"none", borderRadius:10, padding:"10px 22px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, cursor:"pointer" }}>+ Add Market</button>
+          </div>
+        )}
+
+        {/* Candlestick chart */}
+        <div style={{ height:240, padding:"0 0 0 0" }}>
+          <CandlestickChart candles={candles} overlays={session?.overlays || []} inst={inst} containerHeight={240} />
+        </div>
+      </div>
+
+      {/* ── Timeframe selector ───────────────────────────────────────────── */}
+      <div style={{ display:"flex", gap:6, padding:"10px 14px 0" }}>
+        {["15m","1H","4H","1D","More"].map(tf => {
+          const active = tf === "15m";
+          return (
+            <button key={tf} style={{ flex:1, padding:"7px 0", borderRadius:8, border:`1px solid ${active ? T.gold : T.cardBorder}`, background:active ? T.gold : T.card, color:active ? T.ink : T.paper, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11, cursor:"pointer" }}>
+              {tf}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Analysis Progress Panel ──────────────────────────────────────── */}
+      {session && (
+        <div style={{ margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, color:T.paper }}>Raina AI Analysis Progress</div>
+            <button onClick={() => {/* view full */}} style={{ background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:8, padding:"4px 10px", fontFamily:FONT_HEAD, fontSize:11, fontWeight:700, color:T.gold, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>View Full <ChevronRight size={12} /></button>
+          </div>
+          {/* Step row */}
+          <div style={{ display:"flex", gap:0, alignItems:"flex-start" }}>
+            {(session.steps || STEP_DEFS.map(s => ({...s, status:"pending"}))).map((step, i, arr) => {
+              const done = step.status === "done";
+              const active = step.status === "active";
+              const pending = step.status === "pending";
+              return (
+                <React.Fragment key={step.id}>
+                  <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
+                    {/* Circle */}
+                    <div style={{ width:28, height:28, borderRadius:"50%", background:done ? T.sage : active ? T.gold : T.cardBorder, border:`2px solid ${done ? T.sage : active ? T.gold : T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                      {done ? <span style={{ color:"#fff", fontSize:12, fontWeight:800 }}>✓</span>
+                        : <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:10, color:active ? T.ink : T.muted }}>{i+1}</span>}
+                    </div>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontFamily:FONT_HEAD, fontSize:9, fontWeight:700, color:done ? T.paper : active ? T.gold : T.muted, lineHeight:1.3 }}>{step.label}</div>
+                      <div style={{ fontSize:8.5, color:done ? T.sage : active ? T.muted : T.cardBorder, marginTop:2 }}>{done ? step.done : active ? "In progress" : "Pending"}</div>
+                    </div>
+                  </div>
+                  {/* Connector */}
+                  {i < arr.length - 1 && (
+                    <div style={{ marginTop:13, height:2, width:12, background:done ? T.sage : T.cardBorder, flexShrink:0 }} />
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Trade Setup Card ─────────────────────────────────────────────── */}
+      {session?.setup && (
+        <div style={{ margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.paper }}>Potential Trade Setup</div>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <span style={{ background:`${T.sage}22`, color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize:10, borderRadius:6, padding:"3px 8px" }}>Watching</span>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ fontSize:9, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600 }}>AI Confidence</div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.goldBright }}>{session.setup.confidence}%</div>
+              </div>
+            </div>
+          </div>
+          {/* 4-column grid */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:1, marginBottom:1 }}>
+            {[
+              { label:"Bias", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:800, fontSize:13 }}>BUY ↗</span> },
+              { label:"Entry Zone", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11 }}>{session.setup.entryLow.toFixed(inst.digits)} – {session.setup.entryHigh.toFixed(inst.digits)}</span> },
+              { label:"Take Profit 1", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12 }}>{session.setup.tp1.toFixed(inst.digits)}</span> },
+              { label:"Analysis Reason", val: null, wide:true },
+            ].map((cell, i) => (
+              <div key={i} style={{ background:T.ink, borderRadius:8, padding:"10px 10px", border:`1px solid ${T.cardBorder}` }}>
+                <div style={{ fontSize:9, color:T.muted, fontWeight:700, fontFamily:FONT_HEAD, marginBottom:4 }}>{cell.label.toUpperCase()}</div>
+                {cell.val || <div style={{ fontSize:10, color:T.muted, lineHeight:1.5 }}>{session.setup.reason}</div>}
+              </div>
+            ))}
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:1, marginTop:1 }}>
+            {[
+              { label:"Risk / Reward", val: <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.paper }}>1 : {session.setup.rr}</span> },
+              { label:"Stop Loss", val: <span style={{ color:T.rust, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12 }}>{session.setup.stopLoss.toFixed(inst.digits)}</span> },
+              { label:"Take Profit 2", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12 }}>{session.setup.tp2.toFixed(inst.digits)}</span> },
+              { label:"", val: null },
+            ].map((cell, i) => (
+              <div key={i} style={{ background:T.ink, borderRadius:8, padding:"10px 10px", border:`1px solid ${T.cardBorder}` }}>
+                <div style={{ fontSize:9, color:T.muted, fontWeight:700, fontFamily:FONT_HEAD, marginBottom:4 }}>{cell.label.toUpperCase()}</div>
+                {cell.val}
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop:12, fontSize:10.5, color:T.muted, lineHeight:1.6 }}>
+            Raina AI continues to monitor the market and will alert you when the setup is confirmed.
+          </div>
+        </div>
+      )}
+
+      {/* ── Activity Feed ────────────────────────────────────────────────── */}
+      {session?.activities?.length > 0 && (
+        <div style={{ margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px" }}>
+          <button onClick={() => setShowActivity(v => !v)} style={{ width:"100%", background:"none", border:"none", display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", padding:0 }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, color:T.paper }}>Raina AI Activity</div>
+            <ChevronRight size={14} color={T.muted} style={{ transform: showActivity ? "rotate(90deg)" : "rotate(0)", transition:"transform 0.2s" }} />
+          </button>
+          {showActivity && (
+            <div style={{ marginTop:12 }}>
+              {session.activities.slice(0, 8).map((a, i) => (
+                <div key={i} style={{ borderBottom: i < session.activities.slice(0,8).length-1 ? `1px solid ${T.cardBorder}` : "none", padding:"8px 0" }}>
+                  <span style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, marginRight:8 }}>{a.time}</span>
+                  <span style={{ fontSize:12, color:T.paper, lineHeight:1.5 }}>{a.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {!showActivity && session.activities.length > 0 && (
+            <div style={{ marginTop:10, padding:"8px 0 0" }}>
+              <span style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, marginRight:8 }}>{session.activities[0].time}</span>
+              <span style={{ fontSize:12, color:T.paper }}>{session.activities[0].text}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Session complete panel */}
+      {session?.state === "completed" && (
+        <div style={{ margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"20px 16px", textAlign:"center" }}>
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:6 }}>Analysis Session Complete</div>
+          <div style={{ fontSize:12, color:T.muted, marginBottom:16 }}>The selected analysis period has ended. Start a new session to continue monitoring.</div>
+          <button onClick={() => { setSession(null); setShowAddMarket(true); }} style={{ background:T.gold, color:T.ink, border:"none", borderRadius:10, padding:"11px 28px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, cursor:"pointer" }}>Analyze Again</button>
+        </div>
+      )}
+
+      <div style={{ margin:"10px 14px 16px", fontSize:10.5, color:T.muted, lineHeight:1.6, textAlign:"center" }}>
+        AI-generated analysis, not financial advice. No outcome is guaranteed. Always manage your risk.
+      </div>
+
+      {/* ── Modals ───────────────────────────────────────────────────────── */}
+      {showAddMarket && <AddMarketSheet onClose={() => setShowAddMarket(false)} onSelect={handleAssetSelect} />}
+      {pendingAsset && <DurationPicker asset={pendingAsset} onSelect={handleDurationSelect} onClose={() => setPendingAsset(null)} />}
+      {showChangeDlg && <ChangeMarketDialog current={session?.symbol} onConfirm={handleConfirmChange} onCancel={() => { setShowChangeDlg(false); setPendingChange(null); }} />}
+    </div>
   );
 }
 function Row({ label, value, color }) {
-  return <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "4px 0" }}><span style={{ color: T.muted, fontWeight: 500 }}>{label}</span><span style={{ color: color || T.paper, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{value}</span></div>;
+  return <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"4px 0" }}><span style={{ color:T.muted, fontWeight:500 }}>{label}</span><span style={{ color:color||T.paper, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{value}</span></div>;
 }
+
 
 // ---------- Markets tab ----------
 function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect }) {
