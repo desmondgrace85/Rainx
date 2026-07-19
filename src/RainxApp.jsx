@@ -5,9 +5,11 @@ import {
   TrendingUp, TrendingDown, Minus, Activity, Send, Calendar as CalendarIcon,
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
   CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet, Landmark, Gift, Trophy,
+  Maximize2,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import CommunityTab from "./CommunityTab";
+import FullChartView from "./FullChartView";
 
 // ---------- Design tokens ----------
 const T = {
@@ -715,16 +717,41 @@ function MainAppContent({ account, onLogout }) {
         const price = (seriesMapRef.current[prev.symbol] || []).slice(-1)[0]?.price || inst2.base;
         const vol = inst2.vol;
         let newOverlays = [...base];
-        if (prev.stepIndex === 0) { // structure → trendline
-          newOverlays.push({ _step:0, type:"trendline", price1: price - vol*6, price2: price - vol*1 });
-        } else if (prev.stepIndex === 1) { // S&R → zones
-          newOverlays.push({ _step:1, type:"resistance", price: price + vol*2.5, label:"Resistance Zone" });
-          newOverlays.push({ _step:1, type:"support_zone", priceLow: price - vol*2.5, priceHigh: price - vol*1 });
-        } else if (prev.stepIndex === 2) { // trend → nothing extra
-        } else if (prev.stepIndex === 3) { // entry zone
+        if (prev.stepIndex === 0) {
+          // Step 0: Market structure — trendline + swing highs/lows + structure labels
+          newOverlays.push({ _step:0, type:"trendline",        price1: price - vol*6, price2: price - vol*1, label:"Uptrend Line" });
+          newOverlays.push({ _step:0, type:"swing_high",       price: price + vol*4, idx: 8  });
+          newOverlays.push({ _step:0, type:"swing_high",       price: price + vol*2.5, idx: 18 });
+          newOverlays.push({ _step:0, type:"swing_low",        price: price - vol*5, idx: 12 });
+          newOverlays.push({ _step:0, type:"swing_low",        price: price - vol*3, idx: 22 });
+          newOverlays.push({ _step:0, type:"market_structure", price: price + vol*4, idx: 8,  label:"HH" });
+          newOverlays.push({ _step:0, type:"market_structure", price: price - vol*5, idx: 12, label:"HL" });
+        } else if (prev.stepIndex === 1) {
+          // Step 1: Support & Resistance + liquidity zones
+          newOverlays.push({ _step:1, type:"resistance",    price: price + vol*2.5, label:"Resistance Zone" });
+          newOverlays.push({ _step:1, type:"support_zone",  priceLow: price - vol*2.5, priceHigh: price - vol*1 });
+          newOverlays.push({ _step:1, type:"liquidity",     priceLow: price + vol*2.2, priceHigh: price + vol*3.0 });
+          newOverlays.push({ _step:1, type:"liquidity",     priceLow: price - vol*3.0, priceHigh: price - vol*2.2 });
+        } else if (prev.stepIndex === 2) {
+          // Step 2: Trend confirmed — add channel
+          newOverlays.push({ _step:2, type:"channel",
+            price1: price - vol*6, price2: price - vol*1,   // lower bound (same as trendline)
+            price3: price - vol*5, price4: price + vol*0.5, // upper bound
+          });
+        } else if (prev.stepIndex === 3) {
+          // Step 3: Entry zone + breakout area
           newOverlays.push({ _step:3, type:"entry_zone", priceLow: price - vol*0.5, priceHigh: price + vol*0.5 });
-        } else if (prev.stepIndex === 4) { // projection
-          newOverlays.push({ _step:4, type:"projection", target: price + vol*3 });
+          newOverlays.push({ _step:3, type:"breakout",   priceLow: price + vol*0.4, priceHigh: price + vol*1.2 });
+        } else if (prev.stepIndex === 4) {
+          // Step 4: Full trade setup — TP/SL + direction arrow + projection
+          const slDist  = vol * 2.5;
+          const tp1Dist = vol * 3.8;
+          const tp2Dist = vol * 6.2;
+          newOverlays.push({ _step:4, type:"sl_level",        price: price - slDist });
+          newOverlays.push({ _step:4, type:"tp_level",        price: price + tp1Dist, label:"TP 1" });
+          newOverlays.push({ _step:4, type:"tp_level",        price: price + tp2Dist, label:"TP 2" });
+          newOverlays.push({ _step:4, type:"direction_arrow", from:  price,           target: price + tp1Dist });
+          newOverlays.push({ _step:4, type:"projection",      target: price + tp2Dist });
         }
         // Always show current price
         newOverlays = newOverlays.filter(o => o.type !== "current_price");
@@ -745,10 +772,14 @@ function MainAppContent({ account, onLogout }) {
           const slDist = vol * 2.5;
           const tp1Dist = vol * 3.8;
           const tp2Dist = vol * 6.2;
+          const entryLow  = price - vol*0.5;
+          const entryHigh = price + vol*0.5;
+          const entry     = (entryLow + entryHigh) / 2;
           setup = {
             bias: "BUY",
-            entryLow: price - vol*0.5,
-            entryHigh: price + vol*0.5,
+            entry,
+            entryLow,
+            entryHigh,
             stopLoss: price - slDist,
             tp1: price + tp1Dist,
             tp2: price + tp2Dist,
@@ -908,6 +939,44 @@ function MainAppContent({ account, onLogout }) {
           [tf.key]: { ...result, digits: inst.digits, name: inst.name, timeframeLabel: tf.label, generatedAt: Date.now(), status: "active", milestones: [] },
         },
       }));
+
+      // ── If an active session matches this symbol, update overlays with real signal data ──
+      if (result.bias !== "hold" && result.entry != null) {
+        setSession(prev => {
+          if (!prev || prev.symbol !== inst.symbol || prev.state === "completed") return prev;
+          const price  = result.entry;
+          const slDist = result.stop_loss   ? Math.abs(price - result.stop_loss)   : inst.vol * 2.5;
+          const tp1    = result.take_profit_1;
+          const tp2    = result.take_profit_2;
+          // Keep non-signal overlays (trendlines, structure markings) and replace trade levels
+          const keepTypes = new Set(["trendline","channel","support_zone","resistance","liquidity","swing_high","swing_low","market_structure"]);
+          const base = prev.overlays.filter(o => keepTypes.has(o.type));
+          const signalOverlays = [
+            { type:"current_price",   price },
+            { type:"entry_zone",      priceLow:  Array.isArray(signal.entry_zone) ? signal.entry_zone[0] : price-inst.vol*0.5,
+                                      priceHigh: Array.isArray(signal.entry_zone) ? signal.entry_zone[1] : price+inst.vol*0.5 },
+            { type:"sl_level",        price: result.stop_loss || price - slDist },
+            ...(tp1 != null ? [{ type:"tp_level", price: tp1, label:"TP 1" }] : []),
+            ...(tp2 != null ? [{ type:"tp_level", price: tp2, label:"TP 2" }] : []),
+            { type:"direction_arrow", from: price,  target: tp1 || price + slDist * 1.5 },
+            ...(tp2 != null ? [{ type:"projection", target: tp2 }] : []),
+            { type:"breakout",        priceLow:  price + inst.vol*0.3, priceHigh: price + inst.vol*1.0 },
+          ];
+          const newSetup = {
+            bias:      result.bias.toUpperCase(),
+            entry:     price,
+            entryLow:  Array.isArray(signal.entry_zone) ? signal.entry_zone[0] : price-inst.vol*0.5,
+            entryHigh: Array.isArray(signal.entry_zone) ? signal.entry_zone[1] : price+inst.vol*0.5,
+            stopLoss:  result.stop_loss || price - slDist,
+            tp1:       tp1 || price + slDist * 1.5,
+            tp2:       tp2 || price + slDist * 3.0,
+            rr:        (slDist > 0 ? ((tp1 || price + slDist * 1.5) - price) / slDist : 1.5).toFixed(1),
+            confidence: result.confidence,
+            reason:    result.reason,
+          };
+          return { ...prev, overlays: [...base, ...signalOverlays], setup: newSetup };
+        });
+      }
 
       supabase.from("signals").upsert({
         symbol: inst.symbol, timeframe: tf.key, candle_time: new Date().toISOString(),
@@ -1095,7 +1164,7 @@ function MainAppContent({ account, onLogout }) {
       </div>}
 
       <div style={{ paddingBottom: 78 }}>
-        {tab === "home" && <HomeTab inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => setTab("subscribe")} session={session} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} setSession={setSession} seriesMap={seriesMap} />}
+        {tab === "home" && <HomeTab inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => setTab("subscribe")} session={session} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} setSession={setSession} seriesMap={seriesMap} themeMode={themeMode} />}
         {tab === "markets" && <MarketsTab seriesMap={seriesMap} signalsMap={signalsMap} activeSymbol={activeSymbol} onSelect={(s) => { setActiveSymbol(s); setTab("home"); }} />}
         {tab === "community" && <CommunityTab account={account} themeTokens={T} />}
         {tab === "history" && <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => setTab("subscribe")} />}
@@ -1541,12 +1610,13 @@ function fmtTime(secs) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Home Tab — main redesigned screen
 // ─────────────────────────────────────────────────────────────────────────────
-function HomeTab({ inst, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessionSecsLeft, startAnalysisSession, setSession, seriesMap }) {
+function HomeTab({ inst, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessionSecsLeft, startAnalysisSession, setSession, seriesMap, themeMode }) {
   const [showAddMarket, setShowAddMarket] = useState(false);
   const [pendingAsset, setPendingAsset] = useState(null);       // waiting for duration
   const [showChangeDlg, setShowChangeDlg] = useState(false);   // confirm change market
   const [pendingChange, setPendingChange] = useState(null);     // asset user tried to switch to
   const [showActivity, setShowActivity] = useState(false);
+  const [showFullChart, setShowFullChart] = useState(false);
 
   // Sync dark canvas flag
   setIsDarkCanvas(T.ink === "#0F0E0B");
@@ -1633,17 +1703,17 @@ function HomeTab({ inst, last, changePct, series, activeSymbol, setActiveSymbol,
         <div style={{ fontSize:12, color:T.muted, fontWeight:500, marginTop:1 }}>{inst.name} · {inst.symbol}</div>
       </div>
 
-      {/* ── Chart area ───────────────────────────────────────────────────── */}
+      {/* ── Chart preview area ────────────────────────────────────────────── */}
       <div style={{ margin:"12px 14px 0", borderRadius:14, border:`1px solid ${T.cardBorder}`, overflow:"hidden", background:T.card, position:"relative" }}>
         {/* AI badge + session timer */}
         {session && session.state !== "completed" && (
-          <div style={{ position:"absolute", top:10, right:10, zIndex:5, display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:5, background:T.ink, border:`1px solid ${stateColor}44`, borderRadius:20, padding:"4px 10px" }}>
+          <div style={{ position:"absolute", top:8, right:8, zIndex:5, display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:5, background:T.ink, border:`1px solid ${stateColor}44`, borderRadius:20, padding:"3px 9px" }}>
               <div style={{ width:6, height:6, borderRadius:"50%", background:stateColor, animation:"pulse 1.5s infinite" }} />
-              <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:10, color:stateColor }}>{stateLabel}</span>
+              <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:9.5, color:stateColor }}>{stateLabel}</span>
             </div>
             {sessionSecsLeft > 0 && (
-              <div style={{ fontSize:10, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600 }}>{fmtTime(sessionSecsLeft)} remaining</div>
+              <div style={{ fontSize:9.5, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600 }}>{fmtTime(sessionSecsLeft)}</div>
             )}
           </div>
         )}
@@ -1657,11 +1727,34 @@ function HomeTab({ inst, last, changePct, series, activeSymbol, setActiveSymbol,
           </div>
         )}
 
-        {/* Candlestick chart */}
-        <div style={{ height:260 }}>
-          <CandlestickChart candles={candles} overlays={session?.overlays || []} inst={inst} containerHeight={260} panEnabled />
+        {/* Preview candlestick chart — smaller height, real candles */}
+        <div style={{ height:175 }}>
+          <CandlestickChart candles={candles} overlays={session?.overlays || []} inst={inst} containerHeight={175} panEnabled />
         </div>
+
+        {/* "Open Full Chart" button — always visible at bottom of chart */}
+        <button
+          onClick={() => setShowFullChart(true)}
+          style={{
+            width:"100%", background:T.ink, border:"none", borderTop:`1px solid ${T.cardBorder}`,
+            padding:"9px 16px", cursor:"pointer",
+            display:"flex", alignItems:"center", justifyContent:"center", gap:7,
+          }}
+        >
+          <Maximize2 size={13} color={T.gold} />
+          <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.gold }}>Open Full Chart</span>
+        </button>
       </div>
+
+      {/* Full-screen chart overlay */}
+      {showFullChart && (
+        <FullChartView
+          inst={inst}
+          session={session}
+          themeMode={themeMode}
+          onClose={() => setShowFullChart(false)}
+        />
+      )}
 
       {/* ── Timeframe selector ───────────────────────────────────────────── */}
       <div className="hide-scroll" style={{ display:"flex", gap:6, padding:"10px 14px 0", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
