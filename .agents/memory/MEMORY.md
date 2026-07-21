@@ -1,0 +1,1 @@
+- [RainX setup](rainx-setup.md) — monorepo artifact, sources from archive, Yahoo Finance proxy for charts, RAINA_AI_URL needed for signals/chat
