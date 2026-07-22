@@ -3595,7 +3595,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     }, [account?.id]);
       const saveProfileExtended = async () => {
     setSavingProfile(true); setProfileMsg("");
-    const clean = username.trim().replace(/[ -]/g,"").slice(0,30)||null;
+    const clean = username.trim().replace(/[^a-zA-Z0-9_.@-]/g,"").slice(0,30)||null;
 
     // Single consolidated upsert — all fields at once to avoid partial saves
     const payload = {
