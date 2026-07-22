@@ -3518,7 +3518,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
       // Store URL with a version timestamp so each upload busts the browser cache across sessions
       const versionedUrl = `${urlData.publicUrl}?v=${Date.now()}`;
-      const { error: dbErr } = await supabase.from("profiles").update({ avatar_url: versionedUrl }).eq("id", account.id);
+      const { error: dbErr } = await supabase.from("profiles").upsert({ id: account.id, avatar_url: versionedUrl }, { onConflict: "id" });
       if (dbErr) throw new Error("Failed to save photo: " + dbErr.message);
       setAvatarUrl(versionedUrl);
       notifyAvatarRefresh(); // refresh header avatar
@@ -3586,46 +3586,46 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
   const saveProfileExtended = async () => {
     setSavingProfile(true); setProfileMsg("");
-    const clean = username.trim().replace(/[\x00-\x1F\x7F]/g,"").slice(0,30)||null;
+    const clean = username.trim().replace(/[ -]/g,"").slice(0,30)||null;
 
-    // Step 1: upsert core columns — creates profile row if it doesn't exist yet
-    const { error: coreErr } = await supabase.from("profiles").upsert({
+    // Single consolidated upsert — all fields at once to avoid partial saves
+    const payload = {
       id: account.id,
       username: clean,
       bio: bio.trim(),
-    }, { onConflict: "id" });
+      display_name: clean || fullName.trim() || null,
+    };
+    if (fullName.trim())       payload.full_name      = fullName.trim();
+    if (location.trim())       payload.location        = location.trim();
+    if (dob)                   payload.date_of_birth   = dob;
+    if (education.trim())      payload.education       = education.trim();
+    if (certifications.trim()) payload.certifications  = certifications.trim();
 
-    if (coreErr) {
+    const { error: saveErr } = await supabase.from("profiles").upsert(payload, { onConflict: "id" });
+
+    if (saveErr) {
       setSavingProfile(false);
-      setProfileMsg(coreErr.code === "23505" ? "That username is taken." : "Something went wrong.");
+      setProfileMsg(saveErr.code === "23505" ? "That username is taken." : "Save failed: " + saveErr.message);
       return;
     }
 
-    // Step 2: sync display_name so community shows updated name
-    const dispName = clean || fullName.trim() || null;
-    if (dispName) {
-      const { error: dispErr } = await supabase.from("profiles").upsert({ id: account.id, display_name: dispName }, { onConflict: "id" });
-      if (dispErr) console.warn("display_name sync failed:", dispErr.message);
+    // Re-read ALL fields from DB to confirm the save and refresh UI
+    const { data: fresh } = await supabase.from("profiles")
+      .select("username, bio, avatar_url, display_name, full_name, location, date_of_birth, education, certifications")
+      .eq("id", account.id).single();
+    if (fresh) {
+      if (fresh.username   !== undefined) setUsername(fresh.username || "");
+      if (fresh.bio        !== undefined) setBio(fresh.bio || "");
+      if (fresh.avatar_url)               setAvatarUrl(fresh.avatar_url);
+      if (fresh.full_name  !== undefined) setFullName(fresh.full_name || "");
+      if (fresh.location   !== undefined) setLocation(fresh.location || "");
+      if (fresh.date_of_birth !== undefined) setDob(fresh.date_of_birth || "");
+      if (fresh.education  !== undefined) setEducation(fresh.education || "");
+      if (fresh.certifications !== undefined) setCertifications(fresh.certifications || "");
     }
-
-    // Step 3: extended columns — gracefully ignore if columns don't exist yet
-    const ext = {};
-    if (fullName.trim())       ext.full_name      = fullName.trim();
-    if (location.trim())       ext.location        = location.trim();
-    if (dob)                   ext.date_of_birth   = dob;
-    if (education.trim())      ext.education       = education.trim();
-    if (certifications.trim()) ext.certifications  = certifications.trim();
-    if (Object.keys(ext).length) {
-      await supabase.from("profiles").upsert({ id: account.id, ...ext }, { onConflict: "id" }).then(() => {}, () => {});
-    }
-
-    // Re-read from DB so UI reflects what was actually saved
-    supabase.from("profiles").select("username, bio, avatar_url").eq("id", account.id).single().then(({ data }) => {
-      if (data) { setUsername(data.username || ""); setBio(data.bio || ""); if (data.avatar_url) setAvatarUrl(data.avatar_url); }
-    });
     setSavingProfile(false);
     setProfileMsg("Saved. ✓");
-    notifyAvatarRefresh(); // refresh header display_name/avatar
+    notifyAvatarRefresh();
   };
 
   if (morePage === "profile-menu") return (
@@ -3763,7 +3763,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <input type={type||"text"} value={val} onChange={e=>set(e.target.value)} placeholder={ph} style={{ ...getInputStyle(), width:"100%" }} />
           </div>
         ))}
-        {profileMsg && <div style={{ fontSize:11, color:profileMsg==="Saved."?T.sage:T.rust, marginBottom:10 }}>{profileMsg}</div>}
+        {profileMsg && <div style={{ fontSize:11, color:profileMsg.startsWith("Saved")?T.sage:T.rust, marginBottom:10 }}>{profileMsg}</div>}
         <button onClick={saveProfileExtended} disabled={savingProfile} style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, cursor:"pointer" }}>
           {savingProfile?"Saving…":"Save Profile"}
         </button>
