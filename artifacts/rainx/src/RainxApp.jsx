@@ -1756,7 +1756,7 @@ function MainAppContent({ account, onLogout }) {
         {[["home", Home, "Home"], ["markets", Briefcase, "Markets"], ["community", Users2, "Community"], ["more", MoreHorizontal, "More"]].map(([key, Icon, label]) => {
           const active = !profileFromHeader && tab === key;
           return (
-            <button key={key} onClick={() => goTab(key)} style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 64, padding: "6px 4px", transition: "color 0.15s" }}>
+            <button key={key} onClick={() => { if (key === "more") setMorePage(null); goTab(key); }} style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 64, padding: "6px 4px", transition: "color 0.15s" }}>
               <Icon size={24} strokeWidth={active ? 2.5 : 1.8} />
               <span style={{ fontSize: 13, fontFamily: FONT_HEAD, fontWeight: active ? 700 : 500, letterSpacing: 0.1 }}>{label}</span>
             </button>
@@ -3602,7 +3602,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       id: account.id,
       username: clean,
       bio: bio.trim(),
-      display_name: clean || fullName.trim() || null,
     };
     if (fullName.trim())       payload.full_name      = fullName.trim();
     if (location.trim())       payload.location        = location.trim();
@@ -3620,7 +3619,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
     // Re-read ALL fields from DB to confirm the save and refresh UI
     const { data: fresh } = await supabase.from("profiles")
-      .select("username, bio, avatar_url, display_name, full_name, location, date_of_birth, education, certifications")
+      .select("username, bio, avatar_url, full_name, location, date_of_birth, education, certifications")
       .eq("id", account.id).single();
     if (fresh) {
       if (fresh.username   !== undefined) setUsername(fresh.username || "");
