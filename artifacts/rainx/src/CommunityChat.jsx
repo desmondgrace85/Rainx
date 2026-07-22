@@ -1061,7 +1061,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
                   <div style={{ position: "absolute", top: -2, right: -2, background: "#C6A15B", color: "#0F0E0B", borderRadius: "50%", minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, padding: "0 4px" }}>{unread}</div>
                 )}
               </div>
-              <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+              <div style={{ flex: 1, minWidth: 0, textAlign: "left" }} data-chatlist-row>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                     <span style={{ fontWeight: 700, fontSize: 15, color: T.paper, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>
