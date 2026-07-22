@@ -3585,15 +3585,15 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   },[account?.id, morePage]);
 
 
-    // ── last_seen heartbeat ──────────────────────────────────────────────────
-    useEffect(() => {
-      if (!account?.id) return;
-      const bump = () => supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", account.id).catch(() => {});
-      bump(); // immediate on mount
-      const iv = setInterval(bump, 60_000);
-      return () => clearInterval(iv);
-    }, [account?.id]);
-      const saveProfileExtended = async () => {
+  // ── last_seen heartbeat ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!account?.id) return;
+    const bump = () => supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", account.id).catch(() => {});
+    bump(); // immediate on mount
+    const iv = setInterval(bump, 60_000);
+    return () => clearInterval(iv);
+  }, [account?.id]);
+  const saveProfileExtended = async () => {
     setSavingProfile(true); setProfileMsg("");
     const clean = username.trim().replace(/[^a-zA-Z0-9_.@-]/g,"").slice(0,30)||null;
 
