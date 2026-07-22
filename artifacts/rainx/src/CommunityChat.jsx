@@ -230,7 +230,7 @@ function ForwardModal({ account, senderName, onForward, onClose, T }) {
       (data || []).forEach(m => { const pid = m.sender_id === aid ? m.receiver_id : m.sender_id; seen.add(pid); });
       const ids = [...seen];
       if (!ids.length) { setConvos([]); setLoading(false); return; }
-      const { data: profs } = await supabase.from("public_profiles").select("id, display_name, avatar_url").in("id", ids);
+      const { data: profs } = await supabase.from("public_profiles").select("id, username, display_name, avatar_url").in("id", ids);
       setConvos(profs || []);
       setLoading(false);
     })();
@@ -262,7 +262,7 @@ function ForwardModal({ account, senderName, onForward, onClose, T }) {
             <button key={p.id} onClick={() => setSelected(p)}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 0", background: "none", border: "none", cursor: "pointer", borderBottom: "1px solid " + T.cardBorder }}>
               <Avatar name={p.display_name} avatarUrl={p.avatar_url} size={40} />
-              <div style={{ flex: 1, textAlign: "left", fontSize: 14, color: T.paper, fontWeight: 500 }}>{p.display_name || "User"}</div>
+              <div style={{ flex: 1, textAlign: "left", fontSize: 14, color: T.paper, fontWeight: 500 }}>{p.display_name || p.username || "User"}</div>
               <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid " + (selected && selected.id === p.id ? T.gold : T.cardBorder), background: selected && selected.id === p.id ? T.gold : "transparent", transition: "all 0.15s", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {selected && selected.id === p.id && <Check size={12} color="#0F0E0B" strokeWidth={3} />}
               </div>
@@ -933,7 +933,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
       {forwardMsg && (
         <ForwardModal
           account={account}
-          senderName={forwardMsg.sender_id === aid ? "You" : (otherProfile && otherProfile.display_name) || "User"}
+          senderName={forwardMsg.sender_id === aid ? "You" : (otherProfile && (otherProfile.display_name || otherProfile.username)) || "User"}
           onForward={doForward}
           onClose={() => setForwardMsg(null)}
           T={T}
