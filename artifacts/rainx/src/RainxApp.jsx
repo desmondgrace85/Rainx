@@ -498,7 +498,7 @@ function AuthScreen({ onAuthed }) {
           loginEmail = profRow.email;
         } else {
           // Try display_name as fallback
-          const { data: profRow2 } = await supabase.from("profiles").select("email").ilike("display_name", loginEmail).maybeSingle();
+          const { data: profRow2 } = await supabase.from("profiles").select("email").ilike("username", loginEmail).maybeSingle();
           if (profRow2?.email) { loginEmail = profRow2.email; }
           else { setError("No account found with that username. Try your email address."); setBusy(false); return; }
         }
@@ -3584,7 +3584,16 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     supabase.from("follows").select("*",{count:"exact",head:true}).eq("follower_id",account.id).then(({count})=>setProfileFollowing(count||0), ()=>{});
   },[account?.id, morePage]);
 
-  const saveProfileExtended = async () => {
+
+    // ── last_seen heartbeat ──────────────────────────────────────────────────
+    useEffect(() => {
+      if (!account?.id) return;
+      const bump = () => supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", account.id).catch(() => {});
+      bump(); // immediate on mount
+      const iv = setInterval(bump, 60_000);
+      return () => clearInterval(iv);
+    }, [account?.id]);
+      const saveProfileExtended = async () => {
     setSavingProfile(true); setProfileMsg("");
     const clean = username.trim().replace(/[ -]/g,"").slice(0,30)||null;
 
