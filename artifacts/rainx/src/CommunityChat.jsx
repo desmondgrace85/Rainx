@@ -650,7 +650,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
 
   // Message actions
   const pinMessage = (msg) => {
-    const senderName = msg.sender_id === aid ? "You" : (otherProfile && (otherProfile.display_name || otherProfile.username) || "Other";
+    const senderName = msg.sender_id === aid ? "You" : (otherProfile && (otherProfile.display_name || otherProfile.username)) || "Other";
     const pin = { id: msg.id, content: msg.content, sender_id: msg.sender_id, created_at: msg.created_at, senderName };
     const existing = getPinnedMessages(convId);
     if (existing.find(p => p.id === msg.id)) return;
@@ -699,7 +699,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
 
   const doForward = async (recipient, hideSender) => {
     if (!forwardMsg || !recipient) return;
-    const originalSender = forwardMsg.sender_id === aid ? "You" : (otherProfile && (otherProfile.display_name || otherProfile.username) || "Someone";
+    const originalSender = forwardMsg.sender_id === aid ? "You" : (otherProfile && (otherProfile.display_name || otherProfile.username)) || "Someone";
     if (isDeleted(forwardMsg.content)) return;
     const prefix = hideSender ? "↗ Forwarded\n" : `↗ Forwarded from ${originalSender}\n`;
     const fwdContent = prefix + (forwardMsg.content || "");
@@ -718,7 +718,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
   };
 
   const exportChatPDF = () => {
-    const otherName = (otherProfile && (otherProfile.display_name || otherProfile.username) || "User";
+    const otherName = (otherProfile && (otherProfile.display_name || otherProfile.username)) || "User";
     const lines = messages.map(m => {
       const who = m.sender_id === aid ? "Me" : otherName;
       const body = isDeleted(m.content) ? "[deleted]" : (m.content || "");
@@ -788,7 +788,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
             {otherOnline && <div style={{ position: "absolute", bottom: 0, right: 0, width: 11, height: 11, borderRadius: "50%", background: "#4CAF50", border: "2px solid " + T.card }} />}
           </div>
           <div style={{ textAlign: "left" }}>
-            <div style={{ fontWeight: 800, fontSize: 15, color: T.paper }}>{(otherProfile && (otherProfile.display_name || otherProfile.username) || "User"}</div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: T.paper }}>{(otherProfile && (otherProfile.display_name || otherProfile.username)) || "User"}</div>
             {headerSub && <div style={{ fontSize: 11, color: otherOnline ? "#4CAF50" : T.gold }}>{headerSub}</div>}
           </div>
         </button>
@@ -805,7 +805,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
         {!loading && !error && messages.length === 0 && (
           <div style={{ textAlign: "center", color: T.muted, fontSize: 13, paddingTop: 48, lineHeight: 2 }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>👋</div>
-            Say hello to {(otherProfile && (otherProfile.display_name || otherProfile.username) || "them"}!
+            Say hello to {(otherProfile && (otherProfile.display_name || otherProfile.username)) || "them"}!
           </div>
         )}
         {grouped.map((item, i) => {
@@ -933,7 +933,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
       {forwardMsg && (
         <ForwardModal
           account={account}
-          senderName={forwardMsg.sender_id === aid ? "You" : (otherProfile && (otherProfile.display_name || otherProfile.username) || "User"}
+          senderName={forwardMsg.sender_id === aid ? "You" : (otherProfile && (otherProfile.display_name || otherProfile.username)) || "User"}
           onForward={doForward}
           onClose={() => setForwardMsg(null)}
           T={T}
@@ -959,7 +959,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
       {showMiniSettings && (
         <MiniChatSettings
           userId={oid}
-          userName={(otherProfile && (otherProfile.display_name || otherProfile.username) || "User"}
+          userName={(otherProfile && (otherProfile.display_name || otherProfile.username)) || "User"}
           isPro={isPro}
           onClose={() => { setShowMiniSettings(false); refreshSettings(); }}
           T={T}
