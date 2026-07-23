@@ -3727,9 +3727,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       bio: bio.trim(),
       display_name: clean || fullName.trim() || null,
     };
-    if (fullName.trim())  payload.full_name     = fullName.trim();
-    if (location.trim())  payload.location      = location.trim();
-    if (dob)              payload.date_of_birth = dob;
+    payload.full_name     = fullName.trim() || null;
+    payload.location      = location.trim() || null;
+    payload.date_of_birth = dob || null;
 
     const { error: saveErr } = await supabase.from("profiles").update(payload).eq("id", account.id);
 
@@ -3741,7 +3741,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
     // Re-read ALL fields from DB to confirm the save and refresh UI
     const { data: fresh } = await supabase.from("profiles")
-      .select("username, bio, avatar_url, full_name, location, date_of_birth")
+      .select("username, bio, avatar_url, full_name, location, date_of_birth, cover_url")
       .eq("id", account.id).single();
     if (fresh) {
       if (fresh.username   !== undefined) setUsername(fresh.username || "");
@@ -3750,7 +3750,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       if (fresh.full_name  !== undefined) setFullName(fresh.full_name || "");
       if (fresh.location      !== undefined) setLocation(fresh.location || "");
       if (fresh.date_of_birth !== undefined) setDob(fresh.date_of_birth || "");
-
+      if (fresh.cover_url)               setCoverUrl(fresh.cover_url);
     }
     setSavingProfile(false);
     setProfileMsg("Saved. ✓");

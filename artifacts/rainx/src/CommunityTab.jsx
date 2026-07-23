@@ -144,7 +144,7 @@ function renderTextWithTags(text, onOpenProfile) {
       return (
         <span key={i}
           style={{
-            color: isRaina ? T.goldBright : T.sage,
+            color: isRaina ? T.goldBright : T.gold,
             fontWeight: 800,
             fontSize: "1.05em",
             cursor: "pointer",
@@ -473,7 +473,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           </div>
         </div>
       ) : (
-        <div style={{ fontSize: 14, fontWeight: 500, color: T.paper, marginTop: 8, lineHeight: 1.65, whiteSpace: "pre-wrap", fontFamily: FONT_BODY, letterSpacing: 0.1 }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
+        <div style={{ fontSize: 13, fontWeight: 400, color: T.paper, marginTop: 8, lineHeight: 1.65, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
       )}
 
       <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 10 }}>
