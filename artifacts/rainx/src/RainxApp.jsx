@@ -34,6 +34,7 @@ const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold
 const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#C6A15B", goldBright:"#9E7B35", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
 const FONT_HEAD = "'Montserrat', sans-serif";
 const FONT_BODY = "'Montserrat', sans-serif";
+const COUNTRIES = ["Afghanistan","Albania","Algeria","Angola","Argentina","Armenia","Australia","Austria","Azerbaijan","Bahrain","Bangladesh","Belarus","Belgium","Bolivia","Bosnia and Herzegovina","Botswana","Brazil","Bulgaria","Cameroon","Canada","Chile","China","Colombia","Costa Rica","Croatia","Cuba","Czech Republic","Denmark","Ecuador","Egypt","Ethiopia","Finland","France","Georgia","Germany","Ghana","Greece","Guatemala","Hungary","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kuwait","Lebanon","Libya","Malaysia","Mexico","Morocco","Mozambique","Myanmar","Nepal","Netherlands","New Zealand","Nicaragua","Nigeria","Norway","Oman","Pakistan","Panama","Peru","Philippines","Poland","Portugal","Qatar","Romania","Russia","Rwanda","Saudi Arabia","Senegal","Serbia","Singapore","Somalia","South Africa","South Korea","Spain","Sudan","Sweden","Switzerland","Taiwan","Tanzania","Thailand","Tunisia","Turkey","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States","Uruguay","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"];
 
 // ---------- Resilient storage (uses Claude's artifact storage when present,
 // otherwise falls back to real localStorage - which works fine once this is
@@ -964,7 +965,7 @@ function MainAppContent({ account, onLogout }) {
   const seriesMapRef = useRef(seriesMap);
   seriesMapRef.current = seriesMap;
   const entitlement = useEntitlement(account.id);
-  const [morePage, setMorePage] = useState(null); // lifted so sidebar can deep-link; always start fresh to prevent blank white screen
+  const [morePage, setMorePage] = useState(() => { const p = lsGet("rainx-morepage"); return ["profile-menu","profile","verification","rewards","wallet","history","scalping","telegram","analytics","settings","notifications","security"].includes(p) ? p : null; });
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const [tab, setTab] = useState(() => { const t = lsGet("rainx-tab"); return ["home","markets","community"].includes(t) ? t : "home"; });
@@ -1186,6 +1187,7 @@ function MainAppContent({ account, onLogout }) {
   Object.assign(T, isDark ? DARK_TOKENS : LIGHT_TOKENS);
   useEffect(() => { document.body.style.background = T.ink; }, [isDark]);
   useEffect(() => { lsSet("rainx-tab", tab); }, [tab]);
+  useEffect(() => { if (morePage !== null) lsSet("rainx-morepage", morePage); else lsDelete("rainx-morepage"); }, [morePage]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -3587,12 +3589,14 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [dob, setDob] = useState("");
   const [education, setEducation] = useState("");
   const [certifications, setCertifications] = useState("");
+  const [country, setCountry] = useState("");
   const [profileFollowers, setProfileFollowers] = useState(0);
   const [profileFollowing, setProfileFollowing] = useState(0);
   useEffect(() => {
     if (!account?.id || morePage !== "profile") return;
-    // display_name/location/dob/education/certifications not in profiles schema — skip
-
+    supabase.from("profiles").select("full_name,country,location,date_of_birth,education,certifications").eq("id",account.id).single().then(({data})=>{
+      if(data){ setFullName(data.full_name||""); setCountry(data.country||""); setLocation(data.location||""); setDob(data.date_of_birth||""); setEducation(data.education||""); setCertifications(data.certifications||""); }
+    }).catch(()=>{});
 
     supabase.from("follows").select("*",{count:"exact",head:true}).eq("followed_id",account.id).then(({count})=>setProfileFollowers(count||0), ()=>{});
     supabase.from("follows").select("*",{count:"exact",head:true}).eq("follower_id",account.id).then(({count})=>setProfileFollowing(count||0), ()=>{});
@@ -3613,15 +3617,16 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
     // Single consolidated update — all fields at once to avoid partial saves
     const payload = {
-
       username: clean,
       bio: bio.trim(),
+      display_name: clean || fullName.trim() || null,
     };
-    // display_name/location/dob/education/certifications not in profiles schema — omitted from payload
-
-
-
-
+    if (fullName.trim())       payload.full_name      = fullName.trim();
+    if (country)               payload.country        = country;
+    if (location.trim())       payload.location       = location.trim();
+    if (dob)                   payload.date_of_birth  = dob;
+    if (education.trim())      payload.education      = education.trim();
+    if (certifications.trim()) payload.certifications = certifications.trim();
 
     const { error: saveErr } = await supabase.from("profiles").update(payload).eq("id", account.id);
 
@@ -3633,16 +3638,18 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
     // Re-read ALL fields from DB to confirm the save and refresh UI
     const { data: fresh } = await supabase.from("profiles")
-      .select("username, bio, avatar_url")
+      .select("username, bio, avatar_url, full_name, country, location, date_of_birth, education, certifications")
       .eq("id", account.id).single();
     if (fresh) {
       if (fresh.username   !== undefined) setUsername(fresh.username || "");
       if (fresh.bio        !== undefined) setBio(fresh.bio || "");
       if (fresh.avatar_url)               setAvatarUrl(fresh.avatar_url);
-      // display_name/location/dob/education/certifications not in schema — not read back
-
-
-
+      if (fresh.full_name  !== undefined) setFullName(fresh.full_name || "");
+      if (fresh.country    !== undefined) setCountry(fresh.country || "");
+      if (fresh.location   !== undefined) setLocation(fresh.location || "");
+      if (fresh.date_of_birth !== undefined) setDob(fresh.date_of_birth || "");
+      if (fresh.education  !== undefined) setEducation(fresh.education || "");
+      if (fresh.certifications !== undefined) setCertifications(fresh.certifications || "");
 
     }
     setSavingProfile(false);
@@ -3775,14 +3782,18 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           {label:"Full Name",val:fullName,set:setFullName,ph:"Your full name"},
           {label:"Username",val:username,set:setUsername,ph:"@handle"},
           {label:"Bio",val:bio,set:setBio,ph:"Say something about yourself"},
-          {label:"Location",val:location,set:setLocation,ph:"City, Country"},
+          {label:"Country",val:country,set:setCountry,isSelect:true},
+          {label:"Location",val:location,set:setLocation,ph:"City"},
           {label:"Date of Birth",val:dob,set:setDob,ph:"YYYY-MM-DD",type:"date"},
           {label:"Education",val:education,set:setEducation,ph:"University or degree"},
           {label:"Certifications",val:certifications,set:setCertifications,ph:"Trading certs, licenses…"},
-        ].map(({label,val,set,ph,type})=>(
+        ].map(({label,val,set,ph,type,isSelect})=>(
           <div key={label} style={{ marginBottom:12 }}>
             <label style={{ fontSize:11, color:T.muted, fontWeight:600, display:"block", marginBottom:4 }}>{label}</label>
-            <input type={type||"text"} value={val} onChange={e=>set(e.target.value)} placeholder={ph} style={{ ...getInputStyle(), width:"100%" }} />
+            {isSelect
+              ? <select value={val} onChange={e=>set(e.target.value)} style={{ ...getInputStyle(), width:"100%", appearance:"none", WebkitAppearance:"none" }}><option value="">Select country…</option>{COUNTRIES.map(c=><option key={c} value={c}>{c}</option>)}</select>
+              : <input type={type||"text"} value={val} onChange={e=>set(e.target.value)} placeholder={ph} style={{ ...getInputStyle(), width:"100%" }} />
+            }
           </div>
         ))}
         {profileMsg && <div style={{ fontSize:11, color:profileMsg.startsWith("Saved")?T.sage:T.rust, marginBottom:10 }}>{profileMsg}</div>}
