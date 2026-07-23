@@ -3208,7 +3208,77 @@ function SecuritySection({ icon: Icon, title, desc, onPress, label, comingSoon }
 }
 
 // ── Notification Settings Screen ──────────────────────────────────────────
-const NOTIF_CATEGORIES = [
+// ── Push sound map (mirrors sw.js CATEGORY_SOUNDS — keep in sync) ──────────
+    const PUSH_SOUND_MAP = {
+    trading:   "/sounds/Trade%20Entry%20notification%20sound%20.mp3",
+    tp:        "/sounds/take%20profit%20notification%20sound%20.mp3",
+    sl:        "/sounds/Stop%20Loss%20notification%20sound%20.mp3",
+    community: "/sounds/community%20notification.mp3",
+    news:      "/sounds/market%20news%20notification%20sound%20.mp3",
+    risk:      "/sounds/money%20received%20notification.mp3",
+    default:   "/sounds/analysis%20complete%20notification%20.mp3",
+    };
+
+    // ── Sound preview rows for the picker UI ─────────────────────────────────────
+    const SOUND_PREVIEW_ROWS = [
+    { category: "trading",   label: "Trade Signal",      sub: "New BUY / SELL entry",           src: "/sounds/Trade%20Entry%20notification%20sound%20.mp3" },
+    { category: "tp",        label: "Take Profit Hit",   sub: "TP level reached",               src: "/sounds/take%20profit%20notification%20sound%20.mp3" },
+    { category: "sl",        label: "Stop Loss Hit",     sub: "SL level reached",               src: "/sounds/Stop%20Loss%20notification%20sound%20.mp3" },
+    { category: "news",      label: "Market News",       sub: "CPI, NFP, FOMC, rate decisions", src: "/sounds/market%20news%20notification%20sound%20.mp3" },
+    { category: "community", label: "Community",         sub: "Replies, mentions & posts",      src: "/sounds/community%20notification.mp3" },
+    { category: "risk",      label: "Risk & Wallet",     sub: "Risk warnings, wallet events",   src: "/sounds/money%20received%20notification.mp3" },
+    { category: "default",   label: "Analysis Complete", sub: "Analysis done alerts",           src: "/sounds/analysis%20complete%20notification%20.mp3" },
+    ];
+
+    function SoundPickerCard() {
+    const [playing, setPlaying] = React.useState(null);
+    const audioRef = React.useRef(null);
+    const preview = (row) => {
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      if (playing === row.category) { setPlaying(null); return; }
+      try {
+        const a = new Audio(row.src);
+        a.volume = 0.9;
+        a.play().catch(() => {});
+        a.onended = () => setPlaying(null);
+        audioRef.current = a;
+        setPlaying(row.category);
+      } catch { setPlaying(null); }
+    };
+    return (
+      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginTop: 16 }}>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 3 }}>Notification Sounds</div>
+        <div style={{ fontSize: 11, color: T.muted, marginBottom: 14, lineHeight: 1.5 }}>Tap Preview to hear each alert sound before it arrives.</div>
+        {SOUND_PREVIEW_ROWS.map((row, i) => (
+          <div key={row.category} style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            paddingTop: i === 0 ? 0 : 11, paddingBottom: i < SOUND_PREVIEW_ROWS.length - 1 ? 11 : 0,
+            borderBottom: i < SOUND_PREVIEW_ROWS.length - 1 ? `1px solid ${T.cardBorder}` : "none",
+          }}>
+            <div style={{ flex: 1, minWidth: 0, marginRight: 10 }}>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 12.5, color: T.paper }}>{row.label}</div>
+              <div style={{ fontSize: 10.5, color: T.muted, marginTop: 1 }}>{row.sub}</div>
+            </div>
+            <button onClick={() => preview(row)} style={{
+              background: playing === row.category ? T.sage : "transparent",
+              color: playing === row.category ? T.ink : T.gold,
+              border: `1.5px solid ${playing === row.category ? T.sage : T.gold}`,
+              borderRadius: 8, padding: "5px 13px",
+              fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11,
+              cursor: "pointer", flexShrink: 0, transition: "all 0.18s",
+            }}>
+              {playing === row.category ? "Playing…" : "Preview"}
+            </button>
+          </div>
+        ))}
+        <div style={{ marginTop: 12, fontSize: 10.5, color: T.muted, lineHeight: 1.6 }}>
+          Each alert type has its own unique sound — plays automatically even when RainX is closed.
+        </div>
+      </div>
+    );
+    }
+
+    const NOTIF_CATEGORIES = [
   { key: "trading",   label: "Trading & Raina AI",  desc: "Signals, entries, TP/SL alerts" },
   { key: "news",      label: "Market News",          desc: "CPI, NFP, FOMC, rate decisions" },
   { key: "community", label: "Community",            desc: "Likes, comments, follows, mentions" },
