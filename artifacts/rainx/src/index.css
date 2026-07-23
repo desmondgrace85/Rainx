@@ -436,3 +436,13 @@
     inset: -1px;
   }
 }
+
+/* Disable text selection app-wide (does not affect chart interaction or input fields) */
+body {
+  user-select: none;
+  -webkit-user-select: none;
+}
+input, textarea, [contenteditable] {
+  user-select: text;
+  -webkit-user-select: text;
+}

@@ -220,7 +220,8 @@ function Avatar({ name, size = 34, avatarUrl }) {
 }
 
 // ---------- Composer ----------
-function Composer({ account, onPosted, compact }) {
+function Composer({ account, onPosted, compact, themeTokens }) {
+  if (themeTokens) Object.assign(T, themeTokens);
   const [text, setText] = useState("");
   const [posting, setPosting] = useState(false);
   const taRef = useRef(null);
@@ -442,7 +443,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <button onClick={() => onOpenProfile(post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: T.paper }}>{profile?.display_name || "user"}</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: T.paper }}>{profile?.full_name || profile?.display_name || "user"}</span>
           <Badge isAdmin={profile?.is_admin} badge={profile?.badge} isPro={profile?.isPro} />
           <span style={{ fontSize: 11, color: T.muted }}>{timeAgo(post.created_at)}</span>
         </button>
@@ -472,7 +473,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           </div>
         </div>
       ) : (
-        <div style={{ fontSize: 14, fontWeight: 400, color: T.paper, marginTop: 8, lineHeight: 1.65, whiteSpace: "pre-wrap", fontFamily: FONT_BODY, letterSpacing: 0.1 }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
+        <div style={{ fontSize: 14, fontWeight: 500, color: T.paper, marginTop: 8, lineHeight: 1.65, whiteSpace: "pre-wrap", fontFamily: FONT_BODY, letterSpacing: 0.1 }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
       )}
 
       <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 10 }}>
@@ -897,7 +898,8 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
         {profile.bio && <div style={{ fontSize:13.5, color:T.paper, marginBottom:10, lineHeight:1.65 }}>{profile.bio}</div>}
         {joinedLabel && (
           <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:13, color:T.muted, marginBottom:10 }}>
-            <span style={{ fontSize:14 }}>📅</span><span>{joinedLabel}</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span>{joinedLabel}</span>
           </div>
         )}
         <div style={{ display:"flex", gap:20, marginBottom:mutualFollowers.length > 0 ? 10 : 14 }}>
@@ -948,7 +950,8 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
 }
 
 // ---------- ProfileFeed (used inside ProfileView) ----------
-function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser }) {
+function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, onDelete, onRefresh, themeTokens }) {
+  if (themeTokens) Object.assign(T, themeTokens);
   const [likeData, setLikeData] = useState({});
   const [repostData, setRepostData] = useState({});
   const profilesMap = { [profileEntry.id]: profileEntry };
@@ -1008,8 +1011,8 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser }) 
           repostData={repostData}
           onToggleRepost={toggleRepost}
           onOpenProfile={onOpenProfile}
-          onDelete={() => {}}
-          onEdit={() => {}}
+          onDelete={onDelete || (() => {})}
+          onEdit={onRefresh || (() => {})}
           onReport={() => {}}
           onDmUser={onDmUser}
         />
@@ -1207,7 +1210,7 @@ function PostActivityScreen({ post, profile, account, likeData, repostData, T, o
 }
 
 // ---------- Main feed ----------
-export default function CommunityTab({ account, themeTokens }) {
+export default function CommunityTab({ account, themeTokens, onViewingProfileChange }) {
   // Sync theme tokens from parent so T reflects the active theme
   if (themeTokens) Object.assign(T, themeTokens);
   const [posts, setPosts] = useState(null);
@@ -1227,6 +1230,8 @@ export default function CommunityTab({ account, themeTokens }) {
   const [followingIds, setFollowingIds] = useState(new Set());
   const [isAccountPro, setIsAccountPro] = useState(false);
   const [unreadDmCount, setUnreadDmCount] = useState(0);
+  const [fabVisible, setFabVisible] = useState(true);
+  const fabScrollRef = useRef(0);
 
   // Load following IDs for the "Following" feed tab
   useEffect(() => {
@@ -1263,6 +1268,26 @@ export default function CommunityTab({ account, themeTokens }) {
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, [account?.id]);
+
+  // Notify parent when community profile view opens/closes (for bottom nav hiding)
+  useEffect(() => {
+    onViewingProfileChange?.(viewingUserId);
+  }, [viewingUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // FAB scroll-hide: hide when scrolling down, show when scrolling up
+  useEffect(() => {
+    const handleScroll = () => {
+      const y = window.scrollY;
+      if (y > fabScrollRef.current + 8) {
+        setFabVisible(false);
+      } else if (y < fabScrollRef.current - 8) {
+        setFabVisible(true);
+      }
+      fabScrollRef.current = y;
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const seenProfileIdsRef = useRef(new Set());
   const viewedPostIdsRef = useRef(new Set());
@@ -1479,9 +1504,9 @@ export default function CommunityTab({ account, themeTokens }) {
       ))}
 
       </div>{/* end feed wrapper */}
-      <button onClick={() => setShowFabModal(true)} style={{ position: "fixed", bottom: 90, right: 20, width: 52, height: 52, borderRadius: "50%", background: T.gold, border: "none", color: T.ink, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 16px rgba(0,0,0,0.4)", cursor: "pointer", transition: "transform 0.15s" }}
-        onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.9)"; }}
-        onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+      <button onClick={() => setShowFabModal(true)} style={{ position: "fixed", bottom: 90, right: 20, width: 52, height: 52, borderRadius: "50%", background: T.gold, border: "none", color: T.ink, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 16px rgba(0,0,0,0.4)", cursor: "pointer", opacity: fabVisible ? 1 : 0, transform: fabVisible ? "scale(1)" : "scale(0.8)", transition: "opacity 0.25s, transform 0.25s", pointerEvents: fabVisible ? "auto" : "none" }}
+        onMouseDown={(e) => { if (fabVisible) e.currentTarget.style.transform = "scale(0.9)"; }}
+        onMouseUp={(e) => { if (fabVisible) e.currentTarget.style.transform = "scale(1)"; }}
       >
         <Plus size={24} />
       </button>
@@ -1499,3 +1524,5 @@ export default function CommunityTab({ account, themeTokens }) {
     </div>
   );
 }
+
+export { PostCard, ProfileFeed, Composer };

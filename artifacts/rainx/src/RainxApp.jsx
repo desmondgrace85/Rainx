@@ -5,10 +5,10 @@ import {
   TrendingUp, TrendingDown, Minus, Activity, Send, Calendar as CalendarIcon,
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
   CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet, Landmark, Gift, Trophy,
-  Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle,
+  Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle, Plus,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import CommunityTab from "./CommunityTab";
+import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer } from "./CommunityTab";
 import FullChartView from "./FullChartView";
 import LightweightChart from "./LightweightChart";
 
@@ -1035,6 +1035,7 @@ function MainAppContent({ account, onLogout }) {
 
   const [tab, setTab] = useState(() => { const t = lsGet("rainx-tab"); return ["home","markets","community","more"].includes(t) ? t : "home"; });
   const [profileFromHeader, setProfileFromHeader] = useState(false);
+  const [communityProfileOpen, setCommunityProfileOpen] = useState(false);
 
   // ── Telegram-style animated navigation ───────────────────────────────────
   const prevTabRef = useRef("home");
@@ -1683,7 +1684,7 @@ function MainAppContent({ account, onLogout }) {
       >
         {tab === "home" && <HomeTab inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} setSession={setSession} seriesMap={seriesMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} />}
         {tab === "markets" && <MarketsTab seriesMap={seriesMap} signalsMap={signalsMap} activeSymbol={activeSymbol} onSelect={(s) => { setActiveSymbol(s); goTab("home", -1); }} themeMode={themeMode} />}
-        {tab === "community" && <CommunityTab account={account} themeTokens={T} />}
+        {tab === "community" && <CommunityTab account={account} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />}
         {tab === "history" && <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />}
         {tab === "scalping" && <ScalpingTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />}
         {tab === "subscribe" && <SubscribeScreen account={account} entitlement={entitlement} onBack={() => goTab("more", -1)} />}
@@ -1833,17 +1834,19 @@ function MainAppContent({ account, onLogout }) {
         </div>
       )}
 
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: T.card, borderTop: `1px solid ${T.cardBorder}`, display: "flex", justifyContent: "space-around", padding: "6px 0 20px" }}>
-        {[["home", Home, "Home"], ["markets", Briefcase, "Markets"], ["community", Users2, "Community"], ["more", MoreHorizontal, "More"]].map(([key, Icon, label]) => {
-          const active = !profileFromHeader && tab === key;
-          return (
-            <button key={key} onClick={() => { if (key === "more") setMorePage(null); goTab(key); }} style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 64, padding: "6px 4px", transition: "color 0.15s" }}>
-              <Icon size={24} strokeWidth={active ? 2.5 : 1.8} />
-              <span style={{ fontSize: 13, fontFamily: FONT_HEAD, fontWeight: active ? 700 : 500, letterSpacing: 0.1 }}>{label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {!communityProfileOpen && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: T.card, borderTop: `1px solid ${T.cardBorder}`, display: "flex", justifyContent: "space-around", padding: "6px 0 20px" }}>
+          {[["home", Home, "Home"], ["markets", Briefcase, "Markets"], ["community", Users2, "Community"], ["more", MoreHorizontal, "More"]].map(([key, Icon, label]) => {
+            const active = !profileFromHeader && tab === key;
+            return (
+              <button key={key} onClick={() => { if (key === "more") setMorePage(null); goTab(key); }} style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 64, padding: "6px 4px", transition: "color 0.15s" }}>
+                <Icon size={24} strokeWidth={active ? 2.5 : 1.8} />
+                <span style={{ fontSize: 13, fontFamily: FONT_HEAD, fontWeight: active ? 700 : 500, letterSpacing: 0.1 }}>{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -3678,6 +3681,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [profilePostsLoading, setProfilePostsLoading] = useState(false);
   const [profileComposerText, setProfileComposerText] = useState("");
   const [profileComposerPosting, setProfileComposerPosting] = useState(false);
+  const [showProfileFabModal, setShowProfileFabModal] = useState(false);
   const [showYearPicker, setShowYearPicker] = useState(false);
   useEffect(() => {
     if (!account?.id || morePage !== "profile") return;
@@ -3971,7 +3975,10 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               {joinedLabel}
             </span>}
-            {dobDisplay && <span style={{ fontSize:12.5, color:T.muted }}>🎂 {dobDisplay}</span>}
+            {dobDisplay && <span style={{ display:"flex", alignItems:"center", gap:4, fontSize:12.5, color:T.muted }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              {dobDisplay}
+            </span>}
           </div>
           <div style={{ display:"flex", gap:20, marginBottom:10 }}>
             <span><strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{profileFollowing}</strong><span style={{ fontSize:14, color:T.muted }}> Following</span></span>
@@ -3996,36 +4003,28 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper, borderBottom:`2px solid ${T.gold}`, paddingBottom:10, display:"inline-block" }}>Posts</span>
         </div>
 
-        {/* ── Profile Composer ── */}
-        <div style={{ padding:"12px 16px", borderBottom:`1px solid ${T.cardBorder}`, display:"flex", gap:10, alignItems:"flex-start" }}>
-          <div style={{ width:38, height:38, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.ink, flexShrink:0, overflow:"hidden" }}>
-            {avatarUrl ? <img src={avatarUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : profileInitial}
-          </div>
-          <div style={{ flex:1 }}>
-            <textarea
-              value={profileComposerText}
-              onChange={e => setProfileComposerText(e.target.value.slice(0,500))}
-              placeholder="Share a market thought…"
-              rows={2}
-              style={{ width:"100%", background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:10, color:T.paper, fontSize:14, padding:"8px 10px", fontFamily:FONT_BODY, outline:"none", resize:"none", boxSizing:"border-box" }}
-            />
-            <div style={{ display:"flex", justifyContent:"flex-end", marginTop:6 }}>
-              <button
-                onClick={async () => {
-                  if (!profileComposerText.trim() || profileComposerPosting) return;
-                  setProfileComposerPosting(true);
-                  await supabase.from("community_posts").insert({ user_id: account.id, text: profileComposerText.trim() });
-                  setProfileComposerText("");
-                  setProfileComposerPosting(false);
-                  supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false}).then(({data})=>setProfilePosts(data||[]));
-                }}
-                disabled={profileComposerPosting || !profileComposerText.trim()}
-                style={{ background:T.gold, color:T.ink, border:"none", borderRadius:8, padding:"7px 16px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, cursor:"pointer", opacity:!profileComposerText.trim()?0.5:1 }}>
-                {profileComposerPosting ? "Posting…" : "Post"}
-              </button>
+        {/* ── Profile Composer FAB ── */}
+        <button
+          onClick={() => setShowProfileFabModal(true)}
+          style={{ position:"fixed", bottom:90, right:20, width:52, height:52, borderRadius:"50%", background:T.gold, border:"none", color:T.ink, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 6px 16px rgba(0,0,0,0.4)", cursor:"pointer", zIndex:40, transition:"transform 0.15s" }}
+          onMouseDown={e => { e.currentTarget.style.transform = "scale(0.9)"; }}
+          onMouseUp={e => { e.currentTarget.style.transform = "scale(1)"; }}
+        >
+          <Plus size={24} />
+        </button>
+        {showProfileFabModal && (
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={() => setShowProfileFabModal(false)}>
+            <div style={{ background:T.ink, width:"100%", maxWidth:480, margin:"0 auto", borderRadius:"16px 16px 0 0", padding:16 }} onClick={e => e.stopPropagation()}>
+              <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:8 }}>
+                <button onClick={() => setShowProfileFabModal(false)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><X size={20} /></button>
+              </div>
+              <CommunityComposer account={account} compact themeTokens={T} onPosted={() => {
+                setShowProfileFabModal(false);
+                supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false}).then(({data})=>setProfilePosts(data||[]));
+              }} />
             </div>
           </div>
-        </div>
+        )}
 
         {/* ── Profile posts feed ── */}
         {profilePostsLoading ? (
@@ -4033,41 +4032,27 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         ) : profilePosts.length === 0 ? (
           <div style={{ fontSize:13, color:T.muted, padding:"28px 0", textAlign:"center" }}>No posts yet.</div>
         ) : (
-          <div style={{ paddingBottom:20 }}>
-            {profilePosts.map(post => (
-              <div key={post.id} style={{ padding:"12px 16px", borderBottom:`1px solid ${T.cardBorder}`, display:"flex", gap:10, alignItems:"flex-start" }}>
-                <div style={{ width:36, height:36, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, color:T.ink, flexShrink:0, overflow:"hidden" }}>
-                  {avatarUrl ? <img src={avatarUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : profileInitial}
-                </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
-                    <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{fullName || username || account?.email?.split("@")[0]}</span>
-                    <VerifBadgeIcon size={13} />
-                    <span style={{ fontSize:11, color:T.muted, marginLeft:"auto" }}>{post.created_at ? new Date(post.created_at).toLocaleDateString() : ""}</span>
-                  </div>
-                  <div style={{ fontSize:14, color:T.paper, lineHeight:1.65, whiteSpace:"pre-wrap", marginBottom:8 }}>{post.text}</div>
-                  <div style={{ display:"flex", gap:18, fontSize:12, color:T.muted }}>
-                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                      {post.likes || 0}
-                    </span>
-                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      {post.comment_count || 0}
-                    </span>
-                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-                      {post.reposts || 0}
-                    </span>
-                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                      {post.views || 0}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <CommunityProfileFeed
+            posts={profilePosts}
+            account={account}
+            themeTokens={T}
+            profileEntry={{
+              id: account.id,
+              display_name: username || account?.email?.split("@")[0] || "user",
+              full_name: fullName,
+              username: username,
+              avatar_url: avatarUrl,
+            }}
+            onOpenProfile={() => {}}
+            onDmUser={() => {}}
+            onDelete={async (id) => {
+              await supabase.from("community_posts").delete().eq("id", id);
+              setProfilePosts(posts => posts.filter(p => p.id !== id));
+            }}
+            onRefresh={() => {
+              supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false}).then(({data})=>setProfilePosts(data||[]));
+            }}
+          />
         )}
       </div>
     );
