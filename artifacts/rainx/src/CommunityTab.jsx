@@ -433,7 +433,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
   };
 
   return (
-    <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.cardBorder}`, animation: "fadeInUp 0.25s ease", display: "flex", gap: 10 }}>
+    <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.cardBorder}`, animation: "fadeInUp 0.25s ease", display: "flex", gap: 10, alignItems: "flex-start" }}>
       {/* Avatar column */}
       <button onClick={() => onOpenProfile(post.user_id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
         <Avatar name={profile?.display_name} avatarUrl={profile?.avatar_url} size={40} />
