@@ -3532,14 +3532,29 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
       if (upErr && upErr.statusCode !== "200" && upErr.statusCode !== "409") throw upErr;
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
-      // Store URL with a version timestamp so each upload busts the browser cache across sessions
       const versionedUrl = `${urlData.publicUrl}?v=${Date.now()}`;
       const { error: dbErr } = await supabase.from("profiles").update({ avatar_url: versionedUrl }).eq("id", account.id);
       if (dbErr) throw new Error("Failed to save photo: " + dbErr.message);
       setAvatarUrl(versionedUrl);
-      notifyAvatarRefresh(); // refresh header avatar
+      notifyAvatarRefresh();
     } catch (err) { setProfileMsg("Photo upload failed: " + (err?.message || "unknown")); }
     setUploadingAvatar(false);
+  };
+
+  const uploadCover = async (file) => {
+    if (!file) return;
+    setUploadingCover(true);
+    try {
+      const blob = await compressImage(file, 1200, 0.8);
+      const path = `${account.id}/cover.jpg`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+      if (upErr && upErr.statusCode !== "200" && upErr.statusCode !== "409") throw upErr;
+      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      const versionedUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+      await supabase.from("profiles").update({ cover_url: versionedUrl }).eq("id", account.id);
+      setCoverUrl(versionedUrl);
+    } catch (err) { setProfileMsg("Cover upload failed: " + (err?.message || "unknown")); }
+    setUploadingCover(false);
   };
 
   const saveProfile = async () => {
@@ -3594,11 +3609,18 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [profileFollowing, setProfileFollowing] = useState(0);
   const [dobPrivacy, setDobPrivacy] = useState(() => lsGet("rainx-dob-privacy") || "daymonth");
   const [mutualFollowers, setMutualFollowers] = useState([]);
+  const [coverUrl, setCoverUrl] = useState(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [showShareSheet, setShowShareSheet] = useState(false);
+  const [profilePosts, setProfilePosts] = useState([]);
+  const [profilePostsLoading, setProfilePostsLoading] = useState(false);
   useEffect(() => {
     if (!account?.id || morePage !== "profile") return;
-    supabase.from("profiles").select("full_name,country,location,date_of_birth,education,certifications").eq("id",account.id).single().then(({data})=>{
-      if(data){ setFullName(data.full_name||""); setCountry(data.country||""); setLocation(data.location||""); setDob(data.date_of_birth||""); setEducation(data.education||""); setCertifications(data.certifications||""); }
+    supabase.from("profiles").select("full_name,country,location,date_of_birth,education,certifications,cover_url").eq("id",account.id).single().then(({data})=>{
+      if(data){ setFullName(data.full_name||""); setCountry(data.country||""); setLocation(data.location||""); setDob(data.date_of_birth||""); setEducation(data.education||""); setCertifications(data.certifications||""); if(data.cover_url) setCoverUrl(data.cover_url); }
     }).catch(()=>{});
+    setProfilePostsLoading(true);
+    supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false}).then(({data})=>{ setProfilePosts(data||[]); setProfilePostsLoading(false); }).catch(()=>setProfilePostsLoading(false));
 
     supabase.from("follows").select("*",{count:"exact",head:true}).eq("followed_id",account.id).then(({count})=>setProfileFollowers(count||0), ()=>{});
     supabase.from("follows").select("*",{count:"exact",head:true}).eq("follower_id",account.id).then(({count})=>setProfileFollowing(count||0), ()=>{});
@@ -3760,15 +3782,12 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   );
 
   if (morePage === "profile") {
-    // Derive joined date from auth session timestamp
     const joinedRaw = account?.joinedAt || account?.created_at;
     const joinedLabel = joinedRaw ? (() => {
       const d = new Date(joinedRaw);
       if (isNaN(d)) return null;
       return `Joined ${d.toLocaleString("default", { month: "long" })}, ${d.getFullYear()}`;
     })() : null;
-
-    // Format DOB based on selected privacy
     const dobDisplay = (() => {
       if (!dob) return null;
       const d = new Date(dob);
@@ -3780,143 +3799,258 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       if (dobPrivacy === "daymonth" || dobPrivacy === "friends") return `${month} ${day}`;
       return null;
     })();
-
+    const CamIcon = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" />
+      </svg>
+    );
     return (
-      <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Profile" subtitle="Your public RainX identity">
-        {/* ── Banner + overlapping avatar ── */}
-        <div style={{ position:"relative", marginBottom:56 }}>
-          <div style={{ width:"100%", height:96, background:`linear-gradient(135deg,#1a160d 0%,#231d10 55%,${T.gold}28 100%)`, borderBottom:`1px solid ${T.cardBorder}` }} />
-          {/* Avatar — overlaps banner */}
-          <div style={{ position:"absolute", bottom:-48, left:16 }}>
-            {avatarUrl
-              ? <img src={avatarUrl} alt="avatar" style={{ width:90, height:90, borderRadius:"50%", objectFit:"cover", border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}` }} />
-              : <div style={{ width:90, height:90, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:32, border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}` }}>{profileInitial}</div>
-            }
+      <div style={{ minHeight:"100%", background:T.ink, overflowY:"auto" }}>
+        <style>{"@keyframes slideInRight { from { transform:translateX(24px); opacity:0 } to { transform:translateX(0); opacity:1 } } @keyframes sheetUp { from { transform:translateY(100%) } to { transform:translateY(0) } }"}</style>
+
+        {/* ── Share bottom sheet ── */}
+        {showShareSheet && (
+          <div onClick={() => setShowShareSheet(false)} style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(0,0,0,0.55)" }}>
+            <div onClick={e => e.stopPropagation()}
+              style={{ position:"absolute", bottom:0, left:0, right:0, background:T.card, borderRadius:"20px 20px 0 0", padding:"16px 20px 40px", animation:"sheetUp 0.28s ease" }}>
+              <div style={{ width:40, height:4, borderRadius:2, background:T.cardBorder, margin:"0 auto 18px" }} />
+              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:22, padding:"0 4px" }}>
+                {avatarUrl
+                  ? <img src={avatarUrl} style={{ width:46, height:46, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} alt="" />
+                  : <div style={{ width:46, height:46, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
+                }
+                <div>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{fullName || username || account?.email?.split("@")[0]}</div>
+                  {username && <div style={{ fontSize:12, color:T.muted }}>@{username}</div>}
+                </div>
+              </div>
+              {[
+                { emoji:"🔗", label:"Copy profile link", action: () => { try { navigator.clipboard?.writeText(window.location.href); } catch(e) {} setShowShareSheet(false); } },
+                { emoji:"📤", label:"Share via…",        action: () => { try { navigator.share?.({ title: username || "My RainX Profile", url: window.location.href }); } catch(e) {} setShowShareSheet(false); } },
+              ].map(({ emoji, label, action }) => (
+                <button key={label} onClick={action}
+                  style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"14px 8px", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, cursor:"pointer" }}>
+                  <span style={{ fontSize:20 }}>{emoji}</span>
+                  <span style={{ fontFamily:FONT_HEAD, fontWeight:600, fontSize:14, color:T.paper }}>{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
-          {/* Action buttons — top-right, aligned with avatar bottom */}
-          <div style={{ position:"absolute", bottom:-26, right:16, display:"flex", alignItems:"center", gap:8 }}>
-            {/* Gift button */}
-            <button style={{ width:38, height:38, borderRadius:"50%", background:"none", border:`1.5px solid ${T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}>
-              <Gift size={16} color={T.paper} />
+        )}
+
+        {/* ── Sticky minimal header ── */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", position:"sticky", top:0, zIndex:10, background:"rgba(15,14,11,0.94)", backdropFilter:"blur(8px)", borderBottom:`1px solid ${T.cardBorder}` }}>
+          <button onClick={() => setMorePage("profile-menu")} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,0.07)", border:"none", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
+            <ChevronLeft size={20} color={T.paper} />
+          </button>
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>Profile</div>
+          <div style={{ width:36 }} />
+        </div>
+
+        {/* ── Banner (tappable to change cover) + Avatar + action buttons ── */}
+        <div style={{ position:"relative", animation:"slideInRight 0.2s ease" }}>
+          {/* Banner — click to upload cover */}
+          <label style={{ display:"block", cursor:"pointer", position:"relative" }}>
+            <input type="file" accept="image/*" onChange={e => e.target.files[0] && uploadCover(e.target.files[0])} style={{ display:"none" }} disabled={uploadingCover} />
+            {coverUrl
+              ? <img src={coverUrl} style={{ width:"100%", height:110, objectFit:"cover", display:"block" }} alt="" />
+              : <div style={{ width:"100%", height:110, background:`linear-gradient(135deg,#1a160d 0%,#231d10 55%,${T.gold}28 100%)` }} />
+            }
+            {/* Camera overlay on banner */}
+            <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.18)" }}>
+              <div style={{ background:"rgba(0,0,0,0.45)", borderRadius:"50%", padding:8, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <CamIcon />
+              </div>
+            </div>
+          </label>
+
+          {/* Avatar overlapping banner — tappable for avatar upload */}
+          <label style={{ position:"absolute", bottom:-48, left:14, cursor:"pointer" }}>
+            <input type="file" accept="image/*" onChange={e => e.target.files[0] && uploadAvatar(e.target.files[0])} style={{ display:"none" }} disabled={uploadingAvatar} />
+            <div style={{ width:92, height:92, borderRadius:"50%", border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}`, overflow:"hidden", position:"relative" }}>
+              {avatarUrl
+                ? <img src={avatarUrl} alt="avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                : <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:32 }}>{profileInitial}</div>
+              }
+              {/* Camera overlay on avatar */}
+              <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.35)", display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"50%" }}>
+                <CamIcon />
+              </div>
+            </div>
+          </label>
+
+          {/* Share + Edit profile buttons — right side, below banner */}
+          <div style={{ position:"absolute", bottom:-44, right:14, display:"flex", alignItems:"center", gap:8 }}>
+            <button onClick={() => setShowShareSheet(true)}
+              style={{ background:"none", border:`1.5px solid ${T.cardBorder}`, borderRadius:22, padding:"9px 16px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
+              Share
             </button>
-            {/* Notification bell */}
-            <button onClick={() => setMorePage("notifications")} style={{ width:38, height:38, borderRadius:"50%", background:"none", border:`1.5px solid ${T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}>
-              <Bell size={16} color={T.paper} />
+            <button onClick={() => setMorePage("profile-edit")}
+              style={{ background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, border:"none", borderRadius:22, padding:"9px 16px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.ink, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
+              Edit profile
             </button>
-            {/* Edit Photo — styled as primary action */}
-            <label style={{ display:"flex", alignItems:"center", gap:7, background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, borderRadius:22, padding:"9px 17px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:12.5, cursor:"pointer", lineHeight:1, flexShrink:0, userSelect:"none" }}>
-              <User size={13} color={T.ink} style={{ flexShrink:0 }} />
-              {uploadingAvatar ? "Uploading…" : "Edit Photo"}
-              <input type="file" accept="image/*" onChange={e => e.target.files[0] && uploadAvatar(e.target.files[0])} style={{ display:"none" }} disabled={uploadingAvatar} />
-            </label>
           </div>
         </div>
 
+        {/* Spacer for overlap */}
+        <div style={{ height:60 }} />
+
         {/* ── Profile info ── */}
-        <div style={{ padding:"0 16px 6px" }}>
-          {/* Name + badge */}
+        <div style={{ padding:"0 16px 8px" }}>
           <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
             <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.paper, lineHeight:1.2 }}>{fullName || username || account?.email}</span>
             <VerifBadgeIcon size={18} />
           </div>
-          {/* Username */}
           {username && <div style={{ fontSize:13.5, color:T.muted, marginBottom:7 }}>@{username}</div>}
-          {/* Bio */}
           {bio && <div style={{ fontSize:13.5, color:T.paper, marginBottom:9, lineHeight:1.65 }}>{bio}</div>}
-          {/* Meta row: location · joined · dob */}
           <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:"4px 14px", marginBottom:9 }}>
             {location && <span style={{ fontSize:12.5, color:T.muted }}>📍 {location}</span>}
-            {joinedLabel && (
-              <span style={{ display:"flex", alignItems:"center", gap:4, fontSize:12.5, color:T.muted }}>
-                <CalendarIcon size={12} color={T.muted} />{joinedLabel}
-              </span>
-            )}
+            {joinedLabel && <span style={{ display:"flex", alignItems:"center", gap:4, fontSize:12.5, color:T.muted }}><CalendarIcon size={12} color={T.muted} />{joinedLabel}</span>}
             {dobDisplay && <span style={{ fontSize:12.5, color:T.muted }}>🎂 {dobDisplay}</span>}
           </div>
-
-          {/* DOB privacy selector — only when DOB is set */}
-          {dob && (
-            <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:6, marginBottom:11 }}>
-              <span style={{ fontSize:10.5, color:T.muted, fontWeight:600, marginRight:2 }}>DOB visibility:</span>
-              {[["daymonth","Day & Month"],["everyone","Full Date"],["friends","Friends"]].map(([v, label]) => (
-                <button key={v} onClick={() => { setDobPrivacy(v); lsSet("rainx-dob-privacy", v); }}
-                  style={{ fontSize:10.5, padding:"3px 9px", borderRadius:10, border:`1px solid ${dobPrivacy===v ? T.gold : T.cardBorder}`, background:dobPrivacy===v ? `${T.gold}22` : "none", color:dobPrivacy===v ? T.goldBright : T.muted, cursor:"pointer", fontFamily:FONT_HEAD, fontWeight:600 }}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Following / Followers */}
           <div style={{ display:"flex", gap:20, marginBottom:10 }}>
-            <span style={{ fontSize:14, color:T.paper }}>
-              <strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{profileFollowing}</strong>
-              <span style={{ color:T.muted }}> Following</span>
-            </span>
-            <span style={{ fontSize:14, color:T.paper }}>
-              <strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{profileFollowers}</strong>
-              <span style={{ color:T.muted }}> Followers</span>
-            </span>
+            <span><strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{profileFollowing}</strong><span style={{ fontSize:14, color:T.muted }}> Following</span></span>
+            <span><strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{profileFollowers}</strong><span style={{ fontSize:14, color:T.muted }}> Followers</span></span>
           </div>
-
-          {/* Mutual followers row — only when there are actual mutuals */}
           {mutualFollowers.length > 0 && (
             <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, fontSize:12.5, color:T.muted }}>
               <div style={{ display:"flex", alignItems:"center" }}>
                 {mutualFollowers.slice(0, 3).map((f, i) => (
                   <div key={f.id} style={{ width:22, height:22, borderRadius:"50%", marginLeft:i > 0 ? -7 : 0, border:`1.5px solid ${T.ink}`, overflow:"hidden", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:700, fontSize:8, color:T.ink, flexShrink:0 }}>
-                    {f.avatar_url
-                      ? <img src={f.avatar_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
-                      : (f.username || f.email || "?")[0]?.toUpperCase()
-                    }
+                    {f.avatar_url ? <img src={f.avatar_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" /> : (f.username || f.email || "?")[0]?.toUpperCase()}
                   </div>
                 ))}
               </div>
-              <span>
-                Followed by {mutualFollowers.slice(0, 2).map(f => f.username || f.email?.split("@")[0]).join(", ")}
-                {mutualFollowers.length > 2 ? ` and ${mutualFollowers.length - 2} others` : ""}
-              </span>
+              <span>Followed by {mutualFollowers.slice(0, 2).map(f => f.username || f.email?.split("@")[0]).join(", ")}{mutualFollowers.length > 2 ? ` and ${mutualFollowers.length - 2} others` : ""}</span>
             </div>
           )}
+        </div>
 
-          {/* Message button — full-width prominent */}
-          <button style={{ width:"100%", background:"none", border:`1.5px solid ${T.cardBorder}`, borderRadius:24, padding:"12px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:14.5, color:T.paper, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, marginBottom:20, boxSizing:"border-box" }}>
-            <MessageCircle size={17} color={T.paper} /> Message
+        {/* ── Posts ── */}
+        <div style={{ borderTop:`1px solid ${T.cardBorder}`, padding:"12px 16px 0" }}>
+          <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper, borderBottom:`2px solid ${T.gold}`, paddingBottom:10, display:"inline-block" }}>Posts</span>
+        </div>
+        {profilePostsLoading ? (
+          <div style={{ fontSize:13, color:T.muted, padding:"28px 0", textAlign:"center" }}>Loading…</div>
+        ) : profilePosts.length === 0 ? (
+          <div style={{ fontSize:13, color:T.muted, padding:"28px 0", textAlign:"center" }}>No posts yet.</div>
+        ) : (
+          <div style={{ padding:"0 0 20px" }}>
+            {profilePosts.map(post => (
+              <div key={post.id} style={{ padding:"14px 16px", borderBottom:`1px solid ${T.cardBorder}` }}>
+                <div style={{ fontSize:13.5, color:T.paper, lineHeight:1.65, marginBottom:8 }}>{post.content}</div>
+                <div style={{ display:"flex", gap:16, fontSize:12, color:T.muted }}>
+                  <span>❤ {post.likes || 0}</span>
+                  <span>💬 {post.replies_count || 0}</span>
+                  <span>🔁 {post.reposts || 0}</span>
+                  <span>👁 {post.views || 0}</span>
+                  <span style={{ marginLeft:"auto" }}>{post.created_at ? new Date(post.created_at).toLocaleDateString() : ""}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (morePage === "profile-edit") {
+    const CamIcon = () => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" />
+      </svg>
+    );
+    return (
+      <div style={{ minHeight:"100%", background:T.ink, overflowY:"auto", animation:"slideInRight 0.2s ease" }}>
+        <style>{"@keyframes slideInRight { from { transform:translateX(24px); opacity:0 } to { transform:translateX(0); opacity:1 } }"}</style>
+
+        {/* ── Edit profile header ── */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", position:"sticky", top:0, zIndex:10, background:T.ink, borderBottom:`1px solid ${T.cardBorder}` }}>
+          <button onClick={() => setMorePage("profile")} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:6, color:T.paper }}>
+            <ChevronLeft size={22} color={T.paper} />
+            <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.paper }}>Edit profile</span>
+          </button>
+          <button onClick={saveProfileExtended} disabled={savingProfile}
+            style={{ background:"none", border:"none", cursor:"pointer", fontFamily:FONT_HEAD, fontWeight:700, fontSize:15, color:T.gold, padding:"4px 2px" }}>
+            {savingProfile ? "Saving…" : "Save"}
           </button>
         </div>
 
-        {/* Divider */}
-        <div style={{ height:1, background:T.cardBorder, margin:"0 0 18px" }} />
+        {/* ── Banner + Avatar (both tappable) ── */}
+        <div style={{ position:"relative", marginBottom:50 }}>
+          {/* Banner */}
+          <label style={{ display:"block", cursor:"pointer", position:"relative" }}>
+            <input type="file" accept="image/*" onChange={e => e.target.files[0] && uploadCover(e.target.files[0])} style={{ display:"none" }} disabled={uploadingCover} />
+            {coverUrl
+              ? <img src={coverUrl} style={{ width:"100%", height:110, objectFit:"cover", display:"block" }} alt="" />
+              : <div style={{ width:"100%", height:110, background:`linear-gradient(135deg,#1a160d 0%,#231d10 55%,${T.gold}28 100%)` }} />
+            }
+            <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.2)" }}>
+              <div style={{ background:"rgba(0,0,0,0.5)", borderRadius:"50%", padding:9, display:"flex" }}><CamIcon /></div>
+            </div>
+          </label>
+          {/* Avatar */}
+          <label style={{ position:"absolute", bottom:-46, left:14, cursor:"pointer" }}>
+            <input type="file" accept="image/*" onChange={e => e.target.files[0] && uploadAvatar(e.target.files[0])} style={{ display:"none" }} disabled={uploadingAvatar} />
+            <div style={{ width:88, height:88, borderRadius:"50%", border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}`, overflow:"hidden", position:"relative" }}>
+              {avatarUrl
+                ? <img src={avatarUrl} alt="avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                : <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:30 }}>{profileInitial}</div>
+              }
+              <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.35)", display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"50%" }}><CamIcon /></div>
+            </div>
+          </label>
+        </div>
 
-        {/* ── Edit fields ── */}
-        <div style={{ padding:"0 16px 20px" }}>
+        {/* ── Edit fields (Twitter-style: label above, thin bottom divider) ── */}
+        <div style={{ padding:"0 16px 24px" }}>
+          {profileMsg && <div style={{ fontSize:12, color:profileMsg.startsWith("Saved") ? T.sage : T.rust, marginBottom:12, padding:"8px 12px", background:`${profileMsg.startsWith("Saved") ? T.sage : T.rust}18`, borderRadius:8 }}>{profileMsg}</div>}
           {[
-            { label:"Full Name",      val:fullName,       set:setFullName,       ph:"Your full name" },
+            { label:"Name",           val:fullName,       set:setFullName,       ph:"Your display name" },
+            { label:"Bio",            val:bio,            set:setBio,            ph:"Say something about yourself", multiline:true },
+            { label:"Location",       val:location,       set:setLocation,       ph:"City, Country" },
             { label:"Username",       val:username,       set:setUsername,       ph:"@handle" },
-            { label:"Bio",            val:bio,            set:setBio,            ph:"Say something about yourself" },
             { label:"Country",        val:country,        set:setCountry,        isSelect:true },
-            { label:"Location",       val:location,       set:setLocation,       ph:"City" },
-            { label:"Date of Birth",  val:dob,            set:setDob,            ph:"YYYY-MM-DD", type:"date" },
+            { label:"Date of birth",  val:dob,            set:setDob,            ph:"YYYY-MM-DD", type:"date" },
             { label:"Education",      val:education,      set:setEducation,      ph:"University or degree" },
             { label:"Certifications", val:certifications, set:setCertifications, ph:"Trading certs, licenses…" },
-          ].map(({ label, val, set, ph, type, isSelect }) => (
-            <div key={label} style={{ marginBottom:12 }}>
-              <label style={{ fontSize:11, color:T.muted, fontWeight:600, display:"block", marginBottom:4 }}>{label}</label>
+          ].map(({ label, val, set, ph, type, isSelect, multiline }) => (
+            <div key={label} style={{ marginBottom:0, paddingBottom:0 }}>
+              <label style={{ fontSize:12, color:T.gold, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>{label}</label>
               {isSelect
-                ? <select value={val} onChange={e => set(e.target.value)} style={{ ...getInputStyle(), width:"100%", appearance:"none", WebkitAppearance:"none" }}><option value="">Select country…</option>{COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}</select>
-                : <input type={type || "text"} value={val} onChange={e => set(e.target.value)} placeholder={ph} style={{ ...getInputStyle(), width:"100%" }} />
+                ? <select value={val} onChange={e => set(e.target.value)} style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:15, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", cursor:"pointer" }}>
+                    <option value="">Select country…</option>{COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                : multiline
+                  ? <textarea value={val} onChange={e => set(e.target.value)} placeholder={ph} rows={3}
+                      style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:15, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", resize:"none", boxSizing:"border-box" }} />
+                  : <input type={type || "text"} value={val} onChange={e => set(e.target.value)} placeholder={ph}
+                      style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:15, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", boxSizing:"border-box" }} />
               }
             </div>
           ))}
-          {profileMsg && <div style={{ fontSize:11, color:profileMsg.startsWith("Saved") ? T.sage : T.rust, marginBottom:10 }}>{profileMsg}</div>}
-          <button onClick={saveProfileExtended} disabled={savingProfile} style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, cursor:"pointer" }}>
-            {savingProfile ? "Saving…" : "Save Profile"}
-          </button>
-          <button onClick={() => onLogoutConfirm && onLogoutConfirm()} style={{ width:"100%", marginTop:10, background:"none", border:`1px solid rgba(176,96,74,0.4)`, borderRadius:12, padding:"12px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.rust, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+
+          {/* DOB privacy selector */}
+          {dob && (
+            <div style={{ marginTop:18 }}>
+              <label style={{ fontSize:12, color:T.gold, fontWeight:600, display:"block", marginBottom:8 }}>DOB visibility</label>
+              <div style={{ display:"flex", gap:8 }}>
+                {[["daymonth","Day & Month"],["everyone","Full Date"],["friends","Friends"]].map(([v, lbl]) => (
+                  <button key={v} onClick={() => { setDobPrivacy(v); lsSet("rainx-dob-privacy", v); }}
+                    style={{ flex:1, fontSize:11, padding:"6px 4px", borderRadius:10, border:`1px solid ${dobPrivacy===v ? T.gold : T.cardBorder}`, background:dobPrivacy===v ? `${T.gold}22` : "none", color:dobPrivacy===v ? T.goldBright : T.muted, cursor:"pointer", fontFamily:FONT_HEAD, fontWeight:600 }}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <button onClick={() => onLogoutConfirm && onLogoutConfirm()}
+            style={{ width:"100%", marginTop:32, background:"none", border:`1px solid rgba(176,96,74,0.4)`, borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.rust, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
             <LogOut size={15} /> Log out
           </button>
         </div>
-      </MoreSubScreen>
+      </div>
     );
   }
 
