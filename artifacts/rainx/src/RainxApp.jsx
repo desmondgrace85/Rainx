@@ -3856,6 +3856,17 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [benefits, setBenefits] = useState(DEFAULT_BENEFITS);
   const [verification, setVerification] = useState(null);
   const [showLegal, setShowLegal] = useState(false);
+  // PWA install — deferred prompt + installed flag
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [appInstalled, setAppInstalled] = useState(() => window.matchMedia('(display-mode: standalone)').matches);
+  useEffect(() => {
+    if (appInstalled) return;
+    const _bip = (e) => { e.preventDefault(); setInstallPrompt(e); };
+    const _ai  = () => { setAppInstalled(true); setInstallPrompt(null); };
+    window.addEventListener('beforeinstallprompt', _bip);
+    window.addEventListener('appinstalled', _ai);
+    return () => { window.removeEventListener('beforeinstallprompt', _bip); window.removeEventListener('appinstalled', _ai); };
+  }, [appInstalled]);
   // Trader Rewards progress counters — declared here (Rules of Hooks: no hooks after early returns)
   const [followerCount, setFollowerCount] = useState(0);
   const [referralCount, setReferralCount] = useState(0);
@@ -4892,6 +4903,12 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         />
         <MoreRowDivider />
         <MoreRow icon={Bell} title="Notifications" subtitle="Alerts, sounds, categories" onPress={() => setMorePage("notifications")} />
+        {(installPrompt || appInstalled) && <MoreRowDivider />}
+        {appInstalled
+          ? <MoreRow icon={Smartphone} title="App Installed" subtitle="RainX is on your home screen" />
+          : installPrompt
+            ? <MoreRow icon={ArrowUpCircle} title="Install App" subtitle="Add RainX to your home screen" onPress={async () => { installPrompt.prompt(); const { outcome } = await installPrompt.userChoice; if (outcome === 'accepted') { setInstallPrompt(null); setAppInstalled(true); localStorage.setItem('rainx-install-dismissed', '1'); } }} />
+            : null}
       </MoreSection>
 
       <div style={{ textAlign: "center", marginTop: 4 }}>
@@ -5127,12 +5144,14 @@ function InstallBanner() {
   const startX = useRef(0);
 
   useEffect(() => {
+    // Do not show banner if already running as an installed PWA
+    if (window.matchMedia('(display-mode: standalone)').matches) return;
+    // Do not show if the user previously dismissed it
+    if (localStorage.getItem('rainx-install-dismissed') === '1') return;
     const handler = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
       setVisible(true);
-      const id = setTimeout(() => setVisible(false), 3000);
-      return () => clearTimeout(id);
     };
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
@@ -5140,9 +5159,10 @@ function InstallBanner() {
 
   if (!visible || !deferredPrompt) return null;
 
+  const dismiss = () => { setVisible(false); localStorage.setItem('rainx-install-dismissed', '1'); };
   const onTouchStart = (e) => { dragging.current = true; startX.current = e.touches[0].clientX; };
   const onTouchMove = (e) => { if (dragging.current) setDragX(e.touches[0].clientX - startX.current); };
-  const onTouchEnd = () => { dragging.current = false; if (Math.abs(dragX) > 80) setVisible(false); else setDragX(0); };
+  const onTouchEnd = () => { dragging.current = false; if (Math.abs(dragX) > 80) dismiss(); else setDragX(0); };
 
   return (
     <div
@@ -5154,11 +5174,12 @@ function InstallBanner() {
         <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>Add to your home screen for quick access</div>
       </div>
       <button
-        onClick={async () => { setVisible(false); deferredPrompt.prompt(); await deferredPrompt.userChoice; setDeferredPrompt(null); }}
+        onClick={async () => { setVisible(false); deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') localStorage.setItem('rainx-install-dismissed', '1'); setDeferredPrompt(null); }}
         style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 8, padding: "7px 12px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
       >
         Install
       </button>
+      <button onClick={dismiss} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: "4px", display: "flex", alignItems: "center" }}><X size={15} /></button>
     </div>
   );
 }
