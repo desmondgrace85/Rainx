@@ -61,6 +61,74 @@ const LOCATION_SUGGESTIONS = [
   "Lima, Peru","Santiago, Chile","Mexico City, Mexico","Guadalajara, Mexico",
 ];
 
+function CoverCropModal({ file, onConfirm, onCancel, T, FONT_HEAD }) {
+  const DISPLAY_W = 340;
+  const CROP_RATIO = 4; // 4:1 banner
+  const DISPLAY_H = Math.round(DISPLAY_W / CROP_RATIO);
+  const canvasRef = React.useRef(null);
+  const [imgSrc, setImgSrc] = React.useState(null);
+  const [natW, setNatW] = React.useState(1);
+  const [natH, setNatH] = React.useState(1);
+  const [offsetY, setOffsetY] = React.useState(0);
+  const [dragging, setDragging] = React.useState(false);
+  const dragRef = React.useRef({ startY: 0, startOffset: 0 });
+
+  React.useEffect(() => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        setNatW(img.naturalWidth); setNatH(img.naturalHeight);
+        const scale = DISPLAY_W / img.naturalWidth;
+        const rh = img.naturalHeight * scale;
+        setOffsetY(-Math.max(0, (rh - DISPLAY_H) / 2));
+      };
+      img.src = e.target.result;
+      setImgSrc(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  }, [file]);
+
+  const scale = DISPLAY_W / natW;
+  const renderedH = natH * scale;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  const onPD = e => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(true); dragRef.current = { startY: e.clientY, startOffset: offsetY }; };
+  const onPM = e => { if (!dragging) return; const dy = e.clientY - dragRef.current.startY; setOffsetY(clamp(dragRef.current.startOffset + dy, -(renderedH - DISPLAY_H), 0)); };
+  const onPU = () => setDragging(false);
+
+  const confirm = () => {
+    const OUT_W = 1200, OUT_H = 300;
+    const cvs = canvasRef.current; cvs.width = OUT_W; cvs.height = OUT_H;
+    const ctx = cvs.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      const srcY = (-offsetY / scale);
+      const srcH = natW / CROP_RATIO;
+      ctx.drawImage(img, 0, srcY, natW, srcH, 0, 0, OUT_W, OUT_H);
+      cvs.toBlob(blob => onConfirm(blob), 'image/jpeg', 0.88);
+    };
+    img.src = imgSrc;
+  };
+
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.88)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}
+      onPointerMove={onPM} onPointerUp={onPU} onPointerLeave={onPU}>
+      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:15, color:'#fff', marginBottom:14 }}>Drag to position</div>
+      <div style={{ width:DISPLAY_W, height:DISPLAY_H, overflow:'hidden', borderRadius:8, border:'2px solid #C6A15B', cursor:dragging?'grabbing':'grab', position:'relative', userSelect:'none', touchAction:'none' }}
+        onPointerDown={onPD}>
+        {imgSrc && <img src={imgSrc} style={{ width:DISPLAY_W, height:'auto', position:'absolute', top:offsetY, left:0, pointerEvents:'none', userSelect:'none', draggable:false }} alt='' />}
+      </div>
+      <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginTop:10, marginBottom:20 }}>Cover photo · 4:1</div>
+      <div style={{ display:'flex', gap:12 }}>
+        <button onClick={onCancel} style={{ background:'none', border:'1px solid rgba(255,255,255,0.25)', borderRadius:10, padding:'10px 24px', color:'#fff', fontFamily:FONT_HEAD, fontWeight:600, fontSize:13, cursor:'pointer' }}>Cancel</button>
+        <button onClick={confirm} style={{ background:'#C6A15B', border:'none', borderRadius:10, padding:'10px 24px', color:'#0F0E0B', fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:'pointer' }}>Use photo</button>
+      </div>
+      <canvas ref={canvasRef} style={{ display:'none' }} />
+    </div>
+  );
+}
+
 function ProfileLocationInput({ value, onChange, T, FONT_HEAD }) {
   const [open, setOpen] = React.useState(false);
   const [suggestions, setSuggestions] = React.useState([]);
@@ -3625,6 +3693,21 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     setUploadingCover(false);
   };
 
+
+  const uploadCoverBlob = async (blob) => {
+    if (!blob) return;
+    setUploadingCover(true);
+    try {
+      const path = `${account.id}/cover.jpg`;
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+      if (upErr && upErr.statusCode !== '200' && upErr.statusCode !== '409') throw upErr;
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path);
+      const versionedUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+      await supabase.from('profiles').update({ cover_url: versionedUrl }).eq('id', account.id);
+      setCoverUrl(versionedUrl);
+    } catch (err) { setProfileMsg('Cover upload failed: ' + (err?.message || 'unknown')); }
+    setUploadingCover(false);
+  };
   const saveProfile = async () => {
     setSavingProfile(true); setProfileMsg("");
     const clean = username.trim() ? username.trim().replace(/[\x00-\x1F\x7F]/g, "").slice(0, 30) : null;
@@ -3676,6 +3759,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [mutualFollowers, setMutualFollowers] = useState([]);
   const [coverUrl, setCoverUrl] = useState(null);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [cropFile, setCropFile] = useState(null);
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [profilePosts, setProfilePosts] = useState([]);
   const [profilePostsLoading, setProfilePostsLoading] = useState(false);
@@ -3756,6 +3840,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     setProfileMsg("Saved. ✓");
     notifyAvatarRefresh();
   };
+
+  if (cropFile) return <CoverCropModal file={cropFile} onConfirm={blob => { setCropFile(null); uploadCoverBlob(blob); }} onCancel={() => { setCropFile(null); }} T={T} FONT_HEAD={FONT_HEAD} />;
 
   if (morePage === "profile-menu") return (
     <div style={{ minHeight:"100%", background:T.ink, animation:"slideInRight 0.2s ease" }}>
@@ -3914,7 +4000,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <div style={{ position:"relative", animation:"slideInRight 0.2s ease" }}>
           {/* Banner — click to upload cover */}
           <label style={{ display:"block", cursor:"pointer", position:"relative" }}>
-            <input type="file" accept="image/*" onChange={e => e.target.files[0] && uploadCover(e.target.files[0])} style={{ display:"none" }} disabled={uploadingCover} />
+            <input type="file" accept="image/*" onChange={e => e.target.files[0] && setCropFile(e.target.files[0])} style={{ display:"none" }} disabled={uploadingCover} />
             {coverUrl
               ? <img src={coverUrl} style={{ width:"100%", height:110, objectFit:"cover", display:"block" }} alt="" />
               : <div style={{ width:"100%", height:110, background:`linear-gradient(135deg,#1a160d 0%,#231d10 55%,${T.gold}28 100%)` }} />
@@ -4084,7 +4170,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <div style={{ position:"relative", marginBottom:50 }}>
           {/* Banner */}
           <label style={{ display:"block", cursor:"pointer", position:"relative" }}>
-            <input type="file" accept="image/*" onChange={e => e.target.files[0] && uploadCover(e.target.files[0])} style={{ display:"none" }} disabled={uploadingCover} />
+            <input type="file" accept="image/*" onChange={e => e.target.files[0] && setCropFile(e.target.files[0])} style={{ display:"none" }} disabled={uploadingCover} />
             {coverUrl
               ? <img src={coverUrl} style={{ width:"100%", height:110, objectFit:"cover", display:"block" }} alt="" />
               : <div style={{ width:"100%", height:110, background:`linear-gradient(135deg,#1a160d 0%,#231d10 55%,${T.gold}28 100%)` }} />
