@@ -17,6 +17,7 @@ const FONT_BODY = "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Robot
 const fadeIn = "@keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }";
 const pulse = "@keyframes likePulse { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }";
 const slideIn = "@keyframes slideInPanel { from { transform: translateX(100%); } to { transform: translateX(0); } }";
+const slideUp = "@keyframes slideUpSheet { from { transform: translateY(100%); } to { transform: translateY(0); } }";
 
 function timeAgo(dateStr) {
   const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
@@ -219,7 +220,223 @@ function Avatar({ name, size = 34, avatarUrl }) {
   );
 }
 
-// ---------- Composer ----------
+// ---------- Image compression ----------
+async function compressToWebP(file) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const src = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 1280;
+      let { width: w, height: h } = img;
+      if (w > MAX || h > MAX) {
+        if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(src);
+      canvas.toBlob((blob) => resolve(blob || file), "image/webp", 0.82);
+    };
+    img.onerror = () => { URL.revokeObjectURL(src); resolve(file); };
+    img.src = src;
+  });
+}
+
+// ---------- Full-screen Compose Modal ----------
+function ComposeModal({ account, onPosted, onClose }) {
+  const [text, setText] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [images, setImages] = useState([]); // { preview, file, uploading }
+  const [showPoll, setShowPoll] = useState(false);
+  const [pollOptions, setPollOptions] = useState(["", ""]);
+  const [location, setLocation] = useState(null);
+  const [locLoading, setLocLoading] = useState(false);
+  const taRef = useRef(null);
+  const photoRef = useRef(null);
+  const cameraRef = useRef(null);
+
+  useEffect(() => { setTimeout(() => taRef.current?.focus(), 120); }, []);
+
+  const handleFiles = (files) => {
+    const arr = Array.from(files).slice(0, 4 - images.length);
+    setImages((p) => [...p, ...arr.map((f) => ({ preview: URL.createObjectURL(f), file: f }))]);
+  };
+
+  const removeImage = (i) => setImages((p) => p.filter((_, idx) => idx !== i));
+
+  const fetchLocation = () => {
+    if (!navigator.geolocation) return;
+    setLocLoading(true);
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`);
+        const d = await r.json();
+        const city = d.address?.city || d.address?.town || d.address?.village || d.address?.county || "Location";
+        const cc = d.address?.country_code?.toUpperCase() || "";
+        setLocation({ label: cc ? `${city}, ${cc}` : city });
+      } catch { setLocation({ label: "Current location" }); }
+      setLocLoading(false);
+    }, () => setLocLoading(false), { timeout: 8000 });
+  };
+
+  const submit = async () => {
+    if ((!text.trim() && images.length === 0) || posting) return;
+    setPosting(true);
+    const uploadedUrls = [];
+    for (let i = 0; i < images.length; i++) {
+      try {
+        const blob = await compressToWebP(images[i].file);
+        const path = `posts/${account.id}/${Date.now()}_${i}.webp`;
+        const { error } = await supabase.storage.from("post-images").upload(path, blob, { contentType: "image/webp", upsert: true });
+        if (!error) {
+          const { data: { publicUrl } } = supabase.storage.from("post-images").getPublicUrl(path);
+          uploadedUrls.push(publicUrl);
+        }
+      } catch {}
+    }
+    let pollId = null;
+    const validOpts = pollOptions.map((o) => o.trim()).filter(Boolean);
+    if (showPoll && validOpts.length >= 2) {
+      const { data: poll } = await supabase.from("polls").insert({}).select("id").single();
+      if (poll) {
+        pollId = poll.id;
+        await supabase.from("poll_options").insert(validOpts.map((txt, position) => ({ poll_id: pollId, text: txt, position })));
+      }
+    }
+    const trimmed = text.trim();
+    const insertData = { user_id: account.id, text: trimmed };
+    if (uploadedUrls.length) insertData.images = uploadedUrls;
+    if (pollId) insertData.poll_id = pollId;
+    if (location) insertData.location = location.label;
+    const { data: post } = await supabase.from("community_posts").insert(insertData).select("id").single();
+    const mentions = extractMentions(trimmed);
+    if (mentions.length && post) {
+      const { data: mentioned } = await supabase.from("public_profiles").select("id, display_name").in("display_name", mentions);
+      (mentioned || []).forEach((m) => notify(m.id, account.id, "mention", post.id));
+    }
+    if (post && mentions.includes("rainaai")) {
+      fetch("/api/community-ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ post_id: post.id, post_text: trimmed, author_name: account.email, user_id: account.id }) }).catch(() => {});
+      setTimeout(() => onPosted(), 4000);
+    }
+    setPosting(false);
+    onPosted();
+    onClose();
+  };
+
+  const canPost = (text.trim().length > 0 || images.length > 0) && !posting;
+
+  return (
+    <>
+      <style>{`${slideUp}`}</style>
+      <div style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,0.55)" }} onClick={onClose}>
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", height: "92dvh", background: T.ink, borderRadius: "20px 20px 0 0", display: "flex", flexDirection: "column", animation: "slideUpSheet 0.34s cubic-bezier(0.32,0.72,0,1)" }} onClick={(e) => e.stopPropagation()}>
+
+          {/* drag handle */}
+          <div style={{ flexShrink: 0, display: "flex", justifyContent: "center", paddingTop: 10 }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: T.cardBorder }} />
+          </div>
+
+          {/* header */}
+          <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px 12px", borderBottom: `1px solid ${T.cardBorder}` }}>
+            <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 6, color: T.paper }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <button onClick={submit} disabled={!canPost} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 20, padding: "9px 24px", fontWeight: 800, fontSize: 14, cursor: canPost ? "pointer" : "default", opacity: canPost ? 1 : 0.4, transition: "opacity 0.15s", fontFamily: FONT_HEAD }}>
+              {posting ? "Posting…" : "Post"}
+            </button>
+          </div>
+
+          {/* body */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 0" }}>
+            <div style={{ display: "flex", gap: 12 }}>
+              <Avatar name={account.email} size={42} />
+              <div style={{ flex: 1 }}>
+                <MentionTextarea
+                  textareaRef={taRef}
+                  value={text}
+                  onChange={setText}
+                  placeholder="What's happening?"
+                  rows={7}
+                  maxLength={500}
+                  style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: T.paper, fontFamily: FONT_BODY, fontSize: 18, fontWeight: 500, resize: "none", lineHeight: 1.6, padding: 0 }}
+                />
+
+                {/* location chip */}
+                {location && (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(198,161,91,0.12)", border: `1px solid ${T.gold}44`, borderRadius: 20, padding: "4px 11px", marginTop: 8, cursor: "pointer" }} onClick={() => setLocation(null)}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill={T.gold}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                    <span style={{ fontSize: 12, color: T.gold, fontWeight: 600 }}>{location.label}</span>
+                    <span style={{ fontSize: 13, color: T.muted, marginLeft: 2 }}>×</span>
+                  </div>
+                )}
+
+                {/* image grid */}
+                {images.length > 0 && (
+                  <div style={{ marginTop: 12, display: "grid", gap: 3, borderRadius: 14, overflow: "hidden", gridTemplateColumns: images.length === 1 ? "1fr" : "1fr 1fr" }}>
+                    {images.map((img, i) => (
+                      <div key={i} style={{ position: "relative", gridColumn: images.length === 3 && i === 0 ? "1 / span 2" : "auto" }}>
+                        <img src={img.preview} alt="" style={{ width: "100%", height: images.length === 1 ? 220 : 140, objectFit: "cover", display: "block" }} />
+                        <button onClick={() => removeImage(i)} style={{ position: "absolute", top: 6, right: 6, width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,0.72)", border: "1.5px solid rgba(255,255,255,0.25)", color: "#fff", fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* poll builder */}
+                {showPoll && (
+                  <div style={{ marginTop: 14, border: `1px solid ${T.cardBorder}`, borderRadius: 14, overflow: "hidden" }}>
+                    <div style={{ padding: "10px 14px", borderBottom: `1px solid ${T.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: T.paper }}>Poll</span>
+                      <button onClick={() => setShowPoll(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 18, lineHeight: 1 }}>×</button>
+                    </div>
+                    {pollOptions.map((opt, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", borderBottom: i < pollOptions.length - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
+                        <input value={opt} onChange={(e) => { const o = [...pollOptions]; o[i] = e.target.value.slice(0, 60); setPollOptions(o); }} placeholder={`Option ${i + 1}`} style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: T.paper, fontSize: 14, padding: "13px 14px", fontFamily: FONT_BODY }} />
+                        {pollOptions.length > 2 && <button onClick={() => setPollOptions(pollOptions.filter((_, idx) => idx !== i))} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: "0 14px", fontSize: 18 }}>×</button>}
+                      </div>
+                    ))}
+                    {pollOptions.length < 4 && (
+                      <button onClick={() => setPollOptions([...pollOptions, ""])} style={{ width: "100%", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", color: T.gold, fontSize: 13, fontWeight: 600, textAlign: "left" }}>+ Add option</button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* bottom toolbar */}
+          <div style={{ flexShrink: 0, borderTop: `1px solid ${T.cardBorder}`, padding: "12px 20px 28px", display: "flex", alignItems: "center", gap: 4 }}>
+            <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
+            <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
+
+            {/* Camera */}
+            <button onClick={() => cameraRef.current?.click()} disabled={images.length >= 4} title="Camera" style={{ background: "none", border: "none", cursor: images.length >= 4 ? "default" : "pointer", padding: 10, opacity: images.length >= 4 ? 0.3 : 1, color: T.paper }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.2A3.2 3.2 0 1 1 12 8.8a3.2 3.2 0 0 1 0 6.4zm7-11.2h-2.28l-1.44-1.6H8.72L7.28 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/></svg>
+            </button>
+            {/* Photo */}
+            <button onClick={() => photoRef.current?.click()} disabled={images.length >= 4} title="Photo" style={{ background: "none", border: "none", cursor: images.length >= 4 ? "default" : "pointer", padding: 10, opacity: images.length >= 4 ? 0.3 : 1, color: T.paper }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+            </button>
+            {/* Poll */}
+            <button onClick={() => { setShowPoll((v) => !v); if (showPoll) setPollOptions(["", ""]); }} title="Poll" style={{ background: "none", border: "none", cursor: "pointer", padding: 10, color: showPoll ? T.gold : T.paper }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h4v18H3V3zm7 6h4v12h-4V9zm7 4h4v8h-4v-8z"/></svg>
+            </button>
+            {/* Location */}
+            <button onClick={locLoading ? undefined : location ? () => setLocation(null) : fetchLocation} title="Location" style={{ background: "none", border: "none", cursor: "pointer", padding: 10, color: location ? T.gold : T.paper, opacity: locLoading ? 0.5 : 1 }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+            </button>
+
+            <div style={{ flex: 1 }} />
+            <span style={{ fontSize: 11, color: T.muted }}>{text.length}/500</span>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ---------- Composer (used on profile page) ----------
 function Composer({ account, onPosted, compact, themeTokens }) {
   if (themeTokens) Object.assign(T, themeTokens);
   const [text, setText] = useState("");
@@ -492,6 +709,64 @@ function PostMenuSheet({ isOwn, username, onClose, onEdit, onDelete, onReport })
   );
 }
 
+// ---------- Poll widget (shown inside PostCard) ----------
+function PollWidget({ pollId, account }) {
+  const [options, setOptions] = useState([]);
+  const [votes, setVotes] = useState({});
+  const [myVote, setMyVote] = useState(null);
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      const { data: opts } = await supabase.from("poll_options").select("*").eq("poll_id", pollId).order("position");
+      setOptions(opts || []);
+      const { data: voteRows } = await supabase.from("poll_votes").select("option_id, user_id").eq("poll_id", pollId);
+      const counts = {};
+      (opts || []).forEach((o) => { counts[o.id] = 0; });
+      let myV = null;
+      (voteRows || []).forEach((v) => {
+        counts[v.option_id] = (counts[v.option_id] || 0) + 1;
+        if (v.user_id === account.id) myV = v.option_id;
+      });
+      setVotes(counts);
+      setMyVote(myV);
+      setTotal((voteRows || []).length);
+    })();
+  }, [pollId, account.id]);
+
+  const castVote = async (optId) => {
+    if (myVote) return;
+    const { error } = await supabase.from("poll_votes").insert({ poll_id: pollId, option_id: optId, user_id: account.id });
+    if (!error) {
+      setMyVote(optId);
+      setVotes((v) => ({ ...v, [optId]: (v[optId] || 0) + 1 }));
+      setTotal((n) => n + 1);
+    }
+  };
+
+  if (!options.length) return null;
+  const maxVotes = Math.max(...Object.values(votes), 1);
+
+  return (
+    <div style={{ marginTop: 12, border: `1px solid ${T.cardBorder}`, borderRadius: 14, overflow: "hidden" }}>
+      {options.map((opt, i) => {
+        const count = votes[opt.id] || 0;
+        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+        const isChosen = myVote === opt.id;
+        const isWinner = myVote && count === maxVotes;
+        return (
+          <button key={opt.id} onClick={() => castVote(opt.id)} disabled={!!myVote} style={{ position: "relative", width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", background: "none", border: "none", borderBottom: i < options.length - 1 ? `1px solid ${T.cardBorder}` : "none", cursor: myVote ? "default" : "pointer", overflow: "hidden", textAlign: "left" }}>
+            {myVote && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: isChosen ? "rgba(198,161,91,0.22)" : "rgba(242,237,224,0.07)", transition: "width 0.5s ease", borderRadius: i === 0 ? "13px 0 0 0" : i === options.length - 1 ? "0 0 0 13px" : 0 }} />}
+            <span style={{ flex: 1, fontSize: 14, color: T.paper, fontWeight: isChosen ? 700 : 400, position: "relative" }}>{opt.text}</span>
+            {myVote && <span style={{ fontSize: 12, color: isChosen ? T.gold : T.muted, fontWeight: 600, position: "relative", minWidth: 30, textAlign: "right" }}>{pct}%</span>}
+          </button>
+        );
+      })}
+      <div style={{ padding: "7px 14px", fontSize: 11.5, color: T.muted }}>{total} vote{total !== 1 ? "s" : ""}</div>
+    </div>
+  );
+}
+
 // ---------- Post card ----------
 function GiftIconButton({ profile, account }) {
   const [open, setOpen] = useState(false);
@@ -557,6 +832,14 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
         </div>
       </div>
 
+      {/* Location badge */}
+      {post.location && (
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 5, marginBottom: 2 }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill={T.gold}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          <span style={{ fontSize: 11, color: T.gold, fontWeight: 600 }}>{post.location}</span>
+        </div>
+      )}
+
       {editing ? (
         <div style={{ marginTop: 8 }}>
           <textarea value={editText} onChange={(e) => setEditText(e.target.value.slice(0, 500))} rows={3} style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: 8, fontFamily: FONT_BODY, fontSize: 13 }} />
@@ -566,7 +849,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           </div>
         </div>
       ) : (
-        <div style={{ fontSize: 13, fontWeight: 400, color: T.paper, marginTop: 8, lineHeight: 1.65, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
+        <div style={{ fontSize: 13, fontWeight: 400, color: T.paper, marginTop: 6, lineHeight: 1.65, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
       )}
 
       {post.images && post.images.length > 0 && (
@@ -583,6 +866,9 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           ))}
         </div>
       )}
+
+      {/* Poll */}
+      {post.poll_id && <PollWidget pollId={post.poll_id} account={account} />}
 
       <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 10 }}>
         <button onClick={() => onToggleLike(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : T.muted }}>
@@ -1605,18 +1891,11 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
         onMouseDown={(e) => { if (fabVisible) e.currentTarget.style.transform = "scale(0.9)"; }}
         onMouseUp={(e) => { if (fabVisible) e.currentTarget.style.transform = "scale(1)"; }}
       >
-        <Plus size={24} />
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
       </button>
 
       {showFabModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 80, display: "flex", alignItems: "flex-end" }} onClick={() => setShowFabModal(false)}>
-          <div style={{ background: T.ink, width: "100%", maxWidth: 480, margin: "0 auto", borderRadius: "16px 16px 0 0", padding: 16 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-              <button onClick={() => setShowFabModal(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><X size={20} /></button>
-            </div>
-            <Composer account={account} compact onPosted={() => { setShowFabModal(false); loadPosts(); }} />
-          </div>
-        </div>
+        <ComposeModal account={account} onPosted={() => { loadPosts(); }} onClose={() => setShowFabModal(false)} />
       )}
     </div>
   );
