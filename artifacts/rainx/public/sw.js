@@ -1,5 +1,5 @@
 /* RainX Service Worker — Push Notifications + Offline Cache */
-const CACHE_NAME = "rainx-v2026-07-20";
+const CACHE_NAME = "rainx-v2026-07-23";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
 
 // ── Install ────────────────────────────────────────────────────────────────

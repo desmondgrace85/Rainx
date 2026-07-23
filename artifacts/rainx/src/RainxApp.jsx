@@ -3372,11 +3372,8 @@ function NotificationSettingsScreen({ account }) {
           Enable Push Notifications
         </button>
       </div>
-      {/* Sounds note */}
-      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginTop: 16 }}>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 6 }}>Notification Sounds</div>
-        <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.7 }}>Custom RainX notification sounds play for trading signals, TP alerts, and risk warnings. Sounds follow your device's notification settings.</div>
-      </div>
+      {/* Sound Picker — 7 categories with Preview buttons */}
+      <SoundPickerCard />
     </div>
   );
 }
