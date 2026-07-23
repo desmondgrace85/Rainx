@@ -3483,7 +3483,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
   useEffect(() => {
     if (!account?.id) return;
-    supabase.from("profiles").select("username, bio, avatar_url, verification_status").eq("id", account.id).single().then(({ data }) => {
+    supabase.from("profiles").select("username, bio, avatar_url").eq("id", account.id).single().then(({ data }) => {
       if (data) {
         setUsername(data.username || "");
         setBio(data.bio || "");
@@ -3591,9 +3591,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [profileFollowing, setProfileFollowing] = useState(0);
   useEffect(() => {
     if (!account?.id || morePage !== "profile") return;
-    supabase.from("profiles").select("display_name,location,date_of_birth,education,certifications").eq("id",account.id).single().then(({data})=>{
-      if(data){ setFullName(data.display_name||""); setLocation(data.location||""); setDob(data.date_of_birth||""); setEducation(data.education||""); setCertifications(data.certifications||""); }
-    }).catch(()=>{});
+    // display_name/location/dob/education/certifications not in profiles schema — skip
+
+
     supabase.from("follows").select("*",{count:"exact",head:true}).eq("followed_id",account.id).then(({count})=>setProfileFollowers(count||0), ()=>{});
     supabase.from("follows").select("*",{count:"exact",head:true}).eq("follower_id",account.id).then(({count})=>setProfileFollowing(count||0), ()=>{});
   },[account?.id, morePage]);
@@ -3617,11 +3617,11 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       username: clean,
       bio: bio.trim(),
     };
-    if (fullName.trim())       payload.display_name   = fullName.trim();
-    if (location.trim())       payload.location        = location.trim();
-    if (dob)                   payload.date_of_birth   = dob;
-    if (education.trim())      payload.education       = education.trim();
-    if (certifications.trim()) payload.certifications  = certifications.trim();
+    // display_name/location/dob/education/certifications not in profiles schema — omitted from payload
+
+
+
+
 
     const { error: saveErr } = await supabase.from("profiles").upsert(payload, { onConflict: "id" });
 
@@ -3633,17 +3633,17 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
     // Re-read ALL fields from DB to confirm the save and refresh UI
     const { data: fresh } = await supabase.from("profiles")
-      .select("username, bio, avatar_url, display_name, location, date_of_birth, education, certifications")
+      .select("username, bio, avatar_url")
       .eq("id", account.id).single();
     if (fresh) {
       if (fresh.username   !== undefined) setUsername(fresh.username || "");
       if (fresh.bio        !== undefined) setBio(fresh.bio || "");
       if (fresh.avatar_url)               setAvatarUrl(fresh.avatar_url);
-      if (fresh.display_name !== undefined) setFullName(fresh.display_name || "");
-      if (fresh.location   !== undefined) setLocation(fresh.location || "");
-      if (fresh.date_of_birth !== undefined) setDob(fresh.date_of_birth || "");
-      if (fresh.education  !== undefined) setEducation(fresh.education || "");
-      if (fresh.certifications !== undefined) setCertifications(fresh.certifications || "");
+      // display_name/location/dob/education/certifications not in schema — not read back
+
+
+
+
     }
     setSavingProfile(false);
     setProfileMsg("Saved. ✓");
