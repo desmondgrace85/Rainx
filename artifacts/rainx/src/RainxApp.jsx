@@ -3603,7 +3603,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   // ── last_seen heartbeat ──────────────────────────────────────────────────
   useEffect(() => {
     if (!account?.id) return;
-    const bump = async () => { try { await supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", account.id); } catch {} };
+    const bump = async () => { try { await supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", account.id); } catch(e) {} };
     bump(); // immediate on mount
     const iv = setInterval(bump, 60_000);
     return () => clearInterval(iv);
