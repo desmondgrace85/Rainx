@@ -945,6 +945,21 @@ function MainApp({ account, onLogout }) {
   return <MainAppContent account={account} onLogout={onLogout} />;
 }
 
+class MoreTabErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: String(e) }; }
+  componentDidCatch(e, info) { console.error("MoreTab crash:", e, info); }
+  render() {
+    if (this.state.error) return (
+      <div style={{ padding: 24, color: "#C0392B", background: "#fff8f8", fontSize: 13, fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all", border: "2px solid #C0392B", margin: 16, borderRadius: 8 }}>
+        <strong>MoreTab crashed — screenshot this:</strong>{"
+"}{this.state.error}
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
 function MainAppContent({ account, onLogout }) {
   const seriesMap = useMultiPriceSeries();
   const seriesMapRef = useRef(seriesMap);
@@ -1606,7 +1621,7 @@ function MainAppContent({ account, onLogout }) {
         {tab === "history" && <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />}
         {tab === "scalping" && <ScalpingTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />}
         {tab === "subscribe" && <SubscribeScreen account={account} entitlement={entitlement} onBack={() => goTab("more", -1)} />}
-        {tab === "more" && <MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} />}
+        {tab === "more" && <MoreTabErrorBoundary><MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} /></MoreTabErrorBoundary>}
       </div>
 
       {/* ── Sidebar drawer (hamburger menu) ──────────────────────────────── */}
