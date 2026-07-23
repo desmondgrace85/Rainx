@@ -1139,7 +1139,7 @@ function MainAppContent({ account, onLogout }) {
   const inst = activeInst;
   const marketOpen = isMarketOpen(inst.cls);
 
-  const series = seriesMap[activeSymbol];
+  const series = seriesMap[activeSymbol] || seriesMap["XAUUSD"] || [];
   const prices = series.map((p) => p.price);
   const last = prices[prices.length - 1];
   const prev = prices[prices.length - 2] || last;
