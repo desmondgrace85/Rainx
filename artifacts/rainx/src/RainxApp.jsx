@@ -36,6 +36,71 @@ const FONT_HEAD = "'Montserrat', sans-serif";
 const FONT_BODY = "'Montserrat', sans-serif";
 const COUNTRIES = ["Afghanistan","Albania","Algeria","Angola","Argentina","Armenia","Australia","Austria","Azerbaijan","Bahrain","Bangladesh","Belarus","Belgium","Bolivia","Bosnia and Herzegovina","Botswana","Brazil","Bulgaria","Cameroon","Canada","Chile","China","Colombia","Costa Rica","Croatia","Cuba","Czech Republic","Denmark","Ecuador","Egypt","Ethiopia","Finland","France","Georgia","Germany","Ghana","Greece","Guatemala","Hungary","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kuwait","Lebanon","Libya","Malaysia","Mexico","Morocco","Mozambique","Myanmar","Nepal","Netherlands","New Zealand","Nicaragua","Nigeria","Norway","Oman","Pakistan","Panama","Peru","Philippines","Poland","Portugal","Qatar","Romania","Russia","Rwanda","Saudi Arabia","Senegal","Serbia","Singapore","Somalia","South Africa","South Korea","Spain","Sudan","Sweden","Switzerland","Taiwan","Tanzania","Thailand","Tunisia","Turkey","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States","Uruguay","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"];
 
+
+const LOCATION_SUGGESTIONS = [
+  "Accra, Ghana","Kumasi, Ghana","Tema, Ghana","Takoradi, Ghana",
+  "Lagos, Nigeria","Abuja, Nigeria","Kano, Nigeria","Ibadan, Nigeria","Port Harcourt, Nigeria","Benin City, Nigeria",
+  "Nairobi, Kenya","Mombasa, Kenya","Kampala, Uganda","Dar es Salaam, Tanzania","Kigali, Rwanda","Lusaka, Zambia",
+  "Johannesburg, South Africa","Cape Town, South Africa","Durban, South Africa","Pretoria, South Africa",
+  "Harare, Zimbabwe","Gaborone, Botswana","Windhoek, Namibia","Maputo, Mozambique","Lilongwe, Malawi",
+  "Cairo, Egypt","Alexandria, Egypt","Addis Ababa, Ethiopia","Casablanca, Morocco","Tunis, Tunisia",
+  "Dakar, Senegal","Abidjan, Côte d'Ivoire","Accra Metro, Ghana","Kumasi Metro, Ghana",
+  "London, UK","Manchester, UK","Birmingham, UK","Glasgow, UK","Edinburgh, UK","Liverpool, UK","Bristol, UK","Leeds, UK",
+  "New York, USA","Los Angeles, USA","Chicago, USA","Houston, USA","Miami, USA","Atlanta, USA",
+  "Dallas, USA","San Francisco, USA","Seattle, USA","Boston, USA","Washington DC, USA","Phoenix, USA",
+  "Toronto, Canada","Vancouver, Canada","Montreal, Canada","Calgary, Canada","Ottawa, Canada","Edmonton, Canada",
+  "Sydney, Australia","Melbourne, Australia","Brisbane, Australia","Perth, Australia","Adelaide, Australia",
+  "Dublin, Ireland","Amsterdam, Netherlands","Paris, France","Berlin, Germany","Madrid, Spain","Rome, Italy",
+  "Zurich, Switzerland","Vienna, Austria","Stockholm, Sweden","Oslo, Norway","Copenhagen, Denmark",
+  "Dubai, UAE","Abu Dhabi, UAE","Riyadh, Saudi Arabia","Doha, Qatar","Kuwait City, Kuwait","Manama, Bahrain",
+  "Kuala Lumpur, Malaysia","Singapore","Bangkok, Thailand","Jakarta, Indonesia","Manila, Philippines",
+  "Tokyo, Japan","Seoul, South Korea","Hong Kong","Shanghai, China","Beijing, China","Shenzhen, China",
+  "Mumbai, India","Delhi, India","Bengaluru, India","Chennai, India","Hyderabad, India","Kolkata, India",
+  "Karachi, Pakistan","Lahore, Pakistan","Islamabad, Pakistan","Dhaka, Bangladesh","Colombo, Sri Lanka",
+  "São Paulo, Brazil","Rio de Janeiro, Brazil","Buenos Aires, Argentina","Bogotá, Colombia",
+  "Lima, Peru","Santiago, Chile","Mexico City, Mexico","Guadalajara, Mexico",
+];
+
+function ProfileLocationInput({ value, onChange, T, FONT_HEAD }) {
+  const [open, setOpen] = React.useState(false);
+  const [suggestions, setSuggestions] = React.useState([]);
+  const handleInput = (v) => {
+    onChange(v);
+    if (v.length >= 2) {
+      const q = v.toLowerCase();
+      const matches = LOCATION_SUGGESTIONS.filter(l =>
+        l.toLowerCase().startsWith(q) || l.toLowerCase().includes(q)
+      ).slice(0, 6);
+      setSuggestions(matches);
+      setOpen(matches.length > 0);
+    } else {
+      setSuggestions([]);
+      setOpen(false);
+    }
+  };
+  return (
+    <div style={{ position:"relative" }}>
+      <input
+        type="text"
+        value={value}
+        onChange={e => handleInput(e.target.value)}
+        onBlur={() => setTimeout(() => setOpen(false), 200)}
+        placeholder="City, Country or region"
+        style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:15, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", boxSizing:"border-box" }}
+      />
+      {open && suggestions.length > 0 && (
+        <div style={{ position:"absolute", top:"100%", left:0, right:0, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:10, zIndex:200, boxShadow:"0 6px 20px rgba(0,0,0,0.5)", overflow:"hidden" }}>
+          {suggestions.map(s => (
+            <button key={s} onMouseDown={e => { e.preventDefault(); onChange(s); setOpen(false); setSuggestions([]); }}
+              style={{ width:"100%", textAlign:"left", padding:"11px 14px", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}44`, color:T.paper, fontSize:13, cursor:"pointer", fontFamily:FONT_HEAD }}>
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 // ---------- Resilient storage (uses Claude's artifact storage when present,
 // otherwise falls back to real localStorage - which works fine once this is
 // deployed as a normal website outside the Claude preview sandbox) ----------
@@ -965,10 +1030,10 @@ function MainAppContent({ account, onLogout }) {
   const seriesMapRef = useRef(seriesMap);
   seriesMapRef.current = seriesMap;
   const entitlement = useEntitlement(account.id);
-  const [morePage, setMorePage] = useState(() => { const p = lsGet("rainx-morepage"); return ["profile-menu","profile","verification","rewards","wallet","history","scalping","telegram","analytics","settings","notifications","security"].includes(p) ? p : null; });
+  const [morePage, setMorePage] = useState(() => { const p = lsGet("rainx-morepage"); if (p === "profile-edit") return "profile"; return ["profile-menu","profile","verification","rewards","wallet","history","scalping","telegram","analytics","settings","notifications","security"].includes(p) ? p : null; });
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const [tab, setTab] = useState(() => { const t = lsGet("rainx-tab"); return ["home","markets","community"].includes(t) ? t : "home"; });
+  const [tab, setTab] = useState(() => { const t = lsGet("rainx-tab"); return ["home","markets","community","more"].includes(t) ? t : "home"; });
   const [profileFromHeader, setProfileFromHeader] = useState(false);
 
   // ── Telegram-style animated navigation ───────────────────────────────────
@@ -3602,9 +3667,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [fullName, setFullName] = useState("");
   const [location, setLocation] = useState("");
   const [dob, setDob] = useState("");
-  const [education, setEducation] = useState("");
-  const [certifications, setCertifications] = useState("");
-  const [country, setCountry] = useState("");
   const [profileFollowers, setProfileFollowers] = useState(0);
   const [profileFollowing, setProfileFollowing] = useState(0);
   const [dobPrivacy, setDobPrivacy] = useState(() => lsGet("rainx-dob-privacy") || "daymonth");
@@ -3614,10 +3676,13 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [profilePosts, setProfilePosts] = useState([]);
   const [profilePostsLoading, setProfilePostsLoading] = useState(false);
+  const [profileComposerText, setProfileComposerText] = useState("");
+  const [profileComposerPosting, setProfileComposerPosting] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
   useEffect(() => {
     if (!account?.id || morePage !== "profile") return;
-    supabase.from("profiles").select("full_name,country,location,date_of_birth,education,certifications,cover_url").eq("id",account.id).single().then(({data})=>{
-      if(data){ setFullName(data.full_name||""); setCountry(data.country||""); setLocation(data.location||""); setDob(data.date_of_birth||""); setEducation(data.education||""); setCertifications(data.certifications||""); if(data.cover_url) setCoverUrl(data.cover_url); }
+    supabase.from("profiles").select("full_name,location,date_of_birth,cover_url").eq("id",account.id).single().then(({data})=>{
+      if(data){ setFullName(data.full_name||""); setLocation(data.location||""); setDob(data.date_of_birth||""); if(data.cover_url) setCoverUrl(data.cover_url); }
     }).catch(()=>{});
     setProfilePostsLoading(true);
     supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false}).then(({data})=>{ setProfilePosts(data||[]); setProfilePostsLoading(false); }).catch(()=>setProfilePostsLoading(false));
@@ -3658,12 +3723,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       bio: bio.trim(),
       display_name: clean || fullName.trim() || null,
     };
-    if (fullName.trim())       payload.full_name      = fullName.trim();
-    if (country)               payload.country        = country;
-    if (location.trim())       payload.location       = location.trim();
-    if (dob)                   payload.date_of_birth  = dob;
-    if (education.trim())      payload.education      = education.trim();
-    if (certifications.trim()) payload.certifications = certifications.trim();
+    if (fullName.trim())  payload.full_name     = fullName.trim();
+    if (location.trim())  payload.location      = location.trim();
+    if (dob)              payload.date_of_birth = dob;
 
     const { error: saveErr } = await supabase.from("profiles").update(payload).eq("id", account.id);
 
@@ -3675,18 +3737,15 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
     // Re-read ALL fields from DB to confirm the save and refresh UI
     const { data: fresh } = await supabase.from("profiles")
-      .select("username, bio, avatar_url, full_name, country, location, date_of_birth, education, certifications")
+      .select("username, bio, avatar_url, full_name, location, date_of_birth")
       .eq("id", account.id).single();
     if (fresh) {
       if (fresh.username   !== undefined) setUsername(fresh.username || "");
       if (fresh.bio        !== undefined) setBio(fresh.bio || "");
       if (fresh.avatar_url)               setAvatarUrl(fresh.avatar_url);
       if (fresh.full_name  !== undefined) setFullName(fresh.full_name || "");
-      if (fresh.country    !== undefined) setCountry(fresh.country || "");
-      if (fresh.location   !== undefined) setLocation(fresh.location || "");
+      if (fresh.location      !== undefined) setLocation(fresh.location || "");
       if (fresh.date_of_birth !== undefined) setDob(fresh.date_of_birth || "");
-      if (fresh.education  !== undefined) setEducation(fresh.education || "");
-      if (fresh.certifications !== undefined) setCertifications(fresh.certifications || "");
 
     }
     setSavingProfile(false);
@@ -3904,8 +3963,14 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           {username && <div style={{ fontSize:13.5, color:T.muted, marginBottom:7 }}>@{username}</div>}
           {bio && <div style={{ fontSize:13.5, color:T.paper, marginBottom:9, lineHeight:1.65 }}>{bio}</div>}
           <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:"4px 14px", marginBottom:9 }}>
-            {location && <span style={{ fontSize:12.5, color:T.muted }}>📍 {location}</span>}
-            {joinedLabel && <span style={{ display:"flex", alignItems:"center", gap:4, fontSize:12.5, color:T.muted }}><CalendarIcon size={12} color={T.muted} />{joinedLabel}</span>}
+            {location && <span style={{ display:"flex", alignItems:"center", gap:4, fontSize:12.5, color:T.muted }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              {location}
+            </span>}
+            {joinedLabel && <span style={{ display:"flex", alignItems:"center", gap:4, fontSize:12.5, color:T.muted }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              {joinedLabel}
+            </span>}
             {dobDisplay && <span style={{ fontSize:12.5, color:T.muted }}>🎂 {dobDisplay}</span>}
           </div>
           <div style={{ display:"flex", gap:20, marginBottom:10 }}>
@@ -3926,25 +3991,79 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           )}
         </div>
 
-        {/* ── Posts ── */}
+        {/* ── Posts header ── */}
         <div style={{ borderTop:`1px solid ${T.cardBorder}`, padding:"12px 16px 0" }}>
           <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper, borderBottom:`2px solid ${T.gold}`, paddingBottom:10, display:"inline-block" }}>Posts</span>
         </div>
+
+        {/* ── Profile Composer ── */}
+        <div style={{ padding:"12px 16px", borderBottom:`1px solid ${T.cardBorder}`, display:"flex", gap:10, alignItems:"flex-start" }}>
+          <div style={{ width:38, height:38, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.ink, flexShrink:0, overflow:"hidden" }}>
+            {avatarUrl ? <img src={avatarUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : profileInitial}
+          </div>
+          <div style={{ flex:1 }}>
+            <textarea
+              value={profileComposerText}
+              onChange={e => setProfileComposerText(e.target.value.slice(0,500))}
+              placeholder="Share a market thought…"
+              rows={2}
+              style={{ width:"100%", background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:10, color:T.paper, fontSize:14, padding:"8px 10px", fontFamily:FONT_BODY, outline:"none", resize:"none", boxSizing:"border-box" }}
+            />
+            <div style={{ display:"flex", justifyContent:"flex-end", marginTop:6 }}>
+              <button
+                onClick={async () => {
+                  if (!profileComposerText.trim() || profileComposerPosting) return;
+                  setProfileComposerPosting(true);
+                  await supabase.from("community_posts").insert({ user_id: account.id, text: profileComposerText.trim() });
+                  setProfileComposerText("");
+                  setProfileComposerPosting(false);
+                  supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false}).then(({data})=>setProfilePosts(data||[]));
+                }}
+                disabled={profileComposerPosting || !profileComposerText.trim()}
+                style={{ background:T.gold, color:T.ink, border:"none", borderRadius:8, padding:"7px 16px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, cursor:"pointer", opacity:!profileComposerText.trim()?0.5:1 }}>
+                {profileComposerPosting ? "Posting…" : "Post"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Profile posts feed ── */}
         {profilePostsLoading ? (
           <div style={{ fontSize:13, color:T.muted, padding:"28px 0", textAlign:"center" }}>Loading…</div>
         ) : profilePosts.length === 0 ? (
           <div style={{ fontSize:13, color:T.muted, padding:"28px 0", textAlign:"center" }}>No posts yet.</div>
         ) : (
-          <div style={{ padding:"0 0 20px" }}>
+          <div style={{ paddingBottom:20 }}>
             {profilePosts.map(post => (
-              <div key={post.id} style={{ padding:"14px 16px", borderBottom:`1px solid ${T.cardBorder}` }}>
-                <div style={{ fontSize:13.5, color:T.paper, lineHeight:1.65, marginBottom:8 }}>{post.content}</div>
-                <div style={{ display:"flex", gap:16, fontSize:12, color:T.muted }}>
-                  <span>❤ {post.likes || 0}</span>
-                  <span>💬 {post.replies_count || 0}</span>
-                  <span>🔁 {post.reposts || 0}</span>
-                  <span>👁 {post.views || 0}</span>
-                  <span style={{ marginLeft:"auto" }}>{post.created_at ? new Date(post.created_at).toLocaleDateString() : ""}</span>
+              <div key={post.id} style={{ padding:"12px 16px", borderBottom:`1px solid ${T.cardBorder}`, display:"flex", gap:10, alignItems:"flex-start" }}>
+                <div style={{ width:36, height:36, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, color:T.ink, flexShrink:0, overflow:"hidden" }}>
+                  {avatarUrl ? <img src={avatarUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : profileInitial}
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
+                    <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{fullName || username || account?.email?.split("@")[0]}</span>
+                    <VerifBadgeIcon size={13} />
+                    <span style={{ fontSize:11, color:T.muted, marginLeft:"auto" }}>{post.created_at ? new Date(post.created_at).toLocaleDateString() : ""}</span>
+                  </div>
+                  <div style={{ fontSize:14, color:T.paper, lineHeight:1.65, whiteSpace:"pre-wrap", marginBottom:8 }}>{post.text}</div>
+                  <div style={{ display:"flex", gap:18, fontSize:12, color:T.muted }}>
+                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                      {post.likes || 0}
+                    </span>
+                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      {post.comment_count || 0}
+                    </span>
+                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                      {post.reposts || 0}
+                    </span>
+                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      {post.views || 0}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -4002,33 +4121,94 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           </label>
         </div>
 
-        {/* ── Edit fields (Twitter-style: label above, thin bottom divider) ── */}
+        {/* ── Edit fields ── */}
         <div style={{ padding:"0 16px 24px" }}>
           {profileMsg && <div style={{ fontSize:12, color:profileMsg.startsWith("Saved") ? T.sage : T.rust, marginBottom:12, padding:"8px 12px", background:`${profileMsg.startsWith("Saved") ? T.sage : T.rust}18`, borderRadius:8 }}>{profileMsg}</div>}
+
+          {/* Year picker bottom sheet */}
+          {showYearPicker && (
+            <div onClick={() => setShowYearPicker(false)} style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(0,0,0,0.55)" }}>
+              <div onClick={e => e.stopPropagation()} style={{ position:"absolute", bottom:0, left:0, right:0, background:T.card, borderRadius:"20px 20px 0 0", padding:"16px 0 40px", animation:"sheetUp 0.28s ease", maxHeight:"70vh", display:"flex", flexDirection:"column" }}>
+                <div style={{ width:40, height:4, borderRadius:2, background:T.cardBorder, margin:"0 auto 16px", flexShrink:0 }} />
+                <div style={{ textAlign:"center", fontFamily:FONT_HEAD, fontWeight:700, fontSize:15, color:T.paper, marginBottom:8, flexShrink:0 }}>Select Year</div>
+                <div style={{ overflowY:"auto", flex:1 }}>
+                  {Array.from({ length: 80 }, (_, i) => 2010 - i).map(y => {
+                    const curYear = dob ? dob.split("-")[0] : "";
+                    return (
+                      <button key={y} onClick={() => {
+                        const parts = dob ? dob.split("-") : ["","01","01"];
+                        const mm = (parts[1] || "01").padStart(2,"0");
+                        const dd = (parts[2] || "01").padStart(2,"0");
+                        setDob(`${y}-${mm}-${dd}`);
+                        setShowYearPicker(false);
+                      }}
+                        style={{ width:"100%", padding:"14px 0", background: curYear === String(y) ? `${T.gold}22` : "none", border:"none", borderBottom:`1px solid ${T.cardBorder}33`, color: curYear === String(y) ? T.goldBright : T.paper, fontFamily:FONT_HEAD, fontWeight: curYear === String(y) ? 800 : 400, fontSize:16, cursor:"pointer" }}>
+                        {y}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Generic text/multiline fields */}
           {[
-            { label:"Name",           val:fullName,       set:setFullName,       ph:"Your display name" },
-            { label:"Bio",            val:bio,            set:setBio,            ph:"Say something about yourself", multiline:true },
-            { label:"Location",       val:location,       set:setLocation,       ph:"City, Country" },
-            { label:"Username",       val:username,       set:setUsername,       ph:"@handle" },
-            { label:"Country",        val:country,        set:setCountry,        isSelect:true },
-            { label:"Date of birth",  val:dob,            set:setDob,            ph:"YYYY-MM-DD", type:"date" },
-            { label:"Education",      val:education,      set:setEducation,      ph:"University or degree" },
-            { label:"Certifications", val:certifications, set:setCertifications, ph:"Trading certs, licenses…" },
-          ].map(({ label, val, set, ph, type, isSelect, multiline }) => (
+            { label:"Name",     val:fullName, set:setFullName, ph:"Your display name" },
+            { label:"Bio",      val:bio,      set:setBio,      ph:"Say something about yourself", multiline:true },
+            { label:"Username", val:username, set:setUsername, ph:"@handle" },
+          ].map(({ label, val, set, ph, multiline }) => (
             <div key={label} style={{ marginBottom:0, paddingBottom:0 }}>
               <label style={{ fontSize:12, color:T.gold, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>{label}</label>
-              {isSelect
-                ? <select value={val} onChange={e => set(e.target.value)} style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:15, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", cursor:"pointer" }}>
-                    <option value="">Select country…</option>{COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                : multiline
-                  ? <textarea value={val} onChange={e => set(e.target.value)} placeholder={ph} rows={3}
-                      style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:15, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", resize:"none", boxSizing:"border-box" }} />
-                  : <input type={type || "text"} value={val} onChange={e => set(e.target.value)} placeholder={ph}
-                      style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:15, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", boxSizing:"border-box" }} />
+              {multiline
+                ? <textarea value={val} onChange={e => set(e.target.value)} placeholder={ph} rows={3}
+                    style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:15, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", resize:"none", boxSizing:"border-box" }} />
+                : <input type="text" value={val} onChange={e => set(e.target.value)} placeholder={ph}
+                    style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:15, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", boxSizing:"border-box" }} />
               }
             </div>
           ))}
+
+          {/* Location with search suggestions */}
+          <div style={{ marginBottom:0, paddingBottom:0, position:"relative" }}>
+            <label style={{ fontSize:12, color:T.gold, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>Location</label>
+            <ProfileLocationInput value={location} onChange={setLocation} T={T} FONT_HEAD={FONT_HEAD} />
+          </div>
+
+          {/* Date of birth — month + day inline, year opens bottom sheet */}
+          <div style={{ marginBottom:0, paddingBottom:0 }}>
+            <label style={{ fontSize:12, color:T.gold, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>Date of birth</label>
+            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+              <select
+                value={dob ? dob.split("-")[1] || "" : ""}
+                onChange={e => {
+                  const parts = dob ? dob.split("-") : ["2000","","01"];
+                  const y = parts[0] || "2000"; const d = (parts[2] || "01").padStart(2,"0");
+                  setDob(`${y}-${e.target.value.padStart(2,"0")}-${d}`);
+                }}
+                style={{ flex:2, background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:14, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none" }}>
+                <option value="">Month</option>
+                {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m,i) =>
+                  <option key={i+1} value={String(i+1).padStart(2,"0")}>{m}</option>
+                )}
+              </select>
+              <input
+                type="number" min="1" max="31"
+                value={dob ? (dob.split("-")[2] || "") : ""}
+                onChange={e => {
+                  const parts = dob ? dob.split("-") : ["2000","01",""];
+                  const y = parts[0] || "2000"; const m = (parts[1] || "01").padStart(2,"0");
+                  setDob(`${y}-${m}-${e.target.value.padStart(2,"0")}`);
+                }}
+                placeholder="Day"
+                style={{ flex:1, background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:14, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", textAlign:"center", width:0 }} />
+              <button
+                onClick={() => setShowYearPicker(true)}
+                style={{ flex:1.2, background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color: dob && dob.split("-")[0] ? T.paper : T.muted, fontSize:14, padding:"6px 0", fontFamily:FONT_HEAD, textAlign:"center", cursor:"pointer" }}>
+                {dob && dob.split("-")[0] ? dob.split("-")[0] : "Year ▾"}
+              </button>
+            </div>
+          </div>
 
           {/* DOB privacy selector */}
           {dob && (
