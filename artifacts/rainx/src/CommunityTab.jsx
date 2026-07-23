@@ -224,7 +224,9 @@ function Composer({ account, onPosted, compact, themeTokens }) {
   if (themeTokens) Object.assign(T, themeTokens);
   const [text, setText] = useState("");
   const [posting, setPosting] = useState(false);
+  const [images, setImages] = useState([]); // array of { url, uploading }
   const taRef = useRef(null);
+  const fileRef = useRef(null);
 
   const insertAt = (symbol) => {
     const newVal = text + (text.endsWith(" ") || text === "" ? "" : " ") + symbol;
@@ -232,27 +234,64 @@ function Composer({ account, onPosted, compact, themeTokens }) {
     taRef.current?.focus();
   };
 
+  const handlePhotoChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const remaining = 4 - images.length;
+    const toUpload = files.slice(0, remaining);
+    // Add placeholders
+    const placeholders = toUpload.map((f) => ({ url: URL.createObjectURL(f), uploading: true, localUrl: URL.createObjectURL(f) }));
+    setImages((prev) => [...prev, ...placeholders]);
+    // Upload each
+    const uploaded = await Promise.all(toUpload.map(async (file, i) => {
+      try {
+        const ext = file.name.split(".").pop() || "jpg";
+        const path = `posts/${account.id}/${Date.now()}_${i}.${ext}`;
+        const { error } = await supabase.storage.from("post-images").upload(path, file, { upsert: true });
+        if (error) return null;
+        const { data: { publicUrl } } = supabase.storage.from("post-images").getPublicUrl(path);
+        return publicUrl;
+      } catch { return null; }
+    }));
+    setImages((prev) => {
+      const updated = [...prev];
+      let ui = 0;
+      for (let i = 0; i < updated.length; i++) {
+        if (updated[i].uploading) {
+          updated[i] = uploaded[ui] ? { url: uploaded[ui], uploading: false } : null;
+          ui++;
+        }
+      }
+      return updated.filter(Boolean);
+    });
+    e.target.value = "";
+  };
+
+  const removeImage = (idx) => setImages((prev) => prev.filter((_, i) => i !== idx));
+
   const submit = async () => {
-    if (!text.trim() || posting) return;
+    if ((!text.trim() && images.length === 0) || posting) return;
     setPosting(true);
     const trimmed = text.trim();
-    const { data: post } = await supabase.from("community_posts").insert({ user_id: account.id, text: trimmed }).select("id").single();
+    const readyUrls = images.filter((img) => !img.uploading).map((img) => img.url);
+    const insertData = { user_id: account.id, text: trimmed };
+    if (readyUrls.length) insertData.images = readyUrls;
+    const { data: post } = await supabase.from("community_posts").insert(insertData).select("id").single();
     const mentions = extractMentions(trimmed);
     if (mentions.length && post) {
       const { data: mentioned } = await supabase.from("public_profiles").select("id, display_name").in("display_name", mentions);
       (mentioned || []).forEach((m) => notify(m.id, account.id, "mention", post.id));
     }
-    // Trigger Raina AI reply when @rainaai is mentioned
     if (post && mentions.includes("rainaai")) {
       fetch("/api/community-ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ post_id: post.id, post_text: trimmed, author_name: account.email, user_id: account.id }),
       }).catch(() => {});
-      // Reload after a short delay so the AI comment appears
       setTimeout(() => onPosted(), 4000);
     }
     setText("");
+    setImages([]);
     setPosting(false);
     onPosted();
   };
@@ -272,15 +311,35 @@ function Composer({ account, onPosted, compact, themeTokens }) {
             maxLength={500}
             style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 10, color: T.paper, padding: 10, fontFamily: FONT_BODY, fontSize: 13, resize: "none" }}
           />
+          {/* Image previews */}
+          {images.length > 0 && (
+            <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+              {images.map((img, i) => (
+                <div key={i} style={{ position: "relative", width: 72, height: 72 }}>
+                  <img src={img.url} alt="" style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 10, display: "block", opacity: img.uploading ? 0.5 : 1 }} />
+                  {img.uploading && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: T.paper }}>…</div>}
+                  <button onClick={() => removeImage(i)} style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: T.rust, border: "none", color: "#fff", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>×</button>
+                </div>
+              ))}
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
             <div style={{ display: "flex", gap: 6 }}>
               <button onClick={() => insertAt("#")} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 7, padding: "5px 8px", color: T.muted, fontSize: 10.5, cursor: "pointer" }}><Hash size={11} /> Hashtag</button>
               <button onClick={() => insertAt("@")} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 7, padding: "5px 8px", color: T.muted, fontSize: 10.5, cursor: "pointer" }}><AtSign size={11} /> Mention</button>
+              {images.length < 4 && (
+                <>
+                  <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handlePhotoChange} />
+                  <button onClick={() => fileRef.current?.click()} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 7, padding: "5px 8px", color: T.muted, fontSize: 10.5, cursor: "pointer" }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Photo
+                  </button>
+                </>
+              )}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 10, color: T.muted }}>{text.length}/500</span>
-              <button onClick={submit} disabled={posting || !text.trim()} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 8, padding: "7px 16px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, cursor: "pointer", opacity: !text.trim() ? 0.5 : 1, transition: "opacity 0.15s" }}>
-                Post
+              <button onClick={submit} disabled={posting || (!text.trim() && images.length === 0)} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 8, padding: "7px 16px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, cursor: "pointer", opacity: (!text.trim() && images.length === 0) ? 0.5 : 1, transition: "opacity 0.15s" }}>
+                {posting ? "Posting…" : "Post"}
               </button>
             </div>
           </div>
@@ -397,6 +456,42 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
   );
 }
 
+// ---------- Post three-dot bottom sheet ----------
+function PostMenuSheet({ isOwn, username, onClose, onEdit, onDelete, onReport }) {
+  const ownItems = [
+    { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>, label: "Edit post", action: onEdit, danger: false },
+    { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>, label: "Delete post", action: onDelete, danger: true },
+  ];
+  const otherItems = [
+    { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>, label: "Not interested in post", action: onClose, danger: false },
+    { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>, label: `Unfollow @${username}`, action: onClose, danger: false },
+    { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>, label: "Add/remove from Lists", action: onClose, danger: false },
+    { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5h2M12 5v14m-7-7h2a5 5 0 0 0 5-5"/><path d="M5 19l14-14"/></svg>, label: `Mute @${username}`, action: onClose, danger: false },
+    { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg>, label: `Block @${username}`, action: onClose, danger: false },
+    { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3l18 18M10.5 10.677A2 2 0 0 0 10 12c0 1.1.9 2 2 2 .469 0 .9-.164 1.236-.434"/><path d="M13.875 13.818C13.322 14.54 12.71 15 12 15c-2.761 0-5-2.686-5-6 0-.395.034-.78.1-1.154M6.434 6.386C4.938 7.78 4 9.78 4 12c0 5 3.582 9 8 9 1.99 0 3.814-.75 5.228-1.99"/><path d="M9.168 4.215C10.034 4.077 10.988 4 12 4c4.418 0 8 4.03 8 9 0 .734-.073 1.448-.212 2.134"/></svg>, label: `Report post`, action: onReport, danger: true },
+    { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>, label: "Request Community Note", action: onClose, danger: false },
+    { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2v4l-4-4H9a1.994 1.994 0 0 1-1.414-.586"/><path d="M3 2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H7L3 18V4a2 2 0 0 1 0-2z"/></svg>, label: "View Hidden Replies", action: onClose, danger: false },
+  ];
+  const items = isOwn ? ownItems : otherItems;
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 200 }} onClick={onClose}>
+      <style>{"@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}"}</style>
+      <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: T.card, borderRadius: "20px 20px 0 0", paddingBottom: 32, animation: "sheetUp 0.28s cubic-bezier(.16,1,.3,1)" }}>
+        <div style={{ width: 36, height: 4, background: T.cardBorder, borderRadius: 2, margin: "12px auto 16px" }} />
+        {items.map((item, i) => (
+          <React.Fragment key={item.label}>
+            {i > 0 && <div style={{ height: 1, background: T.cardBorder, margin: "0 16px" }} />}
+            <button onClick={() => { onClose(); item.action && item.action(); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 16, padding: "14px 20px", background: "none", border: "none", cursor: "pointer", color: item.danger ? T.rust : T.paper }}>
+              <span style={{ color: item.danger ? T.rust : T.muted, flexShrink: 0 }}>{item.icon}</span>
+              <span style={{ fontSize: 15, fontWeight: 500, textAlign: "left" }}>{item.label}</span>
+            </button>
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ---------- Post card ----------
 function GiftIconButton({ profile, account }) {
   const [open, setOpen] = useState(false);
@@ -448,18 +543,16 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           <span style={{ fontSize: 11, color: T.muted }}>{timeAgo(post.created_at)}</span>
         </button>
         <div style={{ position: "relative" }}>
-          <button onClick={() => setMenuOpen((v) => !v)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><MoreHorizontal size={16} /></button>
+          <button onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><MoreHorizontal size={16} /></button>
           {menuOpen && (
-            <div style={{ position: "absolute", right: 0, top: 22, background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, overflow: "hidden", zIndex: 10, minWidth: 100 }}>
-              {isOwn ? (
-                <>
-                  <button onClick={() => { setEditing(true); setMenuOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", background: "none", border: "none", padding: "8px 10px", color: T.paper, fontSize: 11.5, cursor: "pointer" }}><Edit3 size={12} /> Edit</button>
-                  <button onClick={() => { onDelete(post.id); setMenuOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", background: "none", border: "none", padding: "8px 10px", color: T.rust, fontSize: 11.5, cursor: "pointer" }}><Trash2 size={12} /> Delete</button>
-                </>
-              ) : (
-                <button onClick={() => { onReport(post.id); setMenuOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", background: "none", border: "none", padding: "8px 10px", color: T.rust, fontSize: 11.5, cursor: "pointer" }}><Flag size={12} /> Report</button>
-              )}
-            </div>
+            <PostMenuSheet
+              isOwn={isOwn}
+              username={profile?.display_name || "user"}
+              onClose={() => setMenuOpen(false)}
+              onEdit={() => { setEditing(true); setMenuOpen(false); }}
+              onDelete={() => { onDelete(post.id); setMenuOpen(false); }}
+              onReport={() => { onReport(post.id); setMenuOpen(false); }}
+            />
           )}
         </div>
       </div>
@@ -476,6 +569,21 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
         <div style={{ fontSize: 13, fontWeight: 400, color: T.paper, marginTop: 8, lineHeight: 1.65, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
       )}
 
+      {post.images && post.images.length > 0 && (
+        <div style={{ marginTop: 10, borderRadius: 12, overflow: "hidden", display: "grid", gap: 2,
+          gridTemplateColumns: post.images.length === 1 ? "1fr" : "1fr 1fr",
+          gridTemplateRows: post.images.length === 3 ? "auto auto" : "auto"
+        }}>
+          {post.images.map((img, i) => (
+            <img key={i} src={img} alt="Post attachment" style={{
+              width: "100%", height: post.images.length === 1 ? "auto" : 180, maxHeight: 340, objectFit: "cover",
+              gridColumn: post.images.length === 3 && i === 0 ? "1 / span 2" : "auto",
+              display: "block",
+            }} />
+          ))}
+        </div>
+      )}
+
       <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 10 }}>
         <button onClick={() => onToggleLike(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : T.muted }}>
           <Heart size={14} strokeWidth={1.5} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5 }}>{ld.count}</span>
@@ -489,27 +597,12 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
         <button onClick={() => isOwn && onActivityOpen && onActivityOpen(post)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: isOwn ? "pointer" : "default", color: isOwn ? T.gold : T.muted }}>
           <AnalyticsBarIcon size={14} color={isOwn ? T.gold : "rgba(120,120,120,0.7)"} /> <span style={{ fontSize: 11.5 }}>{post.views || 0}</span>
         </button>
-        {/* Gift button for premium/subscribed users */}
         {profile?.isPro && post.user_id !== account.id && (
           <GiftIconButton profile={profile} account={account} />
         )}
       </div>
 
       {showComments && <CommentsSection postId={post.id} postAuthorId={post.user_id} account={account} profilesMap={profilesMap} onProfilesNeeded={onProfilesNeeded} onOpenProfile={onOpenProfile} />}
-      
-      {post.images && post.images.length > 0 && (
-        <div style={{ marginTop: 12, borderRadius: 12, overflow: "hidden", display: "grid", gap: 2, 
-          gridTemplateColumns: post.images.length === 1 ? "1fr" : post.images.length === 2 ? "1fr 1fr" : "1fr 1fr",
-          gridTemplateRows: post.images.length === 3 ? "1fr 1fr" : "auto"
-        }}>
-          {post.images.map((img, i) => (
-            <img key={i} src={img} alt="Post attachment" style={{ 
-              width: "100%", height: post.images.length === 1 ? "auto" : 200, objectFit: "cover",
-              gridColumn: post.images.length === 3 && i === 0 ? "1 / span 2" : "auto"
-            }} />
-          ))}
-        </div>
-      )}
 
       </div>{/* end content column */}
     </div>
@@ -1070,36 +1163,40 @@ function CommunityNotifBell({ account }) {
       </button>
       {open && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 70 }} onClick={() => setOpen(false)}>
-          <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "88%", maxWidth: 380, background: T.card, padding: 18, overflowY: "auto", animation: "slideInPanel 0.25s ease-out" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <div style={{ fontFamily: FONT_HEAD, fontSize: 16, color: T.paper, fontWeight: 800 }}>Community Notifications</div>
-              <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><X size={20} /></button>
+          <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "88%", maxWidth: 380, background: T.card, display: "flex", flexDirection: "column", animation: "slideInPanel 0.25s ease-out" }} onClick={(e) => e.stopPropagation()}>
+            {/* Sticky header */}
+            <div style={{ flexShrink: 0, padding: "18px 18px 0" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.paper, fontWeight: 800 }}>Community Notifications</div>
+                <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><X size={20} /></button>
+              </div>
+              <button onClick={markAllRead} style={{ background: "none", border: "none", color: T.gold, fontSize: 12, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 14 }}>Mark all as read</button>
+              <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2 }}>
+                {["all", "likes", "replies", "mentions", "reposts"].map((f) => (
+                  <button key={f} onClick={() => setFilter(f)} style={{ flexShrink: 0, background: filter === f ? T.gold : "none", color: filter === f ? T.ink : T.muted, border: `1px solid ${filter === f ? T.gold : T.cardBorder}`, borderRadius: 20, padding: "6px 13px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", textTransform: "capitalize" }}>{f}</button>
+                ))}
+              </div>
             </div>
-            <button onClick={markAllRead} style={{ background: "none", border: "none", color: T.gold, fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 12 }}>Mark all as read</button>
-
-            <div style={{ display: "flex", gap: 6, marginBottom: 12, overflowX: "auto" }}>
-              {["all", "likes", "replies", "mentions", "reposts"].map((f) => (
-                <button key={f} onClick={() => setFilter(f)} style={{ flexShrink: 0, background: filter === f ? T.gold : "none", color: filter === f ? T.ink : T.muted, border: `1px solid ${filter === f ? T.gold : T.cardBorder}`, borderRadius: 20, padding: "5px 11px", fontSize: 10.5, fontWeight: 700, cursor: "pointer", textTransform: "capitalize" }}>{f}</button>
-              ))}
-            </div>
-
-            {filtered.length === 0 ? (
-              <div style={{ fontSize: 12, color: T.muted }}>Nothing here yet.</div>
-            ) : filtered.map((n) => {
-              const actor = actorsMap[n.actor_id];
-              return (
-                <div key={n.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "10px 0", borderBottom: `1px solid ${T.cardBorder}` }}>
-                  <Avatar name={actor?.display_name} size={30} avatarUrl={actor?.avatar_url} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, color: T.paper, lineHeight: 1.4 }}>
-                      <strong style={{ color: T.paper }}>{actor?.display_name || "Someone"}</strong> {NOTIF_LABELS[n.type]}
+            {/* Scrollable list */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 18px 24px" }}>
+              {filtered.length === 0 ? (
+                <div style={{ fontSize: 13, color: T.muted, paddingTop: 8 }}>Nothing here yet.</div>
+              ) : filtered.map((n) => {
+                const actor = actorsMap[n.actor_id];
+                return (
+                  <div key={n.id} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "13px 0", borderBottom: `1px solid ${T.cardBorder}` }}>
+                    <Avatar name={actor?.display_name} size={36} avatarUrl={actor?.avatar_url} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, color: T.paper, lineHeight: 1.45 }}>
+                        <strong style={{ color: T.paper }}>{actor?.display_name || "Someone"}</strong> {NOTIF_LABELS[n.type]}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: T.muted, marginTop: 3 }}>{timeAgo(n.created_at)}</div>
                     </div>
-                    <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>{timeAgo(n.created_at)}</div>
+                    {!n.read && <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.gold, marginTop: 5, flexShrink: 0 }} />}
                   </div>
-                  {!n.read && <span style={{ width: 7, height: 7, borderRadius: "50%", background: T.gold, marginTop: 4, flexShrink: 0 }} />}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

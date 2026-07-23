@@ -95,24 +95,28 @@ function Avatar({ name, avatarUrl, size }) {
 }
 
 // ── Ticks ──────────────────────────────────────────────────────────────────
+// sent=1 black tick, delivered=2 black ticks, read=2 white ticks
 function Ticks({ status }) {
   if (status === "read") {
+    // two white ticks
     return (
-      <span style={{ display: "inline-flex", alignItems: "center", color: "#C6A15B" }}>
+      <span style={{ display: "inline-flex", alignItems: "center", color: "#ffffff" }}>
         <Check size={10} strokeWidth={3.5} />
         <Check size={10} strokeWidth={3.5} style={{ marginLeft: -6 }} />
       </span>
     );
   }
   if (status === "delivered") {
+    // two black ticks
     return (
-      <span style={{ display: "inline-flex", alignItems: "center", color: "rgba(156,148,127,0.5)" }}>
+      <span style={{ display: "inline-flex", alignItems: "center", color: "#111111" }}>
         <Check size={10} strokeWidth={3.5} />
         <Check size={10} strokeWidth={3.5} style={{ marginLeft: -6 }} />
       </span>
     );
   }
-  return <Check size={10} strokeWidth={3.5} color="rgba(156,148,127,0.38)" />;
+  // sent: one black tick
+  return <Check size={10} strokeWidth={3.5} color="#111111" />;
 }
 
 function getTickStatus(msg, otherOnline, readReceiptsEnabled) {

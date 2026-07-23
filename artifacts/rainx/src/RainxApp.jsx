@@ -1904,11 +1904,41 @@ function MainAppContent({ account, onLogout }) {
 
       {!communityProfileOpen && (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: T.card, borderTop: `1px solid ${T.cardBorder}`, display: "flex", justifyContent: "space-around", padding: "6px 0 20px" }}>
-          {[["home", Home, "Home"], ["markets", Briefcase, "Markets"], ["community", Users2, "Community"], ["more", MoreHorizontal, "More"]].map(([key, Icon, label]) => {
+          {[
+            { key: "home", label: "Home", icon: (active) => (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
+                <path d="M9 21V12h6v9"/>
+              </svg>
+            )},
+            { key: "markets", label: "Markets", icon: (active) => (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="4" y="13" width="3" height="7" rx="0.8"/>
+                <rect x="10.5" y="8" width="3" height="12" rx="0.8"/>
+                <rect x="17" y="4" width="3" height="16" rx="0.8"/>
+                <polyline points="5.5 10 10 6.5 14 9.5 19 5"/>
+              </svg>
+            )},
+            { key: "community", label: "Community", icon: (active) => (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="9" cy="7" r="3"/>
+                <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+                <circle cx="18" cy="8" r="2.2"/>
+                <path d="M21 21v-1.5a3 3 0 0 0-2.2-2.9"/>
+              </svg>
+            )},
+            { key: "more", label: "More", icon: (active) => (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="5" cy="12" r="1.4"/>
+                <circle cx="12" cy="12" r="1.4"/>
+                <circle cx="19" cy="12" r="1.4"/>
+              </svg>
+            )},
+          ].map(({ key, label, icon }) => {
             const active = !profileFromHeader && tab === key;
             return (
               <button key={key} onClick={() => { if (key === "more") setMorePage(null); goTab(key); }} style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 64, padding: "6px 4px", transition: "color 0.15s" }}>
-                <Icon size={24} strokeWidth={active ? 2.5 : 1.8} />
+                {icon(active)}
                 <span style={{ fontSize: 13, fontFamily: FONT_HEAD, fontWeight: active ? 700 : 500, letterSpacing: 0.1 }}>{label}</span>
               </button>
             );
