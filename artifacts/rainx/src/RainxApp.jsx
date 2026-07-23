@@ -1123,10 +1123,10 @@ function MainAppContent({ account, onLogout }) {
     if (saved) { _activeSymbolRef.current = saved; return saved; }
     try {
       const markets = JSON.parse(lsGet("rainx-active-markets") || "[]");
-      const s = markets[0] || "";
+      const s = markets[0] || "XAUUSD";
       _activeSymbolRef.current = s;
       return s;
-    } catch { _activeSymbolRef.current = ""; return ""; }
+    } catch { _activeSymbolRef.current = "XAUUSD"; return "XAUUSD"; }
   });
   // ─── Per-market sessions map (persisted to localStorage) ────────────────────
   // sessions = { [symbol]: { symbol, name, startTime, stepIndex, steps, activities, overlays, setup, state } }
