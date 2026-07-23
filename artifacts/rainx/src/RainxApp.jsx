@@ -1099,7 +1099,7 @@ function MainAppContent({ account, onLogout }) {
   const seriesMapRef = useRef(seriesMap);
   seriesMapRef.current = seriesMap;
   const entitlement = useEntitlement(account.id);
-  const [morePage, setMorePage] = useState(() => { const p = lsGet("rainx-morepage"); if (p === "profile-edit") return "profile"; return ["profile-menu","profile","verification","rewards","wallet","history","scalping","telegram","analytics","settings","notifications","security"].includes(p) ? p : null; });
+  const [morePage, setMorePage] = useState(() => { const p = lsGet("rainx-morepage"); if (p === "profile-edit") return "profile"; return ["profile-menu","profile","verification","rewards","wallet","history","scalping","analytics","settings","notifications","security"].includes(p) ? p : null; });
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const [tab, setTab] = useState(() => { const t = lsGet("rainx-tab"); return ["home","markets","community","more"].includes(t) ? t : "home"; });
@@ -1118,10 +1118,23 @@ function MainAppContent({ account, onLogout }) {
     setTab(key);
     setProfileFromHeader(false);
   };
-  const [activeSymbol, setActiveSymbol] = useState(() => { const s = lsGet("rainx-active-symbol") || "XAUUSD"; _activeSymbolRef.current = s; return s; });
-  // ─── Analysis session (declared early — used in activeInst derivation below) ─
-  const [session, setSession] = useState(null);
-  // session = { symbol, name, duration, startTime, endTime, stepIndex, steps, activities, overlays, setup, state }
+  const [activeSymbol, setActiveSymbol] = useState(() => {
+    const saved = lsGet("rainx-active-symbol");
+    if (saved) { _activeSymbolRef.current = saved; return saved; }
+    try {
+      const markets = JSON.parse(lsGet("rainx-active-markets") || "[]");
+      const s = markets[0] || "";
+      _activeSymbolRef.current = s;
+      return s;
+    } catch { _activeSymbolRef.current = ""; return ""; }
+  });
+  // ─── Per-market sessions map (persisted to localStorage) ────────────────────
+  // sessions = { [symbol]: { symbol, name, startTime, stepIndex, steps, activities, overlays, setup, state } }
+  const [sessions, setSessions] = useState(() => {
+    try { return JSON.parse(lsGet("rainx-sessions") || "{}"); } catch { return {}; }
+  });
+  // Derive the active session (for display) from the currently viewed symbol
+  const session = sessions[activeSymbol] || null;
   const activeInst = ALL_ASSETS.find(i => i.symbol === (session?.symbol || activeSymbol)) || ALL_ASSETS.find(i => i.symbol === "XAUUSD");
   const inst = activeInst;
   const marketOpen = isMarketOpen(inst.cls);
@@ -1167,6 +1180,12 @@ function MainAppContent({ account, onLogout }) {
       lsSet("rainx-active-markets", JSON.stringify(next));
       return next;
     });
+    // Also drop the session for this market so analysis doesn't run in background
+    setSessions(prev => {
+      const next = { ...prev };
+      delete next[symbol];
+      return next;
+    });
   }, []);
   const resetMarkets = useCallback(() => {
     const today = new Date().toDateString();
@@ -1185,78 +1204,108 @@ function MainAppContent({ account, onLogout }) {
   // Auto-restore removed: on page refresh, no market is auto-selected or auto-analyzed.
   // The user must manually select a market to begin analysis.
 
-  // ─── Analysis session step progression engine
+  // ─── Analysis session step progression engine (runs for ALL analyzing markets)
+  // Key encodes symbol+stepIndex for every analyzing session so the effect re-fires
+  // each time any session advances a step.
+  const _analyzingKey = Object.entries(sessions)
+    .filter(([, s]) => s.state === "analyzing" && s.stepIndex < STEP_DEFS.length)
+    .map(([sym, s]) => `${sym}:${s.stepIndex}`)
+    .join(",");
   useEffect(() => {
-    if (!session || session.state !== "analyzing") return;
-    if (session.stepIndex >= STEP_DEFS.length) return;
-    const delay = 2800 + Math.random() * 3200;
-    const id = setTimeout(() => {
-      setSession(prev => {
-        if (!prev || prev.stepIndex !== session.stepIndex) return prev;
-        const ni = prev.stepIndex + 1;
-        const steps = STEP_DEFS.map((s, i) => ({ ...s, status: i < ni ? "done" : i === ni ? "active" : "pending" }));
-        // Build overlays for this step
-        const base = prev.overlays.filter(o => o._step !== prev.stepIndex);
-        const inst2 = ALL_ASSETS.find(a => a.symbol === prev.symbol) || ALL_ASSETS[0];
-        const price = (seriesMapRef.current[prev.symbol] || []).slice(-1)[0]?.price || inst2.base;
-        const vol = inst2.vol;
-        let newOverlays = [...base];
-        if (prev.stepIndex === 0) {
-          // Step 0: Market structure — trendline + swing highs/lows + structure labels
-          newOverlays.push({ _step:0, type:"trendline",        price1: price - vol*6, price2: price - vol*1, label:"Uptrend Line" });
-          newOverlays.push({ _step:0, type:"swing_high",       price: price + vol*4, idx: 8  });
-          newOverlays.push({ _step:0, type:"swing_high",       price: price + vol*2.5, idx: 18 });
-          newOverlays.push({ _step:0, type:"swing_low",        price: price - vol*5, idx: 12 });
-          newOverlays.push({ _step:0, type:"swing_low",        price: price - vol*3, idx: 22 });
-          newOverlays.push({ _step:0, type:"market_structure", price: price + vol*4, idx: 8,  label:"HH" });
-          newOverlays.push({ _step:0, type:"market_structure", price: price - vol*5, idx: 12, label:"HL" });
-        } else if (prev.stepIndex === 1) {
-          // Step 1: Support & Resistance + liquidity zones
-          newOverlays.push({ _step:1, type:"resistance",    price: price + vol*2.5, label:"Resistance Zone" });
-          newOverlays.push({ _step:1, type:"support_zone",  priceLow: price - vol*2.5, priceHigh: price - vol*1 });
-          newOverlays.push({ _step:1, type:"liquidity",     priceLow: price + vol*2.2, priceHigh: price + vol*3.0 });
-          newOverlays.push({ _step:1, type:"liquidity",     priceLow: price - vol*3.0, priceHigh: price - vol*2.2 });
-        } else if (prev.stepIndex === 2) {
-          // Step 2: Trend confirmed — add channel
-          newOverlays.push({ _step:2, type:"channel",
-            price1: price - vol*6, price2: price - vol*1,   // lower bound (same as trendline)
-            price3: price - vol*5, price4: price + vol*0.5, // upper bound
-          });
-        } else if (prev.stepIndex === 3) {
-          // Step 3: Entry zone + breakout area
-          newOverlays.push({ _step:3, type:"entry_zone", priceLow: price - vol*0.5, priceHigh: price + vol*0.5 });
-          newOverlays.push({ _step:3, type:"breakout",   priceLow: price + vol*0.4, priceHigh: price + vol*1.2 });
-        } else if (prev.stepIndex === 4) {
-          // Step 4: Awaiting real signal from backend — no placeholder SL/TP shown.
-          // Real trade overlays are only set when checkCandle returns confidence ≥ 65%.
-        }
-        // Always show current price
-        newOverlays = newOverlays.filter(o => o.type !== "current_price");
-        newOverlays.push({ type:"current_price", price });
-        // Activity entry
-        const actMsg = [
-          "Market structure mapped — bullish higher highs forming.",
-          `Support zone identified near ${(price - vol*1.5).toFixed(inst2.digits)}.`,
-          "Trend direction confirmed — bullish bias maintained.",
-          `Entry zone identified ${(price - vol*0.5).toFixed(inst2.digits)} – ${(price + vol*0.5).toFixed(inst2.digits)}. Monitoring price action.`,
-          "Confirmation pending — watching for momentum shift.",
-        ][prev.stepIndex] || "Analysis progressing.";
-        const activities = [{ time: new Date().toLocaleTimeString(), text: actMsg }, ...prev.activities].slice(0, 20);
-        // setup stays null until real backend signal arrives via checkCandle
-        const setup = prev.setup || null;
-        const state = ni >= STEP_DEFS.length ? "watching" : "analyzing";
-        return { ...prev, stepIndex: ni, steps, overlays: newOverlays, activities, setup, state };
-      });
-    }, delay);
-    return () => clearTimeout(id);
-  }, [session?.stepIndex, session?.state]);
+    if (!_analyzingKey) return;
+    const timers = _analyzingKey.split(",").map(entry => {
+      const [symbol, stepIdxStr] = entry.split(":");
+      const stepIdx = Number(stepIdxStr);
+      const delay = 2800 + Math.random() * 3200;
+      return setTimeout(() => {
+        setSessions(prev => {
+          const sess = prev[symbol];
+          if (!sess || sess.state !== "analyzing" || sess.stepIndex !== stepIdx) return prev;
+          const ni = sess.stepIndex + 1;
+          const steps = STEP_DEFS.map((s, i) => ({ ...s, status: i < ni ? "done" : i === ni ? "active" : "pending" }));
+          const base = sess.overlays.filter(o => o._step !== sess.stepIndex);
+          const inst2 = ALL_ASSETS.find(a => a.symbol === symbol) || ALL_ASSETS[0];
+          const price = (seriesMapRef.current[symbol] || []).slice(-1)[0]?.price || inst2.base;
+          const vol = inst2.vol;
+          let newOverlays = [...base];
+          if (stepIdx === 0) {
+            newOverlays.push({ _step:0, type:"trendline",        price1: price - vol*6, price2: price - vol*1, label:"Uptrend Line" });
+            newOverlays.push({ _step:0, type:"swing_high",       price: price + vol*4, idx: 8  });
+            newOverlays.push({ _step:0, type:"swing_high",       price: price + vol*2.5, idx: 18 });
+            newOverlays.push({ _step:0, type:"swing_low",        price: price - vol*5, idx: 12 });
+            newOverlays.push({ _step:0, type:"swing_low",        price: price - vol*3, idx: 22 });
+            newOverlays.push({ _step:0, type:"market_structure", price: price + vol*4, idx: 8,  label:"HH" });
+            newOverlays.push({ _step:0, type:"market_structure", price: price - vol*5, idx: 12, label:"HL" });
+          } else if (stepIdx === 1) {
+            newOverlays.push({ _step:1, type:"resistance",    price: price + vol*2.5, label:"Resistance Zone" });
+            newOverlays.push({ _step:1, type:"support_zone",  priceLow: price - vol*2.5, priceHigh: price - vol*1 });
+            newOverlays.push({ _step:1, type:"liquidity",     priceLow: price + vol*2.2, priceHigh: price + vol*3.0 });
+            newOverlays.push({ _step:1, type:"liquidity",     priceLow: price - vol*3.0, priceHigh: price - vol*2.2 });
+          } else if (stepIdx === 2) {
+            newOverlays.push({ _step:2, type:"channel",
+              price1: price - vol*6, price2: price - vol*1,
+              price3: price - vol*5, price4: price + vol*0.5,
+            });
+          } else if (stepIdx === 3) {
+            newOverlays.push({ _step:3, type:"entry_zone", priceLow: price - vol*0.5, priceHigh: price + vol*0.5 });
+            newOverlays.push({ _step:3, type:"breakout",   priceLow: price + vol*0.4, priceHigh: price + vol*1.2 });
+          }
+          // Step 4: no placeholder overlays — real signal comes from checkCandle
+          newOverlays = newOverlays.filter(o => o.type !== "current_price");
+          newOverlays.push({ type:"current_price", price });
+          const actMsg = [
+            "Market structure mapped — bullish higher highs forming.",
+            `Support zone identified near ${(price - vol*1.5).toFixed(inst2.digits)}.`,
+            "Trend direction confirmed — bullish bias maintained.",
+            `Entry zone identified ${(price - vol*0.5).toFixed(inst2.digits)} – ${(price + vol*0.5).toFixed(inst2.digits)}. Monitoring price action.`,
+            "Confirmation pending — watching for momentum shift.",
+          ][stepIdx] || "Analysis progressing.";
+          const activities = [{ time: new Date().toLocaleTimeString(), text: actMsg }, ...sess.activities].slice(0, 20);
+          const state = ni >= STEP_DEFS.length ? "watching" : "analyzing";
+          return { ...prev, [symbol]: { ...sess, stepIndex: ni, steps, overlays: newOverlays, activities, setup: sess.setup || null, state } };
+        });
+      }, delay);
+    });
+    return () => timers.forEach(clearTimeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_analyzingKey]);
 
   // Persist active symbol so it survives refresh
   useEffect(() => { lsSet("rainx-active-symbol", activeSymbol); _activeSymbolRef.current = activeSymbol; }, [activeSymbol]);
 
-  // Activity heartbeat during watching phase
+  // Persist all sessions to localStorage whenever they change
+  useEffect(() => { lsSet("rainx-sessions", JSON.stringify(sessions)); }, [sessions]);
+
+  // On mount: auto-start sessions for any active market that doesn't have one yet
+  // (handles fresh installs or cleared localStorage while activeMarkets was already saved)
   useEffect(() => {
-    if (!session || session.state !== "watching") return;
+    setActiveMarkets(prev => {
+      prev.forEach(symbol => {
+        setSessions(s => {
+          if (s[symbol]) return s; // session already exists — keep it
+          const asset = ALL_ASSETS.find(a => a.symbol === symbol);
+          if (!asset) return s;
+          const now = Date.now();
+          return {
+            ...s,
+            [symbol]: {
+              symbol: asset.symbol, name: asset.name, startTime: now, stepIndex: 0,
+              steps: STEP_DEFS.map((st, i) => ({ ...st, status: i === 0 ? "active" : "pending" })),
+              activities: [{ time: new Date().toLocaleTimeString(), text: `Raina AI resuming analysis on ${asset.symbol}.` }],
+              overlays: [], setup: null, state: "analyzing",
+            },
+          };
+        });
+      });
+      return prev; // don't change activeMarkets — side-effect only
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Activity heartbeat during watching phase (runs for ALL watching markets)
+  const _watchingKey = Object.keys(sessions).filter(sym => sessions[sym]?.state === "watching").join(",");
+  useEffect(() => {
+    if (!_watchingKey) return;
     const msgs = [
       "Price action remains constructive above support.",
       "Monitoring momentum indicators for confirmation.",
@@ -1266,31 +1315,42 @@ function MainAppContent({ account, onLogout }) {
       "Price consolidating near entry zone.",
     ];
     const id = setInterval(() => {
-      setSession(prev => {
-        if (!prev) return prev;
-        const text = msgs[Math.floor(Math.random() * msgs.length)];
-        return { ...prev, activities: [{ time: new Date().toLocaleTimeString(), text }, ...prev.activities].slice(0, 20) };
+      setSessions(prev => {
+        const next = { ...prev };
+        let changed = false;
+        _watchingKey.split(",").forEach(symbol => {
+          const s = prev[symbol];
+          if (!s || s.state !== "watching") return;
+          const text = msgs[Math.floor(Math.random() * msgs.length)];
+          next[symbol] = { ...s, activities: [{ time: new Date().toLocaleTimeString(), text }, ...s.activities].slice(0, 20) };
+          changed = true;
+        });
+        return changed ? next : prev;
       });
     }, 30000);
     return () => clearInterval(id);
-  }, [session?.state]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_watchingKey]);
 
   // Session countdown
   const [sessionSecsLeft] = useState(0); // Session runs continuously — no countdown
 
   const startAnalysisSession = useCallback((asset) => {
     const now = Date.now();
-    setSession({
-      symbol: asset.symbol,
-      name: asset.name,
-      startTime: now,
-      stepIndex: 0,
-      steps: STEP_DEFS.map((s, i) => ({ ...s, status: i === 0 ? "active" : "pending" })),
-      activities: [{ time: new Date().toLocaleTimeString(), text: `Raina AI starting analysis on ${asset.symbol}. Studying market structure…` }],
-      overlays: [],
-      setup: null,
-      state: "analyzing",
-    });
+    setSessions(prev => ({
+      ...prev,
+      [asset.symbol]: {
+        symbol: asset.symbol,
+        name: asset.name,
+        startTime: now,
+        stepIndex: 0,
+        steps: STEP_DEFS.map((s, i) => ({ ...s, status: i === 0 ? "active" : "pending" })),
+        activities: [{ time: new Date().toLocaleTimeString(), text: `Raina AI starting analysis on ${asset.symbol}. Studying market structure…` }],
+        overlays: [],
+        setup: null,
+        state: "analyzing",
+      }
+    }));
   }, []);
 
   // ─── Theme ─────────────────────────────────────────────────────────────────
@@ -1456,17 +1516,17 @@ function MainAppContent({ account, onLogout }) {
         },
       }));
 
-      // ── If an active session matches this symbol, update overlays with real signal data ──
+      // ── Update this symbol's session with real signal data from backend ──
       if (result.bias !== "hold" && result.entry != null) {
-        setSession(prev => {
-          if (!prev || prev.symbol !== inst.symbol || prev.state === "completed") return prev;
+        setSessions(prev => {
+          const sess = prev[inst.symbol];
+          if (!sess || sess.state === "completed") return prev;
           const price  = result.entry;
           const slDist = result.stop_loss   ? Math.abs(price - result.stop_loss)   : inst.vol * 2.5;
           const tp1    = result.take_profit_1;
           const tp2    = result.take_profit_2;
-          // Keep non-signal overlays (trendlines, structure markings) and replace trade levels
           const keepTypes = new Set(["trendline","channel","support_zone","resistance","liquidity","swing_high","swing_low","market_structure"]);
-          const base = prev.overlays.filter(o => keepTypes.has(o.type));
+          const base = sess.overlays.filter(o => keepTypes.has(o.type));
           const signalOverlays = [
             { type:"current_price",   price },
             { type:"entry_zone",      priceLow:  Array.isArray(signal.entry_zone) ? signal.entry_zone[0] : price-inst.vol*0.5,
@@ -1474,9 +1534,9 @@ function MainAppContent({ account, onLogout }) {
             { type:"sl_level",        price: result.stop_loss || price - slDist },
             ...(tp1 != null ? [{ type:"tp_level", price: tp1, label:"TP 1" }] : []),
             ...(tp2 != null ? [{ type:"tp_level", price: tp2, label:"TP 2" }] : []),
-            { type:"direction_arrow", from: price,  target: tp1 || price + slDist * 1.5 },
+            { type:"direction_arrow", from: price, target: tp1 || price + slDist * 1.5 },
             ...(tp2 != null ? [{ type:"projection", target: tp2 }] : []),
-            { type:"breakout",        priceLow:  price + inst.vol*0.3, priceHigh: price + inst.vol*1.0 },
+            { type:"breakout",        priceLow: price + inst.vol*0.3, priceHigh: price + inst.vol*1.0 },
           ];
           const newSetup = {
             bias:      result.bias.toUpperCase(),
@@ -1490,7 +1550,7 @@ function MainAppContent({ account, onLogout }) {
             confidence: result.confidence,
             reason:    result.reason,
           };
-          return { ...prev, overlays: [...base, ...signalOverlays], setup: newSetup };
+          return { ...prev, [inst.symbol]: { ...sess, overlays: [...base, ...signalOverlays], setup: newSetup } };
         });
       }
 
@@ -1643,21 +1703,23 @@ function MainAppContent({ account, onLogout }) {
     return () => clearInterval(id);
   }, [pushNotification, account]);
 
-  // When analysis finishes and session enters "watching", immediately fetch a real signal
-  // from the backend instead of waiting for the 15s scan loop.
+  // When any session transitions to "watching", immediately fetch a real signal
+  // from the backend for that market instead of waiting for the scan loop.
   useEffect(() => {
-    if (!session || session.state !== "watching") return;
-    const inst2 = ALL_ASSETS.find(a => a.symbol === session.symbol);
-    if (!inst2) return;
-    // Clear throttle so the first call always goes through
-    const key15 = `${inst2.symbol}_15m`;
-    const key1h  = `${inst2.symbol}_1h`;
-    delete lastCandleTimeRef.current[key15];
-    delete lastCandleTimeRef.current[key1h];
-    checkCandle(inst2, { key: "15m", label: "15M" });
-    checkCandle(inst2, { key: "1h",  label: "1H" });
+    if (!_watchingKey) return;
+    _watchingKey.split(",").forEach(symbol => {
+      const inst2 = ALL_ASSETS.find(a => a.symbol === symbol);
+      if (!inst2) return;
+      // Clear throttle so the first call always goes through
+      delete lastCandleTimeRef.current[`${symbol}_15m`];
+      delete lastCandleTimeRef.current[`${symbol}_1h`];
+      delete lastCandleTimeRef.current[`${symbol}_4h`];
+      checkCandle(inst2, { key: "15m", label: "15M" });
+      checkCandle(inst2, { key: "1h",  label: "1H" });
+      checkCandle(inst2, { key: "4h",  label: "4H" });
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.state, session?.symbol]);
+  }, [_watchingKey]);
 
   const activeSignal = signalsMap[activeSymbol]?.[selectedTf] || null;
 
@@ -1730,7 +1792,7 @@ function MainAppContent({ account, onLogout }) {
           else if (dx > 0 && ci > 0)          goTab(tabs[ci - 1]);
         }}
       >
-        {tab === "home" && <HomeTab inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} setSession={setSession} seriesMap={seriesMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} />}
+        {tab === "home" && <HomeTab inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessions={sessions} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} seriesMap={seriesMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} />}
         {tab === "markets" && <MarketsTab seriesMap={seriesMap} signalsMap={signalsMap} activeSymbol={activeSymbol} onSelect={(s) => { setActiveSymbol(s); goTab("home", -1); }} themeMode={themeMode} />}
         {tab === "community" && <CommunityTab account={account} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />}
         {tab === "history" && <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />}
@@ -2463,24 +2525,6 @@ function DurationPicker({ asset, onSelect, onClose }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Change market confirmation dialog
-// ─────────────────────────────────────────────────────────────────────────────
-function ChangeMarketDialog({ current, onConfirm, onCancel }) {
-  return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:90, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
-      <div style={{ background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:18, padding:24, width:"100%", maxWidth:340 }}>
-        <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.paper, marginBottom:8 }}>Change Active Market?</div>
-        <div style={{ fontSize:13, color:T.muted, lineHeight:1.6, marginBottom:20 }}>Your current <strong style={{ color:T.paper }}>{current}</strong> analysis session is active. Changing markets will stop this session.</div>
-        <div style={{ display:"flex", gap:10 }}>
-          <button onClick={onCancel} style={{ flex:1, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:10, padding:"11px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, cursor:"pointer" }}>Cancel</button>
-          <button onClick={onConfirm} style={{ flex:1, background:T.rust, border:"none", borderRadius:10, padding:"11px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer" }}>Change Market</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Format seconds → HH:MM:SS
 // ─────────────────────────────────────────────────────────────────────────────
 function fmtTime(secs) {
@@ -2492,10 +2536,8 @@ function fmtTime(secs) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Home Tab — main redesigned screen
 // ─────────────────────────────────────────────────────────────────────────────
-function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessionSecsLeft, startAnalysisSession, setSession, seriesMap, themeMode, activeMarkets = [], addActiveMarket, removeActiveMarket, maxActiveMarkets = 3 }) {
+function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessions, sessionSecsLeft, startAnalysisSession, seriesMap, themeMode, activeMarkets = [], addActiveMarket, removeActiveMarket, maxActiveMarkets = 3 }) {
   const [showAddMarket, setShowAddMarket] = useState(false);
-  const [showChangeDlg, setShowChangeDlg] = useState(false);   // confirm change market
-  const [pendingChange, setPendingChange] = useState(null);     // asset user tried to switch to
   const [showActivity, setShowActivity] = useState(false);
   const [showFullChart, setShowFullChart] = useState(false);
   const [activeChartTf, setActiveChartTf] = useState("15m");   // chart candle timeframe — does NOT control AI analysis duration
@@ -2546,32 +2588,19 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
 
   const [showSubLock, setShowSubLock] = useState(false);
 
+  // Called from AddMarketSheet when the user picks a NEW market to add/replace
   function handleAssetSelect(asset) {
     setShowAddMarket(false);
-    // Gate: only active subscribers can add/activate markets
     if (!hasAccess(entitlement?.tier, "weekly")) {
       setShowSubLock(true);
       return;
     }
-    if (session && session.state !== "completed" && session.symbol !== asset.symbol) {
-      setPendingChange(asset);
-      setShowChangeDlg(true);
-    } else {
-      if (addActiveMarket) addActiveMarket(asset.symbol);
+    if (addActiveMarket) addActiveMarket(asset.symbol);
+    // Only start a new session if one doesn't already exist for this market
+    if (!sessions?.[asset.symbol]) {
       startAnalysisSession(asset);
-      setActiveSymbol(asset.symbol);
     }
-  }
-
-  function handleConfirmChange() {
-    setShowChangeDlg(false);
-    const asset = pendingChange;
-    setPendingChange(null);
-    if (asset) {
-      if (addActiveMarket) addActiveMarket(asset.symbol);
-      startAnalysisSession(asset);
-      setActiveSymbol(asset.symbol);
-    }
+    setActiveSymbol(asset.symbol);
   }
 
   return (
@@ -2589,7 +2618,8 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
           return tabs.map(a => {
             const active = a.symbol === primarySym;
             return (
-              <button key={a.symbol} onClick={() => handleAssetSelect(a)} style={{ flexShrink:0, background:active ? T.gold : T.card, color:active ? T.ink : T.paper, border:`1px solid ${active ? T.gold : T.cardBorder}`, borderRadius:20, padding:"6px 14px", fontFamily:FONT_HEAD, fontSize:11, fontWeight:700, cursor:"pointer" }}>
+              // Tab bar just switches the view — no dialog, no session restart
+              <button key={a.symbol} onClick={() => setActiveSymbol(a.symbol)} style={{ flexShrink:0, background:active ? T.gold : T.card, color:active ? T.ink : T.paper, border:`1px solid ${active ? T.gold : T.cardBorder}`, borderRadius:20, padding:"6px 14px", fontFamily:FONT_HEAD, fontSize:11, fontWeight:700, cursor:"pointer" }}>
                 {a.symbol}
               </button>
             );
@@ -2830,7 +2860,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
         <div style={{ margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"20px 16px", textAlign:"center" }}>
           <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:6 }}>Analysis Session Complete</div>
           <div style={{ fontSize:12, color:T.muted, marginBottom:16 }}>The selected analysis period has ended. Start a new session to continue monitoring.</div>
-          <button onClick={() => { setSession(null); setShowAddMarket(true); }} style={{ background:T.gold, color:T.ink, border:"none", borderRadius:10, padding:"11px 28px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, cursor:"pointer" }}>Analyze Again</button>
+          <button onClick={() => setShowAddMarket(true)} style={{ background:T.gold, color:T.ink, border:"none", borderRadius:10, padding:"11px 28px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, cursor:"pointer" }}>Analyze Again</button>
         </div>
       )}
 
@@ -2851,7 +2881,6 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
         </div>
       )}
       {showAddMarket && <AddMarketSheet onClose={() => setShowAddMarket(false)} onSelect={handleAssetSelect} activeMarkets={activeMarkets} maxActiveMarkets={maxActiveMarkets} onRemoveMarket={removeActiveMarket} />}
-      {showChangeDlg && <ChangeMarketDialog current={session?.symbol} onConfirm={handleConfirmChange} onCancel={() => { setShowChangeDlg(false); setPendingChange(null); }} />}
     </div>
   );
 }
@@ -4589,30 +4618,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     </MoreSubScreen>
   );
 
-  if (morePage === "telegram") return (
-    <MoreSubScreen onBack={() => setMorePage(null)}>
-      <div style={{ padding: 16 }}>
-        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: 22, marginBottom: 14, textAlign: "center" }}>
-          <div style={{ width: 52, height: 52, borderRadius: "50%", background: T.cardBorder, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16, margin: "0 auto 16px" }}>
-            <Send size={22} color={T.muted} />
-          </div>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper, marginBottom: 8 }}>Telegram Bot Discontinued</div>
-          <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.8 }}>
-            The Raina AI Telegram bot has been discontinued. All signals are now delivered exclusively through this platform — live, in real time, directly on your screen.
-          </div>
-        </div>
-        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px" }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 6 }}>How to receive signals</div>
-          <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.8 }}>
-            1. Go to the <strong style={{ color: T.paper }}>Home</strong> tab and tap <strong style={{ color: T.paper }}>+ Add Market</strong>.<br />
-            2. Select up to 3 markets per day.<br />
-            3. Raina AI will analyze continuously and alert you here when a high-confidence setup is found.
-          </div>
-        </div>
-      </div>
-    </MoreSubScreen>
-  );
-
   // Community profile = redirect to main profile (same data)
   if (morePage === "community-profile") {
     setMorePage("profile");
@@ -4818,8 +4823,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           badgeColor={hasAccess(entitlement.tier, "monthly") ? T.sage : T.muted}
           onPress={() => setMorePage("scalping")}
         />
-        <MoreRowDivider />
-        <MoreRow icon={Send} title="Signals (Web Only)" subtitle="Telegram bot discontinued" onPress={() => setMorePage("telegram")} />
         <MoreRowDivider />
         <MoreRow icon={Bell} title="Notifications" subtitle="Alerts, sounds, categories" onPress={() => setMorePage("notifications")} />
       </MoreSection>
