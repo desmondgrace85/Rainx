@@ -3372,6 +3372,58 @@ function NotificationSettingsScreen({ account }) {
           Enable Push Notifications
         </button>
       </div>
+      {/* Test Notification — fires a real SW notification + plays sound immediately */}
+      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginTop: 16 }}>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 4 }}>Test Notification Sound</div>
+        <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.6, marginBottom: 12 }}>
+          Tap a category to fire a real notification right now — you will hear the sound and see a banner, which confirms everything is working.
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {[
+            { cat: "trading",   label: "Trade Signal" },
+            { cat: "tp",        label: "Take Profit" },
+            { cat: "sl",        label: "Stop Loss" },
+            { cat: "news",      label: "Market News" },
+            { cat: "community", label: "Community" },
+            { cat: "risk",      label: "Risk & Wallet" },
+            { cat: "default",   label: "Analysis" },
+          ].map(({ cat, label }) => (
+            <button key={cat} onClick={async () => {
+              if (!("Notification" in window)) { alert("Notifications not supported in this browser."); return; }
+              if (Notification.permission !== "granted") {
+                const p = await Notification.requestPermission();
+                if (p !== "granted") { alert("Please allow notifications first, then tap again."); return; }
+              }
+              const src = PUSH_SOUND_MAP[cat] || PUSH_SOUND_MAP.default;
+              // 1. Play sound immediately so you hear it now
+              try { const a = new Audio(src); a.volume = 0.9; a.play().catch(() => {}); } catch {}
+              // 2. Show a real service-worker notification (same path as a server push)
+              try {
+                if ("serviceWorker" in navigator) {
+                  const reg = await navigator.serviceWorker.ready;
+                  await reg.showNotification(`RainX — ${label}`, {
+                    body: `Test notification for "${label}" category. Tap it to confirm sound on open.`,
+                    icon: "/favicon.svg",
+                    tag: `rainx-test-${cat}`,
+                    vibrate: [200, 100, 200],
+                    data: { url: "/", soundSrc: src, category: cat },
+                  });
+                }
+              } catch (e) { alert("Could not show notification: " + e.message); }
+            }} style={{
+              background: "transparent", color: T.gold,
+              border: `1.5px solid ${T.gold}`, borderRadius: 8,
+              padding: "6px 12px", fontFamily: FONT_HEAD,
+              fontWeight: 700, fontSize: 11, cursor: "pointer", marginBottom: 4,
+            }}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div style={{ marginTop: 10, fontSize: 10.5, color: T.muted, lineHeight: 1.6 }}>
+          Sound plays immediately + a banner notification appears. Tapping the banner when RainX is in the background also replays the sound.
+        </div>
+      </div>
       {/* Sound Picker — 7 categories with Preview buttons */}
       <SoundPickerCard />
     </div>

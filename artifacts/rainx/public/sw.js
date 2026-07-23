@@ -84,22 +84,35 @@ self.addEventListener("push", (event) => {
 });
 
 // ── Notification Click ─────────────────────────────────────────────────────
+// When the user taps a notification, focus or open the app and immediately
+// send a PLAY_SOUND message so the correct category sound plays even if the
+// app was fully closed when the notification arrived.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const targetUrl = event.notification.data?.url || "/";
+  const soundSrc  = event.notification.data?.soundSrc;
 
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (clients) => {
       // Focus existing RainX tab if open
       for (const client of clients) {
         if (client.url.includes(self.location.origin) && "focus" in client) {
           client.focus();
+          if (soundSrc) client.postMessage({ type: "PLAY_SOUND", soundSrc });
           if (targetUrl !== "/") client.navigate(targetUrl);
           return;
         }
       }
-      // Open new tab
-      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+      // Open new tab — sound will play via the PLAY_SOUND message listener once
+      // the app hydrates and registers its service-worker message handler.
+      if (self.clients.openWindow) {
+        const newClient = await self.clients.openWindow(targetUrl);
+        // Give the app ~1.5 s to register its message listener then play sound
+        if (newClient && soundSrc) {
+          await new Promise((r) => setTimeout(r, 1500));
+          newClient.postMessage({ type: "PLAY_SOUND", soundSrc });
+        }
+      }
     })
   );
 });
