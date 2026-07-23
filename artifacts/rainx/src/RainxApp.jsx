@@ -2310,7 +2310,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
           return (
             <button key={a.symbol} onClick={() => handleAssetSelect(a)}
               style={{ flexShrink:0, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", textAlign:"left" }}>
-              <div style={{ fontFamily:FONT_HEAD, fontSize:9, fontWeight:700, color:T.muted }}>{a.symbol}</div>
+              <div style={{ fontFamily:FONT_HEAD, fontSize:10, fontWeight:700, color:T.muted }}>{a.symbol}</div>
               <div style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:800, color:up ? "#1D6FE8" : T.rust, fontVariantNumeric:"tabular-nums" }}>{p.toFixed(Math.min(a.digits,2))}</div>
             </button>
           );
@@ -2440,8 +2440,8 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
                         : <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:10, color:active ? T.ink : T.muted }}>{i+1}</span>}
                     </div>
                     <div style={{ textAlign:"center" }}>
-                      <div style={{ fontFamily:FONT_HEAD, fontSize:9, fontWeight:700, color:done ? T.paper : active ? T.gold : T.muted, lineHeight:1.3 }}>{step.label}</div>
-                      <div style={{ fontSize:8.5, color:done ? T.sage : active ? T.muted : T.cardBorder, marginTop:2 }}>{done ? step.done : active ? "In progress" : "Pending"}</div>
+                      <div style={{ fontFamily:FONT_HEAD, fontSize:10, fontWeight:700, color:done ? T.paper : active ? T.gold : T.muted, lineHeight:1.3 }}>{step.label}</div>
+                      <div style={{ fontSize:9.5, color:done ? T.sage : active ? T.muted : T.cardBorder, marginTop:2 }}>{done ? step.done : active ? "In progress" : "Pending"}</div>
                     </div>
                   </div>
                   {/* Connector */}
@@ -2477,7 +2477,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
               { label:"Analysis Reason", val: null, wide:true },
             ].map((cell, i) => (
               <div key={i} style={{ background:T.ink, borderRadius:8, padding:"10px 10px", border:`1px solid ${T.cardBorder}` }}>
-                <div style={{ fontSize:9, color:T.muted, fontWeight:700, fontFamily:FONT_HEAD, marginBottom:4 }}>{cell.label.toUpperCase()}</div>
+                <div style={{ fontSize:10, color:T.muted, fontWeight:700, fontFamily:FONT_HEAD, marginBottom:4 }}>{cell.label.toUpperCase()}</div>
                 {cell.val || <div style={{ fontSize:10, color:T.muted, lineHeight:1.5 }}>{session.setup.reason}</div>}
               </div>
             ))}
@@ -2490,7 +2490,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
               { label:"", val: null },
             ].map((cell, i) => (
               <div key={i} style={{ background:T.ink, borderRadius:8, padding:"10px 10px", border:`1px solid ${T.cardBorder}` }}>
-                <div style={{ fontSize:9, color:T.muted, fontWeight:700, fontFamily:FONT_HEAD, marginBottom:4 }}>{cell.label.toUpperCase()}</div>
+                <div style={{ fontSize:10, color:T.muted, fontWeight:700, fontFamily:FONT_HEAD, marginBottom:4 }}>{cell.label.toUpperCase()}</div>
                 {cell.val}
               </div>
             ))}
@@ -2636,7 +2636,7 @@ function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }
                 <div style={{ fontSize: 10, fontWeight: 600, color: isUp ? T.sage : T.rust }}>
                   {isUp ? "▲" : "▼"} {Math.abs(changePct).toFixed(2)}%
                 </div>
-                <div style={{ fontSize: 9, color: open ? T.sage : T.rust, fontWeight: 500, marginTop: 1 }}>{open ? "Open" : "Closed"}</div>
+                <div style={{ fontSize: 10, color: open ? T.sage : T.rust, fontWeight: 500, marginTop: 1 }}>{open ? "Open" : "Closed"}</div>
                 <button
                   onClick={(e) => { e.stopPropagation(); setFullChartInst(i); }}
                   style={{ marginTop: 5, background: "transparent", border: `1px solid ${T.gold}55`, borderRadius: 6, padding: "3px 9px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 9.5, color: T.gold, cursor: "pointer" }}
@@ -2765,7 +2765,7 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         {[["Closed trades", rows.length], ["Wins", wins], ["Losses", losses], ["Net points", netPoints]].map(([l, v]) => (
           <div key={l} style={{ flex: 1, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 10, padding: 8, textAlign: "center" }}>
-            <div style={{ fontSize: 9, color: T.muted }}>{l}</div>
+            <div style={{ fontSize: 10, color: T.muted }}>{l}</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: T.paper }}>{v}</div>
           </div>
         ))}

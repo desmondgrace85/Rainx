@@ -367,7 +367,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
             <Avatar name={p?.display_name} size={24} avatarUrl={p?.avatar_url} />
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: T.paper }}>{p?.display_name || "user"}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: T.paper }}>{p?.display_name || "user"}</span>
                 <Badge isAdmin={p?.is_admin} badge={p?.badge} />
                 <span style={{ fontSize: 9.5, color: T.muted }}>· {timeAgo(c.created_at)}</span>
               </div>
@@ -442,7 +442,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <button onClick={() => onOpenProfile(post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: T.paper }}>{profile?.display_name || "user"}</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: T.paper }}>{profile?.display_name || "user"}</span>
           <Badge isAdmin={profile?.is_admin} badge={profile?.badge} isPro={profile?.isPro} />
           <span style={{ fontSize: 11, color: T.muted }}>{timeAgo(post.created_at)}</span>
         </button>
