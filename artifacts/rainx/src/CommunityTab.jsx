@@ -710,6 +710,8 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
   const [showGift, setShowGift] = useState(false);
   const [showFollowList, setShowFollowList] = useState(null);
   const [notifOn, setNotifOn] = useState(false);
+  const [showNotifSheet, setShowNotifSheet] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState({ posts: true, signals: true });
   const [mutualFollowers, setMutualFollowers] = useState([]);
 
   useEffect(() => {
@@ -755,12 +757,13 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
     }
   };
 
+  const toggleNotifPref = (key) => setNotifPrefs(prev => ({ ...prev, [key]: !prev[key] }));
+
   if (!profile || posts === null) return (
     <div style={{ padding: 24, color: T.muted, fontSize: 13, textAlign: "center" }}>Loading profile…</div>
   );
   const isOwnProfile = userId === account.id;
 
-  // Joined date from profile record
   const joinedLabel = profile.created_at ? (() => {
     const d = new Date(profile.created_at);
     if (isNaN(d)) return null;
@@ -770,9 +773,13 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
   const handle = profile.username || profile.display_name;
 
   return (
-    <div style={{ minHeight: "100%", background: T.ink, overflowY: "auto" }}>
-      <style>{"@keyframes pvSlideIn { from { transform:translateX(28px); opacity:0 } to { transform:translateX(0); opacity:1 } }"}</style>
+    <div style={{ minHeight:"100%", background:T.ink, overflowY:"auto" }}>
+      <style>{`
+        @keyframes pvSlideIn { from { transform:translateX(28px); opacity:0 } to { transform:translateX(0); opacity:1 } }
+        @keyframes sheetUp   { from { transform:translateY(100%) }            to { transform:translateY(0) } }
+      `}</style>
 
+      {/* ── Modals ── */}
       {showFollowList && (
         <FollowListModal userId={userId} type={showFollowList} onClose={() => setShowFollowList(null)} onOpenProfile={onOpenProfile} />
       )}
@@ -780,23 +787,70 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
         <GiftModal profile={profile} senderAccount={account} onClose={() => setShowGift(false)} />
       )}
 
-      {/* ── Sticky top nav ── */}
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px 10px", position:"sticky", top:0, zIndex:10, background:"rgba(15,14,11,0.94)", backdropFilter:"blur(8px)", borderBottom:`1px solid ${T.cardBorder}` }}>
-        <button onClick={onBack} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,0.07)", border:"none", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}>
-          <ArrowLeft size={18} color={T.paper} />
-        </button>
-        <div style={{ textAlign:"center", flex:1 }}>
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, lineHeight:1.2 }}>{profile.display_name}</div>
-          <div style={{ fontSize:11, color:T.muted, marginTop:1 }}>{counts.followers.toLocaleString()} followers</div>
+      {/* ── Notification bottom sheet ── */}
+      {showNotifSheet && !isOwnProfile && (
+        <div onClick={() => setShowNotifSheet(false)} style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(0,0,0,0.55)" }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ position:"absolute", bottom:0, left:0, right:0, background:T.card, borderRadius:"20px 20px 0 0", padding:"16px 20px 38px", animation:"sheetUp 0.28s ease" }}>
+            <div style={{ width:40, height:4, borderRadius:2, background:T.cardBorder, margin:"0 auto 18px" }} />
+            {/* Header */}
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
+              <div style={{ width:44, height:44, borderRadius:"50%", background:`${T.gold}18`, border:`1.5px solid ${T.gold}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <Bell size={20} color={T.gold} />
+              </div>
+              <div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.paper }}>Notifications</div>
+                <div style={{ fontSize:12, color:T.muted }}>@{handle}</div>
+              </div>
+            </div>
+            {/* Master toggle */}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingBottom:16, marginBottom:16, borderBottom:`1px solid ${T.cardBorder}` }}>
+              <div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14.5, color:T.paper }}>Enable notifications</div>
+                <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Get alerts for this user's activity</div>
+              </div>
+              <button onClick={() => setNotifOn(v => !v)}
+                style={{ width:46, height:27, borderRadius:14, background:notifOn ? T.gold : T.cardBorder, border:"none", cursor:"pointer", position:"relative", flexShrink:0, transition:"background 0.2s" }}>
+                <div style={{ position:"absolute", top:3, left:notifOn ? 22 : 3, width:21, height:21, borderRadius:"50%", background:T.paper, transition:"left 0.2s" }} />
+              </button>
+            </div>
+            {/* Per-type toggles (shown only when master is on) */}
+            {notifOn && [
+              { key:"posts",   label:"New Posts",        desc:"When they publish a new post" },
+              { key:"signals", label:"Trading Signals",  desc:"When they share a trading signal" },
+            ].map(({ key, label, desc }) => (
+              <div key={key} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingBottom:14, marginBottom:14, borderBottom:`1px solid ${T.cardBorder}66` }}>
+                <div>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:600, fontSize:13.5, color:T.paper }}>{label}</div>
+                  <div style={{ fontSize:12, color:T.muted }}>{desc}</div>
+                </div>
+                <button onClick={() => toggleNotifPref(key)}
+                  style={{ width:42, height:25, borderRadius:13, background:notifPrefs[key] ? T.gold : T.cardBorder, border:"none", cursor:"pointer", position:"relative", flexShrink:0 }}>
+                  <div style={{ position:"absolute", top:2.5, left:notifPrefs[key] ? 20 : 2.5, width:20, height:20, borderRadius:"50%", background:T.paper, transition:"left 0.18s" }} />
+                </button>
+              </div>
+            ))}
+            <button onClick={() => setShowNotifSheet(false)}
+              style={{ width:"100%", marginTop:6, background:`${T.gold}18`, border:`1px solid ${T.gold}55`, borderRadius:14, padding:"12px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.gold, cursor:"pointer" }}>
+              Done
+            </button>
+          </div>
         </div>
-        <div style={{ width:36, flexShrink:0 }} />
-      </div>
+      )}
 
-      {/* ── Banner + overlapping avatar ── */}
-      <div style={{ position:"relative", marginBottom:54, animation:"pvSlideIn 0.22s ease" }}>
-        <div style={{ width:"100%", height:100, background:`linear-gradient(135deg,#1a160d 0%,#231d10 55%,${T.gold}28 100%)` }} />
-        {/* Avatar overlaps banner */}
-        <div style={{ position:"absolute", bottom:-48, left:14, borderRadius:"50%", border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}`, overflow:"hidden", width:92, height:92, flexShrink:0 }}>
+      {/* ── Banner area — back arrow overlaid, NO top nav bar with email text ── */}
+      <div style={{ position:"relative", animation:"pvSlideIn 0.22s ease" }}>
+        {/* Floating back button over banner */}
+        <button onClick={onBack}
+          style={{ position:"absolute", top:12, left:12, zIndex:5, width:34, height:34, borderRadius:"50%", background:"rgba(15,14,11,0.6)", border:"none", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
+          <ArrowLeft size={17} color={T.paper} />
+        </button>
+
+        {/* Banner */}
+        <div style={{ width:"100%", height:110, background:`linear-gradient(135deg,#1a160d 0%,#231d10 55%,${T.gold}28 100%)` }} />
+
+        {/* Avatar overlaps banner bottom */}
+        <div style={{ position:"absolute", bottom:-48, left:14, borderRadius:"50%", border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}`, overflow:"hidden", width:92, height:92 }}>
           {profile.avatar_url
             ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
             : <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${T.gold},#8a6f34)`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, color:T.ink, fontSize:34 }}>
@@ -804,49 +858,48 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
               </div>
           }
         </div>
-        {/* Action buttons — right-aligned, vertically centred beside avatar bottom */}
+
+        {/* Action buttons: Gift → Bell → Follow — BELOW banner, right side */}
         {!isOwnProfile && (
-          <div style={{ position:"absolute", bottom:-26, right:14, display:"flex", alignItems:"center", gap:8 }}>
-            {/* Bell — notify toggle */}
-            <button
-              onClick={() => setNotifOn(v => !v)}
-              title={notifOn ? "Notifications on" : "Get notified"}
+          <div style={{ position:"absolute", bottom:-44, right:14, display:"flex", alignItems:"center", gap:8 }}>
+            {/* Gift (clean SVG, no emoji) */}
+            <button onClick={() => setShowGift(true)} title="Send a gift"
+              style={{ width:38, height:38, borderRadius:"50%", background:"none", border:`1.5px solid ${T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={T.paper} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 12 20 22 4 22 4 12" /><rect x="2" y="7" width="20" height="5" /><line x1="12" y1="22" x2="12" y2="7" />
+                <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+              </svg>
+            </button>
+            {/* Bell → opens notification sheet */}
+            <button onClick={() => setShowNotifSheet(true)} title="Notifications"
               style={{ width:38, height:38, borderRadius:"50%", background:"none", border:`1.5px solid ${notifOn ? T.gold : T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}>
               <Bell size={16} color={notifOn ? T.gold : T.paper} />
             </button>
             {/* Follow */}
-            <button
-              onClick={toggleFollow}
+            <button onClick={toggleFollow}
               style={{ display:"flex", alignItems:"center", gap:7, background: isFollowing ? "none" : `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: isFollowing ? T.paper : T.ink, border:`1.5px solid ${isFollowing ? T.cardBorder : "transparent"}`, borderRadius:22, padding:"9px 18px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
-              {isFollowing
-                ? <><UserCheck size={14} style={{ flexShrink:0 }} /> Following</>
-                : <><UserPlus size={14} style={{ flexShrink:0 }} /> Follow</>}
+              {isFollowing ? <><UserCheck size={14} /> Following</> : <><UserPlus size={14} /> Follow</>}
             </button>
           </div>
         )}
       </div>
 
+      {/* Spacer for avatar + button overlap (avatar extends 48px below banner) */}
+      <div style={{ height:60 }} />
+
       {/* ── Profile info ── */}
       <div style={{ padding:"0 16px 8px" }}>
-        {/* Name + badge */}
         <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:2, flexWrap:"wrap" }}>
           <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.paper, lineHeight:1.25 }}>{profile.display_name}</span>
           <Badge isAdmin={profile.is_admin} badge={profile.badge} />
         </div>
-        {/* @handle */}
         <div style={{ fontSize:13.5, color:T.muted, marginBottom:8 }}>@{handle}</div>
-        {/* Bio */}
-        {profile.bio && (
-          <div style={{ fontSize:13.5, color:T.paper, marginBottom:10, lineHeight:1.65 }}>{profile.bio}</div>
-        )}
-        {/* Joined date */}
+        {profile.bio && <div style={{ fontSize:13.5, color:T.paper, marginBottom:10, lineHeight:1.65 }}>{profile.bio}</div>}
         {joinedLabel && (
           <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:13, color:T.muted, marginBottom:10 }}>
-            <span style={{ fontSize:14 }}>📅</span>
-            <span>{joinedLabel}</span>
+            <span style={{ fontSize:14 }}>📅</span><span>{joinedLabel}</span>
           </div>
         )}
-        {/* Following / Followers — clickable */}
         <div style={{ display:"flex", gap:20, marginBottom:mutualFollowers.length > 0 ? 10 : 14 }}>
           <button onClick={() => setShowFollowList("following")} style={{ background:"none", border:"none", cursor:"pointer", padding:0, textAlign:"left" }}>
             <strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{counts.following.toLocaleString()}</strong>
@@ -857,17 +910,12 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
             <span style={{ fontSize:14, color:T.muted }}> Followers</span>
           </button>
         </div>
-
-        {/* Mutual followers row — only when there are actual mutuals */}
         {mutualFollowers.length > 0 && (
           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, fontSize:12.5, color:T.muted }}>
             <div style={{ display:"flex", alignItems:"center", flexShrink:0 }}>
               {mutualFollowers.slice(0, 3).map((f, i) => (
                 <div key={f.id} style={{ width:22, height:22, borderRadius:"50%", marginLeft:i > 0 ? -7 : 0, border:`1.5px solid ${T.ink}`, overflow:"hidden", background:`linear-gradient(135deg,${T.gold},#8a6f34)`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:700, fontSize:8, color:T.ink, flexShrink:0 }}>
-                  {f.avatar_url
-                    ? <img src={f.avatar_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
-                    : (f.display_name || "?")[0]?.toUpperCase()
-                  }
+                  {f.avatar_url ? <img src={f.avatar_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" /> : (f.display_name || "?")[0]?.toUpperCase()}
                 </div>
               ))}
             </div>
@@ -877,43 +925,23 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
             </span>
           </div>
         )}
-
-        {/* Message button (full-width) + Gift icon — other users only */}
+        {/* Message button — other users only */}
         {!isOwnProfile && (
-          <div style={{ display:"flex", gap:8, marginBottom:18, alignItems:"center" }}>
-            <button
-              onClick={() => onDmUser && onDmUser(profile)}
-              style={{ flex:1, background:"none", border:`1.5px solid ${T.cardBorder}`, borderRadius:24, padding:"11px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:14.5, color:T.paper, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, boxSizing:"border-box" }}>
-              <MessageCircle size={17} color={T.paper} /> Message
-            </button>
-            <button
-              onClick={() => setShowGift(true)}
-              style={{ width:42, height:42, borderRadius:"50%", background:"none", border:`1.5px solid ${T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0, fontSize:18 }}
-              title="Send a gift">
-              🎁
-            </button>
-          </div>
+          <button onClick={() => onDmUser && onDmUser(profile)}
+            style={{ width:"100%", background:"none", border:`1.5px solid ${T.cardBorder}`, borderRadius:24, padding:"11px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:14.5, color:T.paper, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, boxSizing:"border-box", marginBottom:18 }}>
+            <MessageCircle size={17} color={T.paper} /> Message
+          </button>
         )}
       </div>
 
-      {/* Divider + Posts tab */}
-      <div style={{ borderTop:`1px solid ${T.cardBorder}` }}>
-        <div style={{ padding:"12px 16px 0" }}>
-          <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper, borderBottom:`2px solid ${T.gold}`, paddingBottom:10, display:"inline-block" }}>Posts</span>
-        </div>
+      {/* ── Posts ── */}
+      <div style={{ borderTop:`1px solid ${T.cardBorder}`, padding:"12px 16px 0" }}>
+        <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper, borderBottom:`2px solid ${T.gold}`, paddingBottom:10, display:"inline-block" }}>Posts</span>
       </div>
-
-      {/* Posts */}
       {posts.length === 0 ? (
         <div style={{ fontSize:13, color:T.muted, padding:"32px 0", textAlign:"center" }}>No posts yet.</div>
       ) : (
-        <ProfileFeed
-          posts={posts}
-          account={account}
-          profileEntry={profile}
-          onOpenProfile={onOpenProfile}
-          onDmUser={onDmUser}
-        />
+        <ProfileFeed posts={posts} account={account} profileEntry={profile} onOpenProfile={onOpenProfile} onDmUser={onDmUser} />
       )}
     </div>
   );
