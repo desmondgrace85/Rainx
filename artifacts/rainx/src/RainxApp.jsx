@@ -537,6 +537,7 @@ async function recordActivity(userId, action, meta) {
 const TIMEFRAMES = [
   { key: "15m", td: "15min", label: "15 Minute" },
   { key: "1h", td: "1h", label: "1 Hour" },
+  { key: "4h", td: "4h", label: "4 Hour" },
 ];
 
 async function saveTradeHistory(account, inst, tf, sig, result, points) {
@@ -861,7 +862,7 @@ const SUB_PLANS = [
       { text: "Everything in Weekly" },
       { text: "Golden Verification Badge",       sub: "Exclusive premium tier recognition" },
       { text: "Scalping Setups",                 sub: "Advanced short-term trade setups" },
-      { text: "Priority Signal Alerts",          sub: "Telegram + in-app push notifications" },
+      { text: "Priority Signal Alerts",          sub: "In-app push notifications" },
       { text: "Exclusive Market Reports",        sub: "Weekly professional analysis reports" },
       { text: "Cancel Anytime",                  sub: "No long-term commitment. Cancel anytime." },
     ],
@@ -1154,10 +1155,7 @@ function MainAppContent({ account, onLogout }) {
   const addActiveMarket = useCallback((symbol) => {
     setActiveMarkets(prev => {
       if (prev.includes(symbol)) return prev;
-      if (prev.length >= MAX_ACTIVE_MARKETS) {
-        alert("You can select up to 3 markets. Remove one to add another.");
-        return prev;
-      }
+      if (prev.length >= MAX_ACTIVE_MARKETS) return prev; // Replace flow handled in AddMarketSheet
       const next = [...prev, symbol];
       lsSet("rainx-active-markets", JSON.stringify(next));
       return next;
@@ -1184,19 +1182,8 @@ function MainAppContent({ account, onLogout }) {
     }
   }, [lastMarketReset]);
 
-  // ─── Auto-restore session for persisted active markets ─────────────────
-  const didAutoRestore = React.useRef(false);
-  useEffect(() => {
-    if (didAutoRestore.current || activeMarkets.length === 0 || session) return;
-    didAutoRestore.current = true;
-    const firstSym = activeMarkets[0];
-    const asset = ALL_ASSETS.find(a => a.symbol === firstSym);
-    if (asset) {
-      setActiveSymbol(firstSym);
-      if (isMarketOpen(asset.cls)) startAnalysisSession(asset);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeMarkets.length]);
+  // Auto-restore removed: on page refresh, no market is auto-selected or auto-analyzed.
+  // The user must manually select a market to begin analysis.
 
   // ─── Analysis session step progression engine
   useEffect(() => {
@@ -1240,15 +1227,8 @@ function MainAppContent({ account, onLogout }) {
           newOverlays.push({ _step:3, type:"entry_zone", priceLow: price - vol*0.5, priceHigh: price + vol*0.5 });
           newOverlays.push({ _step:3, type:"breakout",   priceLow: price + vol*0.4, priceHigh: price + vol*1.2 });
         } else if (prev.stepIndex === 4) {
-          // Step 4: Full trade setup — TP/SL + direction arrow + projection
-          const slDist  = vol * 2.5;
-          const tp1Dist = vol * 3.8;
-          const tp2Dist = vol * 6.2;
-          newOverlays.push({ _step:4, type:"sl_level",        price: price - slDist });
-          newOverlays.push({ _step:4, type:"tp_level",        price: price + tp1Dist, label:"TP 1" });
-          newOverlays.push({ _step:4, type:"tp_level",        price: price + tp2Dist, label:"TP 2" });
-          newOverlays.push({ _step:4, type:"direction_arrow", from:  price,           target: price + tp1Dist });
-          newOverlays.push({ _step:4, type:"projection",      target: price + tp2Dist });
+          // Step 4: Awaiting real signal from backend — no placeholder SL/TP shown.
+          // Real trade overlays are only set when checkCandle returns confidence ≥ 65%.
         }
         // Always show current price
         newOverlays = newOverlays.filter(o => o.type !== "current_price");
@@ -1327,7 +1307,7 @@ function MainAppContent({ account, onLogout }) {
 
   const pushNotification = useCallback(async (n) => {
     // Subscribers do NOT receive trading signal / economic news push notifications
-    // (signals are shown in-app on the chart; Telegram is used for push alerts)
+    // (signals are shown in-app on the chart; push notifications are sent for confirmed signals)
     const tradingKw = ["buy","sell","take profit","stop loss"," tp "," sl ","entry","cpi","nfp","fomc","reversal","signal"];
     const isTradingNotif = ["signal","update","warning","news"].includes(n.type) ||
       tradingKw.some(kw => (n.title||"").toLowerCase().includes(kw) || (n.body||"").toLowerCase().includes(kw));
@@ -1540,8 +1520,8 @@ function MainAppContent({ account, onLogout }) {
 
   const allCombos = [];
   INSTRUMENTS.forEach((inst) => {
-    // Only scan markets the user has explicitly activated (or all if none active yet)
-    if (activeMarkets.length === 0 || activeMarkets.includes(inst.symbol)) {
+    // Only scan markets the user has explicitly activated
+    if (activeMarkets.includes(inst.symbol)) {
       TIMEFRAMES.forEach((tf) => allCombos.push({ inst, tf }));
     }
   });
@@ -2249,15 +2229,156 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Add Market bottom sheet
+// Add Market bottom sheet — supports add, replace when full, and manage active
 // ─────────────────────────────────────────────────────────────────────────────
-function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets = [], maxActiveMarkets = 3 }) {
+function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets = [], maxActiveMarkets = 3, onRemoveMarket }) {
   const [category, setCategory] = useState(null);
+  // mode: null = category grid | "manage" = replace/delete active | "pick_replacement" = pick who to replace
+  const [mode, setMode] = useState(null);
+  const [managedAsset, setManagedAsset] = useState(null);   // asset being managed or new asset wanting a slot
   const atLimit = activeMarkets.length >= maxActiveMarkets;
+
+  // ── Manage already-active market: Replace or Delete ─────────────────────
+  if (mode === "manage" && managedAsset) {
+    return (
+      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
+        <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
+          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
+          <div style={{ padding:"0 20px 20px" }}>
+            <button onClick={() => { setMode(null); setManagedAsset(null); }} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
+              <ChevronLeft size={16} /><span style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:700 }}>Back</span>
+            </button>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:3 }}>{managedAsset.symbol}</div>
+            <div style={{ fontSize:12, color:T.muted, marginBottom:22 }}>{managedAsset.name} · Currently active</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              <button onClick={() => { setMode("pick_category_for_replace"); setCategory(null); }} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"16px", textAlign:"left", cursor:"pointer" }}>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Replace with another market</div>
+                <div style={{ fontSize:12, color:T.muted, marginTop:3 }}>Swap {managedAsset.symbol} with a different market</div>
+              </button>
+              <button onClick={() => { onRemoveMarket(managedAsset.symbol); onClose(); }} style={{ background:`${T.rust}12`, border:`1px solid ${T.rust}44`, borderRadius:12, padding:"16px", textAlign:"left", cursor:"pointer" }}>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.rust }}>Remove market</div>
+                <div style={{ fontSize:12, color:T.muted, marginTop:3 }}>Stop analyzing {managedAsset.symbol}</div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Pick new replacement market (category → asset) ───────────────────────
+  if (mode === "pick_category_for_replace" || mode === "pick_new_when_full") {
+    const backMode = mode;
+    if (!category) {
+      return (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
+          <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
+            <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
+            <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:10 }}>
+              <button onClick={() => { setMode(backMode === "pick_category_for_replace" ? "manage" : null); }} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
+              <div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>
+                  {backMode === "pick_category_for_replace" ? `Replace ${managedAsset?.symbol}` : "Select replacement market"}
+                </div>
+                <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Choose a category</div>
+              </div>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 16px" }}>
+              {ASSET_CATALOG.map(cat => (
+                <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"18px 14px", textAlign:"left", cursor:"pointer" }}>
+                  <div style={{ fontSize:22, marginBottom:8 }}>{cat.emoji}</div>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{cat.label}</div>
+                  <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>{cat.assets.length} markets</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
+        <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
+          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
+          <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:12 }}>
+            <button onClick={() => setCategory(null)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
+            <div>
+              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>{category.label}</div>
+              <div style={{ fontSize:12, color:T.muted }}>
+                {backMode === "pick_category_for_replace" ? `Replacing ${managedAsset?.symbol}` : "Pick market to add"}
+              </div>
+            </div>
+          </div>
+          <div style={{ padding:"0 16px", display:"flex", flexDirection:"column", gap:8 }}>
+            {category.assets.map(asset => {
+              const alreadyActive = activeMarkets.includes(asset.symbol);
+              const isSelf = asset.symbol === managedAsset?.symbol;
+              if (isSelf) return null;
+              return (
+                <button key={asset.symbol} disabled={alreadyActive} onClick={() => {
+                  if (backMode === "pick_category_for_replace") {
+                    onRemoveMarket(managedAsset.symbol);
+                    onSelect(asset);
+                  } else {
+                    // pick_new_when_full: need to pick which to remove
+                    setManagedAsset(asset); // new asset wanting a slot
+                    setMode("pick_who_to_replace");
+                    setCategory(null);
+                  }
+                }} style={{ background:T.card, border:`1px solid ${alreadyActive ? T.gold : T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:alreadyActive ? "default" : "pointer", opacity:alreadyActive ? 0.45 : 1 }}>
+                  <div style={{ textAlign:"left" }}>
+                    <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{asset.symbol}</div>
+                    <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{asset.name}</div>
+                  </div>
+                  {alreadyActive
+                    ? <div style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.gold}22`, borderRadius:6, padding:"3px 8px" }}>Active</div>
+                    : <ChevronRight size={16} color={T.muted} />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Pick which active market to evict (when 3 are full and user wants a 4th) ─
+  if (mode === "pick_who_to_replace" && managedAsset) {
+    return (
+      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
+        <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
+          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
+          <div style={{ padding:"0 20px 20px" }}>
+            <button onClick={() => setMode("pick_new_when_full")} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
+              <ChevronLeft size={16} /><span style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:700 }}>Back</span>
+            </button>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:3 }}>Replace a Market</div>
+            <div style={{ fontSize:12, color:T.muted, marginBottom:18 }}>Choose which market to replace with <strong style={{ color:T.paper }}>{managedAsset.symbol}</strong></div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {activeMarkets.map(sym => {
+                const a = ALL_ASSETS.find(x => x.symbol === sym);
+                if (!a) return null;
+                return (
+                  <button key={sym} onClick={() => { onRemoveMarket(sym); onSelect(managedAsset); }} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
+                    <div style={{ textAlign:"left" }}>
+                      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{a.symbol}</div>
+                      <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{a.name}</div>
+                    </div>
+                    <div style={{ fontSize:10, color:T.rust, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.rust}22`, borderRadius:6, padding:"3px 8px" }}>Replace</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Default: category grid + asset list ─────────────────────────────────
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
-        {/* Handle */}
         <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}>
           <div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} />
         </div>
@@ -2271,8 +2392,8 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
               <button onClick={onClose} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><X size={20} /></button>
             </div>
             {atLimit && (
-              <div style={{ margin:"0 16px 14px", background:`${T.rust}18`, border:`1px solid ${T.rust}44`, borderRadius:10, padding:"10px 14px", fontSize:12, color:T.rust, fontFamily:FONT_HEAD, fontWeight:600 }}>
-                Maximum {maxActiveMarkets} active markets reached. Close a market to add another.
+              <div style={{ margin:"0 16px 14px", background:`${T.gold}11`, border:`1px solid ${T.gold}44`, borderRadius:10, padding:"10px 14px", fontSize:12, color:T.gold, fontFamily:FONT_HEAD, fontWeight:600 }}>
+                3 markets active. Tap an active market below to replace or remove it.
               </div>
             )}
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 16px" }}>
@@ -2297,16 +2418,27 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
             <div style={{ padding:"0 16px", display:"flex", flexDirection:"column", gap:8 }}>
               {category.assets.map(asset => {
                 const alreadyActive = activeMarkets.includes(asset.symbol);
-                const blocked = atLimit && !alreadyActive;
                 return (
-                  <button key={asset.symbol} onClick={() => { if (!blocked) onSelect(asset); }} style={{ background:T.card, border:`1px solid ${alreadyActive ? T.gold : T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:blocked ? "not-allowed" : "pointer", opacity:blocked ? 0.45 : 1 }}>
+                  <button key={asset.symbol} onClick={() => {
+                    if (alreadyActive) {
+                      setManagedAsset(asset);
+                      setMode("manage");
+                    } else if (atLimit) {
+                      setManagedAsset(asset);
+                      setMode("pick_who_to_replace");
+                    } else {
+                      onSelect(asset);
+                    }
+                  }} style={{ background:T.card, border:`1px solid ${alreadyActive ? T.gold : T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
                     <div style={{ textAlign:"left" }}>
                       <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{asset.symbol}</div>
                       <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{asset.name}</div>
                     </div>
                     {alreadyActive
-                      ? <div style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.gold}22`, borderRadius:6, padding:"3px 8px" }}>Active</div>
-                      : <ChevronRight size={16} color={blocked ? T.cardBorder : T.muted} />}
+                      ? <div style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.gold}22`, borderRadius:6, padding:"3px 8px" }}>Active ›</div>
+                      : (atLimit
+                        ? <div style={{ fontSize:10, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600, background:`${T.cardBorder}`, borderRadius:6, padding:"3px 8px" }}>Replace</div>
+                        : <ChevronRight size={16} color={T.muted} />)}
                   </button>
                 );
               })}
@@ -2452,7 +2584,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
           // Show active watched markets; fall back to defaults if none set yet
           const watchedAssets = activeMarkets.length > 0
             ? activeMarkets.filter(s => s !== primarySym).map(s => ALL_ASSETS.find(a => a.symbol === s)).filter(Boolean)
-            : ALL_ASSETS.filter(a => ["XAUUSD","BTCUSD","ETHUSD"].includes(a.symbol) && a.symbol !== primarySym).slice(0,2);
+            : [];
           const tabs = [primaryAsset, ...watchedAssets].filter(Boolean).slice(0, 4);
           return tabs.map(a => {
             const active = a.symbol === primarySym;
@@ -2510,8 +2642,8 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
         {/* Empty state: only when zero markets selected */}
         {activeMarkets.length === 0 && !session && (
           <div style={{ position:"absolute", inset:0, zIndex:5, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:T.ink + "cc", borderRadius:14 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:4 }}>Choose a Market</div>
-            <div style={{ fontSize:12, color:T.muted, marginBottom:16, textAlign:"center", maxWidth:200 }}>Select a market and let Raina AI study it for you</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:4 }}>Select a market</div>
+            <div style={{ fontSize:12, color:T.muted, marginBottom:16, textAlign:"center", maxWidth:200 }}>You can select up to 3 markets per day.</div>
             <button onClick={() => setShowAddMarket(true)} style={{ background:T.gold, color:T.ink, border:"none", borderRadius:10, padding:"10px 22px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, cursor:"pointer" }}>+ Add Market</button>
           </div>
         )}
@@ -2718,7 +2850,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
           </div>
         </div>
       )}
-      {showAddMarket && <AddMarketSheet onClose={() => setShowAddMarket(false)} onSelect={handleAssetSelect} activeMarkets={activeMarkets} maxActiveMarkets={maxActiveMarkets} />}
+      {showAddMarket && <AddMarketSheet onClose={() => setShowAddMarket(false)} onSelect={handleAssetSelect} activeMarkets={activeMarkets} maxActiveMarkets={maxActiveMarkets} onRemoveMarket={removeActiveMarket} />}
       {showChangeDlg && <ChangeMarketDialog current={session?.symbol} onConfirm={handleConfirmChange} onCancel={() => { setShowChangeDlg(false); setPendingChange(null); }} />}
     </div>
   );
@@ -4460,20 +4592,22 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   if (morePage === "telegram") return (
     <MoreSubScreen onBack={() => setMorePage(null)}>
       <div style={{ padding: 16 }}>
-        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: 22, marginBottom: 14 }}>
-          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#229ED9", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-            <Send size={22} color="#fff" />
+        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: 22, marginBottom: 14, textAlign: "center" }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: T.cardBorder, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16, margin: "0 auto 16px" }}>
+            <Send size={22} color={T.muted} />
           </div>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper, marginBottom: 8 }}>Connect to Telegram</div>
-          <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.8, marginBottom: 18 }}>
-            Receive live signals directly in Telegram. Open the bot, tap <strong style={{ color: T.paper }}>Start</strong>, choose <strong style={{ color: T.paper }}>Log in</strong>, and enter your RainX email and password to link your account.
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper, marginBottom: 8 }}>Telegram Bot Discontinued</div>
+          <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.8 }}>
+            The Raina AI Telegram bot has been discontinued. All signals are now delivered exclusively through this platform — live, in real time, directly on your screen.
           </div>
-          <a href="https://t.me/RainaAIBot" target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: "#229ED9", color: "#fff", border: "none", borderRadius: 12, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: "pointer", textDecoration: "none", boxSizing: "border-box" }}>
-            <Send size={16} /> Open @RainaAIBot
-          </a>
         </div>
-        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 16px" }}>
-          <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.7 }}>Already linked? Your signals will arrive automatically when confidence ≥ 65%.</div>
+        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px" }}>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 6 }}>How to receive signals</div>
+          <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.8 }}>
+            1. Go to the <strong style={{ color: T.paper }}>Home</strong> tab and tap <strong style={{ color: T.paper }}>+ Add Market</strong>.<br />
+            2. Select up to 3 markets per day.<br />
+            3. Raina AI will analyze continuously and alert you here when a high-confidence setup is found.
+          </div>
         </div>
       </div>
     </MoreSubScreen>
@@ -4685,7 +4819,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           onPress={() => setMorePage("scalping")}
         />
         <MoreRowDivider />
-        <MoreRow icon={Send} title="Connect Telegram" onPress={() => setMorePage("telegram")} />
+        <MoreRow icon={Send} title="Signals (Web Only)" subtitle="Telegram bot discontinued" onPress={() => setMorePage("telegram")} />
         <MoreRowDivider />
         <MoreRow icon={Bell} title="Notifications" subtitle="Alerts, sounds, categories" onPress={() => setMorePage("notifications")} />
       </MoreSection>
