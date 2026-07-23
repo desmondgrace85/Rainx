@@ -3592,6 +3592,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [country, setCountry] = useState("");
   const [profileFollowers, setProfileFollowers] = useState(0);
   const [profileFollowing, setProfileFollowing] = useState(0);
+  const [dobPrivacy, setDobPrivacy] = useState(() => lsGet("rainx-dob-privacy") || "daymonth");
+  const [mutualFollowers, setMutualFollowers] = useState([]);
   useEffect(() => {
     if (!account?.id || morePage !== "profile") return;
     supabase.from("profiles").select("full_name,country,location,date_of_birth,education,certifications").eq("id",account.id).single().then(({data})=>{
@@ -3600,6 +3602,19 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
     supabase.from("follows").select("*",{count:"exact",head:true}).eq("followed_id",account.id).then(({count})=>setProfileFollowers(count||0), ()=>{});
     supabase.from("follows").select("*",{count:"exact",head:true}).eq("follower_id",account.id).then(({count})=>setProfileFollowing(count||0), ()=>{});
+
+    // Mutual followers: people who follow me AND whom I follow
+    supabase.from("follows").select("follower_id").eq("followed_id", account.id).then(({ data: theyFollowMe }) => {
+      const theirIds = (theyFollowMe || []).map(r => r.follower_id);
+      if (!theirIds.length) { setMutualFollowers([]); return; }
+      supabase.from("follows").select("followed_id").eq("follower_id", account.id).then(({ data: iFollow }) => {
+        const iFollowIds = new Set((iFollow || []).map(r => r.followed_id));
+        const mutualIds = theirIds.filter(id => iFollowIds.has(id));
+        if (!mutualIds.length) { setMutualFollowers([]); return; }
+        supabase.from("profiles").select("id,username,avatar_url,email").in("id", mutualIds.slice(0, 5))
+          .then(({ data }) => setMutualFollowers(data || [])).catch(() => {});
+      }).catch(() => {});
+    }).catch(() => {});
   },[account?.id, morePage]);
 
 
@@ -3744,68 +3759,166 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     </div>
   );
 
-  if (morePage === "profile") return (
-    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Profile" subtitle="Your public RainX identity">
-      <div style={{ padding: 16 }}>
-        {/* Avatar + social counts */}
-        <div style={{ padding:20, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:16, marginBottom:16, textAlign:"center" }}>
-          <div style={{ marginBottom:10 }}>
+  if (morePage === "profile") {
+    // Derive joined date from auth session timestamp
+    const joinedRaw = account?.joinedAt || account?.created_at;
+    const joinedLabel = joinedRaw ? (() => {
+      const d = new Date(joinedRaw);
+      if (isNaN(d)) return null;
+      return `Joined ${d.toLocaleString("default", { month: "long" })}, ${d.getFullYear()}`;
+    })() : null;
+
+    // Format DOB based on selected privacy
+    const dobDisplay = (() => {
+      if (!dob) return null;
+      const d = new Date(dob);
+      if (isNaN(d)) return null;
+      const month = d.toLocaleString("default", { month: "long" });
+      const day = d.getDate();
+      const year = d.getFullYear();
+      if (dobPrivacy === "everyone") return `${month} ${day}, ${year}`;
+      if (dobPrivacy === "daymonth" || dobPrivacy === "friends") return `${month} ${day}`;
+      return null;
+    })();
+
+    return (
+      <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Profile" subtitle="Your public RainX identity">
+        {/* ── Banner + overlapping avatar ── */}
+        <div style={{ position:"relative", marginBottom:56 }}>
+          <div style={{ width:"100%", height:96, background:`linear-gradient(135deg,#1a160d 0%,#231d10 55%,${T.gold}28 100%)`, borderBottom:`1px solid ${T.cardBorder}` }} />
+          {/* Avatar — overlaps banner */}
+          <div style={{ position:"absolute", bottom:-48, left:16 }}>
             {avatarUrl
-              ? <img src={avatarUrl} alt="avatar" style={{ width:76, height:76, borderRadius:"50%", objectFit:"cover", border:`3px solid ${T.gold}` }} />
-              : <div style={{ width:76, height:76, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"inline-flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:26, border:`3px solid ${T.gold}` }}>{profileInitial}</div>
+              ? <img src={avatarUrl} alt="avatar" style={{ width:90, height:90, borderRadius:"50%", objectFit:"cover", border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}` }} />
+              : <div style={{ width:90, height:90, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:32, border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}` }}>{profileInitial}</div>
             }
           </div>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6, marginBottom:2 }}>
-            <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>{fullName||username||account?.email}</span>
-            <VerifBadgeIcon size={17} />
+          {/* Action buttons — top-right, aligned with avatar bottom */}
+          <div style={{ position:"absolute", bottom:-26, right:16, display:"flex", alignItems:"center", gap:8 }}>
+            {/* Gift button */}
+            <button style={{ width:38, height:38, borderRadius:"50%", background:"none", border:`1.5px solid ${T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}>
+              <Gift size={16} color={T.paper} />
+            </button>
+            {/* Notification bell */}
+            <button onClick={() => setMorePage("notifications")} style={{ width:38, height:38, borderRadius:"50%", background:"none", border:`1.5px solid ${T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}>
+              <Bell size={16} color={T.paper} />
+            </button>
+            {/* Edit Photo — styled as primary action */}
+            <label style={{ display:"flex", alignItems:"center", gap:7, background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, borderRadius:22, padding:"9px 17px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:12.5, cursor:"pointer", lineHeight:1, flexShrink:0, userSelect:"none" }}>
+              <User size={13} color={T.ink} style={{ flexShrink:0 }} />
+              {uploadingAvatar ? "Uploading…" : "Edit Photo"}
+              <input type="file" accept="image/*" onChange={e => e.target.files[0] && uploadAvatar(e.target.files[0])} style={{ display:"none" }} disabled={uploadingAvatar} />
+            </label>
           </div>
-          {username && <div style={{ fontSize:12, color:T.muted, marginBottom:6 }}>@{username}</div>}
-          {bio && <div style={{ fontSize:13, color:T.paper, marginBottom:8, lineHeight:1.6 }}>{bio}</div>}
-          {location && <div style={{ fontSize:12, color:T.muted, marginBottom:10 }}>📍 {location}</div>}
-          <div style={{ display:"flex", justifyContent:"center", gap:36, marginBottom:12 }}>
-            <div style={{ textAlign:"center" }}>
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.paper }}>{profileFollowers}</div>
-              <div style={{ fontSize:11, color:T.muted }}>Followers</div>
-            </div>
-            <div style={{ textAlign:"center" }}>
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.paper }}>{profileFollowing}</div>
-              <div style={{ fontSize:11, color:T.muted }}>Following</div>
-            </div>
-          </div>
-          <label style={{ display:"inline-block", background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:8, padding:"6px 14px", color:T.goldBright, fontSize:12, cursor:"pointer", fontFamily:FONT_HEAD, fontWeight:600 }}>
-            {uploadingAvatar?"Uploading…":"Change Photo"}
-            <input type="file" accept="image/*" onChange={e=>e.target.files[0]&&uploadAvatar(e.target.files[0])} style={{ display:"none" }} disabled={uploadingAvatar} />
-          </label>
         </div>
-        {/* Editable fields */}
-        {[
-          {label:"Full Name",val:fullName,set:setFullName,ph:"Your full name"},
-          {label:"Username",val:username,set:setUsername,ph:"@handle"},
-          {label:"Bio",val:bio,set:setBio,ph:"Say something about yourself"},
-          {label:"Country",val:country,set:setCountry,isSelect:true},
-          {label:"Location",val:location,set:setLocation,ph:"City"},
-          {label:"Date of Birth",val:dob,set:setDob,ph:"YYYY-MM-DD",type:"date"},
-          {label:"Education",val:education,set:setEducation,ph:"University or degree"},
-          {label:"Certifications",val:certifications,set:setCertifications,ph:"Trading certs, licenses…"},
-        ].map(({label,val,set,ph,type,isSelect})=>(
-          <div key={label} style={{ marginBottom:12 }}>
-            <label style={{ fontSize:11, color:T.muted, fontWeight:600, display:"block", marginBottom:4 }}>{label}</label>
-            {isSelect
-              ? <select value={val} onChange={e=>set(e.target.value)} style={{ ...getInputStyle(), width:"100%", appearance:"none", WebkitAppearance:"none" }}><option value="">Select country…</option>{COUNTRIES.map(c=><option key={c} value={c}>{c}</option>)}</select>
-              : <input type={type||"text"} value={val} onChange={e=>set(e.target.value)} placeholder={ph} style={{ ...getInputStyle(), width:"100%" }} />
-            }
+
+        {/* ── Profile info ── */}
+        <div style={{ padding:"0 16px 6px" }}>
+          {/* Name + badge */}
+          <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
+            <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.paper, lineHeight:1.2 }}>{fullName || username || account?.email}</span>
+            <VerifBadgeIcon size={18} />
           </div>
-        ))}
-        {profileMsg && <div style={{ fontSize:11, color:profileMsg.startsWith("Saved")?T.sage:T.rust, marginBottom:10 }}>{profileMsg}</div>}
-        <button onClick={saveProfileExtended} disabled={savingProfile} style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, cursor:"pointer" }}>
-          {savingProfile?"Saving…":"Save Profile"}
-        </button>
-        <button onClick={() => onLogoutConfirm && onLogoutConfirm()} style={{ width:"100%", marginTop:10, background:"none", border:`1px solid rgba(176,96,74,0.4)`, borderRadius:12, padding:"12px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.rust, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
-          <LogOut size={15} /> Log out
-        </button>
-      </div>
-    </MoreSubScreen>
-  );
+          {/* Username */}
+          {username && <div style={{ fontSize:13.5, color:T.muted, marginBottom:7 }}>@{username}</div>}
+          {/* Bio */}
+          {bio && <div style={{ fontSize:13.5, color:T.paper, marginBottom:9, lineHeight:1.65 }}>{bio}</div>}
+          {/* Meta row: location · joined · dob */}
+          <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:"4px 14px", marginBottom:9 }}>
+            {location && <span style={{ fontSize:12.5, color:T.muted }}>📍 {location}</span>}
+            {joinedLabel && (
+              <span style={{ display:"flex", alignItems:"center", gap:4, fontSize:12.5, color:T.muted }}>
+                <CalendarIcon size={12} color={T.muted} />{joinedLabel}
+              </span>
+            )}
+            {dobDisplay && <span style={{ fontSize:12.5, color:T.muted }}>🎂 {dobDisplay}</span>}
+          </div>
+
+          {/* DOB privacy selector — only when DOB is set */}
+          {dob && (
+            <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:6, marginBottom:11 }}>
+              <span style={{ fontSize:10.5, color:T.muted, fontWeight:600, marginRight:2 }}>DOB visibility:</span>
+              {[["daymonth","Day & Month"],["everyone","Full Date"],["friends","Friends"]].map(([v, label]) => (
+                <button key={v} onClick={() => { setDobPrivacy(v); lsSet("rainx-dob-privacy", v); }}
+                  style={{ fontSize:10.5, padding:"3px 9px", borderRadius:10, border:`1px solid ${dobPrivacy===v ? T.gold : T.cardBorder}`, background:dobPrivacy===v ? `${T.gold}22` : "none", color:dobPrivacy===v ? T.goldBright : T.muted, cursor:"pointer", fontFamily:FONT_HEAD, fontWeight:600 }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Following / Followers */}
+          <div style={{ display:"flex", gap:20, marginBottom:10 }}>
+            <span style={{ fontSize:14, color:T.paper }}>
+              <strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{profileFollowing}</strong>
+              <span style={{ color:T.muted }}> Following</span>
+            </span>
+            <span style={{ fontSize:14, color:T.paper }}>
+              <strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{profileFollowers}</strong>
+              <span style={{ color:T.muted }}> Followers</span>
+            </span>
+          </div>
+
+          {/* Mutual followers row — only when there are actual mutuals */}
+          {mutualFollowers.length > 0 && (
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, fontSize:12.5, color:T.muted }}>
+              <div style={{ display:"flex", alignItems:"center" }}>
+                {mutualFollowers.slice(0, 3).map((f, i) => (
+                  <div key={f.id} style={{ width:22, height:22, borderRadius:"50%", marginLeft:i > 0 ? -7 : 0, border:`1.5px solid ${T.ink}`, overflow:"hidden", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:700, fontSize:8, color:T.ink, flexShrink:0 }}>
+                    {f.avatar_url
+                      ? <img src={f.avatar_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
+                      : (f.username || f.email || "?")[0]?.toUpperCase()
+                    }
+                  </div>
+                ))}
+              </div>
+              <span>
+                Followed by {mutualFollowers.slice(0, 2).map(f => f.username || f.email?.split("@")[0]).join(", ")}
+                {mutualFollowers.length > 2 ? ` and ${mutualFollowers.length - 2} others` : ""}
+              </span>
+            </div>
+          )}
+
+          {/* Message button — full-width prominent */}
+          <button style={{ width:"100%", background:"none", border:`1.5px solid ${T.cardBorder}`, borderRadius:24, padding:"12px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:14.5, color:T.paper, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, marginBottom:20, boxSizing:"border-box" }}>
+            <MessageCircle size={17} color={T.paper} /> Message
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height:1, background:T.cardBorder, margin:"0 0 18px" }} />
+
+        {/* ── Edit fields ── */}
+        <div style={{ padding:"0 16px 20px" }}>
+          {[
+            { label:"Full Name",      val:fullName,       set:setFullName,       ph:"Your full name" },
+            { label:"Username",       val:username,       set:setUsername,       ph:"@handle" },
+            { label:"Bio",            val:bio,            set:setBio,            ph:"Say something about yourself" },
+            { label:"Country",        val:country,        set:setCountry,        isSelect:true },
+            { label:"Location",       val:location,       set:setLocation,       ph:"City" },
+            { label:"Date of Birth",  val:dob,            set:setDob,            ph:"YYYY-MM-DD", type:"date" },
+            { label:"Education",      val:education,      set:setEducation,      ph:"University or degree" },
+            { label:"Certifications", val:certifications, set:setCertifications, ph:"Trading certs, licenses…" },
+          ].map(({ label, val, set, ph, type, isSelect }) => (
+            <div key={label} style={{ marginBottom:12 }}>
+              <label style={{ fontSize:11, color:T.muted, fontWeight:600, display:"block", marginBottom:4 }}>{label}</label>
+              {isSelect
+                ? <select value={val} onChange={e => set(e.target.value)} style={{ ...getInputStyle(), width:"100%", appearance:"none", WebkitAppearance:"none" }}><option value="">Select country…</option>{COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}</select>
+                : <input type={type || "text"} value={val} onChange={e => set(e.target.value)} placeholder={ph} style={{ ...getInputStyle(), width:"100%" }} />
+              }
+            </div>
+          ))}
+          {profileMsg && <div style={{ fontSize:11, color:profileMsg.startsWith("Saved") ? T.sage : T.rust, marginBottom:10 }}>{profileMsg}</div>}
+          <button onClick={saveProfileExtended} disabled={savingProfile} style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, cursor:"pointer" }}>
+            {savingProfile ? "Saving…" : "Save Profile"}
+          </button>
+          <button onClick={() => onLogoutConfirm && onLogoutConfirm()} style={{ width:"100%", marginTop:10, background:"none", border:`1px solid rgba(176,96,74,0.4)`, borderRadius:12, padding:"12px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.rust, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+            <LogOut size={15} /> Log out
+          </button>
+        </div>
+      </MoreSubScreen>
+    );
+  }
 
   if (morePage === "verification") {
     const isGolden = verification === "golden";
