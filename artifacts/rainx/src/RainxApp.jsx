@@ -3543,7 +3543,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const saveProfile = async () => {
     setSavingProfile(true); setProfileMsg("");
     const clean = username.trim() ? username.trim().replace(/[\x00-\x1F\x7F]/g, "").slice(0, 30) : null;
-    const { error } = await supabase.from("profiles").upsert({ id: account.id, username: clean, bio: bio.trim() }, { onConflict: "id" });
+    const { error } = await supabase.from("profiles").update({ username: clean, bio: bio.trim() }).eq("id", account.id);
     setSavingProfile(false);
     setProfileMsg(error ? (error.code === "23505" ? "That username is taken." : "Something went wrong.") : "Saved.");
   };
@@ -3611,9 +3611,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     setSavingProfile(true); setProfileMsg("");
     const clean = username.trim().replace(/[^a-zA-Z0-9_.@-]/g,"").slice(0,30)||null;
 
-    // Single consolidated upsert — all fields at once to avoid partial saves
+    // Single consolidated update — all fields at once to avoid partial saves
     const payload = {
-      id: account.id,
+
       username: clean,
       bio: bio.trim(),
     };
@@ -3623,7 +3623,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
 
 
-    const { error: saveErr } = await supabase.from("profiles").upsert(payload, { onConflict: "id" });
+    const { error: saveErr } = await supabase.from("profiles").update(payload).eq("id", account.id);
 
     if (saveErr) {
       setSavingProfile(false);
