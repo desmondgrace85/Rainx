@@ -708,7 +708,9 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [counts, setCounts] = useState({ followers: 0, following: 0 });
   const [showGift, setShowGift] = useState(false);
-  const [showFollowList, setShowFollowList] = useState(null); // "followers" | "following"
+  const [showFollowList, setShowFollowList] = useState(null);
+  const [notifOn, setNotifOn] = useState(false);
+  const [mutualFollowers, setMutualFollowers] = useState([]);
 
   useEffect(() => {
     (async () => {
@@ -721,6 +723,22 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
       setCounts({ followers: followers || 0, following: following || 0 });
       const { data: mine } = await supabase.from("follows").select("*").eq("follower_id", account.id).eq("followed_id", userId).maybeSingle();
       setIsFollowing(!!mine);
+
+      // Mutual followers: people I follow who also follow this profile
+      const [{ data: iFollow }, { data: theyFollow }] = await Promise.all([
+        supabase.from("follows").select("followed_id").eq("follower_id", account.id),
+        supabase.from("follows").select("follower_id").eq("followed_id", userId),
+      ]);
+      const iFollowSet = new Set((iFollow || []).map(r => r.followed_id));
+      const mutualIds = (theyFollow || [])
+        .map(r => r.follower_id)
+        .filter(id => iFollowSet.has(id) && id !== account.id);
+      if (mutualIds.length) {
+        const { data: mProfiles } = await supabase
+          .from("public_profiles").select("id,display_name,avatar_url")
+          .in("id", mutualIds.slice(0, 5));
+        setMutualFollowers(mProfiles || []);
+      }
     })();
   }, [userId, account.id]);
 
@@ -737,58 +755,157 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
     }
   };
 
-  if (!profile || posts === null) return <div style={{ padding: 16, color: T.muted, fontSize: 13 }}>Loading profile…</div>;
+  if (!profile || posts === null) return (
+    <div style={{ padding: 24, color: T.muted, fontSize: 13, textAlign: "center" }}>Loading profile…</div>
+  );
   const isOwnProfile = userId === account.id;
 
+  // Joined date from profile record
+  const joinedLabel = profile.created_at ? (() => {
+    const d = new Date(profile.created_at);
+    if (isNaN(d)) return null;
+    return `Joined ${d.toLocaleString("default", { month: "long" })} ${d.getFullYear()}`;
+  })() : null;
+
+  const handle = profile.username || profile.display_name;
+
   return (
-    <div style={{ padding: 16 }}>
+    <div style={{ minHeight: "100%", background: T.ink, overflowY: "auto" }}>
+      <style>{"@keyframes pvSlideIn { from { transform:translateX(28px); opacity:0 } to { transform:translateX(0); opacity:1 } }"}</style>
+
       {showFollowList && (
         <FollowListModal userId={userId} type={showFollowList} onClose={() => setShowFollowList(null)} onOpenProfile={onOpenProfile} />
       )}
       {showGift && (
         <GiftModal profile={profile} senderAccount={account} onClose={() => setShowGift(false)} />
       )}
-      <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: T.muted, cursor: "pointer", marginBottom: 14, fontSize: 12 }}>
-        <ArrowLeft size={15} /> Back to Community
-      </button>
-      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 18, marginBottom: 16 }}>
-        <Avatar name={profile.display_name} size={56} avatarUrl={profile.avatar_url} />
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
-          <span style={{ fontFamily: FONT_HEAD, fontSize: 18, fontWeight: 800, color: T.paper }}>{profile.display_name}</span>
-          <Badge isAdmin={profile.is_admin} badge={profile.badge} />
+
+      {/* ── Sticky top nav ── */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px 10px", position:"sticky", top:0, zIndex:10, background:"rgba(15,14,11,0.94)", backdropFilter:"blur(8px)", borderBottom:`1px solid ${T.cardBorder}` }}>
+        <button onClick={onBack} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,0.07)", border:"none", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}>
+          <ArrowLeft size={18} color={T.paper} />
+        </button>
+        <div style={{ textAlign:"center", flex:1 }}>
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, lineHeight:1.2 }}>{profile.display_name}</div>
+          <div style={{ fontSize:11, color:T.muted, marginTop:1 }}>{counts.followers.toLocaleString()} followers</div>
         </div>
-        {profile.bio && <div style={{ fontSize: 12.5, color: T.paper, marginTop: 6, lineHeight: 1.5 }}>{profile.bio}</div>}
-        {/* Follower / Following counts — clickable */}
-        <div style={{ display: "flex", gap: 20, marginTop: 12 }}>
-          <button onClick={() => setShowFollowList("followers")} style={{ background:"none", border:"none", cursor:"pointer", padding:0, textAlign:"left" }}>
-            <strong style={{ color: T.paper, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15 }}>{counts.followers}</strong>
-            <span style={{ fontSize: 12, color: T.muted, marginLeft: 4 }}>followers</span>
-          </button>
-          <button onClick={() => setShowFollowList("following")} style={{ background:"none", border:"none", cursor:"pointer", padding:0, textAlign:"left" }}>
-            <strong style={{ color: T.paper, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15 }}>{counts.following}</strong>
-            <span style={{ fontSize: 12, color: T.muted, marginLeft: 4 }}>following</span>
-          </button>
+        <div style={{ width:36, flexShrink:0 }} />
+      </div>
+
+      {/* ── Banner + overlapping avatar ── */}
+      <div style={{ position:"relative", marginBottom:54, animation:"pvSlideIn 0.22s ease" }}>
+        <div style={{ width:"100%", height:100, background:`linear-gradient(135deg,#1a160d 0%,#231d10 55%,${T.gold}28 100%)` }} />
+        {/* Avatar overlaps banner */}
+        <div style={{ position:"absolute", bottom:-48, left:14, borderRadius:"50%", border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}`, overflow:"hidden", width:92, height:92, flexShrink:0 }}>
+          {profile.avatar_url
+            ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+            : <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${T.gold},#8a6f34)`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, color:T.ink, fontSize:34 }}>
+                {(profile.display_name || "?")[0]?.toUpperCase()}
+              </div>
+          }
         </div>
-        {/* Action buttons for other users */}
+        {/* Action buttons — right-aligned, vertically centred beside avatar bottom */}
         {!isOwnProfile && (
-          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <button onClick={toggleFollow}
-              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent:"center", gap: 5, background: isFollowing ? "none" : T.gold, color: isFollowing ? T.paper : T.ink, border: `1px solid ${isFollowing ? T.cardBorder : T.gold}`, borderRadius: 10, padding: "9px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-              {isFollowing ? <><UserCheck size={13} /> Following</> : <><UserPlus size={13} /> Follow</>}
+          <div style={{ position:"absolute", bottom:-26, right:14, display:"flex", alignItems:"center", gap:8 }}>
+            {/* Bell — notify toggle */}
+            <button
+              onClick={() => setNotifOn(v => !v)}
+              title={notifOn ? "Notifications on" : "Get notified"}
+              style={{ width:38, height:38, borderRadius:"50%", background:"none", border:`1.5px solid ${notifOn ? T.gold : T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0 }}>
+              <Bell size={16} color={notifOn ? T.gold : T.paper} />
             </button>
-            <button onClick={() => onDmUser && onDmUser(profile)}
-              style={{ flex: 1, display:"flex", alignItems:"center", justifyContent:"center", gap:5, background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:10, padding:"9px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.paper, cursor:"pointer" }}>
-              <MessageCircle size={13} /> Chat
-            </button>
-            <button onClick={() => setShowGift(true)}
-              style={{ flex: 1, display:"flex", alignItems:"center", justifyContent:"center", gap:5, background:"rgba(198,161,91,0.15)", border:`1px solid ${T.gold}44`, borderRadius:10, padding:"9px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.gold, cursor:"pointer" }}>
-              🎁 Gift
+            {/* Follow */}
+            <button
+              onClick={toggleFollow}
+              style={{ display:"flex", alignItems:"center", gap:7, background: isFollowing ? "none" : `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: isFollowing ? T.paper : T.ink, border:`1.5px solid ${isFollowing ? T.cardBorder : "transparent"}`, borderRadius:22, padding:"9px 18px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
+              {isFollowing
+                ? <><UserCheck size={14} style={{ flexShrink:0 }} /> Following</>
+                : <><UserPlus size={14} style={{ flexShrink:0 }} /> Follow</>}
             </button>
           </div>
         )}
       </div>
+
+      {/* ── Profile info ── */}
+      <div style={{ padding:"0 16px 8px" }}>
+        {/* Name + badge */}
+        <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:2, flexWrap:"wrap" }}>
+          <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.paper, lineHeight:1.25 }}>{profile.display_name}</span>
+          <Badge isAdmin={profile.is_admin} badge={profile.badge} />
+        </div>
+        {/* @handle */}
+        <div style={{ fontSize:13.5, color:T.muted, marginBottom:8 }}>@{handle}</div>
+        {/* Bio */}
+        {profile.bio && (
+          <div style={{ fontSize:13.5, color:T.paper, marginBottom:10, lineHeight:1.65 }}>{profile.bio}</div>
+        )}
+        {/* Joined date */}
+        {joinedLabel && (
+          <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:13, color:T.muted, marginBottom:10 }}>
+            <span style={{ fontSize:14 }}>📅</span>
+            <span>{joinedLabel}</span>
+          </div>
+        )}
+        {/* Following / Followers — clickable */}
+        <div style={{ display:"flex", gap:20, marginBottom:mutualFollowers.length > 0 ? 10 : 14 }}>
+          <button onClick={() => setShowFollowList("following")} style={{ background:"none", border:"none", cursor:"pointer", padding:0, textAlign:"left" }}>
+            <strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{counts.following.toLocaleString()}</strong>
+            <span style={{ fontSize:14, color:T.muted }}> Following</span>
+          </button>
+          <button onClick={() => setShowFollowList("followers")} style={{ background:"none", border:"none", cursor:"pointer", padding:0, textAlign:"left" }}>
+            <strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{counts.followers.toLocaleString()}</strong>
+            <span style={{ fontSize:14, color:T.muted }}> Followers</span>
+          </button>
+        </div>
+
+        {/* Mutual followers row — only when there are actual mutuals */}
+        {mutualFollowers.length > 0 && (
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, fontSize:12.5, color:T.muted }}>
+            <div style={{ display:"flex", alignItems:"center", flexShrink:0 }}>
+              {mutualFollowers.slice(0, 3).map((f, i) => (
+                <div key={f.id} style={{ width:22, height:22, borderRadius:"50%", marginLeft:i > 0 ? -7 : 0, border:`1.5px solid ${T.ink}`, overflow:"hidden", background:`linear-gradient(135deg,${T.gold},#8a6f34)`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:700, fontSize:8, color:T.ink, flexShrink:0 }}>
+                  {f.avatar_url
+                    ? <img src={f.avatar_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" />
+                    : (f.display_name || "?")[0]?.toUpperCase()
+                  }
+                </div>
+              ))}
+            </div>
+            <span style={{ lineHeight:1.4 }}>
+              Followed by {mutualFollowers.slice(0, 2).map(f => f.display_name).join(", ")}
+              {mutualFollowers.length > 2 ? ` and ${mutualFollowers.length - 2} others` : ""}
+            </span>
+          </div>
+        )}
+
+        {/* Message button (full-width) + Gift icon — other users only */}
+        {!isOwnProfile && (
+          <div style={{ display:"flex", gap:8, marginBottom:18, alignItems:"center" }}>
+            <button
+              onClick={() => onDmUser && onDmUser(profile)}
+              style={{ flex:1, background:"none", border:`1.5px solid ${T.cardBorder}`, borderRadius:24, padding:"11px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:14.5, color:T.paper, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, boxSizing:"border-box" }}>
+              <MessageCircle size={17} color={T.paper} /> Message
+            </button>
+            <button
+              onClick={() => setShowGift(true)}
+              style={{ width:42, height:42, borderRadius:"50%", background:"none", border:`1.5px solid ${T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0, fontSize:18 }}
+              title="Send a gift">
+              🎁
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Divider + Posts tab */}
+      <div style={{ borderTop:`1px solid ${T.cardBorder}` }}>
+        <div style={{ padding:"12px 16px 0" }}>
+          <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper, borderBottom:`2px solid ${T.gold}`, paddingBottom:10, display:"inline-block" }}>Posts</span>
+        </div>
+      </div>
+
+      {/* Posts */}
       {posts.length === 0 ? (
-        <div style={{ fontSize: 12, color: T.muted, padding: "20px 0", textAlign:"center" }}>No posts yet.</div>
+        <div style={{ fontSize:13, color:T.muted, padding:"32px 0", textAlign:"center" }}>No posts yet.</div>
       ) : (
         <ProfileFeed
           posts={posts}
