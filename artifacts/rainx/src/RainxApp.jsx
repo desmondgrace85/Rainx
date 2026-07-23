@@ -952,8 +952,7 @@ class MoreTabErrorBoundary extends React.Component {
   render() {
     if (this.state.error) return (
       <div style={{ padding: 24, color: "#C0392B", background: "#fff8f8", fontSize: 13, fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all", border: "2px solid #C0392B", margin: 16, borderRadius: 8 }}>
-        <strong>MoreTab crashed — screenshot this:</strong>{"
-"}{this.state.error}
+        <strong>MoreTab crashed — screenshot this:</strong>{" "}{this.state.error}
       </div>
     );
     return this.props.children;
