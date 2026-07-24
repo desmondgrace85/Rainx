@@ -3575,11 +3575,11 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
 
         <BlurGate unlocked={unlocked} requiredLabel="Monthly" onSubscribe={onSubscribe} minHeight={440}>
           {phase === "loading"    ? <div style={{ textAlign: "center", padding: 40, color: T.muted, fontSize: 15 }}>Loading…</div>
-           : phase === "setup"    ? <PhaseSetup />
-           : phase === "pending"  ? <PhasePending />
-           : phase === "connected"? <PhaseConnected />
-           : phase === "active"   ? <PhaseActive />
-           : <PhaseSetup />}
+           : phase === "setup"    ? PhaseSetup()
+           : phase === "pending"  ? PhasePending()
+           : phase === "connected"? PhaseConnected()
+           : phase === "active"   ? PhaseActive()
+           : PhaseSetup()}
         </BlurGate>
       </div>
     );
