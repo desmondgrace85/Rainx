@@ -3121,7 +3121,7 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
 
 
 // ---------- Scalping ----------
-    // Frontend for the existing Raina AI scalping engine (Python/FastAPI on Railway).
+    // Frontend for the existing Raina AI scalping engine (Python/FastAPI on Railway). No engine logic duplicated.
     // No signal-generation, lot-sizing, or trade-execution logic lives here.
     // User identity: stable integer derived from Supabase UUID used as telegram_id.
     function webUserId(supabaseId) {
