@@ -161,7 +161,7 @@ async function forwardToBot(req: Request, res: Response): Promise<void> {
 
 // Use router.use() so Express handles sub-paths without needing a wildcard pattern
 // (path-to-regexp v8 used by Express 5 rejects /* and (.*) in .all())
-router.use("/mt5",     forwardToBot); // Raina AI MT5 account, settings, trades, scalping toggle
+router.use("/mt5",     forwardToBot); // Raina AI MT5 account, settings, trades, scalping toggle — added for RainX web integration
 router.use("/scan",    forwardToBot); // Raina AI multi-symbol scalp scanner
 router.use("/proxy",   forwardToBot);
 router.all("/chat",    forwardToBot);
