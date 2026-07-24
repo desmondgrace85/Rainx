@@ -3271,7 +3271,7 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
 
     const Disclaimer = () => (
       <div style={{ padding: "12px 14px", background: `${T.rust}15`, border: `1px solid ${T.rust}33`, borderRadius: 12, marginTop: 14 }}>
-        <div style={{ fontSize: 10.5, color: T.muted, lineHeight: 1.7 }}>
+        <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.7 }}>
           <strong style={{ color: T.rust }}>⚠ Risk Disclaimer</strong> — Automated scalping involves significant risk of loss. Short-timeframe trading amplifies exposure. Only use a dedicated account with capital you can afford to lose. Past performance does not guarantee future results.
         </div>
       </div>
@@ -3287,17 +3287,17 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
         ].map(({ key, label, min, max, step }) => (
           <div key={key} style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 11.5, color: T.muted }}>{label}</span>
-              <span style={{ fontSize: 11.5, color: T.goldBright, fontFamily: FONT_HEAD, fontWeight: 700 }}>{localS[key]}</span>
+              <span style={{ fontSize: 13.5, color: T.muted }}>{label}</span>
+              <span style={{ fontSize: 13.5, color: T.goldBright, fontFamily: FONT_HEAD, fontWeight: 700 }}>{localS[key]}</span>
             </div>
             <input type="range" min={min} max={max} step={step} value={localS[key]}
               onChange={e => setLocalS(p => ({ ...p, [key]: parseFloat(e.target.value) }))}
               style={{ width: "100%", accentColor: T.gold }} />
           </div>
         ))}
-        {err && <div style={{ fontSize: 11.5, color: T.rust, marginBottom: 8 }}>{err}</div>}
+        {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 8 }}>{err}</div>}
         <button onClick={handleSaveSettings} disabled={busy}
-          style={{ width: "100%", background: saved ? T.sage : `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, cursor: busy ? "not-allowed" : "pointer", transition: "background 0.3s" }}>
+          style={{ width: "100%", background: saved ? T.sage : `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, cursor: busy ? "not-allowed" : "pointer", transition: "background 0.3s" }}>
           {saved ? "Saved ✓" : busy ? "Saving…" : "Save Settings"}
         </button>
       </div>
@@ -3306,26 +3306,26 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
     const SignalCard = ({ sig }) => (
       <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: T.paper }}>{sig.asset}</span>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15.5, color: T.paper }}>{sig.asset}</span>
           <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 10.5, color: dirColor(sig.direction), background: `${dirColor(sig.direction)}22`, borderRadius: 6, padding: "2px 7px" }}>{sig.direction}</span>
-            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 10.5, color: riskColor(sig.risk_level), background: `${riskColor(sig.risk_level)}22`, borderRadius: 6, padding: "2px 7px" }}>{sig.risk_level}</span>
-            <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 10.5, color: T.goldBright }}>{Math.round(sig.confidence)}%</span>
+            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: dirColor(sig.direction), background: `${dirColor(sig.direction)}22`, borderRadius: 6, padding: "2px 7px" }}>{sig.direction}</span>
+            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: riskColor(sig.risk_level), background: `${riskColor(sig.risk_level)}22`, borderRadius: 6, padding: "2px 7px" }}>{sig.risk_level}</span>
+            <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 12.5, color: T.goldBright }}>{Math.round(sig.confidence)}%</span>
           </div>
         </div>
         {sig.entry_zone && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 6 }}>
-            <div><div style={{ fontSize: 9.5, color: T.muted, marginBottom: 1 }}>Entry</div><div style={{ fontSize: 11, color: T.paper, fontWeight: 600 }}>{sig.entry_zone[0]?.toFixed(5)}–{sig.entry_zone[1]?.toFixed(5)}</div></div>
-            {sig.stop_loss != null && <div><div style={{ fontSize: 9.5, color: T.muted, marginBottom: 1 }}>SL</div><div style={{ fontSize: 11, color: T.rust, fontWeight: 600 }}>{sig.stop_loss?.toFixed(5)}</div></div>}
-            {sig.take_profit?.[0] != null && <div><div style={{ fontSize: 9.5, color: T.muted, marginBottom: 1 }}>TP1</div><div style={{ fontSize: 11, color: T.sage, fontWeight: 600 }}>{sig.take_profit[0]?.toFixed(5)}</div></div>}
+            <div><div style={{ fontSize: 11.5, color: T.muted, marginBottom: 1 }}>Entry</div><div style={{ fontSize: 13, color: T.paper, fontWeight: 600 }}>{sig.entry_zone[0]?.toFixed(5)}–{sig.entry_zone[1]?.toFixed(5)}</div></div>
+            {sig.stop_loss != null && <div><div style={{ fontSize: 11.5, color: T.muted, marginBottom: 1 }}>SL</div><div style={{ fontSize: 13, color: T.rust, fontWeight: 600 }}>{sig.stop_loss?.toFixed(5)}</div></div>}
+            {sig.take_profit?.[0] != null && <div><div style={{ fontSize: 11.5, color: T.muted, marginBottom: 1 }}>TP1</div><div style={{ fontSize: 13, color: T.sage, fontWeight: 600 }}>{sig.take_profit[0]?.toFixed(5)}</div></div>}
           </div>
         )}
         <div style={{ display: "flex", gap: 10 }}>
-          {sig.risk_reward_ratio != null && <span style={{ fontSize: 10, color: T.gold }}>RR {sig.risk_reward_ratio}:1</span>}
-          {sig.timeframe && <span style={{ fontSize: 10, color: T.muted }}>{sig.timeframe}</span>}
-          {sig.take_profit?.[1] != null && <span style={{ fontSize: 10, color: T.muted }}>TP2 {sig.take_profit[1]?.toFixed(5)}</span>}
+          {sig.risk_reward_ratio != null && <span style={{ fontSize: 12, color: T.gold }}>RR {sig.risk_reward_ratio}:1</span>}
+          {sig.timeframe && <span style={{ fontSize: 12, color: T.muted }}>{sig.timeframe}</span>}
+          {sig.take_profit?.[1] != null && <span style={{ fontSize: 12, color: T.muted }}>TP2 {sig.take_profit[1]?.toFixed(5)}</span>}
         </div>
-        {sig.explanation && <div style={{ fontSize: 10.5, color: T.muted, lineHeight: 1.5, marginTop: 6 }}>{sig.explanation.slice(0, 130)}{sig.explanation.length > 130 ? "…" : ""}</div>}
+        {sig.explanation && <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.5, marginTop: 6 }}>{sig.explanation.slice(0, 130)}{sig.explanation.length > 130 ? "…" : ""}</div>}
       </div>
     );
 
@@ -3341,38 +3341,38 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
       <div>
         {/* Demo tip */}
         <div style={{ background: `${T.sage}14`, border: `1px solid ${T.sage}44`, borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: T.sage, fontWeight: 700, marginBottom: 3 }}>💡 New to scalping? Start with a Demo account</div>
-          <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6 }}>
+          <div style={{ fontSize: 13, color: T.sage, fontWeight: 700, marginBottom: 3 }}>💡 New to scalping? Start with a Demo account</div>
+          <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>
             Open a free demo account on any MT5 broker (FTMO, ICMarkets, XM, Exness…), connect it here, and test Raina AI scalping with virtual funds before going live. No money at risk.
           </div>
         </div>
 
         {/* Connection method */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Connection Method</div>
+          <div style={{ fontSize: 13.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Connection Method</div>
           <div style={{ display: "flex", gap: 8 }}>
             {[["metaapi","MetaAPI (Cloud)"],["ea","EA Desktop"]].map(([m,label]) => (
               <button key={m} onClick={() => { setConnectMethod(m); setErr(""); }}
-                style={{ flex:1, background: connectMethod===m ? T.gold : T.card, color: connectMethod===m ? T.ink : T.muted, border: `1px solid ${connectMethod===m ? T.gold : T.cardBorder}`, borderRadius:10, padding:"10px 6px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:11, cursor:"pointer", transition:"background 0.2s,color 0.2s" }}>
+                style={{ flex:1, background: connectMethod===m ? T.gold : T.card, color: connectMethod===m ? T.ink : T.muted, border: `1px solid ${connectMethod===m ? T.gold : T.cardBorder}`, borderRadius:10, padding:"10px 6px", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 13, cursor:"pointer", transition:"background 0.2s,color 0.2s" }}>
                 {label}
               </button>
             ))}
           </div>
           {connectMethod === "metaapi" && (
-            <div style={{ fontSize:10.5, color:T.muted, marginTop:6, lineHeight:1.5 }}>Recommended — no PC or VPS needed. Raina AI stays connected to your broker 24/7 via MetaAPI cloud.</div>
+            <div style={{ fontSize: 12.5, color:T.muted, marginTop:6, lineHeight:1.5 }}>Recommended — no PC or VPS needed. Raina AI stays connected to your broker 24/7 via MetaAPI cloud.</div>
           )}
           {connectMethod === "ea" && (
-            <div style={{ fontSize:10.5, color:T.muted, marginTop:6, lineHeight:1.5 }}>Install an Expert Advisor in your local MetaTrader 5. MT5 must stay open on a PC or VPS for trades to execute.</div>
+            <div style={{ fontSize: 12.5, color:T.muted, marginTop:6, lineHeight:1.5 }}>Install an Expert Advisor in your local MetaTrader 5. MT5 must stay open on a PC or VPS for trades to execute.</div>
           )}
         </div>
 
         {/* Account mode */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Account Mode</div>
+          <div style={{ fontSize: 13.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Account Mode</div>
           <div style={{ display: "flex", gap: 8 }}>
             {["demo","live"].map(m => (
               <button key={m} onClick={() => setMode(m)}
-                style={{ flex:1, background: mode===m ? T.gold : T.card, color: mode===m ? T.ink : T.muted, border: `1px solid ${mode===m ? T.gold : T.cardBorder}`, borderRadius:10, padding:"10px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:12.5, cursor:"pointer", textTransform:"capitalize", transition:"background 0.2s,color 0.2s" }}>
+                style={{ flex:1, background: mode===m ? T.gold : T.card, color: mode===m ? T.ink : T.muted, border: `1px solid ${mode===m ? T.gold : T.cardBorder}`, borderRadius:10, padding:"10px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 14.5, cursor:"pointer", textTransform:"capitalize", transition:"background 0.2s,color 0.2s" }}>
                 {m === "demo" ? "📊 Demo" : "🔴 Live"}
               </button>
             ))}
@@ -3381,43 +3381,43 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
 
         {connectMethod === "metaapi" ? (
           <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"14px 16px", marginBottom:16 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, color:T.goldBright, marginBottom:4 }}>MT5 Credentials</div>
-            <div style={{ fontSize:10.5, color:T.muted, marginBottom:14, lineHeight:1.6 }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 14.5, color:T.goldBright, marginBottom:4 }}>MT5 Credentials</div>
+            <div style={{ fontSize: 12.5, color:T.muted, marginBottom:14, lineHeight:1.6 }}>
               Raina AI connects securely via MetaAPI. Your credentials are encrypted in transit and never stored in plain text.
             </div>
             <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:11, color:T.muted, fontWeight:700, marginBottom:4 }}>MT5 Login Number</div>
+              <div style={{ fontSize: 13, color:T.muted, fontWeight:700, marginBottom:4 }}>MT5 Login Number</div>
               <input type="text" value={mt5Login} onChange={e => setMt5Login(e.target.value)} placeholder="e.g. 12345678"
-                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize:13, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
-              <div style={{ fontSize:10, color:T.muted, marginTop:3 }}>The account number from your broker's welcome email.</div>
+                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize: 15, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
+              <div style={{ fontSize: 12, color:T.muted, marginTop:3 }}>The account number from your broker's welcome email.</div>
             </div>
             <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:11, color:T.muted, fontWeight:700, marginBottom:4 }}>MT5 Password</div>
+              <div style={{ fontSize: 13, color:T.muted, fontWeight:700, marginBottom:4 }}>MT5 Password</div>
               <input type="password" value={mt5Password} onChange={e => setMt5Password(e.target.value)} placeholder="Master or Investor password"
-                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize:13, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
-              <div style={{ fontSize:10, color:T.muted, marginTop:3 }}>Use your Master password for automated trading (not the Investor/read-only password).</div>
+                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize: 15, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
+              <div style={{ fontSize: 12, color:T.muted, marginTop:3 }}>Use your Master password for automated trading (not the Investor/read-only password).</div>
             </div>
             <div style={{ marginBottom:6 }}>
-              <div style={{ fontSize:11, color:T.muted, fontWeight:700, marginBottom:4 }}>Broker Server</div>
+              <div style={{ fontSize: 13, color:T.muted, fontWeight:700, marginBottom:4 }}>Broker Server</div>
               <input type="text" value={mt5Server} onChange={e => setMt5Server(e.target.value)} placeholder="e.g. ICMarkets-Demo"
                 list="broker-servers"
-                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize:13, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
+                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize: 15, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
               <datalist id="broker-servers">{BROKER_SERVERS.map(s => <option key={s} value={s} />)}</datalist>
-              <div style={{ fontSize:10, color:T.muted, marginTop:3 }}>Find this in MT5 → Help → About MetaTrader 5. Type it exactly (case-sensitive).</div>
+              <div style={{ fontSize: 12, color:T.muted, marginTop:3 }}>Find this in MT5 → Help → About MetaTrader 5. Type it exactly (case-sensitive).</div>
             </div>
           </div>
         ) : (
           <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"14px 16px", marginBottom:16 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, color:T.goldBright, marginBottom:4 }}>EA Desktop Mode</div>
-            <div style={{ fontSize:11, color:T.muted, lineHeight:1.7 }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 14.5, color:T.goldBright, marginBottom:4 }}>EA Desktop Mode</div>
+            <div style={{ fontSize: 13, color:T.muted, lineHeight:1.7 }}>
               Click below to generate your API key. Then install the Expert Advisor from the Raina AI Telegram bot in your MetaTrader 5. Paste the key into the EA settings — Raina AI will start queuing trades automatically.
             </div>
           </div>
         )}
 
-        {err && <div style={{ fontSize:11.5, color:T.rust, marginBottom:10, padding:"10px 12px", background:`${T.rust}15`, borderRadius:8, lineHeight:1.5 }}>{err}</div>}
+        {err && <div style={{ fontSize: 13.5, color:T.rust, marginBottom:10, padding:"10px 12px", background:`${T.rust}15`, borderRadius:8, lineHeight:1.5 }}>{err}</div>}
         <button onClick={handleConnect} disabled={busy}
-          style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor: busy ? "not-allowed" : "pointer" }}>
+          style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize: 16, cursor: busy ? "not-allowed" : "pointer" }}>
           {busy ? "Connecting…" : connectMethod === "metaapi" ? "Connect via MetaAPI" : "Generate API Key & Connect"}
         </button>
         <Disclaimer />
@@ -3428,23 +3428,23 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
     const PhasePending = () => (
       <div>
         <div style={{ background: `${T.gold}14`, border: `1px solid ${T.gold}55`, borderRadius: 12, padding: "14px 16px", marginBottom: 16, textAlign: "center" }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, color: T.goldBright, marginBottom: 4 }}>Waiting for MT5 Connection</div>
-          <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.6 }}>Install the Expert Advisor in MetaTrader 5 to complete setup. This page checks automatically every 30s.</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright, marginBottom: 4 }}>Waiting for MT5 Connection</div>
+          <div style={{ fontSize: 13.5, color: T.muted, lineHeight: 1.6 }}>Install the Expert Advisor in MetaTrader 5 to complete setup. This page checks automatically every 30s.</div>
         </div>
         {apiKey && (
           <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: T.paper, marginBottom: 10 }}>Your API Key</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginBottom: 10 }}>Your API Key</div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, background: T.ink, borderRadius: 8, padding: "10px 12px" }}>
-              <div style={{ flex: 1, fontFamily: "monospace", fontSize: 11, color: T.gold, wordBreak: "break-all" }}>
+              <div style={{ flex: 1, fontFamily: "monospace", fontSize: 13, color: T.gold, wordBreak: "break-all" }}>
                 {showKey ? apiKey : "●".repeat(Math.min(apiKey.length, 36))}
               </div>
-              <button onClick={() => setShowKey(v => !v)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 10.5, fontFamily: FONT_BODY, flexShrink: 0 }}>{showKey ? "Hide" : "Show"}</button>
-              <button onClick={() => navigator.clipboard?.writeText(apiKey)} style={{ background: "none", border: "none", color: T.gold, cursor: "pointer", fontSize: 10.5, fontFamily: FONT_BODY, flexShrink: 0 }}>Copy</button>
+              <button onClick={() => setShowKey(v => !v)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 12.5, fontFamily: FONT_BODY, flexShrink: 0 }}>{showKey ? "Hide" : "Show"}</button>
+              <button onClick={() => navigator.clipboard?.writeText(apiKey)} style={{ background: "none", border: "none", color: T.gold, cursor: "pointer", fontSize: 12.5, fontFamily: FONT_BODY, flexShrink: 0 }}>Copy</button>
             </div>
           </div>
         )}
         <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: T.paper, marginBottom: 10 }}>EA Installation Steps</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginBottom: 10 }}>EA Installation Steps</div>
           {[
             "Get the EA file from the Raina AI Telegram bot — send /mt5connect and choose Desktop",
             "In MT5: File → Open Data Folder → MQL5 → Experts — paste RainaAI_EA.mq5",
@@ -3454,8 +3454,8 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
             "Keep MT5 open on a PC or VPS — trades execute through your local terminal",
           ].map((step, i) => (
             <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "flex-start" }}>
-              <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 11, color: T.gold, minWidth: 16 }}>{i + 1}.</span>
-              <span style={{ fontSize: 11.5, color: T.paper, lineHeight: 1.6 }}>{step}</span>
+              <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.gold, minWidth: 16 }}>{i + 1}.</span>
+              <span style={{ fontSize: 13.5, color: T.paper, lineHeight: 1.6 }}>{step}</span>
             </div>
           ))}
         </div>
@@ -3468,20 +3468,20 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
       <div>
         <div style={{ background: `${T.sage}18`, border: `1px solid ${T.sage}44`, borderRadius: 12, padding: "12px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.sage }}>MT5 Connected ✓</div>
-            <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{mt5?.broker_name || "Broker"} · {(mt5?.account_mode || "demo").toUpperCase()} · #{mt5?.account_number || "—"}</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.sage }}>MT5 Connected ✓</div>
+            <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{mt5?.broker_name || "Broker"} · {(mt5?.account_mode || "demo").toUpperCase()} · #{mt5?.account_number || "—"}</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright }}>${(mt5?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-            <div style={{ fontSize: 10, color: T.muted }}>Balance</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: T.goldBright }}>${(mt5?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+            <div style={{ fontSize: 12, color: T.muted }}>Balance</div>
           </div>
         </div>
         <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper, marginBottom: 14 }}>Risk Settings</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper, marginBottom: 14 }}>Risk Settings</div>
           <RiskForm />
         </div>
         <button onClick={handleToggle} disabled={busy}
-          style={{ width: "100%", background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: busy ? "not-allowed" : "pointer", marginBottom: 14 }}>
+          style={{ width: "100%", background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy ? "not-allowed" : "pointer", marginBottom: 14 }}>
           {busy ? "Please wait…" : "🚀 Activate Raina AI Scalping"}
         </button>
         <Disclaimer />
@@ -3493,12 +3493,12 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
       <div>
         <div style={{ background: `${T.sage}18`, border: `1px solid ${T.sage}44`, borderRadius: 12, padding: "12px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.sage }}>🤖 Scalping Active</div>
-            <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{mt5?.broker_name} · {(mt5?.account_mode || "").toUpperCase()} · #{mt5?.account_number}</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.sage }}>🤖 Scalping Active</div>
+            <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{mt5?.broker_name} · {(mt5?.account_mode || "").toUpperCase()} · #{mt5?.account_number}</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright }}>${(mt5?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-            {perf && <div style={{ fontSize: 10.5, color: (perf.total_profit ?? 0) >= 0 ? T.sage : T.rust, fontWeight: 700 }}>{(perf.total_profit ?? 0) >= 0 ? "+" : ""}{(perf.total_profit ?? 0).toFixed(2)} P&L</div>}
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: T.goldBright }}>${(mt5?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+            {perf && <div style={{ fontSize: 12.5, color: (perf.total_profit ?? 0) >= 0 ? T.sage : T.rust, fontWeight: 700 }}>{(perf.total_profit ?? 0) >= 0 ? "+" : ""}{(perf.total_profit ?? 0).toFixed(2)} P&L</div>}
           </div>
         </div>
 
@@ -3510,8 +3510,8 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
               { label: "P&L",          val: `${(perf.total_profit ?? 0) >= 0 ? "+" : ""}${(perf.total_profit ?? 0).toFixed(2)}`, col: (perf.total_profit ?? 0) >= 0 ? T.sage : T.rust },
             ].map(({ label, val, col }) => (
               <div key={label} style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
-                <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, color: col }}>{val}</div>
-                <div style={{ fontSize: 9.5, color: T.muted, marginTop: 2 }}>{label}</div>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: col }}>{val}</div>
+                <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2 }}>{label}</div>
               </div>
             ))}
           </div>
@@ -3519,16 +3519,16 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
 
         {trades.length > 0 && (
           <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper, marginBottom: 10 }}>Open Trades ({trades.length})</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper, marginBottom: 10 }}>Open Trades ({trades.length})</div>
             {trades.map((t, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: i < trades.length - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
                 <div>
-                  <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper }}>{t.asset}</span>
-                  <span style={{ marginLeft: 8, fontSize: 10.5, color: t.direction === "BUY" ? T.sage : T.rust, fontFamily: FONT_HEAD, fontWeight: 700 }}>{t.direction}</span>
+                  <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper }}>{t.asset}</span>
+                  <span style={{ marginLeft: 8, fontSize: 12.5, color: t.direction === "BUY" ? T.sage : T.rust, fontFamily: FONT_HEAD, fontWeight: 700 }}>{t.direction}</span>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 11, color: T.muted }}>Lot {t.lot_size}</div>
-                  {t.confidence && <div style={{ fontSize: 10, color: T.muted }}>{t.confidence}% conf</div>}
+                  <div style={{ fontSize: 13, color: T.muted }}>Lot {t.lot_size}</div>
+                  {t.confidence && <div style={{ fontSize: 12, color: T.muted }}>{t.confidence}% conf</div>}
                 </div>
               </div>
             ))}
@@ -3537,31 +3537,31 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
 
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper }}>Live Scalp Signals</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper }}>Live Scalp Signals</div>
             <button onClick={loadSignals} disabled={sigLoading}
-              style={{ background: "none", border: "none", color: T.gold, fontSize: 11.5, fontFamily: FONT_HEAD, fontWeight: 700, cursor: sigLoading ? "not-allowed" : "pointer" }}>
+              style={{ background: "none", border: "none", color: T.gold, fontSize: 13.5, fontFamily: FONT_HEAD, fontWeight: 700, cursor: sigLoading ? "not-allowed" : "pointer" }}>
               {sigLoading ? "…" : "↺ Refresh"}
             </button>
           </div>
           {sigLoading && signals.length === 0 && (
-            <div style={{ textAlign: "center", color: T.muted, fontSize: 12, padding: 20 }}>Loading signals…</div>
+            <div style={{ textAlign: "center", color: T.muted, fontSize: 14, padding: 20 }}>Loading signals…</div>
           )}
           {signals.map((sig, i) => <SignalCard key={`${sig.asset}-${i}`} sig={sig} />)}
           {!sigLoading && signals.length === 0 && (
             <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "20px 16px", textAlign: "center" }}>
-              <div style={{ fontSize: 12, color: T.muted }}>No actionable signals right now.</div>
-              <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>Raina AI is monitoring markets — signals appear when conditions are met.</div>
+              <div style={{ fontSize: 14, color: T.muted }}>No actionable signals right now.</div>
+              <div style={{ fontSize: 13, color: T.muted, marginTop: 4 }}>Raina AI is monitoring markets — signals appear when conditions are met.</div>
             </div>
           )}
         </div>
 
         <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper, marginBottom: 14 }}>Risk Settings</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper, marginBottom: 14 }}>Risk Settings</div>
           <RiskForm />
         </div>
 
         <button onClick={handleToggle} disabled={busy}
-          style={{ width: "100%", background: `${T.rust}22`, color: T.rust, border: `1px solid ${T.rust}44`, borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: busy ? "not-allowed" : "pointer" }}>
+          style={{ width: "100%", background: `${T.rust}22`, color: T.rust, border: `1px solid ${T.rust}44`, borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, cursor: busy ? "not-allowed" : "pointer" }}>
           {busy ? "Please wait…" : "Pause Scalping"}
         </button>
       </div>
@@ -3570,11 +3570,11 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
     // ── Root render ────────────────────────────────────────────────────────────
     return (
       <div style={{ padding: "16px 16px 90px" }}>
-        <div style={{ fontFamily: FONT_HEAD, fontSize: 18, color: T.goldBright, fontWeight: 800, marginBottom: 2 }}>Scalping</div>
-        <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 16, lineHeight: 1.6 }}>Raina AI premium scalping engine — 1m/5m/15m signals auto-queued to your MT5.</div>
+        <div style={{ fontFamily: FONT_HEAD, fontSize: 20, color: T.goldBright, fontWeight: 800, marginBottom: 2 }}>Scalping</div>
+        <div style={{ fontSize: 13.5, color: T.muted, marginBottom: 16, lineHeight: 1.6 }}>Raina AI premium scalping engine — 1m/5m/15m signals auto-queued to your MT5.</div>
 
         <BlurGate unlocked={unlocked} requiredLabel="Monthly" onSubscribe={onSubscribe} minHeight={440}>
-          {phase === "loading"    ? <div style={{ textAlign: "center", padding: 40, color: T.muted, fontSize: 13 }}>Loading…</div>
+          {phase === "loading"    ? <div style={{ textAlign: "center", padding: 40, color: T.muted, fontSize: 15 }}>Loading…</div>
            : phase === "setup"    ? <PhaseSetup />
            : phase === "pending"  ? <PhasePending />
            : phase === "connected"? <PhaseConnected />
