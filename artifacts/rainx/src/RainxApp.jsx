@@ -3148,6 +3148,10 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
     const [showKey, setShowKey]     = useState(false);
     const [sigLoading, setSigLoading] = useState(false);
     const [localS, setLocalS]       = useState({ risk_percent: 1.0, max_open_trades: 3, min_confidence: 70.0, daily_loss_limit: 5.0 });
+    const [connectMethod, setConnectMethod] = useState("metaapi"); // "metaapi" | "ea"
+    const [mt5Login, setMt5Login]           = useState("");
+    const [mt5Password, setMt5Password]     = useState("");
+    const [mt5Server, setMt5Server]         = useState("");
 
     // ── Data loaders ───────────────────────────────────────────────────────────
     const loadTrades = useCallback(async () => {
@@ -3213,11 +3217,29 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
     const handleConnect = async () => {
       setBusy(true); setErr("");
       try {
-        const r = await fetch("/api/mt5/connect", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ telegram_id: webId, account_mode: mode }) });
-        if (!r.ok) throw new Error(`Error ${r.status}`);
-        const d = await r.json();
-        setApiKey(d.api_key);
-        setPhase("pending");
+        if (connectMethod === "metaapi") {
+          if (!mt5Login.trim()) throw new Error("MT5 login number is required");
+          if (!mt5Password.trim()) throw new Error("MT5 password is required");
+          if (!mt5Server.trim()) throw new Error("Broker server is required — find it in MT5 Help → About");
+          const r = await fetch("/api/mt5/connect/metaapi", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ telegram_id: webId, mt5_login: mt5Login.trim(), mt5_password: mt5Password, mt5_server: mt5Server.trim(), account_mode: mode }),
+          });
+          const d = await r.json();
+          if (!r.ok) throw new Error(d.detail || `Error ${r.status}`);
+          setApiKey(d.api_key);
+          await loadAccount();
+        } else {
+          const r = await fetch("/api/mt5/connect", {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ telegram_id: webId, account_mode: mode }),
+          });
+          if (!r.ok) throw new Error(`Error ${r.status}`);
+          const d = await r.json();
+          setApiKey(d.api_key);
+          setPhase("pending");
+        }
       } catch (e) { setErr(e.message); }
       setBusy(false);
     };
@@ -3308,29 +3330,95 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
     );
 
     // ── Phase: Setup ───────────────────────────────────────────────────────────
+    const BROKER_SERVERS = [
+      "ICMarkets-Live","ICMarkets-Demo","Exness-Real","Exness-MT5Trial","FTMO-Server",
+      "XM.COM-Real 3","XM.COM-Demo","HFMarkets-Live Server","Pepperstone-Edge-Live",
+      "Pepperstone-MT5-Live","OctaFX-Real","FBS-Real","Tickmill-Live","Vantage-Real",
+      "GO Markets Group-Live","Axiory-Real","EasyMarkets-MT5 Real","ThinkMarkets-Live",
+    ];
+
     const PhaseSetup = () => (
       <div>
-        <div style={{ background: `${T.gold}14`, border: `1px solid ${T.gold}44`, borderRadius: 12, padding: "14px 16px", marginBottom: 18 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.goldBright, marginBottom: 6 }}>Connect Your MT5 Account</div>
-          <div style={{ fontSize: 11.5, color: T.paper, lineHeight: 1.7 }}>
-            RainX activates the existing Raina AI scalping engine on your MT5 account. Raina AI generates 1m/5m/15m signals and queues trades automatically within your chosen risk limits. Your MT5 Expert Advisor executes locally — Raina AI never holds your login credentials.
+        {/* Demo tip */}
+        <div style={{ background: `${T.sage}14`, border: `1px solid ${T.sage}44`, borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: T.sage, fontWeight: 700, marginBottom: 3 }}>💡 New to scalping? Start with a Demo account</div>
+          <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6 }}>
+            Open a free demo account on any MT5 broker (FTMO, ICMarkets, XM, Exness…), connect it here, and test Raina AI scalping with virtual funds before going live. No money at risk.
           </div>
         </div>
+
+        {/* Connection method */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Connection Method</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[["metaapi","MetaAPI (Cloud)"],["ea","EA Desktop"]].map(([m,label]) => (
+              <button key={m} onClick={() => { setConnectMethod(m); setErr(""); }}
+                style={{ flex:1, background: connectMethod===m ? T.gold : T.card, color: connectMethod===m ? T.ink : T.muted, border: `1px solid ${connectMethod===m ? T.gold : T.cardBorder}`, borderRadius:10, padding:"10px 6px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:11, cursor:"pointer", transition:"background 0.2s,color 0.2s" }}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {connectMethod === "metaapi" && (
+            <div style={{ fontSize:10.5, color:T.muted, marginTop:6, lineHeight:1.5 }}>Recommended — no PC or VPS needed. Raina AI stays connected to your broker 24/7 via MetaAPI cloud.</div>
+          )}
+          {connectMethod === "ea" && (
+            <div style={{ fontSize:10.5, color:T.muted, marginTop:6, lineHeight:1.5 }}>Install an Expert Advisor in your local MetaTrader 5. MT5 must stay open on a PC or VPS for trades to execute.</div>
+          )}
+        </div>
+
+        {/* Account mode */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 11.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Account Mode</div>
           <div style={{ display: "flex", gap: 8 }}>
-            {["demo", "live"].map(m => (
+            {["demo","live"].map(m => (
               <button key={m} onClick={() => setMode(m)}
-                style={{ flex: 1, background: mode === m ? T.gold : T.card, color: mode === m ? T.ink : T.muted, border: `1px solid ${mode === m ? T.gold : T.cardBorder}`, borderRadius: 10, padding: "10px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, cursor: "pointer", textTransform: "capitalize", transition: "background 0.2s,color 0.2s" }}>
-                {m === "demo" ? "Demo" : "Live"}
+                style={{ flex:1, background: mode===m ? T.gold : T.card, color: mode===m ? T.ink : T.muted, border: `1px solid ${mode===m ? T.gold : T.cardBorder}`, borderRadius:10, padding:"10px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:12.5, cursor:"pointer", textTransform:"capitalize", transition:"background 0.2s,color 0.2s" }}>
+                {m === "demo" ? "📊 Demo" : "🔴 Live"}
               </button>
             ))}
           </div>
         </div>
-        {err && <div style={{ fontSize: 11.5, color: T.rust, marginBottom: 10 }}>{err}</div>}
+
+        {connectMethod === "metaapi" ? (
+          <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"14px 16px", marginBottom:16 }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, color:T.goldBright, marginBottom:4 }}>MT5 Credentials</div>
+            <div style={{ fontSize:10.5, color:T.muted, marginBottom:14, lineHeight:1.6 }}>
+              Raina AI connects securely via MetaAPI. Your credentials are encrypted in transit and never stored in plain text.
+            </div>
+            <div style={{ marginBottom:14 }}>
+              <div style={{ fontSize:11, color:T.muted, fontWeight:700, marginBottom:4 }}>MT5 Login Number</div>
+              <input type="text" value={mt5Login} onChange={e => setMt5Login(e.target.value)} placeholder="e.g. 12345678"
+                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize:13, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
+              <div style={{ fontSize:10, color:T.muted, marginTop:3 }}>The account number from your broker's welcome email.</div>
+            </div>
+            <div style={{ marginBottom:14 }}>
+              <div style={{ fontSize:11, color:T.muted, fontWeight:700, marginBottom:4 }}>MT5 Password</div>
+              <input type="password" value={mt5Password} onChange={e => setMt5Password(e.target.value)} placeholder="Master or Investor password"
+                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize:13, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
+              <div style={{ fontSize:10, color:T.muted, marginTop:3 }}>Use your Master password for automated trading (not the Investor/read-only password).</div>
+            </div>
+            <div style={{ marginBottom:6 }}>
+              <div style={{ fontSize:11, color:T.muted, fontWeight:700, marginBottom:4 }}>Broker Server</div>
+              <input type="text" value={mt5Server} onChange={e => setMt5Server(e.target.value)} placeholder="e.g. ICMarkets-Demo"
+                list="broker-servers"
+                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize:13, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
+              <datalist id="broker-servers">{BROKER_SERVERS.map(s => <option key={s} value={s} />)}</datalist>
+              <div style={{ fontSize:10, color:T.muted, marginTop:3 }}>Find this in MT5 → Help → About MetaTrader 5. Type it exactly (case-sensitive).</div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"14px 16px", marginBottom:16 }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, color:T.goldBright, marginBottom:4 }}>EA Desktop Mode</div>
+            <div style={{ fontSize:11, color:T.muted, lineHeight:1.7 }}>
+              Click below to generate your API key. Then install the Expert Advisor from the Raina AI Telegram bot in your MetaTrader 5. Paste the key into the EA settings — Raina AI will start queuing trades automatically.
+            </div>
+          </div>
+        )}
+
+        {err && <div style={{ fontSize:11.5, color:T.rust, marginBottom:10, padding:"10px 12px", background:`${T.rust}15`, borderRadius:8, lineHeight:1.5 }}>{err}</div>}
         <button onClick={handleConnect} disabled={busy}
-          style={{ width: "100%", background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: busy ? "not-allowed" : "pointer" }}>
-          {busy ? "Connecting…" : "Generate API Key & Connect"}
+          style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor: busy ? "not-allowed" : "pointer" }}>
+          {busy ? "Connecting…" : connectMethod === "metaapi" ? "Connect via MetaAPI" : "Generate API Key & Connect"}
         </button>
         <Disclaimer />
       </div>
