@@ -3,15 +3,15 @@
   "buildCommand": "pnpm --filter @workspace/rainx exec vite build --config vite.config.vercel.ts",
   "outputDirectory": "artifacts/rainx/dist",
   "rewrites": [
-    { "source": "/api/signals/:path*", "destination": "https://raina-ai-production.up.railway.app/signals/:path*" },
-    { "source": "/api/scan/:path*",    "destination": "https://raina-ai-production.up.railway.app/scan/:path*" },
-    { "source": "/api/chat",           "destination": "https://raina-ai-production.up.railway.app/chat" },
-    { "source": "/api/price",          "destination": "https://raina-ai-production.up.railway.app/price" },
-    { "source": "/api/symbols",        "destination": "https://raina-ai-production.up.railway.app/symbols" },
-    { "source": "/api/history/:path*", "destination": "https://raina-ai-production.up.railway.app/history/:path*" },
-    { "source": "/api/candles",        "destination": "https://raina-ai-production.up.railway.app/candles" },
-    { "source": "/api/push/:path*",    "destination": "https://raina-ai-production.up.railway.app/push/:path*" },
-    { "source": "/api/webhook/:path*", "destination": "https://raina-ai-production.up.railway.app/webhook/:path*" },
+    { "source": "/api/signals/:path*", "destination": "https://raina-ai-production-b247.up.railway.app/signals/:path*" },
+    { "source": "/api/scan/:path*",    "destination": "https://raina-ai-production-b247.up.railway.app/scan/:path*" },
+    { "source": "/api/chat",           "destination": "https://raina-ai-production-b247.up.railway.app/chat" },
+    { "source": "/api/price",          "destination": "https://raina-ai-production-b247.up.railway.app/price" },
+    { "source": "/api/symbols",        "destination": "https://raina-ai-production-b247.up.railway.app/symbols" },
+    { "source": "/api/history/:path*", "destination": "https://raina-ai-production-b247.up.railway.app/history/:path*" },
+    { "source": "/api/candles",        "destination": "https://raina-ai-production-b247.up.railway.app/candles" },
+    { "source": "/api/push/:path*",    "destination": "https://raina-ai-production-b247.up.railway.app/push/:path*" },
+    { "source": "/api/webhook/:path*", "destination": "https://raina-ai-production-b247.up.railway.app/webhook/:path*" },
     { "source": "/(.*)",               "destination": "/index.html" }
   ]
 }
