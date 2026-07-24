@@ -114,15 +114,15 @@ function CoverCropModal({ file, onConfirm, onCancel, T, FONT_HEAD }) {
   return (
     <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.88)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}
       onPointerMove={onPM} onPointerUp={onPU} onPointerLeave={onPU}>
-      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:15, color:'#fff', marginBottom:14 }}>Drag to position</div>
+      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 17, color:'#fff', marginBottom:14 }}>Drag to position</div>
       <div style={{ width:DISPLAY_W, height:DISPLAY_H, overflow:'hidden', borderRadius:8, border:'2px solid #C6A15B', cursor:dragging?'grabbing':'grab', position:'relative', userSelect:'none', touchAction:'none' }}
         onPointerDown={onPD}>
         {imgSrc && <img src={imgSrc} style={{ width:DISPLAY_W, height:'auto', position:'absolute', top:offsetY, left:0, pointerEvents:'none', userSelect:'none', draggable:false }} alt='' />}
       </div>
-      <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginTop:10, marginBottom:20 }}>Cover photo · 4:1</div>
+      <div style={{ fontSize: 13, color:'rgba(255,255,255,0.35)', marginTop:10, marginBottom:20 }}>Cover photo · 4:1</div>
       <div style={{ display:'flex', gap:12 }}>
-        <button onClick={onCancel} style={{ background:'none', border:'1px solid rgba(255,255,255,0.25)', borderRadius:10, padding:'10px 24px', color:'#fff', fontFamily:FONT_HEAD, fontWeight:600, fontSize:13, cursor:'pointer' }}>Cancel</button>
-        <button onClick={confirm} style={{ background:'#C6A15B', border:'none', borderRadius:10, padding:'10px 24px', color:'#0F0E0B', fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:'pointer' }}>Use photo</button>
+        <button onClick={onCancel} style={{ background:'none', border:'1px solid rgba(255,255,255,0.25)', borderRadius:10, padding:'10px 24px', color:'#fff', fontFamily:FONT_HEAD, fontWeight:600, fontSize: 15, cursor:'pointer' }}>Cancel</button>
+        <button onClick={confirm} style={{ background:'#C6A15B', border:'none', borderRadius:10, padding:'10px 24px', color:'#0F0E0B', fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15, cursor:'pointer' }}>Use photo</button>
       </div>
       <canvas ref={canvasRef} style={{ display:'none' }} />
     </div>
@@ -154,13 +154,13 @@ function ProfileLocationInput({ value, onChange, T, FONT_HEAD }) {
         onChange={e => handleInput(e.target.value)}
         onBlur={() => setTimeout(() => setOpen(false), 200)}
         placeholder="City, Country or region"
-        style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:15, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", boxSizing:"border-box" }}
+        style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize: 17, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", boxSizing:"border-box" }}
       />
       {open && suggestions.length > 0 && (
         <div style={{ position:"absolute", top:"100%", left:0, right:0, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:10, zIndex:200, boxShadow:"0 6px 20px rgba(0,0,0,0.5)", overflow:"hidden" }}>
           {suggestions.map(s => (
             <button key={s} onMouseDown={e => { e.preventDefault(); onChange(s); setOpen(false); setSuggestions([]); }}
-              style={{ width:"100%", textAlign:"left", padding:"11px 14px", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}44`, color:T.paper, fontSize:13, cursor:"pointer", fontFamily:FONT_HEAD }}>
+              style={{ width:"100%", textAlign:"left", padding:"11px 14px", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}44`, color:T.paper, fontSize: 15, cursor:"pointer", fontFamily:FONT_HEAD }}>
               {s}
             </button>
           ))}
@@ -465,7 +465,7 @@ function BiasChip({ bias }) {
     hold: { color: T.muted, label: "HOLD", dot: "⚪" },
   };
   const m = map[bias] || map.hold;
-  return <div style={{ display: "flex", alignItems: "center", gap: 6, color: m.color, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15 }}><span>{m.dot}</span> {m.label}</div>;
+  return <div style={{ display: "flex", alignItems: "center", gap: 6, color: m.color, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 17 }}><span>{m.dot}</span> {m.label}</div>;
 }
 function playNotifSound() {
   try {
@@ -520,13 +520,13 @@ function Toast({ toast, onDone }) {
         animation: dragX === 0 ? "slideDown 0.25s ease-out" : "none",
       }}
     >
-      <div style={{ fontFamily: FONT_HEAD, fontSize: 12.5, fontWeight: 700, color: colorMap[toast.type] || T.gold }}>{toast.title}</div>
-      <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: T.paper, marginTop: 3, fontWeight: 500 }}>{toast.body}</div>
-      <div style={{ fontSize: 9.5, color: T.muted, marginTop: 4 }}>Swipe or tap to dismiss</div>
+      <div style={{ fontFamily: FONT_HEAD, fontSize: 14.5, fontWeight: 700, color: colorMap[toast.type] || T.gold }}>{toast.title}</div>
+      <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: T.paper, marginTop: 3, fontWeight: 500 }}>{toast.body}</div>
+      <div style={{ fontSize: 11.5, color: T.muted, marginTop: 4 }}>Swipe or tap to dismiss</div>
     </div>
   );
 }
-const getInputStyle = () => ({ flex: 1, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: 10, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 500 });
+const getInputStyle = () => ({ flex: 1, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: 10, fontFamily: FONT_BODY, fontSize: 15, fontWeight: 500 });
 
 // ---------- Auth (real Supabase accounts) ----------
 async function recordActivity(userId, action, meta) {
@@ -674,23 +674,23 @@ function AuthScreen({ onAuthed }) {
           </linearGradient>
         </defs>
         <path id="authRibbonPath" d="M6 74 C 55 6, 95 6, 140 46 S 250 84, 306 14" stroke="url(#authRibbon)" strokeWidth="22" fill="none" strokeLinecap="round" />
-        <text fontSize="8.5" fontWeight="800" letterSpacing="2" fill="#0B0B0B">
+        <text fontSize="10.5" fontWeight="800" letterSpacing="2" fill="#0B0B0B">
           <textPath href="#authRibbonPath" startOffset="6%">PREMIUM SIGNALS FOR TRADERS</textPath>
         </text>
       </svg>
 
       <div style={{ marginBottom: 24 }}>
-        <div style={{ fontFamily: FONT_HEAD, fontSize: 26, fontWeight: 800, color: "#fff", letterSpacing: -0.5, lineHeight: 1.25 }}>
+        <div style={{ fontFamily: FONT_HEAD, fontSize: 27, fontWeight: 800, color: "#fff", letterSpacing: -0.5, lineHeight: 1.25 }}>
           Get <span style={{ color: A.gold }}>high accuracy</span> trading signals and connect with our active community.
         </div>
-        <div style={{ fontSize: 11, color: A.gray, fontWeight: 700, letterSpacing: 1.5, marginTop: 10, textTransform: "uppercase" }}>{content.hero_subtitle}</div>
-        <div style={{ fontSize: 12.5, color: A.gray, marginTop: 6, fontWeight: 500 }}>{content.hero_tagline}</div>
+        <div style={{ fontSize: 13, color: A.gray, fontWeight: 700, letterSpacing: 1.5, marginTop: 10, textTransform: "uppercase" }}>{content.hero_subtitle}</div>
+        <div style={{ fontSize: 14.5, color: A.gray, marginTop: 6, fontWeight: 500 }}>{content.hero_tagline}</div>
       </div>
 
       <div style={{ background: A.card, border: `1px solid ${A.border}`, borderRadius: 28, padding: 24, boxShadow: "0 20px 40px rgba(0,0,0,0.35)" }}>
         <div style={{ display: "flex", marginBottom: 20, background: "rgba(255,255,255,0.04)", borderRadius: 14, padding: 4 }}>
           {["signup", "signin"].map((m) => (
-            <button key={m} onClick={() => { setMode(m); setError(""); setNotice(""); }} style={{ flex: 1, padding: "10px 0", border: "none", borderRadius: 10, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, background: mode === m ? A.goldGrad : "transparent", color: mode === m ? "#0B0B0B" : A.gray, transition: "background 0.15s" }}>
+            <button key={m} onClick={() => { setMode(m); setError(""); setNotice(""); }} style={{ flex: 1, padding: "10px 0", border: "none", borderRadius: 10, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, background: mode === m ? A.goldGrad : "transparent", color: mode === m ? "#0B0B0B" : A.gray, transition: "background 0.15s" }}>
               {m === "signup" ? "Sign up" : "Sign in"}
             </button>
           ))}
@@ -699,80 +699,80 @@ function AuthScreen({ onAuthed }) {
         {mode === "signup" && (<>
           <div style={{ display:"flex", gap:8, marginBottom:14 }}>
             <div style={{ flex:1 }}>
-              <label style={{ fontSize:11, color:A.gray, fontWeight:600, letterSpacing:0.3 }}>First Name</label>
+              <label style={{ fontSize: 13, color:A.gray, fontWeight:600, letterSpacing:0.3 }}>First Name</label>
               <div style={{ display:"flex", alignItems:"center", marginTop:6, background:A.bg, border:`1px solid ${A.border}`, borderRadius:14, padding:"12px 14px" }}>
-                <input value={firstName} onChange={e=>setFirstName(e.target.value)} placeholder="First name" style={{ flex:1, background:"transparent", border:"none", outline:"none", color:"#fff", fontFamily:FONT_BODY, fontSize:13 }} />
+                <input value={firstName} onChange={e=>setFirstName(e.target.value)} placeholder="First name" style={{ flex:1, background:"transparent", border:"none", outline:"none", color:"#fff", fontFamily:FONT_BODY, fontSize: 15 }} />
               </div>
             </div>
             <div style={{ flex:1 }}>
-              <label style={{ fontSize:11, color:A.gray, fontWeight:600, letterSpacing:0.3 }}>Last Name</label>
+              <label style={{ fontSize: 13, color:A.gray, fontWeight:600, letterSpacing:0.3 }}>Last Name</label>
               <div style={{ display:"flex", alignItems:"center", marginTop:6, background:A.bg, border:`1px solid ${A.border}`, borderRadius:14, padding:"12px 14px" }}>
-                <input value={lastName} onChange={e=>setLastName(e.target.value)} placeholder="Last name" style={{ flex:1, background:"transparent", border:"none", outline:"none", color:"#fff", fontFamily:FONT_BODY, fontSize:13 }} />
+                <input value={lastName} onChange={e=>setLastName(e.target.value)} placeholder="Last name" style={{ flex:1, background:"transparent", border:"none", outline:"none", color:"#fff", fontFamily:FONT_BODY, fontSize: 15 }} />
               </div>
             </div>
           </div>
-          <label style={{ fontSize:11, color:A.gray, fontWeight:600, letterSpacing:0.3 }}>Username</label>
+          <label style={{ fontSize: 13, color:A.gray, fontWeight:600, letterSpacing:0.3 }}>Username</label>
           <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:6, marginBottom:14, background:A.bg, border:`1px solid ${A.border}`, borderRadius:14, padding:"12px 14px" }}>
-            <span style={{ color:A.gray, fontSize:14 }}>@</span>
-            <input value={username2} onChange={e=>setUsername2(e.target.value)} placeholder="yourhandle" style={{ flex:1, background:"transparent", border:"none", outline:"none", color:"#fff", fontFamily:FONT_BODY, fontSize:13.5 }} />
+            <span style={{ color:A.gray, fontSize: 16 }}>@</span>
+            <input value={username2} onChange={e=>setUsername2(e.target.value)} placeholder="yourhandle" style={{ flex:1, background:"transparent", border:"none", outline:"none", color:"#fff", fontFamily:FONT_BODY, fontSize: 15.5 }} />
           </div>
         </>)}
 
-        <label style={{ fontSize: 11, color: A.gray, fontWeight: 600, letterSpacing: 0.3 }}>{mode === "signin" ? "Email or Username" : "Email"}</label>
+        <label style={{ fontSize: 13, color: A.gray, fontWeight: 600, letterSpacing: 0.3 }}>{mode === "signin" ? "Email or Username" : "Email"}</label>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6, marginBottom: 16, background: A.bg, border: `1px solid ${A.border}`, borderRadius: 14, padding: "12px 14px" }}>
           <Mail size={16} color={A.gray} />
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={mode === "signin" ? "Email or @username" : "you@email.com"} style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#fff", fontFamily: FONT_BODY, fontSize: 13.5 }} />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={mode === "signin" ? "Email or @username" : "you@email.com"} style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#fff", fontFamily: FONT_BODY, fontSize: 15.5 }} />
         </div>
 
         {mode === "signup" && (<>
           <div style={{ display:"flex", gap:8, marginBottom:14 }}>
             <div style={{ flex:1 }}>
-              <label style={{ fontSize:11, color:A.gray, fontWeight:600, letterSpacing:0.3 }}>Phone</label>
+              <label style={{ fontSize: 13, color:A.gray, fontWeight:600, letterSpacing:0.3 }}>Phone</label>
               <div style={{ display:"flex", alignItems:"center", marginTop:6, background:A.bg, border:`1px solid ${A.border}`, borderRadius:14, padding:"12px 14px" }}>
-                <input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+1 555 000 0000" style={{ flex:1, background:"transparent", border:"none", outline:"none", color:"#fff", fontFamily:FONT_BODY, fontSize:13 }} />
+                <input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="+1 555 000 0000" style={{ flex:1, background:"transparent", border:"none", outline:"none", color:"#fff", fontFamily:FONT_BODY, fontSize: 15 }} />
               </div>
             </div>
             <div style={{ flex:1 }}>
-              <label style={{ fontSize:11, color:A.gray, fontWeight:600, letterSpacing:0.3 }}>Country</label>
+              <label style={{ fontSize: 13, color:A.gray, fontWeight:600, letterSpacing:0.3 }}>Country</label>
               <div style={{ display:"flex", alignItems:"center", marginTop:6, background:A.bg, border:`1px solid ${A.border}`, borderRadius:14, padding:"12px 14px" }}>
-                <input value={country} onChange={e=>setCountry(e.target.value)} placeholder="Country" style={{ flex:1, background:"transparent", border:"none", outline:"none", color:"#fff", fontFamily:FONT_BODY, fontSize:13 }} />
+                <input value={country} onChange={e=>setCountry(e.target.value)} placeholder="Country" style={{ flex:1, background:"transparent", border:"none", outline:"none", color:"#fff", fontFamily:FONT_BODY, fontSize: 15 }} />
               </div>
             </div>
           </div>
         </>)}
 
-        <label style={{ fontSize: 11, color: A.gray, fontWeight: 600, letterSpacing: 0.3 }}>Password</label>
+        <label style={{ fontSize: 13, color: A.gray, fontWeight: 600, letterSpacing: 0.3 }}>Password</label>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6, marginBottom: 18, background: A.bg, border: `1px solid ${A.border}`, borderRadius: 14, padding: "12px 14px" }}>
           <ShieldCheck size={16} color={A.gray} />
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#fff", fontFamily: FONT_BODY, fontSize: 13.5 }} />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#fff", fontFamily: FONT_BODY, fontSize: 15.5 }} />
         </div>
 
         {mode === "signup" && (
-          <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 11, color: A.gray, marginBottom: 16, lineHeight: 1.6 }}>
+          <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, color: A.gray, marginBottom: 16, lineHeight: 1.6 }}>
             <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} style={{ marginTop: 2, accentColor: A.gold }} />
             I understand RainX is an analysis tool, not financial advice, and I trade at my own risk.
           </label>
         )}
-        {notice && <div style={{ color: "#7A9E86", fontSize: 12, marginBottom: 12 }}>{notice}</div>}
-        {error && <div style={{ color: "#E27D6B", fontSize: 12, marginBottom: 12 }}>{error}</div>}
+        {notice && <div style={{ color: "#7A9E86", fontSize: 14, marginBottom: 12 }}>{notice}</div>}
+        {error && <div style={{ color: "#E27D6B", fontSize: 14, marginBottom: 12 }}>{error}</div>}
 
-        <button onClick={submit} disabled={busy} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: A.goldGrad, color: "#0B0B0B", border: "none", borderRadius: 14, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1, boxShadow: "0 8px 20px rgba(212,175,99,0.25)" }}>
+        <button onClick={submit} disabled={busy} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: A.goldGrad, color: "#0B0B0B", border: "none", borderRadius: 14, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15.5, cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1, boxShadow: "0 8px 20px rgba(212,175,99,0.25)" }}>
           {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"} {!busy && <ArrowRight size={15} />}
         </button>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "20px 0 14px" }}>
           <div style={{ flex: 1, height: 1, background: A.border }} />
-          <span style={{ fontSize: 10, color: A.gray }}>or continue with</span>
+          <span style={{ fontSize: 12, color: A.gray }}>or continue with</span>
           <div style={{ flex: 1, height: 1, background: A.border }} />
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           {["Google", "Apple"].map((provider) => (
-            <button key={provider} onClick={() => setOauthNotice(`${provider} sign-in is coming soon.`)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "rgba(255,255,255,0.04)", border: `1px solid ${A.border}`, borderRadius: 12, padding: "11px 0", color: "#fff", fontFamily: FONT_BODY, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
+            <button key={provider} onClick={() => setOauthNotice(`${provider} sign-in is coming soon.`)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "rgba(255,255,255,0.04)", border: `1px solid ${A.border}`, borderRadius: 12, padding: "11px 0", color: "#fff", fontFamily: FONT_BODY, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
               {provider}
             </button>
           ))}
         </div>
-        {oauthNotice && <div style={{ fontSize: 10.5, color: A.gray, textAlign: "center", marginTop: 10 }}>{oauthNotice}</div>}
+        {oauthNotice && <div style={{ fontSize: 12.5, color: A.gray, textAlign: "center", marginTop: 10 }}>{oauthNotice}</div>}
       </div>
     </div>
   );
@@ -822,9 +822,9 @@ function BlurGate({ unlocked, requiredLabel, onSubscribe, children, minHeight = 
     <div style={{ position: "relative", minHeight, borderRadius: 14, overflow: "hidden" }}>
       <div style={{ filter: "blur(7px)", opacity: 0.5, pointerEvents: "none", userSelect: "none" }}>{children}</div>
       <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(15,14,11,0.35)", padding: 16, textAlign: "center" }}>
-        <div style={{ fontSize: 24, marginBottom: 6 }}>🔒</div>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 4 }}>{requiredLabel} subscription required</div>
-        <button onClick={onSubscribe} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 8, padding: "8px 16px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, cursor: "pointer", marginTop: 6 }}>
+        <div style={{ fontSize: 25, marginBottom: 6 }}>🔒</div>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper, marginBottom: 4 }}>{requiredLabel} subscription required</div>
+        <button onClick={onSubscribe} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 8, padding: "8px 16px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, cursor: "pointer", marginTop: 6 }}>
           Subscribe to unlock
         </button>
       </div>
@@ -915,11 +915,11 @@ function SubscribeScreen({ account, entitlement, onBack }) {
         <div style={{ width: 64, height: 64, borderRadius: "50%", background: `rgba(198,161,91,0.12)`, border: `2px solid ${T.gold}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
           <ShieldCheck size={30} color={T.gold} />
         </div>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.paper, marginBottom: 8 }}>Payment Submitted!</div>
-        <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.7, marginBottom: 20 }}>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 19, color: T.paper, marginBottom: 8 }}>Payment Submitted!</div>
+        <div style={{ fontSize: 15, color: T.muted, lineHeight: 1.7, marginBottom: 20 }}>
           Your {PLAN_LABELS[entitlement.pendingPlan || plan.key]} plan request is awaiting confirmation. Access unlocks automatically once an admin approves your payment.
         </div>
-        <button onClick={onBack} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: "12px 32px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+        <button onClick={onBack} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: "12px 32px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
           Back to More
         </button>
       </div>
@@ -930,19 +930,19 @@ function SubscribeScreen({ account, entitlement, onBack }) {
   if (selectedMethod) {
     return (
       <div style={{ padding: 16 }}>
-        <button onClick={() => setSelectedMethod(null)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: FONT_HEAD, fontSize: 13, fontWeight: 700, marginBottom: 16 }}>
+        <button onClick={() => setSelectedMethod(null)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: FONT_HEAD, fontSize: 15, fontWeight: 700, marginBottom: 16 }}>
           <ChevronLeft size={16} /> Back
         </button>
-        <div style={{ fontFamily: FONT_HEAD, fontSize: 16, fontWeight: 800, color: T.goldBright, marginBottom: 12 }}>{selectedMethod.name}</div>
+        <div style={{ fontFamily: FONT_HEAD, fontSize: 18, fontWeight: 800, color: T.goldBright, marginBottom: 12 }}>{selectedMethod.name}</div>
         <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 18, marginBottom: 12 }}>
-          <div style={{ fontSize: 13, color: T.paper, lineHeight: 1.7, marginBottom: 14, whiteSpace: "pre-wrap" }}>{selectedMethod.instructions}</div>
+          <div style={{ fontSize: 15, color: T.paper, lineHeight: 1.7, marginBottom: 14, whiteSpace: "pre-wrap" }}>{selectedMethod.instructions}</div>
           {selectedMethod.image_url && (
             <img src={selectedMethod.image_url} alt="Payment details" style={{ width: "100%", borderRadius: 10, marginBottom: 14 }} />
           )}
         </div>
-        <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 4 }}>Payment reference (optional)</label>
+        <label style={{ fontSize: 13, color: T.muted, fontWeight: 600, display: "block", marginBottom: 4 }}>Payment reference (optional)</label>
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. transaction ID" style={{ ...getInputStyle(), width: "100%", marginBottom: 14 }} />
-        <button onClick={submitPayment} disabled={busy} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+        <button onClick={submitPayment} disabled={busy} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: "pointer" }}>
           {busy ? "Submitting…" : "I've Paid — Confirm →"}
         </button>
       </div>
@@ -957,8 +957,8 @@ function SubscribeScreen({ account, entitlement, onBack }) {
     <div style={{ background: T.ink, minHeight: "100%", paddingBottom: 24 }}>
       {/* Header */}
       <div style={{ textAlign: "center", padding: "24px 20px 16px" }}>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 20, color: T.goldBright, marginBottom: 4 }}>Upgrade Plan</div>
-        <div style={{ fontSize: 12.5, color: T.muted }}>Choose the plan that works best for you</div>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 21, color: T.goldBright, marginBottom: 4 }}>Upgrade Plan</div>
+        <div style={{ fontSize: 14.5, color: T.muted }}>Choose the plan that works best for you</div>
       </div>
 
       {/* Gold badge icon */}
@@ -968,8 +968,8 @@ function SubscribeScreen({ account, entitlement, onBack }) {
         </div>
       </div>
       <div style={{ textAlign: "center", marginBottom: 24, padding: "0 20px" }}>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 19, color: T.paper, marginBottom: 5 }}>Unlock More. Earn More.</div>
-        <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.6 }}>Get premium tools, rewards, and insights{"\n"}to stay ahead in the market.</div>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 21, color: T.paper, marginBottom: 5 }}>Unlock More. Earn More.</div>
+        <div style={{ fontSize: 14.5, color: T.muted, lineHeight: 1.6 }}>Get premium tools, rewards, and insights{"\n"}to stay ahead in the market.</div>
       </div>
 
       {/* Plan tabs */}
@@ -984,11 +984,11 @@ function SubscribeScreen({ account, entitlement, onBack }) {
               border: "none", cursor: "pointer",
               fontFamily: FONT_HEAD, fontWeight: 700,
               color: activePlanIdx === i ? T.ink : T.muted,
-              fontSize: 11.5, lineHeight: 1.3, textAlign: "center",
+              fontSize: 13.5, lineHeight: 1.3, textAlign: "center",
             }}
           >
             <div>{p.label}</div>
-            <div style={{ fontSize: 9.5, fontWeight: 600, marginTop: 1, opacity: 0.85 }}>{p.tag}</div>
+            <div style={{ fontSize: 11.5, fontWeight: 600, marginTop: 1, opacity: 0.85 }}>{p.tag}</div>
           </button>
         ))}
       </div>
@@ -998,12 +998,12 @@ function SubscribeScreen({ account, entitlement, onBack }) {
         {/* Price + gold bars */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
           <div>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.goldBright, marginBottom: 6 }}>{plan.label} Plan</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.goldBright, marginBottom: 6 }}>{plan.label} Plan</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-              <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 30, color: T.paper }}>{plan.price}</span>
-              <span style={{ fontSize: 13, color: T.muted, fontFamily: FONT_HEAD }}>{plan.period}</span>
+              <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 31, color: T.paper }}>{plan.price}</span>
+              <span style={{ fontSize: 15, color: T.muted, fontFamily: FONT_HEAD }}>{plan.period}</span>
             </div>
-            <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>{plan.billing}</div>
+            <div style={{ fontSize: 13, color: T.muted, marginTop: 3 }}>{plan.billing}</div>
           </div>
           <GoldBarsIcon />
         </div>
@@ -1013,14 +1013,14 @@ function SubscribeScreen({ account, entitlement, onBack }) {
           {plan.features.map((f, i) => (
             <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
               <div style={{ width: 22, height: 22, borderRadius: "50%", background: `rgba(198,161,91,0.15)`, border: `1px solid ${T.gold}44`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
-                <span style={{ fontSize: 11, color: T.gold, fontWeight: 800 }}>✓</span>
+                <span style={{ fontSize: 13, color: T.gold, fontWeight: 800 }}>✓</span>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper }}>{f.text}</div>
-                {f.sub && <div style={{ fontSize: 11, color: T.muted, marginTop: 1, lineHeight: 1.5 }}>{f.sub}</div>}
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper }}>{f.text}</div>
+                {f.sub && <div style={{ fontSize: 13, color: T.muted, marginTop: 1, lineHeight: 1.5 }}>{f.sub}</div>}
               </div>
               <div style={{ width: 20, height: 20, borderRadius: "50%", background: T.gold, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
-                <span style={{ fontSize: 10, color: T.ink, fontWeight: 800 }}>✓</span>
+                <span style={{ fontSize: 12, color: T.ink, fontWeight: 800 }}>✓</span>
               </div>
             </div>
           ))}
@@ -1031,37 +1031,37 @@ function SubscribeScreen({ account, entitlement, onBack }) {
       <div style={{ margin: "0 16px 16px", background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
         <ShieldCheck size={18} color={T.goldBright} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: T.goldBright }}>Secure &amp; Trusted Payments</div>
-          <div style={{ fontSize: 10.5, color: T.muted, marginTop: 1 }}>Your payment information is fully encrypted</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.goldBright }}>Secure &amp; Trusted Payments</div>
+          <div style={{ fontSize: 12.5, color: T.muted, marginTop: 1 }}>Your payment information is fully encrypted</div>
         </div>
         {/* Payment logos */}
         <div style={{ display: "flex", gap: 6 }}>
           {["VISA", "MC", "MTN"].map(m => (
-            <div key={m} style={{ background: m === "VISA" ? "#1434CB" : m === "MC" ? "#EB001B" : "#FFCC00", borderRadius: 4, padding: "3px 6px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 9, color: m === "MTN" ? "#000" : "#fff" }}>{m}</div>
+            <div key={m} style={{ background: m === "VISA" ? "#1434CB" : m === "MC" ? "#EB001B" : "#FFCC00", borderRadius: 4, padding: "3px 6px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 11, color: m === "MTN" ? "#000" : "#fff" }}>{m}</div>
           ))}
         </div>
       </div>
 
       {/* CTA */}
       {methods === null ? (
-        <div style={{ margin: "0 16px", background: T.gold, borderRadius: 14, padding: "15px 0", textAlign: "center", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.ink, cursor: "pointer" }}>
+        <div style={{ margin: "0 16px", background: T.gold, borderRadius: 14, padding: "15px 0", textAlign: "center", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.ink, cursor: "pointer" }}>
           Loading…
         </div>
       ) : methods.length === 0 ? (
         <div style={{ margin: "0 16px 8px", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, borderRadius: 14, padding: "15px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
           onClick={() => alert("No payment methods configured. Please contact support.")}>
-          <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.ink }}>Subscribe Now</span>
-          <span style={{ fontSize: 20, color: T.ink }}>→</span>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.ink }}>Subscribe Now</span>
+          <span style={{ fontSize: 21, color: T.ink }}>→</span>
         </div>
       ) : methods.length === 1 ? (
-        <button onClick={() => setSelectedMethod(methods[0])} style={{ margin: "0 16px 8px", width: "calc(100% - 32px)", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 14, padding: "15px 20px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span>Subscribe Now</span><span style={{ fontSize: 20 }}>→</span>
+        <button onClick={() => setSelectedMethod(methods[0])} style={{ margin: "0 16px 8px", width: "calc(100% - 32px)", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 14, padding: "15px 20px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span>Subscribe Now</span><span style={{ fontSize: 21 }}>→</span>
         </button>
       ) : (
         <div style={{ margin: "0 16px 8px", display: "flex", flexDirection: "column", gap: 8 }}>
           {methods.map(m => (
-            <button key={m.id} onClick={() => setSelectedMethod(m)} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 14, padding: "13px 20px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span>Subscribe via {m.name}</span><span style={{ fontSize: 18 }}>→</span>
+            <button key={m.id} onClick={() => setSelectedMethod(m)} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 14, padding: "13px 20px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>Subscribe via {m.name}</span><span style={{ fontSize: 20 }}>→</span>
             </button>
           ))}
         </div>
@@ -1069,7 +1069,7 @@ function SubscribeScreen({ account, entitlement, onBack }) {
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 10 }}>
         <ShieldCheck size={12} color={T.muted} />
-        <span style={{ fontSize: 11, color: T.muted, fontFamily: FONT_HEAD }}>14-Day Money Back Guarantee</span>
+        <span style={{ fontSize: 13, color: T.muted, fontFamily: FONT_HEAD }}>14-Day Money Back Guarantee</span>
       </div>
     </div>
   );
@@ -1086,7 +1086,7 @@ class MoreTabErrorBoundary extends React.Component {
   componentDidCatch(e, info) { console.error("MoreTab crash:", e, info); }
   render() {
     if (this.state.error) return (
-      <div style={{ padding: 24, color: "#C0392B", background: "#fff8f8", fontSize: 13, fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all", border: "2px solid #C0392B", margin: 16, borderRadius: 8 }}>
+      <div style={{ padding: 24, color: "#C0392B", background: "#fff8f8", fontSize: 15, fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all", border: "2px solid #C0392B", margin: 16, borderRadius: 8 }}>
         <strong>MoreTab crashed — screenshot this:</strong>{" "}{this.state.error}
       </div>
     );
@@ -1750,8 +1750,8 @@ function MainAppContent({ account, onLogout }) {
           <HeaderAvatar account={account} morePage={morePage} T={T} />
         </button>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: FONT_HEAD, fontSize: 19, fontWeight: 800, color: T.goldBright, letterSpacing: -0.3 }}>RainX</div>
-          <div style={{ fontSize: 9.5, color: T.muted, fontWeight: 600, marginTop: -2 }}>Powered by Raina AI</div>
+          <div style={{ fontFamily: FONT_HEAD, fontSize: 21, fontWeight: 800, color: T.goldBright, letterSpacing: -0.3 }}>RainX</div>
+          <div style={{ fontSize: 11.5, color: T.muted, fontWeight: 600, marginTop: -2 }}>Powered by Raina AI</div>
         </div>
         <button onClick={() => {
           setShowNotifPanel(true);
@@ -1763,7 +1763,7 @@ function MainAppContent({ account, onLogout }) {
         }} style={{ position: "relative", background: "none", border: "none", color: T.paper, cursor: "pointer" }}>
           <Bell size={20} />
           {unreadCount > 0 && (
-            <span style={{ position: "absolute", top: -6, right: -8, background: T.rust, color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 10, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>
+            <span style={{ position: "absolute", top: -6, right: -8, background: T.rust, color: "#fff", fontSize: 12, fontWeight: 700, borderRadius: 10, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
@@ -1817,16 +1817,16 @@ function MainAppContent({ account, onLogout }) {
 
             {/* Header */}
             <div style={{ padding:"22px 20px 16px", borderBottom:`1px solid ${T.cardBorder}`, background:`linear-gradient(135deg,${T.gold}18,transparent)` }}>
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.goldBright, letterSpacing:-0.3, marginBottom:2 }}>RainX</div>
-              <div style={{ fontSize:10, color:T.muted, fontWeight:600 }}>Powered by Raina AI</div>
+              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 21, color:T.goldBright, letterSpacing:-0.3, marginBottom:2 }}>RainX</div>
+              <div style={{ fontSize: 12, color:T.muted, fontWeight:600 }}>Powered by Raina AI</div>
               {/* Clickable Profile */}
               <button onClick={() => { setMorePage("profile"); goTab("more"); setShowSidebar(false); }} style={{ marginTop:18, width:"100%", display:"flex", alignItems:"center", gap:12, background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"12px 14px", cursor:"pointer", textAlign:"left" }}>
-                <div style={{ width:44, height:44, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>
+                <div style={{ width:44, height:44, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize: 18, color:T.ink, flexShrink:0 }}>
                   {(account?.email || "?")[0].toUpperCase()}
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper }}>Profile</div>
-                  <div style={{ fontSize:10.5, color:T.muted, marginTop:2 }}>View &amp; edit your profile</div>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15, color:T.paper }}>Profile</div>
+                  <div style={{ fontSize: 12.5, color:T.muted, marginTop:2 }}>View &amp; edit your profile</div>
                 </div>
                 <ChevronRight size={15} color={T.muted} />
               </button>
@@ -1846,14 +1846,14 @@ function MainAppContent({ account, onLogout }) {
               ) : (
                 <button key={item.label} onClick={item.action} style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"13px 20px", background:"none", border:"none", cursor:"pointer" }}>
                   <item.icon size={18} color={item.danger ? T.rust : T.gold} />
-                  <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:item.danger ? T.rust : T.paper }}>{item.label}</span>
+                  <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 16, color:item.danger ? T.rust : T.paper }}>{item.label}</span>
                 </button>
               ))}
             </div>
 
             {/* Footer */}
             <div style={{ padding:"14px 20px", borderTop:`1px solid ${T.cardBorder}` }}>
-              <div style={{ fontSize:10, color:T.muted, lineHeight:1.7 }}>RainX is an analysis tool, not a broker. AI analysis is not financial advice.</div>
+              <div style={{ fontSize: 12, color:T.muted, lineHeight:1.7 }}>RainX is an analysis tool, not a broker. AI analysis is not financial advice.</div>
             </div>
           </div>
         </div>
@@ -1864,13 +1864,13 @@ function MainAppContent({ account, onLogout }) {
           <div style={{ background: T.card, width: "88%", maxWidth: 380, height: "100%", display: "flex", flexDirection: "column" }}>
             {/* Header */}
             <div style={{ padding: "16px 18px 10px", borderBottom: `1px solid ${T.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-              <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.goldBright, fontWeight: 700 }}>Notifications</div>
+              <div style={{ fontFamily: FONT_HEAD, fontSize: 19, color: T.goldBright, fontWeight: 700 }}>Notifications</div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 {notifications.length > 0 && (
                   <button onClick={() => {
                     setNotifications([]);
                     if (account?.id) supabase.from("user_notifications").delete().eq("user_id", account.id).then(() => {}, () => {});
-                  }} style={{ background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 7, padding: "4px 10px", fontSize: 11, color: T.muted, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 600 }}>Clear all</button>
+                  }} style={{ background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 7, padding: "4px 10px", fontSize: 13, color: T.muted, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 600 }}>Clear all</button>
                 )}
                 <button onClick={() => setShowNotifPanel(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><X size={20} /></button>
               </div>
@@ -1879,7 +1879,7 @@ function MainAppContent({ account, onLogout }) {
             <div style={{ flex: 1, overflowY: "auto", padding: "10px 18px 18px" }}>
               <BlurGate unlocked={hasAccess(entitlement.tier, "weekly")} requiredLabel="Weekly" onSubscribe={() => { setShowNotifPanel(false); setTab("subscribe"); }} minHeight={140}>
                 {notifications.length === 0 ? (
-                  <div style={{ fontSize: 12, color: T.muted, paddingTop: 8 }}>Nothing yet. You'll only be notified for strong setups and trade updates — not every tick.</div>
+                  <div style={{ fontSize: 14, color: T.muted, paddingTop: 8 }}>Nothing yet. You'll only be notified for strong setups and trade updates — not every tick.</div>
                 ) : (() => {
                   const nowDate = new Date();
                   const todayStr = nowDate.toDateString();
@@ -1897,16 +1897,16 @@ function MainAppContent({ account, onLogout }) {
                   const list = allUngrouped ? [{ label: null, items: notifications }] : groups;
                   return list.map(group => (
                     <div key={group.label || "all"}>
-                      {group.label && <div style={{ fontSize: 10, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, padding: "12px 0 6px" }}>{group.label}</div>}
+                      {group.label && <div style={{ fontSize: 12, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, padding: "12px 0 6px" }}>{group.label}</div>}
                       {group.items.map((n) => (
                         <div key={n.id} style={{ borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 0", display: "flex", justifyContent: "space-between", gap: 8, opacity: n.read ? 0.65 : 1 }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                               {!n.read && <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.gold, flexShrink: 0 }} />}
-                              <div style={{ fontSize: 12.5, fontWeight: 700, color: n.type === "warning" ? T.rust : n.type === "update" ? T.sage : T.gold }}>{n.title}</div>
+                              <div style={{ fontSize: 14.5, fontWeight: 700, color: n.type === "warning" ? T.rust : n.type === "update" ? T.sage : T.gold }}>{n.title}</div>
                             </div>
-                            <div style={{ fontSize: 12, color: T.paper, marginTop: 2, fontWeight: 500 }}>{n.body}</div>
-                            <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>{n.time}</div>
+                            <div style={{ fontSize: 14, color: T.paper, marginTop: 2, fontWeight: 500 }}>{n.body}</div>
+                            <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{n.time}</div>
                           </div>
                           <button onClick={() => {
                             setNotifications(list => list.filter(x => x.id !== n.id));
@@ -1927,8 +1927,8 @@ function MainAppContent({ account, onLogout }) {
       {showLogoutConfirm && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:90, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px" }}>
           <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:24, maxWidth:360, width:"100%" }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:10 }}>Log Out of RainX?</div>
-            <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.8, marginBottom:20 }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 19, color:T.paper, marginBottom:10 }}>Log Out of RainX?</div>
+            <div style={{ fontSize: 14.5, color:T.muted, lineHeight:1.8, marginBottom:20 }}>
               If you log out, you will stop receiving:<br/>
               <span style={{ color:T.paper }}>• Live trading signals &amp; Raina AI alerts</span><br/>
               <span style={{ color:T.paper }}>• TP / SL hit notifications</span><br/>
@@ -1937,8 +1937,8 @@ function MainAppContent({ account, onLogout }) {
               You can log back in at any time.
             </div>
             <div style={{ display:"flex", gap:10 }}>
-              <button onClick={() => setShowLogoutConfirm(false)} style={{ flex:1, background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, cursor:"pointer" }}>Cancel</button>
-              <button onClick={() => { setShowLogoutConfirm(false); onLogout(); }} style={{ flex:1, background:"#E53935", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer" }}>Log Out</button>
+              <button onClick={() => setShowLogoutConfirm(false)} style={{ flex:1, background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15, color:T.paper, cursor:"pointer" }}>Cancel</button>
+              <button onClick={() => { setShowLogoutConfirm(false); onLogout(); }} style={{ flex:1, background:"#E53935", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15, color:"#fff", cursor:"pointer" }}>Log Out</button>
             </div>
           </div>
         </div>
@@ -1981,7 +1981,7 @@ function MainAppContent({ account, onLogout }) {
             return (
               <button key={key} onClick={() => { if (key === "more") setMorePage(null); goTab(key); }} style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 64, padding: "6px 4px", transition: "color 0.15s" }}>
                 {icon(active)}
-                <span style={{ fontSize: 13, fontFamily: FONT_HEAD, fontWeight: active ? 700 : 500, letterSpacing: 0.1 }}>{label}</span>
+                <span style={{ fontSize: 15, fontFamily: FONT_HEAD, fontWeight: active ? 700 : 500, letterSpacing: 0.1 }}>{label}</span>
               </button>
             );
           })}
@@ -2308,18 +2308,18 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
           <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
           <div style={{ padding:"0 20px 20px" }}>
             <button onClick={() => { setMode(null); setManagedAsset(null); }} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
-              <ChevronLeft size={16} /><span style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:700 }}>Back</span>
+              <ChevronLeft size={16} /><span style={{ fontFamily:FONT_HEAD, fontSize: 14, fontWeight:700 }}>Back</span>
             </button>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:3 }}>{managedAsset.symbol}</div>
-            <div style={{ fontSize:12, color:T.muted, marginBottom:22 }}>{managedAsset.name} · Currently active</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 19, color:T.paper, marginBottom:3 }}>{managedAsset.symbol}</div>
+            <div style={{ fontSize: 14, color:T.muted, marginBottom:22 }}>{managedAsset.name} · Currently active</div>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
               <button onClick={() => { setMode("pick_category_for_replace"); setCategory(null); }} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"16px", textAlign:"left", cursor:"pointer" }}>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Replace with another market</div>
-                <div style={{ fontSize:12, color:T.muted, marginTop:3 }}>Swap {managedAsset.symbol} with a different market</div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 16, color:T.paper }}>Replace with another market</div>
+                <div style={{ fontSize: 14, color:T.muted, marginTop:3 }}>Swap {managedAsset.symbol} with a different market</div>
               </button>
               <button onClick={() => { onRemoveMarket(managedAsset.symbol); onClose(); }} style={{ background:`${T.rust}12`, border:`1px solid ${T.rust}44`, borderRadius:12, padding:"16px", textAlign:"left", cursor:"pointer" }}>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.rust }}>Remove market</div>
-                <div style={{ fontSize:12, color:T.muted, marginTop:3 }}>Stop analyzing {managedAsset.symbol}</div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 16, color:T.rust }}>Remove market</div>
+                <div style={{ fontSize: 14, color:T.muted, marginTop:3 }}>Stop analyzing {managedAsset.symbol}</div>
               </button>
             </div>
           </div>
@@ -2339,18 +2339,18 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
             <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:10 }}>
               <button onClick={() => { setMode(backMode === "pick_category_for_replace" ? "manage" : null); }} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
               <div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 19, color:T.paper }}>
                   {backMode === "pick_category_for_replace" ? `Replace ${managedAsset?.symbol}` : "Select replacement market"}
                 </div>
-                <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Choose a category</div>
+                <div style={{ fontSize: 14, color:T.muted, marginTop:2 }}>Choose a category</div>
               </div>
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 16px" }}>
               {ASSET_CATALOG.map(cat => (
                 <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"18px 14px", textAlign:"left", cursor:"pointer" }}>
-                  <div style={{ fontSize:22, marginBottom:8 }}>{cat.emoji}</div>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{cat.label}</div>
-                  <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>{cat.assets.length} markets</div>
+                  <div style={{ fontSize: 23, marginBottom:8 }}>{cat.emoji}</div>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 16, color:T.paper }}>{cat.label}</div>
+                  <div style={{ fontSize: 13, color:T.muted, marginTop:3 }}>{cat.assets.length} markets</div>
                 </button>
               ))}
             </div>
@@ -2365,8 +2365,8 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
           <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:12 }}>
             <button onClick={() => setCategory(null)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
             <div>
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>{category.label}</div>
-              <div style={{ fontSize:12, color:T.muted }}>
+              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 19, color:T.paper }}>{category.label}</div>
+              <div style={{ fontSize: 14, color:T.muted }}>
                 {backMode === "pick_category_for_replace" ? `Replacing ${managedAsset?.symbol}` : "Pick market to add"}
               </div>
             </div>
@@ -2389,11 +2389,11 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
                   }
                 }} style={{ background:T.card, border:`1px solid ${alreadyActive ? T.gold : T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:alreadyActive ? "default" : "pointer", opacity:alreadyActive ? 0.45 : 1 }}>
                   <div style={{ textAlign:"left" }}>
-                    <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{asset.symbol}</div>
-                    <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{asset.name}</div>
+                    <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 16, color:T.paper }}>{asset.symbol}</div>
+                    <div style={{ fontSize: 14, color:T.muted, marginTop:2 }}>{asset.name}</div>
                   </div>
                   {alreadyActive
-                    ? <div style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.gold}22`, borderRadius:6, padding:"3px 8px" }}>Active</div>
+                    ? <div style={{ fontSize: 12, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.gold}22`, borderRadius:6, padding:"3px 8px" }}>Active</div>
                     : <ChevronRight size={16} color={T.muted} />}
                 </button>
               );
@@ -2412,10 +2412,10 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
           <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
           <div style={{ padding:"0 20px 20px" }}>
             <button onClick={() => setMode("pick_new_when_full")} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
-              <ChevronLeft size={16} /><span style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:700 }}>Back</span>
+              <ChevronLeft size={16} /><span style={{ fontFamily:FONT_HEAD, fontSize: 14, fontWeight:700 }}>Back</span>
             </button>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:3 }}>Replace a Market</div>
-            <div style={{ fontSize:12, color:T.muted, marginBottom:18 }}>Choose which market to replace with <strong style={{ color:T.paper }}>{managedAsset.symbol}</strong></div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 19, color:T.paper, marginBottom:3 }}>Replace a Market</div>
+            <div style={{ fontSize: 14, color:T.muted, marginBottom:18 }}>Choose which market to replace with <strong style={{ color:T.paper }}>{managedAsset.symbol}</strong></div>
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               {activeMarkets.map(sym => {
                 const a = ALL_ASSETS.find(x => x.symbol === sym);
@@ -2423,10 +2423,10 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
                 return (
                   <button key={sym} onClick={() => { onRemoveMarket(sym); onSelect(managedAsset); }} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
                     <div style={{ textAlign:"left" }}>
-                      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{a.symbol}</div>
-                      <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{a.name}</div>
+                      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 16, color:T.paper }}>{a.symbol}</div>
+                      <div style={{ fontSize: 14, color:T.muted, marginTop:2 }}>{a.name}</div>
                     </div>
-                    <div style={{ fontSize:10, color:T.rust, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.rust}22`, borderRadius:6, padding:"3px 8px" }}>Replace</div>
+                    <div style={{ fontSize: 12, color:T.rust, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.rust}22`, borderRadius:6, padding:"3px 8px" }}>Replace</div>
                   </button>
                 );
               })}
@@ -2448,22 +2448,22 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
           <>
             <div style={{ padding:"0 20px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>Add Market</div>
-                <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Choose a market · {activeMarkets.length}/{maxActiveMarkets} active</div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 19, color:T.paper }}>Add Market</div>
+                <div style={{ fontSize: 14, color:T.muted, marginTop:2 }}>Choose a market · {activeMarkets.length}/{maxActiveMarkets} active</div>
               </div>
               <button onClick={onClose} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><X size={20} /></button>
             </div>
             {atLimit && (
-              <div style={{ margin:"0 16px 14px", background:`${T.gold}11`, border:`1px solid ${T.gold}44`, borderRadius:10, padding:"10px 14px", fontSize:12, color:T.gold, fontFamily:FONT_HEAD, fontWeight:600 }}>
+              <div style={{ margin:"0 16px 14px", background:`${T.gold}11`, border:`1px solid ${T.gold}44`, borderRadius:10, padding:"10px 14px", fontSize: 14, color:T.gold, fontFamily:FONT_HEAD, fontWeight:600 }}>
                 3 markets active. Tap an active market below to replace or remove it.
               </div>
             )}
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 16px" }}>
               {ASSET_CATALOG.map(cat => (
                 <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"18px 14px", textAlign:"left", cursor:"pointer" }}>
-                  <div style={{ fontSize:22, marginBottom:8 }}>{cat.emoji}</div>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{cat.label}</div>
-                  <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>{cat.assets.length} markets</div>
+                  <div style={{ fontSize: 23, marginBottom:8 }}>{cat.emoji}</div>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 16, color:T.paper }}>{cat.label}</div>
+                  <div style={{ fontSize: 13, color:T.muted, marginTop:3 }}>{cat.assets.length} markets</div>
                 </button>
               ))}
             </div>
@@ -2473,8 +2473,8 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
             <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:12 }}>
               <button onClick={() => setCategory(null)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
               <div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>{category.label}</div>
-                <div style={{ fontSize:12, color:T.muted }}>Select a market</div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 19, color:T.paper }}>{category.label}</div>
+                <div style={{ fontSize: 14, color:T.muted }}>Select a market</div>
               </div>
             </div>
             <div style={{ padding:"0 16px", display:"flex", flexDirection:"column", gap:8 }}>
@@ -2493,13 +2493,13 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
                     }
                   }} style={{ background:T.card, border:`1px solid ${alreadyActive ? T.gold : T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
                     <div style={{ textAlign:"left" }}>
-                      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{asset.symbol}</div>
-                      <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{asset.name}</div>
+                      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 16, color:T.paper }}>{asset.symbol}</div>
+                      <div style={{ fontSize: 14, color:T.muted, marginTop:2 }}>{asset.name}</div>
                     </div>
                     {alreadyActive
-                      ? <div style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.gold}22`, borderRadius:6, padding:"3px 8px" }}>Active ›</div>
+                      ? <div style={{ fontSize: 12, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.gold}22`, borderRadius:6, padding:"3px 8px" }}>Active ›</div>
                       : (atLimit
-                        ? <div style={{ fontSize:10, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600, background:`${T.cardBorder}`, borderRadius:6, padding:"3px 8px" }}>Replace</div>
+                        ? <div style={{ fontSize: 12, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600, background:`${T.cardBorder}`, borderRadius:6, padding:"3px 8px" }}>Replace</div>
                         : <ChevronRight size={16} color={T.muted} />)}
                   </button>
                 );
@@ -2619,13 +2619,13 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
             const active = a.symbol === primarySym;
             return (
               // Tab bar just switches the view — no dialog, no session restart
-              <button key={a.symbol} onClick={() => setActiveSymbol(a.symbol)} style={{ flexShrink:0, background:active ? T.gold : T.card, color:active ? T.ink : T.paper, border:`1px solid ${active ? T.gold : T.cardBorder}`, borderRadius:20, padding:"6px 14px", fontFamily:FONT_HEAD, fontSize:11, fontWeight:700, cursor:"pointer" }}>
+              <button key={a.symbol} onClick={() => setActiveSymbol(a.symbol)} style={{ flexShrink:0, background:active ? T.gold : T.card, color:active ? T.ink : T.paper, border:`1px solid ${active ? T.gold : T.cardBorder}`, borderRadius:20, padding:"6px 14px", fontFamily:FONT_HEAD, fontSize: 13, fontWeight:700, cursor:"pointer" }}>
                 {a.symbol}
               </button>
             );
           });
         })()}
-        <button onClick={() => setShowAddMarket(true)} style={{ flexShrink:0, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"6px 12px", fontFamily:FONT_HEAD, fontSize:14, fontWeight:700, color:T.gold, cursor:"pointer" }}>+</button>
+        <button onClick={() => setShowAddMarket(true)} style={{ flexShrink:0, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"6px 12px", fontFamily:FONT_HEAD, fontSize: 16, fontWeight:700, color:T.gold, cursor:"pointer" }}>+</button>
       </div>
 
       {/* ── Live market mini-strip ──────────────────────────────────────── */}
@@ -2638,8 +2638,8 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
           return (
             <button key={a.symbol} onClick={() => handleAssetSelect(a)}
               style={{ flexShrink:0, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", textAlign:"left" }}>
-              <div style={{ fontFamily:FONT_HEAD, fontSize:10, fontWeight:700, color:T.muted }}>{a.symbol}</div>
-              <div style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:800, color:up ? "#1D6FE8" : T.rust, fontVariantNumeric:"tabular-nums" }}>{p.toFixed(Math.min(a.digits,2))}</div>
+              <div style={{ fontFamily:FONT_HEAD, fontSize: 12, fontWeight:700, color:T.muted }}>{a.symbol}</div>
+              <div style={{ fontFamily:FONT_HEAD, fontSize: 14, fontWeight:800, color:up ? "#1D6FE8" : T.rust, fontVariantNumeric:"tabular-nums" }}>{p.toFixed(Math.min(a.digits,2))}</div>
             </button>
           );
         })}
@@ -2648,10 +2648,10 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
       {/* ── Price header ─────────────────────────────────────────────────── */}
       <div style={{ padding:"8px 16px 0" }}>
         <div style={{ display:"flex", alignItems:"baseline", gap:10 }}>
-          <span style={{ fontFamily:FONT_HEAD, fontSize:34, fontWeight:800, fontVariantNumeric:"tabular-nums", color:T.paper }}>{last?.toFixed(inst.digits) ?? "—"}</span>
-          <span style={{ fontSize:14, fontWeight:700, color: changePct >= 0 ? T.sage : T.rust }}>{changePct >= 0 ? "▲" : "▼"} {Math.abs(changePct || 0).toFixed(3)}%</span>
+          <span style={{ fontFamily:FONT_HEAD, fontSize: 35, fontWeight:800, fontVariantNumeric:"tabular-nums", color:T.paper }}>{last?.toFixed(inst.digits) ?? "—"}</span>
+          <span style={{ fontSize: 16, fontWeight:700, color: changePct >= 0 ? T.sage : T.rust }}>{changePct >= 0 ? "▲" : "▼"} {Math.abs(changePct || 0).toFixed(3)}%</span>
         </div>
-        <div style={{ fontSize:12, color:T.muted, fontWeight:500, marginTop:1 }}>{inst.name} · {inst.symbol}</div>
+        <div style={{ fontSize: 14, color:T.muted, fontWeight:500, marginTop:1 }}>{inst.name} · {inst.symbol}</div>
       </div>
 
       {/* ── Chart preview area ────────────────────────────────────────────── */}
@@ -2661,10 +2661,10 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
           <div style={{ position:"absolute", top:8, right:8, zIndex:5, display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3 }}>
             <div style={{ display:"flex", alignItems:"center", gap:5, background:T.ink, border:`1px solid ${stateColor}44`, borderRadius:20, padding:"3px 9px" }}>
               <div style={{ width:6, height:6, borderRadius:"50%", background:stateColor, animation:"pulse 1.5s infinite" }} />
-              <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:9.5, color:stateColor }}>{stateLabel}</span>
+              <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 11.5, color:stateColor }}>{stateLabel}</span>
             </div>
             {sessionSecsLeft > 0 && (
-              <div style={{ fontSize:9.5, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600 }}>{fmtTime(sessionSecsLeft)}</div>
+              <div style={{ fontSize: 11.5, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600 }}>{fmtTime(sessionSecsLeft)}</div>
             )}
           </div>
         )}
@@ -2672,16 +2672,16 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
         {/* Empty state: only when zero markets selected */}
         {activeMarkets.length === 0 && !session && (
           <div style={{ position:"absolute", inset:0, zIndex:5, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:T.ink + "cc", borderRadius:14 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:4 }}>Select a market</div>
-            <div style={{ fontSize:12, color:T.muted, marginBottom:16, textAlign:"center", maxWidth:200 }}>You can select up to 3 markets per day.</div>
-            <button onClick={() => setShowAddMarket(true)} style={{ background:T.gold, color:T.ink, border:"none", borderRadius:10, padding:"10px 22px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, cursor:"pointer" }}>+ Add Market</button>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 17, color:T.paper, marginBottom:4 }}>Select a market</div>
+            <div style={{ fontSize: 14, color:T.muted, marginBottom:16, textAlign:"center", maxWidth:200 }}>You can select up to 3 markets per day.</div>
+            <button onClick={() => setShowAddMarket(true)} style={{ background:T.gold, color:T.ink, border:"none", borderRadius:10, padding:"10px 22px", fontFamily:FONT_HEAD, fontWeight:800, fontSize: 15, cursor:"pointer" }}>+ Add Market</button>
           </div>
         )}
         {/* Market Closed overlay */}
         {!marketOpen && (activeMarkets.length > 0 || !!session) && (
           <div style={{ position:"absolute", inset:0, zIndex:4, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"rgba(15,14,11,0.75)", borderRadius:14, pointerEvents:"none" }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.muted, marginBottom:6 }}>Market Closed</div>
-            <div style={{ fontSize:12, color:T.muted, textAlign:"center", maxWidth:220, lineHeight:1.6 }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 19, color:T.muted, marginBottom:6 }}>Market Closed</div>
+            <div style={{ fontSize: 14, color:T.muted, textAlign:"center", maxWidth:220, lineHeight:1.6 }}>
               {inst?.cls === "crypto" ? "Crypto trades 24/7 — data will resume shortly." : inst?.cls === "forex" ? "Forex is closed on weekends (Sat–Sun UTC)." : "Opens at the next market session."}
             </div>
           </div>
@@ -2709,7 +2709,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
           }}
         >
           <Maximize2 size={13} color={T.gold} />
-          <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.gold }}>Open Full Chart</span>
+          <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 14, color:T.gold }}>Open Full Chart</span>
         </button>
       </div>
 
@@ -2729,7 +2729,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
         {["15m","30m","1H","2H","4H","1D"].map(tf => {
           const active = tf === activeChartTf;
           return (
-            <button key={tf} onClick={() => setActiveChartTf(tf)} style={{ flexShrink:0, minWidth:44, padding:"7px 0", borderRadius:8, border:`1px solid ${active ? T.gold : T.cardBorder}`, background:active ? T.gold : T.card, color:active ? T.ink : T.paper, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11, cursor:"pointer" }}>
+            <button key={tf} onClick={() => setActiveChartTf(tf)} style={{ flexShrink:0, minWidth:44, padding:"7px 0", borderRadius:8, border:`1px solid ${active ? T.gold : T.cardBorder}`, background:active ? T.gold : T.card, color:active ? T.ink : T.paper, fontFamily:FONT_HEAD, fontWeight:700, fontSize: 13, cursor:"pointer" }}>
               {tf}
             </button>
           );
@@ -2740,16 +2740,16 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
       {session && (
         <div style={{ margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px" }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, color:T.paper }}>Raina AI Analysis Progress</div>
-            <button onClick={() => {/* view full */}} style={{ background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:8, padding:"4px 10px", fontFamily:FONT_HEAD, fontSize:11, fontWeight:700, color:T.gold, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>View Full <ChevronRight size={12} /></button>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 15, color:T.paper }}>Raina AI Analysis Progress</div>
+            <button onClick={() => {/* view full */}} style={{ background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:8, padding:"4px 10px", fontFamily:FONT_HEAD, fontSize: 13, fontWeight:700, color:T.gold, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>View Full <ChevronRight size={12} /></button>
           </div>
           {/* ── AI status indicator — shown when analyzing but no signal yet ── */}
           {!session.setup && session.state === "analyzing" && (
             <div style={{ background:`${T.gold}11`, border:`1px solid ${T.gold}33`, borderRadius:10, padding:"10px 14px", marginBottom:12, display:"flex", alignItems:"center", gap:10 }}>
               <div style={{ width:8, height:8, borderRadius:"50%", background:T.gold, flexShrink:0, animation:"pulse 1.5s infinite" }} />
               <div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.gold }}>Hold — No confirmed setup yet</div>
-                <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>Raina AI is still analyzing. A signal will appear when a strong setup is confirmed.</div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 14, color:T.gold }}>Hold — No confirmed setup yet</div>
+                <div style={{ fontSize: 13, color:T.muted, marginTop:2 }}>Raina AI is still analyzing. A signal will appear when a strong setup is confirmed.</div>
               </div>
             </div>
           )}
@@ -2764,12 +2764,12 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
                   <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
                     {/* Circle */}
                     <div style={{ width:28, height:28, borderRadius:"50%", background:done ? T.sage : active ? T.gold : T.cardBorder, border:`2px solid ${done ? T.sage : active ? T.gold : T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                      {done ? <span style={{ color:"#fff", fontSize:12, fontWeight:800 }}>✓</span>
-                        : <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:10, color:active ? T.ink : T.muted }}>{i+1}</span>}
+                      {done ? <span style={{ color:"#fff", fontSize: 14, fontWeight:800 }}>✓</span>
+                        : <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 12, color:active ? T.ink : T.muted }}>{i+1}</span>}
                     </div>
                     <div style={{ textAlign:"center" }}>
-                      <div style={{ fontFamily:FONT_HEAD, fontSize:10, fontWeight:700, color:done ? T.paper : active ? T.gold : T.muted, lineHeight:1.3 }}>{step.label}</div>
-                      <div style={{ fontSize:9.5, color:done ? T.sage : active ? T.muted : T.cardBorder, marginTop:2 }}>{done ? step.done : active ? "In progress" : "Pending"}</div>
+                      <div style={{ fontFamily:FONT_HEAD, fontSize: 12, fontWeight:700, color:done ? T.paper : active ? T.gold : T.muted, lineHeight:1.3 }}>{step.label}</div>
+                      <div style={{ fontSize: 11.5, color:done ? T.sage : active ? T.muted : T.cardBorder, marginTop:2 }}>{done ? step.done : active ? "In progress" : "Pending"}</div>
                     </div>
                   </div>
                   {/* Connector */}
@@ -2787,43 +2787,43 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
       {session?.setup && (
         <div style={{ margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px" }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.paper }}>Potential Trade Setup</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 16, color:T.paper }}>Potential Trade Setup</div>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              <span style={{ background:`${T.sage}22`, color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize:10, borderRadius:6, padding:"3px 8px" }}>Watching</span>
+              <span style={{ background:`${T.sage}22`, color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize: 12, borderRadius:6, padding:"3px 8px" }}>Watching</span>
               <div style={{ textAlign:"right" }}>
-                <div style={{ fontSize:9, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600 }}>AI Confidence</div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.goldBright }}>{session.setup.confidence}%</div>
+                <div style={{ fontSize: 11, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600 }}>AI Confidence</div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 17, color:T.goldBright }}>{session.setup.confidence}%</div>
               </div>
             </div>
           </div>
           {/* 4-column grid */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:1, marginBottom:1 }}>
             {[
-              { label:"Bias", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:800, fontSize:13 }}>BUY ↗</span> },
-              { label:"Entry Zone", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11 }}>{session.setup.entryLow.toFixed(inst.digits)} – {session.setup.entryHigh.toFixed(inst.digits)}</span> },
-              { label:"Take Profit 1", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12 }}>{session.setup.tp1.toFixed(inst.digits)}</span> },
+              { label:"Bias", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:800, fontSize: 15 }}>BUY ↗</span> },
+              { label:"Entry Zone", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize: 13 }}>{session.setup.entryLow.toFixed(inst.digits)} – {session.setup.entryHigh.toFixed(inst.digits)}</span> },
+              { label:"Take Profit 1", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize: 14 }}>{session.setup.tp1.toFixed(inst.digits)}</span> },
               { label:"Analysis Reason", val: null, wide:true },
             ].map((cell, i) => (
               <div key={i} style={{ background:T.ink, borderRadius:8, padding:"10px 10px", border:`1px solid ${T.cardBorder}` }}>
-                <div style={{ fontSize:10, color:T.muted, fontWeight:700, fontFamily:FONT_HEAD, marginBottom:4 }}>{cell.label.toUpperCase()}</div>
-                {cell.val || <div style={{ fontSize:10, color:T.muted, lineHeight:1.5 }}>{session.setup.reason}</div>}
+                <div style={{ fontSize: 12, color:T.muted, fontWeight:700, fontFamily:FONT_HEAD, marginBottom:4 }}>{cell.label.toUpperCase()}</div>
+                {cell.val || <div style={{ fontSize: 12, color:T.muted, lineHeight:1.5 }}>{session.setup.reason}</div>}
               </div>
             ))}
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:1, marginTop:1 }}>
             {[
-              { label:"Risk / Reward", val: <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.paper }}>1 : {session.setup.rr}</span> },
-              { label:"Stop Loss", val: <span style={{ color:T.rust, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12 }}>{session.setup.stopLoss.toFixed(inst.digits)}</span> },
-              { label:"Take Profit 2", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12 }}>{session.setup.tp2.toFixed(inst.digits)}</span> },
+              { label:"Risk / Reward", val: <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 14, color:T.paper }}>1 : {session.setup.rr}</span> },
+              { label:"Stop Loss", val: <span style={{ color:T.rust, fontFamily:FONT_HEAD, fontWeight:700, fontSize: 14 }}>{session.setup.stopLoss.toFixed(inst.digits)}</span> },
+              { label:"Take Profit 2", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize: 14 }}>{session.setup.tp2.toFixed(inst.digits)}</span> },
               { label:"", val: null },
             ].map((cell, i) => (
               <div key={i} style={{ background:T.ink, borderRadius:8, padding:"10px 10px", border:`1px solid ${T.cardBorder}` }}>
-                <div style={{ fontSize:10, color:T.muted, fontWeight:700, fontFamily:FONT_HEAD, marginBottom:4 }}>{cell.label.toUpperCase()}</div>
+                <div style={{ fontSize: 12, color:T.muted, fontWeight:700, fontFamily:FONT_HEAD, marginBottom:4 }}>{cell.label.toUpperCase()}</div>
                 {cell.val}
               </div>
             ))}
           </div>
-          <div style={{ marginTop:12, fontSize:10.5, color:T.muted, lineHeight:1.6 }}>
+          <div style={{ marginTop:12, fontSize: 12.5, color:T.muted, lineHeight:1.6 }}>
             Raina AI continues to monitor the market and will alert you when the setup is confirmed.
           </div>
         </div>
@@ -2833,23 +2833,23 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
       {session?.activities?.length > 0 && (
         <div style={{ margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px" }}>
           <button onClick={() => setShowActivity(v => !v)} style={{ width:"100%", background:"none", border:"none", display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", padding:0 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, color:T.paper }}>Raina AI Activity</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 15, color:T.paper }}>Raina AI Activity</div>
             <ChevronRight size={14} color={T.muted} style={{ transform: showActivity ? "rotate(90deg)" : "rotate(0)", transition:"transform 0.2s" }} />
           </button>
           {showActivity && (
             <div style={{ marginTop:12 }}>
               {session.activities.slice(0, 8).map((a, i) => (
                 <div key={i} style={{ borderBottom: i < session.activities.slice(0,8).length-1 ? `1px solid ${T.cardBorder}` : "none", padding:"8px 0" }}>
-                  <span style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, marginRight:8 }}>{a.time}</span>
-                  <span style={{ fontSize:12, color:T.paper, lineHeight:1.5 }}>{a.text}</span>
+                  <span style={{ fontSize: 12, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, marginRight:8 }}>{a.time}</span>
+                  <span style={{ fontSize: 14, color:T.paper, lineHeight:1.5 }}>{a.text}</span>
                 </div>
               ))}
             </div>
           )}
           {!showActivity && session.activities.length > 0 && (
             <div style={{ marginTop:10, padding:"8px 0 0" }}>
-              <span style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, marginRight:8 }}>{session.activities[0].time}</span>
-              <span style={{ fontSize:12, color:T.paper }}>{session.activities[0].text}</span>
+              <span style={{ fontSize: 12, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, marginRight:8 }}>{session.activities[0].time}</span>
+              <span style={{ fontSize: 14, color:T.paper }}>{session.activities[0].text}</span>
             </div>
           )}
         </div>
@@ -2858,13 +2858,13 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
       {/* Session complete panel */}
       {session?.state === "completed" && (
         <div style={{ margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"20px 16px", textAlign:"center" }}>
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:6 }}>Analysis Session Complete</div>
-          <div style={{ fontSize:12, color:T.muted, marginBottom:16 }}>The selected analysis period has ended. Start a new session to continue monitoring.</div>
-          <button onClick={() => setShowAddMarket(true)} style={{ background:T.gold, color:T.ink, border:"none", borderRadius:10, padding:"11px 28px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, cursor:"pointer" }}>Analyze Again</button>
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 17, color:T.paper, marginBottom:6 }}>Analysis Session Complete</div>
+          <div style={{ fontSize: 14, color:T.muted, marginBottom:16 }}>The selected analysis period has ended. Start a new session to continue monitoring.</div>
+          <button onClick={() => setShowAddMarket(true)} style={{ background:T.gold, color:T.ink, border:"none", borderRadius:10, padding:"11px 28px", fontFamily:FONT_HEAD, fontWeight:800, fontSize: 15, cursor:"pointer" }}>Analyze Again</button>
         </div>
       )}
 
-      <div style={{ margin:"10px 14px 16px", fontSize:10.5, color:T.muted, lineHeight:1.6, textAlign:"center" }}>
+      <div style={{ margin:"10px 14px 16px", fontSize: 12.5, color:T.muted, lineHeight:1.6, textAlign:"center" }}>
         AI-generated analysis, not financial advice. No outcome is guaranteed. Always manage your risk.
       </div>
 
@@ -2872,11 +2872,11 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
       {showSubLock && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:90, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
           <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:18, padding:28, width:"100%", maxWidth:340, textAlign:"center" }}>
-            <div style={{ fontSize:38, marginBottom:12 }}>🔒</div>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:8 }}>Subscription Required</div>
-            <div style={{ fontSize:13, color:T.muted, lineHeight:1.7, marginBottom:22 }}>An active subscription is required to access live market analysis, Raina AI signals, and real-time charts. Subscribe to unlock up to 3 active markets.</div>
-            <button onClick={() => { setShowSubLock(false); onSubscribe(); }} style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:"pointer", marginBottom:10 }}>View Plans</button>
-            <button onClick={() => setShowSubLock(false)} style={{ width:"100%", background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"11px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.muted, cursor:"pointer" }}>Close</button>
+            <div style={{ fontSize: 39, marginBottom:12 }}>🔒</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 19, color:T.paper, marginBottom:8 }}>Subscription Required</div>
+            <div style={{ fontSize: 15, color:T.muted, lineHeight:1.7, marginBottom:22 }}>An active subscription is required to access live market analysis, Raina AI signals, and real-time charts. Subscribe to unlock up to 3 active markets.</div>
+            <button onClick={() => { setShowSubLock(false); onSubscribe(); }} style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize: 16, cursor:"pointer", marginBottom:10 }}>View Plans</button>
+            <button onClick={() => setShowSubLock(false)} style={{ width:"100%", background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"11px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15, color:T.muted, cursor:"pointer" }}>Close</button>
           </div>
         </div>
       )}
@@ -2885,7 +2885,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
   );
 }
 function Row({ label, value, color }) {
-  return <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"4px 0" }}><span style={{ color:T.muted, fontWeight:500 }}>{label}</span><span style={{ color:color||T.paper, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{value}</span></div>;
+  return <div style={{ display:"flex", justifyContent:"space-between", fontSize: 15, padding:"4px 0" }}><span style={{ color:T.muted, fontWeight:500 }}>{label}</span><span style={{ color:color||T.paper, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{value}</span></div>;
 }
 
 
@@ -2925,7 +2925,7 @@ function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }
           onClose={() => setFullChartInst(null)}
         />
       )}
-      <div style={{ fontFamily: FONT_HEAD, fontSize: 18, color: T.goldBright, fontWeight: 800, marginBottom: 12 }}>All markets</div>
+      <div style={{ fontFamily: FONT_HEAD, fontSize: 20, color: T.goldBright, fontWeight: 800, marginBottom: 12 }}>All markets</div>
       {INSTRUMENTS.map((i) => {
         const arr = seriesMap[i.symbol] || [];
         const price = arr.length ? arr[arr.length - 1].price : 0;
@@ -2939,14 +2939,14 @@ function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {/* Left: name + symbol + signals — tap to go to home */}
               <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => onSelect(i.symbol)}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: T.paper }}>{i.name}</div>
-                <div style={{ fontSize: 10, color: T.muted, fontWeight: 500 }}>{i.symbol}</div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: T.paper }}>{i.name}</div>
+                <div style={{ fontSize: 12, color: T.muted, fontWeight: 500 }}>{i.symbol}</div>
                 <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
                   {TIMEFRAMES.map((tf) => {
                     const sig = combo[tf.key];
                     if (!sig || sig.bias === "hold" || sig.status !== "active") return null;
                     return (
-                      <div key={tf.key} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 10, color: T.muted }}>
+                      <div key={tf.key} style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 12, color: T.muted }}>
                         <span>{tf.label}:</span><BiasChip bias={sig.bias} />
                       </div>
                     );
@@ -2959,14 +2959,14 @@ function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }
               </div>
               {/* Right: price, change, status, full chart button */}
               <div style={{ textAlign: "right", flexShrink: 0, minWidth: 80 }}>
-                <div style={{ fontFamily: FONT_HEAD, fontSize: 13, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: T.paper }}>{price ? price.toFixed(Math.min(i.digits, 5)) : "—"}</div>
-                <div style={{ fontSize: 10, fontWeight: 600, color: isUp ? T.sage : T.rust }}>
+                <div style={{ fontFamily: FONT_HEAD, fontSize: 15, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: T.paper }}>{price ? price.toFixed(Math.min(i.digits, 5)) : "—"}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: isUp ? T.sage : T.rust }}>
                   {isUp ? "▲" : "▼"} {Math.abs(changePct).toFixed(2)}%
                 </div>
-                <div style={{ fontSize: 10, color: open ? T.sage : T.rust, fontWeight: 500, marginTop: 1 }}>{open ? "Open" : "Closed"}</div>
+                <div style={{ fontSize: 12, color: open ? T.sage : T.rust, fontWeight: 500, marginTop: 1 }}>{open ? "Open" : "Closed"}</div>
                 <button
                   onClick={(e) => { e.stopPropagation(); setFullChartInst(i); }}
-                  style={{ marginTop: 5, background: "transparent", border: `1px solid ${T.gold}55`, borderRadius: 6, padding: "3px 9px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 9.5, color: T.gold, cursor: "pointer" }}
+                  style={{ marginTop: 5, background: "transparent", border: `1px solid ${T.gold}55`, borderRadius: 6, padding: "3px 9px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, color: T.gold, cursor: "pointer" }}
                 >
                   Full Chart ↗
                 </button>
@@ -3034,16 +3034,16 @@ function ChatTab({ inst, analysis, last, account }) {
     rec.start();
   };
 
-  if (!messages) return <div style={{ padding: 16, color: T.muted, fontSize: 13 }}>Loading conversation…</div>;
+  if (!messages) return <div style={{ padding: 16, color: T.muted, fontSize: 15 }}>Loading conversation…</div>;
 
   return (
     <div style={{ padding: 16, display: "flex", flexDirection: "column", height: "calc(100vh - 200px)" }}>
-      <div style={{ fontFamily: FONT_HEAD, fontSize: 18, color: T.goldBright, fontWeight: 800, marginBottom: 10 }}>Raina — {inst.symbol}</div>
+      <div style={{ fontFamily: FONT_HEAD, fontSize: 20, color: T.goldBright, fontWeight: 800, marginBottom: 10 }}>Raina — {inst.symbol}</div>
       <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}>
         {messages.map((m, idx) => (
-          <div key={idx} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", background: m.role === "user" ? T.gold : T.card, color: m.role === "user" ? T.ink : T.paper, border: m.role === "user" ? "none" : `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "8px 12px", maxWidth: "85%", fontSize: 12.5, lineHeight: 1.5, fontWeight: 500 }}>{m.text}</div>
+          <div key={idx} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", background: m.role === "user" ? T.gold : T.card, color: m.role === "user" ? T.ink : T.paper, border: m.role === "user" ? "none" : `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "8px 12px", maxWidth: "85%", fontSize: 14.5, lineHeight: 1.5, fontWeight: 500 }}>{m.text}</div>
         ))}
-        {busy && <div style={{ color: T.muted, fontSize: 12, fontWeight: 500 }}>Raina is thinking…</div>}
+        {busy && <div style={{ color: T.muted, fontSize: 14, fontWeight: 500 }}>Raina is thinking…</div>}
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder={recording ? "Listening…" : "Should I enter now?"} style={{ ...getInputStyle() }} />
@@ -3052,7 +3052,7 @@ function ChatTab({ inst, analysis, last, account }) {
         </button>
         <button onClick={() => send()} disabled={busy} style={{ background: T.gold, border: "none", borderRadius: 8, padding: "0 14px", cursor: "pointer" }}><Send size={16} color={T.ink} /></button>
       </div>
-      <div style={{ fontSize: 10, color: T.muted, marginTop: 8, textAlign: "center", fontWeight: 500 }}>
+      <div style={{ fontSize: 12, color: T.muted, marginTop: 8, textAlign: "center", fontWeight: 500 }}>
         {SpeechRecognitionCtor ? "Tap the mic to talk · " : ""}Your conversation history is saved to this account and instrument.
       </div>
     </div>
@@ -3078,7 +3078,7 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
     })();
   }, [account?.id]);
 
-  if (rows === null) return <div style={{ padding: 16, color: T.muted, fontSize: 13 }}>Loading history…</div>;
+  if (rows === null) return <div style={{ padding: 16, color: T.muted, fontSize: 15 }}>Loading history…</div>;
 
   const wins = rows.filter((r) => r.result === "tp").length;
   const losses = rows.filter((r) => r.result === "sl").length;
@@ -3087,30 +3087,30 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
 
   return (
     <div style={{ padding: 16 }}>
-      <div style={{ fontFamily: FONT_HEAD, fontSize: 18, color: T.goldBright, fontWeight: 800, marginBottom: 12 }}>Trade History</div>
+      <div style={{ fontFamily: FONT_HEAD, fontSize: 20, color: T.goldBright, fontWeight: 800, marginBottom: 12 }}>Trade History</div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         {[["Closed trades", rows.length], ["Wins", wins], ["Losses", losses], ["Net points", netPoints]].map(([l, v]) => (
           <div key={l} style={{ flex: 1, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 10, padding: 8, textAlign: "center" }}>
-            <div style={{ fontSize: 10, color: T.muted }}>{l}</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: T.paper }}>{v}</div>
+            <div style={{ fontSize: 12, color: T.muted }}>{l}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: T.paper }}>{v}</div>
           </div>
         ))}
       </div>
 
       <BlurGate unlocked={unlocked} requiredLabel="Weekly" onSubscribe={onSubscribe} minHeight={200}>
       {rows.length === 0 ? (
-        <div style={{ fontSize: 12, color: T.muted }}>No closed trades yet. This fills in automatically once a signal hits Take Profit or Stop Loss.</div>
+        <div style={{ fontSize: 14, color: T.muted }}>No closed trades yet. This fills in automatically once a signal hits Take Profit or Stop Loss.</div>
       ) : (
         rows.map((r) => (
           <div key={r.id} style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 10, padding: 12, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: r.direction === "buy" ? T.sage : T.rust }}>{r.symbol} · {r.direction.toUpperCase()} · {r.timeframe}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: r.result === "tp" ? T.sage : T.rust }}>{r.result === "tp" ? "🎯 TP" : "⛔ SL"} {r.points >= 0 ? "+" : ""}{r.points}</div>
+              <div style={{ fontSize: 14.5, fontWeight: 700, color: r.direction === "buy" ? T.sage : T.rust }}>{r.symbol} · {r.direction.toUpperCase()} · {r.timeframe}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: r.result === "tp" ? T.sage : T.rust }}>{r.result === "tp" ? "🎯 TP" : "⛔ SL"} {r.points >= 0 ? "+" : ""}{r.points}</div>
             </div>
-            <div style={{ fontSize: 10.5, color: T.muted, marginTop: 4 }}>Entry {r.entry} · SL {r.stop_loss} · TP {r.take_profit}</div>
-            {r.reason && <div style={{ fontSize: 11, color: T.paper, marginTop: 4, lineHeight: 1.5 }}>{r.reason}</div>}
-            <div style={{ fontSize: 10, color: T.muted, marginTop: 4 }}>{new Date(r.closed_at).toLocaleString()}</div>
+            <div style={{ fontSize: 12.5, color: T.muted, marginTop: 4 }}>Entry {r.entry} · SL {r.stop_loss} · TP {r.take_profit}</div>
+            {r.reason && <div style={{ fontSize: 13, color: T.paper, marginTop: 4, lineHeight: 1.5 }}>{r.reason}</div>}
+            <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>{new Date(r.closed_at).toLocaleString()}</div>
           </div>
         ))
       )}
@@ -3271,7 +3271,7 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
 
     const Disclaimer = () => (
       <div style={{ padding: "12px 14px", background: `${T.rust}15`, border: `1px solid ${T.rust}33`, borderRadius: 12, marginTop: 14 }}>
-        <div style={{ fontSize: 10.5, color: T.muted, lineHeight: 1.7 }}>
+        <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.7 }}>
           <strong style={{ color: T.rust }}>⚠ Risk Disclaimer</strong> — Automated scalping involves significant risk of loss. Short-timeframe trading amplifies exposure. Only use a dedicated account with capital you can afford to lose. Past performance does not guarantee future results.
         </div>
       </div>
@@ -3287,17 +3287,17 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
         ].map(({ key, label, min, max, step }) => (
           <div key={key} style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 11.5, color: T.muted }}>{label}</span>
-              <span style={{ fontSize: 11.5, color: T.goldBright, fontFamily: FONT_HEAD, fontWeight: 700 }}>{localS[key]}</span>
+              <span style={{ fontSize: 13.5, color: T.muted }}>{label}</span>
+              <span style={{ fontSize: 13.5, color: T.goldBright, fontFamily: FONT_HEAD, fontWeight: 700 }}>{localS[key]}</span>
             </div>
             <input type="range" min={min} max={max} step={step} value={localS[key]}
               onChange={e => setLocalS(p => ({ ...p, [key]: parseFloat(e.target.value) }))}
               style={{ width: "100%", accentColor: T.gold }} />
           </div>
         ))}
-        {err && <div style={{ fontSize: 11.5, color: T.rust, marginBottom: 8 }}>{err}</div>}
+        {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 8 }}>{err}</div>}
         <button onClick={handleSaveSettings} disabled={busy}
-          style={{ width: "100%", background: saved ? T.sage : `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, cursor: busy ? "not-allowed" : "pointer", transition: "background 0.3s" }}>
+          style={{ width: "100%", background: saved ? T.sage : `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, cursor: busy ? "not-allowed" : "pointer", transition: "background 0.3s" }}>
           {saved ? "Saved ✓" : busy ? "Saving…" : "Save Settings"}
         </button>
       </div>
@@ -3306,26 +3306,26 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
     const SignalCard = ({ sig }) => (
       <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: T.paper }}>{sig.asset}</span>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15.5, color: T.paper }}>{sig.asset}</span>
           <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 10.5, color: dirColor(sig.direction), background: `${dirColor(sig.direction)}22`, borderRadius: 6, padding: "2px 7px" }}>{sig.direction}</span>
-            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 10.5, color: riskColor(sig.risk_level), background: `${riskColor(sig.risk_level)}22`, borderRadius: 6, padding: "2px 7px" }}>{sig.risk_level}</span>
-            <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 10.5, color: T.goldBright }}>{Math.round(sig.confidence)}%</span>
+            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: dirColor(sig.direction), background: `${dirColor(sig.direction)}22`, borderRadius: 6, padding: "2px 7px" }}>{sig.direction}</span>
+            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: riskColor(sig.risk_level), background: `${riskColor(sig.risk_level)}22`, borderRadius: 6, padding: "2px 7px" }}>{sig.risk_level}</span>
+            <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 12.5, color: T.goldBright }}>{Math.round(sig.confidence)}%</span>
           </div>
         </div>
         {sig.entry_zone && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 6 }}>
-            <div><div style={{ fontSize: 9.5, color: T.muted, marginBottom: 1 }}>Entry</div><div style={{ fontSize: 11, color: T.paper, fontWeight: 600 }}>{sig.entry_zone[0]?.toFixed(5)}–{sig.entry_zone[1]?.toFixed(5)}</div></div>
-            {sig.stop_loss != null && <div><div style={{ fontSize: 9.5, color: T.muted, marginBottom: 1 }}>SL</div><div style={{ fontSize: 11, color: T.rust, fontWeight: 600 }}>{sig.stop_loss?.toFixed(5)}</div></div>}
-            {sig.take_profit?.[0] != null && <div><div style={{ fontSize: 9.5, color: T.muted, marginBottom: 1 }}>TP1</div><div style={{ fontSize: 11, color: T.sage, fontWeight: 600 }}>{sig.take_profit[0]?.toFixed(5)}</div></div>}
+            <div><div style={{ fontSize: 11.5, color: T.muted, marginBottom: 1 }}>Entry</div><div style={{ fontSize: 13, color: T.paper, fontWeight: 600 }}>{sig.entry_zone[0]?.toFixed(5)}–{sig.entry_zone[1]?.toFixed(5)}</div></div>
+            {sig.stop_loss != null && <div><div style={{ fontSize: 11.5, color: T.muted, marginBottom: 1 }}>SL</div><div style={{ fontSize: 13, color: T.rust, fontWeight: 600 }}>{sig.stop_loss?.toFixed(5)}</div></div>}
+            {sig.take_profit?.[0] != null && <div><div style={{ fontSize: 11.5, color: T.muted, marginBottom: 1 }}>TP1</div><div style={{ fontSize: 13, color: T.sage, fontWeight: 600 }}>{sig.take_profit[0]?.toFixed(5)}</div></div>}
           </div>
         )}
         <div style={{ display: "flex", gap: 10 }}>
-          {sig.risk_reward_ratio != null && <span style={{ fontSize: 10, color: T.gold }}>RR {sig.risk_reward_ratio}:1</span>}
-          {sig.timeframe && <span style={{ fontSize: 10, color: T.muted }}>{sig.timeframe}</span>}
-          {sig.take_profit?.[1] != null && <span style={{ fontSize: 10, color: T.muted }}>TP2 {sig.take_profit[1]?.toFixed(5)}</span>}
+          {sig.risk_reward_ratio != null && <span style={{ fontSize: 12, color: T.gold }}>RR {sig.risk_reward_ratio}:1</span>}
+          {sig.timeframe && <span style={{ fontSize: 12, color: T.muted }}>{sig.timeframe}</span>}
+          {sig.take_profit?.[1] != null && <span style={{ fontSize: 12, color: T.muted }}>TP2 {sig.take_profit[1]?.toFixed(5)}</span>}
         </div>
-        {sig.explanation && <div style={{ fontSize: 10.5, color: T.muted, lineHeight: 1.5, marginTop: 6 }}>{sig.explanation.slice(0, 130)}{sig.explanation.length > 130 ? "…" : ""}</div>}
+        {sig.explanation && <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.5, marginTop: 6 }}>{sig.explanation.slice(0, 130)}{sig.explanation.length > 130 ? "…" : ""}</div>}
       </div>
     );
 
@@ -3341,38 +3341,38 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
       <div>
         {/* Demo tip */}
         <div style={{ background: `${T.sage}14`, border: `1px solid ${T.sage}44`, borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: T.sage, fontWeight: 700, marginBottom: 3 }}>💡 New to scalping? Start with a Demo account</div>
-          <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6 }}>
+          <div style={{ fontSize: 13, color: T.sage, fontWeight: 700, marginBottom: 3 }}>💡 New to scalping? Start with a Demo account</div>
+          <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>
             Open a free demo account on any MT5 broker (FTMO, ICMarkets, XM, Exness…), connect it here, and test Raina AI scalping with virtual funds before going live. No money at risk.
           </div>
         </div>
 
         {/* Connection method */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Connection Method</div>
+          <div style={{ fontSize: 13.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Connection Method</div>
           <div style={{ display: "flex", gap: 8 }}>
             {[["metaapi","MetaAPI (Cloud)"],["ea","EA Desktop"]].map(([m,label]) => (
               <button key={m} onClick={() => { setConnectMethod(m); setErr(""); }}
-                style={{ flex:1, background: connectMethod===m ? T.gold : T.card, color: connectMethod===m ? T.ink : T.muted, border: `1px solid ${connectMethod===m ? T.gold : T.cardBorder}`, borderRadius:10, padding:"10px 6px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:11, cursor:"pointer", transition:"background 0.2s,color 0.2s" }}>
+                style={{ flex:1, background: connectMethod===m ? T.gold : T.card, color: connectMethod===m ? T.ink : T.muted, border: `1px solid ${connectMethod===m ? T.gold : T.cardBorder}`, borderRadius:10, padding:"10px 6px", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 13, cursor:"pointer", transition:"background 0.2s,color 0.2s" }}>
                 {label}
               </button>
             ))}
           </div>
           {connectMethod === "metaapi" && (
-            <div style={{ fontSize:10.5, color:T.muted, marginTop:6, lineHeight:1.5 }}>Recommended — no PC or VPS needed. Raina AI stays connected to your broker 24/7 via MetaAPI cloud.</div>
+            <div style={{ fontSize: 12.5, color:T.muted, marginTop:6, lineHeight:1.5 }}>Recommended — no PC or VPS needed. Raina AI stays connected to your broker 24/7 via MetaAPI cloud.</div>
           )}
           {connectMethod === "ea" && (
-            <div style={{ fontSize:10.5, color:T.muted, marginTop:6, lineHeight:1.5 }}>Install an Expert Advisor in your local MetaTrader 5. MT5 must stay open on a PC or VPS for trades to execute.</div>
+            <div style={{ fontSize: 12.5, color:T.muted, marginTop:6, lineHeight:1.5 }}>Install an Expert Advisor in your local MetaTrader 5. MT5 must stay open on a PC or VPS for trades to execute.</div>
           )}
         </div>
 
         {/* Account mode */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Account Mode</div>
+          <div style={{ fontSize: 13.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Account Mode</div>
           <div style={{ display: "flex", gap: 8 }}>
             {["demo","live"].map(m => (
               <button key={m} onClick={() => setMode(m)}
-                style={{ flex:1, background: mode===m ? T.gold : T.card, color: mode===m ? T.ink : T.muted, border: `1px solid ${mode===m ? T.gold : T.cardBorder}`, borderRadius:10, padding:"10px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:12.5, cursor:"pointer", textTransform:"capitalize", transition:"background 0.2s,color 0.2s" }}>
+                style={{ flex:1, background: mode===m ? T.gold : T.card, color: mode===m ? T.ink : T.muted, border: `1px solid ${mode===m ? T.gold : T.cardBorder}`, borderRadius:10, padding:"10px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 14.5, cursor:"pointer", textTransform:"capitalize", transition:"background 0.2s,color 0.2s" }}>
                 {m === "demo" ? "📊 Demo" : "🔴 Live"}
               </button>
             ))}
@@ -3381,43 +3381,43 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
 
         {connectMethod === "metaapi" ? (
           <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"14px 16px", marginBottom:16 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, color:T.goldBright, marginBottom:4 }}>MT5 Credentials</div>
-            <div style={{ fontSize:10.5, color:T.muted, marginBottom:14, lineHeight:1.6 }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 14.5, color:T.goldBright, marginBottom:4 }}>MT5 Credentials</div>
+            <div style={{ fontSize: 12.5, color:T.muted, marginBottom:14, lineHeight:1.6 }}>
               Raina AI connects securely via MetaAPI. Your credentials are encrypted in transit and never stored in plain text.
             </div>
             <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:11, color:T.muted, fontWeight:700, marginBottom:4 }}>MT5 Login Number</div>
+              <div style={{ fontSize: 13, color:T.muted, fontWeight:700, marginBottom:4 }}>MT5 Login Number</div>
               <input type="text" value={mt5Login} onChange={e => setMt5Login(e.target.value)} placeholder="e.g. 12345678"
-                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize:13, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
-              <div style={{ fontSize:10, color:T.muted, marginTop:3 }}>The account number from your broker's welcome email.</div>
+                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize: 15, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
+              <div style={{ fontSize: 12, color:T.muted, marginTop:3 }}>The account number from your broker's welcome email.</div>
             </div>
             <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:11, color:T.muted, fontWeight:700, marginBottom:4 }}>MT5 Password</div>
+              <div style={{ fontSize: 13, color:T.muted, fontWeight:700, marginBottom:4 }}>MT5 Password</div>
               <input type="password" value={mt5Password} onChange={e => setMt5Password(e.target.value)} placeholder="Master or Investor password"
-                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize:13, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
-              <div style={{ fontSize:10, color:T.muted, marginTop:3 }}>Use your Master password for automated trading (not the Investor/read-only password).</div>
+                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize: 15, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
+              <div style={{ fontSize: 12, color:T.muted, marginTop:3 }}>Use your Master password for automated trading (not the Investor/read-only password).</div>
             </div>
             <div style={{ marginBottom:6 }}>
-              <div style={{ fontSize:11, color:T.muted, fontWeight:700, marginBottom:4 }}>Broker Server</div>
+              <div style={{ fontSize: 13, color:T.muted, fontWeight:700, marginBottom:4 }}>Broker Server</div>
               <input type="text" value={mt5Server} onChange={e => setMt5Server(e.target.value)} placeholder="e.g. ICMarkets-Demo"
                 list="broker-servers"
-                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize:13, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
+                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize: 15, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
               <datalist id="broker-servers">{BROKER_SERVERS.map(s => <option key={s} value={s} />)}</datalist>
-              <div style={{ fontSize:10, color:T.muted, marginTop:3 }}>Find this in MT5 → Help → About MetaTrader 5. Type it exactly (case-sensitive).</div>
+              <div style={{ fontSize: 12, color:T.muted, marginTop:3 }}>Find this in MT5 → Help → About MetaTrader 5. Type it exactly (case-sensitive).</div>
             </div>
           </div>
         ) : (
           <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"14px 16px", marginBottom:16 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, color:T.goldBright, marginBottom:4 }}>EA Desktop Mode</div>
-            <div style={{ fontSize:11, color:T.muted, lineHeight:1.7 }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 14.5, color:T.goldBright, marginBottom:4 }}>EA Desktop Mode</div>
+            <div style={{ fontSize: 13, color:T.muted, lineHeight:1.7 }}>
               Click below to generate your API key. Then install the Expert Advisor from the Raina AI Telegram bot in your MetaTrader 5. Paste the key into the EA settings — Raina AI will start queuing trades automatically.
             </div>
           </div>
         )}
 
-        {err && <div style={{ fontSize:11.5, color:T.rust, marginBottom:10, padding:"10px 12px", background:`${T.rust}15`, borderRadius:8, lineHeight:1.5 }}>{err}</div>}
+        {err && <div style={{ fontSize: 13.5, color:T.rust, marginBottom:10, padding:"10px 12px", background:`${T.rust}15`, borderRadius:8, lineHeight:1.5 }}>{err}</div>}
         <button onClick={handleConnect} disabled={busy}
-          style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor: busy ? "not-allowed" : "pointer" }}>
+          style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize: 16, cursor: busy ? "not-allowed" : "pointer" }}>
           {busy ? "Connecting…" : connectMethod === "metaapi" ? "Connect via MetaAPI" : "Generate API Key & Connect"}
         </button>
         <Disclaimer />
@@ -3428,23 +3428,23 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
     const PhasePending = () => (
       <div>
         <div style={{ background: `${T.gold}14`, border: `1px solid ${T.gold}55`, borderRadius: 12, padding: "14px 16px", marginBottom: 16, textAlign: "center" }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, color: T.goldBright, marginBottom: 4 }}>Waiting for MT5 Connection</div>
-          <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.6 }}>Install the Expert Advisor in MetaTrader 5 to complete setup. This page checks automatically every 30s.</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright, marginBottom: 4 }}>Waiting for MT5 Connection</div>
+          <div style={{ fontSize: 13.5, color: T.muted, lineHeight: 1.6 }}>Install the Expert Advisor in MetaTrader 5 to complete setup. This page checks automatically every 30s.</div>
         </div>
         {apiKey && (
           <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: T.paper, marginBottom: 10 }}>Your API Key</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginBottom: 10 }}>Your API Key</div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, background: T.ink, borderRadius: 8, padding: "10px 12px" }}>
-              <div style={{ flex: 1, fontFamily: "monospace", fontSize: 11, color: T.gold, wordBreak: "break-all" }}>
+              <div style={{ flex: 1, fontFamily: "monospace", fontSize: 13, color: T.gold, wordBreak: "break-all" }}>
                 {showKey ? apiKey : "●".repeat(Math.min(apiKey.length, 36))}
               </div>
-              <button onClick={() => setShowKey(v => !v)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 10.5, fontFamily: FONT_BODY, flexShrink: 0 }}>{showKey ? "Hide" : "Show"}</button>
-              <button onClick={() => navigator.clipboard?.writeText(apiKey)} style={{ background: "none", border: "none", color: T.gold, cursor: "pointer", fontSize: 10.5, fontFamily: FONT_BODY, flexShrink: 0 }}>Copy</button>
+              <button onClick={() => setShowKey(v => !v)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 12.5, fontFamily: FONT_BODY, flexShrink: 0 }}>{showKey ? "Hide" : "Show"}</button>
+              <button onClick={() => navigator.clipboard?.writeText(apiKey)} style={{ background: "none", border: "none", color: T.gold, cursor: "pointer", fontSize: 12.5, fontFamily: FONT_BODY, flexShrink: 0 }}>Copy</button>
             </div>
           </div>
         )}
         <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: T.paper, marginBottom: 10 }}>EA Installation Steps</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginBottom: 10 }}>EA Installation Steps</div>
           {[
             "Get the EA file from the Raina AI Telegram bot — send /mt5connect and choose Desktop",
             "In MT5: File → Open Data Folder → MQL5 → Experts — paste RainaAI_EA.mq5",
@@ -3454,8 +3454,8 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
             "Keep MT5 open on a PC or VPS — trades execute through your local terminal",
           ].map((step, i) => (
             <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "flex-start" }}>
-              <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 11, color: T.gold, minWidth: 16 }}>{i + 1}.</span>
-              <span style={{ fontSize: 11.5, color: T.paper, lineHeight: 1.6 }}>{step}</span>
+              <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.gold, minWidth: 16 }}>{i + 1}.</span>
+              <span style={{ fontSize: 13.5, color: T.paper, lineHeight: 1.6 }}>{step}</span>
             </div>
           ))}
         </div>
@@ -3468,20 +3468,20 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
       <div>
         <div style={{ background: `${T.sage}18`, border: `1px solid ${T.sage}44`, borderRadius: 12, padding: "12px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.sage }}>MT5 Connected ✓</div>
-            <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{mt5?.broker_name || "Broker"} · {(mt5?.account_mode || "demo").toUpperCase()} · #{mt5?.account_number || "—"}</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.sage }}>MT5 Connected ✓</div>
+            <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{mt5?.broker_name || "Broker"} · {(mt5?.account_mode || "demo").toUpperCase()} · #{mt5?.account_number || "—"}</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright }}>${(mt5?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-            <div style={{ fontSize: 10, color: T.muted }}>Balance</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: T.goldBright }}>${(mt5?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+            <div style={{ fontSize: 12, color: T.muted }}>Balance</div>
           </div>
         </div>
         <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper, marginBottom: 14 }}>Risk Settings</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper, marginBottom: 14 }}>Risk Settings</div>
           <RiskForm />
         </div>
         <button onClick={handleToggle} disabled={busy}
-          style={{ width: "100%", background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: busy ? "not-allowed" : "pointer", marginBottom: 14 }}>
+          style={{ width: "100%", background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy ? "not-allowed" : "pointer", marginBottom: 14 }}>
           {busy ? "Please wait…" : "🚀 Activate Raina AI Scalping"}
         </button>
         <Disclaimer />
@@ -3493,12 +3493,12 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
       <div>
         <div style={{ background: `${T.sage}18`, border: `1px solid ${T.sage}44`, borderRadius: 12, padding: "12px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.sage }}>🤖 Scalping Active</div>
-            <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{mt5?.broker_name} · {(mt5?.account_mode || "").toUpperCase()} · #{mt5?.account_number}</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.sage }}>🤖 Scalping Active</div>
+            <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{mt5?.broker_name} · {(mt5?.account_mode || "").toUpperCase()} · #{mt5?.account_number}</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright }}>${(mt5?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-            {perf && <div style={{ fontSize: 10.5, color: (perf.total_profit ?? 0) >= 0 ? T.sage : T.rust, fontWeight: 700 }}>{(perf.total_profit ?? 0) >= 0 ? "+" : ""}{(perf.total_profit ?? 0).toFixed(2)} P&L</div>}
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: T.goldBright }}>${(mt5?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+            {perf && <div style={{ fontSize: 12.5, color: (perf.total_profit ?? 0) >= 0 ? T.sage : T.rust, fontWeight: 700 }}>{(perf.total_profit ?? 0) >= 0 ? "+" : ""}{(perf.total_profit ?? 0).toFixed(2)} P&L</div>}
           </div>
         </div>
 
@@ -3510,8 +3510,8 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
               { label: "P&L",          val: `${(perf.total_profit ?? 0) >= 0 ? "+" : ""}${(perf.total_profit ?? 0).toFixed(2)}`, col: (perf.total_profit ?? 0) >= 0 ? T.sage : T.rust },
             ].map(({ label, val, col }) => (
               <div key={label} style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
-                <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, color: col }}>{val}</div>
-                <div style={{ fontSize: 9.5, color: T.muted, marginTop: 2 }}>{label}</div>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: col }}>{val}</div>
+                <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2 }}>{label}</div>
               </div>
             ))}
           </div>
@@ -3519,16 +3519,16 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
 
         {trades.length > 0 && (
           <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper, marginBottom: 10 }}>Open Trades ({trades.length})</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper, marginBottom: 10 }}>Open Trades ({trades.length})</div>
             {trades.map((t, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: i < trades.length - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
                 <div>
-                  <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper }}>{t.asset}</span>
-                  <span style={{ marginLeft: 8, fontSize: 10.5, color: t.direction === "BUY" ? T.sage : T.rust, fontFamily: FONT_HEAD, fontWeight: 700 }}>{t.direction}</span>
+                  <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper }}>{t.asset}</span>
+                  <span style={{ marginLeft: 8, fontSize: 12.5, color: t.direction === "BUY" ? T.sage : T.rust, fontFamily: FONT_HEAD, fontWeight: 700 }}>{t.direction}</span>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 11, color: T.muted }}>Lot {t.lot_size}</div>
-                  {t.confidence && <div style={{ fontSize: 10, color: T.muted }}>{t.confidence}% conf</div>}
+                  <div style={{ fontSize: 13, color: T.muted }}>Lot {t.lot_size}</div>
+                  {t.confidence && <div style={{ fontSize: 12, color: T.muted }}>{t.confidence}% conf</div>}
                 </div>
               </div>
             ))}
@@ -3537,31 +3537,31 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
 
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper }}>Live Scalp Signals</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper }}>Live Scalp Signals</div>
             <button onClick={loadSignals} disabled={sigLoading}
-              style={{ background: "none", border: "none", color: T.gold, fontSize: 11.5, fontFamily: FONT_HEAD, fontWeight: 700, cursor: sigLoading ? "not-allowed" : "pointer" }}>
+              style={{ background: "none", border: "none", color: T.gold, fontSize: 13.5, fontFamily: FONT_HEAD, fontWeight: 700, cursor: sigLoading ? "not-allowed" : "pointer" }}>
               {sigLoading ? "…" : "↺ Refresh"}
             </button>
           </div>
           {sigLoading && signals.length === 0 && (
-            <div style={{ textAlign: "center", color: T.muted, fontSize: 12, padding: 20 }}>Loading signals…</div>
+            <div style={{ textAlign: "center", color: T.muted, fontSize: 14, padding: 20 }}>Loading signals…</div>
           )}
           {signals.map((sig, i) => <SignalCard key={`${sig.asset}-${i}`} sig={sig} />)}
           {!sigLoading && signals.length === 0 && (
             <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "20px 16px", textAlign: "center" }}>
-              <div style={{ fontSize: 12, color: T.muted }}>No actionable signals right now.</div>
-              <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>Raina AI is monitoring markets — signals appear when conditions are met.</div>
+              <div style={{ fontSize: 14, color: T.muted }}>No actionable signals right now.</div>
+              <div style={{ fontSize: 13, color: T.muted, marginTop: 4 }}>Raina AI is monitoring markets — signals appear when conditions are met.</div>
             </div>
           )}
         </div>
 
         <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper, marginBottom: 14 }}>Risk Settings</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper, marginBottom: 14 }}>Risk Settings</div>
           <RiskForm />
         </div>
 
         <button onClick={handleToggle} disabled={busy}
-          style={{ width: "100%", background: `${T.rust}22`, color: T.rust, border: `1px solid ${T.rust}44`, borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: busy ? "not-allowed" : "pointer" }}>
+          style={{ width: "100%", background: `${T.rust}22`, color: T.rust, border: `1px solid ${T.rust}44`, borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, cursor: busy ? "not-allowed" : "pointer" }}>
           {busy ? "Please wait…" : "Pause Scalping"}
         </button>
       </div>
@@ -3570,11 +3570,11 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
     // ── Root render ────────────────────────────────────────────────────────────
     return (
       <div style={{ padding: "16px 16px 90px" }}>
-        <div style={{ fontFamily: FONT_HEAD, fontSize: 18, color: T.goldBright, fontWeight: 800, marginBottom: 2 }}>Scalping</div>
-        <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 16, lineHeight: 1.6 }}>Raina AI premium scalping engine — 1m/5m/15m signals auto-queued to your MT5.</div>
+        <div style={{ fontFamily: FONT_HEAD, fontSize: 20, color: T.goldBright, fontWeight: 800, marginBottom: 2 }}>Scalping</div>
+        <div style={{ fontSize: 13.5, color: T.muted, marginBottom: 16, lineHeight: 1.6 }}>Raina AI premium scalping engine — 1m/5m/15m signals auto-queued to your MT5.</div>
 
         <BlurGate unlocked={unlocked} requiredLabel="Monthly" onSubscribe={onSubscribe} minHeight={440}>
-          {phase === "loading"    ? <div style={{ textAlign: "center", padding: 40, color: T.muted, fontSize: 13 }}>Loading…</div>
+          {phase === "loading"    ? <div style={{ textAlign: "center", padding: 40, color: T.muted, fontSize: 15 }}>Loading…</div>
            : phase === "setup"    ? <PhaseSetup />
            : phase === "pending"  ? <PhasePending />
            : phase === "connected"? <PhaseConnected />
@@ -3609,11 +3609,11 @@ function MoreRow({ icon: Icon, iconType, title, subtitle, badge, badgeColor, onP
         </div>
       )}
       <div style={{ flex: 1, textAlign: "left" }}>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>{title}</div>
-        {subtitle && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{subtitle}</div>}
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 16, color: T.paper }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{subtitle}</div>}
       </div>
       {badge && (
-        <span style={{ fontSize: 10.5, fontWeight: 700, color: badgeColor || T.muted, border: `1px solid ${badgeColor ? badgeColor + "55" : T.cardBorder}`, borderRadius: 20, padding: "3px 9px", flexShrink: 0 }}>{badge}</span>
+        <span style={{ fontSize: 12.5, fontWeight: 700, color: badgeColor || T.muted, border: `1px solid ${badgeColor ? badgeColor + "55" : T.cardBorder}`, borderRadius: 20, padding: "3px 9px", flexShrink: 0 }}>{badge}</span>
       )}
       <ChevronRight size={16} color={T.muted} style={{ flexShrink: 0 }} />
     </button>
@@ -3628,12 +3628,12 @@ function SecuritySection({ icon: Icon, title, desc, onPress, label, comingSoon }
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>{title}</span>
-          {comingSoon && <span style={{ fontSize: 9.5, fontWeight: 700, color: T.muted, border: `1px solid ${T.cardBorder}`, borderRadius: 6, padding: "2px 6px", fontFamily: FONT_HEAD }}>SOON</span>}
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 16, color: T.paper }}>{title}</span>
+          {comingSoon && <span style={{ fontSize: 11.5, fontWeight: 700, color: T.muted, border: `1px solid ${T.cardBorder}`, borderRadius: 6, padding: "2px 6px", fontFamily: FONT_HEAD }}>SOON</span>}
         </div>
-        <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2 }}>{desc}</div>
+        <div style={{ fontSize: 13.5, color: T.muted, marginTop: 2 }}>{desc}</div>
       </div>
-      <button onClick={onPress} style={{ background: comingSoon ? "transparent" : T.gold, border: `1px solid ${comingSoon ? T.cardBorder : T.gold}`, borderRadius: 9, padding: "7px 13px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, color: comingSoon ? T.muted : T.ink, cursor: "pointer", flexShrink: 0 }}>
+      <button onClick={onPress} style={{ background: comingSoon ? "transparent" : T.gold, border: `1px solid ${comingSoon ? T.cardBorder : T.gold}`, borderRadius: 9, padding: "7px 13px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, color: comingSoon ? T.muted : T.ink, cursor: "pointer", flexShrink: 0 }}>
         {label}
       </button>
     </div>
@@ -3680,8 +3680,8 @@ function SecuritySection({ icon: Icon, title, desc, onPress, label, comingSoon }
     };
     return (
       <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginTop: 16 }}>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 3 }}>Notification Sounds</div>
-        <div style={{ fontSize: 11, color: T.muted, marginBottom: 14, lineHeight: 1.5 }}>Tap Preview to hear each alert sound before it arrives.</div>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper, marginBottom: 3 }}>Notification Sounds</div>
+        <div style={{ fontSize: 13, color: T.muted, marginBottom: 14, lineHeight: 1.5 }}>Tap Preview to hear each alert sound before it arrives.</div>
         {SOUND_PREVIEW_ROWS.map((row, i) => (
           <div key={row.category} style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -3689,22 +3689,22 @@ function SecuritySection({ icon: Icon, title, desc, onPress, label, comingSoon }
             borderBottom: i < SOUND_PREVIEW_ROWS.length - 1 ? `1px solid ${T.cardBorder}` : "none",
           }}>
             <div style={{ flex: 1, minWidth: 0, marginRight: 10 }}>
-              <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 12.5, color: T.paper }}>{row.label}</div>
-              <div style={{ fontSize: 10.5, color: T.muted, marginTop: 1 }}>{row.sub}</div>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 14.5, color: T.paper }}>{row.label}</div>
+              <div style={{ fontSize: 12.5, color: T.muted, marginTop: 1 }}>{row.sub}</div>
             </div>
             <button onClick={() => preview(row)} style={{
               background: playing === row.category ? T.sage : "transparent",
               color: playing === row.category ? T.ink : T.gold,
               border: `1.5px solid ${playing === row.category ? T.sage : T.gold}`,
               borderRadius: 8, padding: "5px 13px",
-              fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11,
+              fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13,
               cursor: "pointer", flexShrink: 0, transition: "all 0.18s",
             }}>
               {playing === row.category ? "Playing…" : "Preview"}
             </button>
           </div>
         ))}
-        <div style={{ marginTop: 12, fontSize: 10.5, color: T.muted, lineHeight: 1.6 }}>
+        <div style={{ marginTop: 12, fontSize: 12.5, color: T.muted, lineHeight: 1.6 }}>
           Each alert type has its own unique sound — plays automatically even when RainX is closed.
         </div>
       </div>
@@ -3743,8 +3743,8 @@ function NotificationSettingsScreen({ account }) {
       <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>All Notifications</div>
-            <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2 }}>Master on/off for all alerts</div>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 16, color: T.paper }}>All Notifications</div>
+            <div style={{ fontSize: 13.5, color: T.muted, marginTop: 2 }}>Master on/off for all alerts</div>
           </div>
           <SwitchToggle on={masterOn} onChange={() => toggle("master")} />
         </div>
@@ -3756,8 +3756,8 @@ function NotificationSettingsScreen({ account }) {
           return (
             <div key={cat.key} style={{ padding: "14px 16px", borderBottom: i < NOTIF_CATEGORIES.length - 1 ? `1px solid ${T.cardBorder}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center", opacity: masterOn ? 1 : 0.5 }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 13, color: T.paper }}>{cat.label}</div>
-                <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{cat.desc}</div>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 15, color: T.paper }}>{cat.label}</div>
+                <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{cat.desc}</div>
               </div>
               <SwitchToggle on={catOn} onChange={() => masterOn && toggle(cat.key)} />
             </div>
@@ -3766,8 +3766,8 @@ function NotificationSettingsScreen({ account }) {
       </div>
       {/* Push notifications */}
       <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginTop: 16 }}>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 8 }}>Push Notifications</div>
-        <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.7, marginBottom: 12 }}>Enable push notifications to receive trading signals and alerts even when RainX is not open.</div>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper, marginBottom: 8 }}>Push Notifications</div>
+        <div style={{ fontSize: 13.5, color: T.muted, lineHeight: 1.7, marginBottom: 12 }}>Enable push notifications to receive trading signals and alerts even when RainX is not open.</div>
         <button onClick={async () => {
           if (!("Notification" in window)) { alert("Notifications are not supported in this browser."); return; }
           const permission = await Notification.requestPermission();
@@ -3801,7 +3801,7 @@ function NotificationSettingsScreen({ account }) {
             });
             alert("Push notifications enabled! You will now receive trading signals even when RainX is closed.");
           } catch (e) { alert("Could not enable push notifications: " + e.message); }
-        }} style={{ width: "100%", background: T.gold, color: T.ink, border: "none", borderRadius: 10, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+        }} style={{ width: "100%", background: T.gold, color: T.ink, border: "none", borderRadius: 10, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
           Enable Push Notifications
         </button>
       </div>
@@ -3814,7 +3814,7 @@ function NotificationSettingsScreen({ account }) {
 function MoreSection({ title, children }) {
   return (
     <div style={{ marginBottom: 22 }}>
-      <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.goldBright, marginBottom: 8, paddingLeft: 2 }}>{title}</div>
+      <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.goldBright, marginBottom: 8, paddingLeft: 2 }}>{title}</div>
       <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, overflow: "hidden" }}>
         {children}
       </div>
@@ -3868,8 +3868,8 @@ function MoreSubScreen({ onBack, title, subtitle, rightElement, children }) {
           <ChevronLeft size={22} />
         </button>
         <div style={{ flex: 1, textAlign: "center" }}>
-          {title && <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright, lineHeight: 1.2 }}>{title}</div>}
-          {subtitle && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{subtitle}</div>}
+          {title && <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: T.goldBright, lineHeight: 1.2 }}>{title}</div>}
+          {subtitle && <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{subtitle}</div>}
         </div>
         <div style={{ flexShrink: 0, width: 30, display: "flex", justifyContent: "flex-end" }}>
           {rightElement || null}
@@ -3944,15 +3944,15 @@ function RewardsScreen({ account, entitlement }) {
     };
     return (
       <div style={{ padding: 16 }}>
-        <button onClick={() => setQuickPage(null)} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, marginBottom: 16 }}>
+        <button onClick={() => setQuickPage(null)} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, marginBottom: 16 }}>
           <ChevronLeft size={18} /> Back
         </button>
         <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: 32, textAlign: "center" }}>
           <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(198,161,91,0.12)", border: `1px solid ${T.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
             <Trophy size={26} color={T.goldBright} />
           </div>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper, marginBottom: 8 }}>{titles[quickPage]}</div>
-          <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.7 }}>This feature is coming soon. Check back for updates.</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 17, color: T.paper, marginBottom: 8 }}>{titles[quickPage]}</div>
+          <div style={{ fontSize: 14, color: T.muted, lineHeight: 1.7 }}>This feature is coming soon. Check back for updates.</div>
         </div>
       </div>
     );
@@ -3967,10 +3967,10 @@ function RewardsScreen({ account, entitlement }) {
           <div style={{ position: "absolute", inset: 0, borderRadius: 18, background: "linear-gradient(135deg, rgba(198,161,91,0.07) 0%, transparent 60%)", pointerEvents: "none" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11.5, color: T.goldBright, fontWeight: 600, marginBottom: 8, letterSpacing: 0.3 }}>Total Rewards Balance</div>
-              <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 32, color: T.paper, letterSpacing: -0.5, lineHeight: 1.15 }}>{fmtGHS(totalBalance)}</div>
+              <div style={{ fontSize: 13.5, color: T.goldBright, fontWeight: 600, marginBottom: 8, letterSpacing: 0.3 }}>Total Rewards Balance</div>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 33, color: T.paper, letterSpacing: -0.5, lineHeight: 1.15 }}>{fmtGHS(totalBalance)}</div>
               <div style={{ marginTop: 14 }}>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: `${T.cardBorder}88`, border: `1px solid ${T.gold}44`, borderRadius: 20, padding: "5px 12px", fontSize: 11.5, color: weeklyPct >= 0 ? T.goldBright : T.rust, fontWeight: 600 }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: `${T.cardBorder}88`, border: `1px solid ${T.gold}44`, borderRadius: 20, padding: "5px 12px", fontSize: 13.5, color: weeklyPct >= 0 ? T.goldBright : T.rust, fontWeight: 600 }}>
                   {weeklyPct >= 0 ? `+${weeklyPct.toFixed(2)}%` : `${weeklyPct.toFixed(2)}%`} this week
                 </span>
               </div>
@@ -3984,14 +3984,14 @@ function RewardsScreen({ account, entitlement }) {
 
       {/* Quick Access */}
       <div style={{ padding: "22px 16px 0" }}>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 16 }}>Quick Access</div>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper, marginBottom: 16 }}>Quick Access</div>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           {quickItems.map(({ icon: Icon, label, page }) => (
             <button key={page} onClick={() => setQuickPage(page)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: 0, flex: 1 }}>
               <div style={{ width: 54, height: 54, borderRadius: "50%", background: T.card, border: `1px solid ${T.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Icon size={22} color={T.goldBright} strokeWidth={1.5} />
               </div>
-              <div style={{ fontSize: 10.5, color: T.paper, textAlign: "center", fontWeight: 500, whiteSpace: "pre-line", lineHeight: 1.35 }}>{label}</div>
+              <div style={{ fontSize: 12.5, color: T.paper, textAlign: "center", fontWeight: 500, whiteSpace: "pre-line", lineHeight: 1.35 }}>{label}</div>
             </button>
           ))}
         </div>
@@ -4001,26 +4001,26 @@ function RewardsScreen({ account, entitlement }) {
       <div style={{ padding: "20px 16px 0" }}>
         <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: "18px 16px 16px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
-            <span style={{ fontSize: 16, color: T.goldBright }}>↗</span>
-            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>Your Overview</span>
+            <span style={{ fontSize: 18, color: T.goldBright }}>↗</span>
+            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 16, color: T.paper }}>Your Overview</span>
           </div>
           <div style={{ display: "flex" }}>
             <div style={{ flex: 1, textAlign: "center" }}>
-              <div style={{ fontSize: 10.5, color: T.muted, marginBottom: 5 }}>Total Earned</div>
-              <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.paper }}>{fmtGHS(totalEarned)}</div>
-              <div style={{ fontSize: 10, color: T.muted, marginTop: 3 }}>All time</div>
+              <div style={{ fontSize: 12.5, color: T.muted, marginBottom: 5 }}>Total Earned</div>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.paper }}>{fmtGHS(totalEarned)}</div>
+              <div style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>All time</div>
             </div>
             <div style={{ width: 1, background: T.cardBorder }} />
             <div style={{ flex: 1, textAlign: "center" }}>
-              <div style={{ fontSize: 10.5, color: T.muted, marginBottom: 5 }}>Total Withdrawn</div>
-              <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.paper }}>{fmtGHS(totalWithdrawn)}</div>
-              <div style={{ fontSize: 10, color: T.muted, marginTop: 3 }}>All time</div>
+              <div style={{ fontSize: 12.5, color: T.muted, marginBottom: 5 }}>Total Withdrawn</div>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.paper }}>{fmtGHS(totalWithdrawn)}</div>
+              <div style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>All time</div>
             </div>
             <div style={{ width: 1, background: T.cardBorder }} />
             <div style={{ flex: 1, textAlign: "center" }}>
-              <div style={{ fontSize: 10.5, color: T.muted, marginBottom: 5 }}>Pending</div>
-              <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.paper }}>{fmtGHS(pending)}</div>
-              <div style={{ fontSize: 10, color: T.muted, marginTop: 3 }}>Processing</div>
+              <div style={{ fontSize: 12.5, color: T.muted, marginBottom: 5 }}>Pending</div>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.paper }}>{fmtGHS(pending)}</div>
+              <div style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>Processing</div>
             </div>
           </div>
         </div>
@@ -4029,8 +4029,8 @@ function RewardsScreen({ account, entitlement }) {
       {/* Recent Activity */}
       <div style={{ padding: "20px 16px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.goldBright }}>Recent Activity</span>
-          <button onClick={() => setQuickPage("txHistory")} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", display: "flex", alignItems: "center", gap: 2, fontSize: 12, fontFamily: FONT_HEAD, fontWeight: 600 }}>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 16, color: T.goldBright }}>Recent Activity</span>
+          <button onClick={() => setQuickPage("txHistory")} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", display: "flex", alignItems: "center", gap: 2, fontSize: 14, fontFamily: FONT_HEAD, fontWeight: 600 }}>
             View all <ChevronRight size={14} />
           </button>
         </div>
@@ -4044,14 +4044,14 @@ function RewardsScreen({ account, entitlement }) {
                   <IconComp size={20} color={T.goldBright} strokeWidth={1.6} />
                 </div>
                 <div style={{ flex: 1, textAlign: "left" }}>
-                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 13, color: T.paper }}>{tx.type || "Transaction"}</div>
-                  <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{tx.description || ""}</div>
+                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 15, color: T.paper }}>{tx.type || "Transaction"}</div>
+                  <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{tx.description || ""}</div>
                 </div>
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: isPos ? T.goldBright : T.rust }}>
+                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: isPos ? T.goldBright : T.rust }}>
                     {isPos ? `+${fmtGHS(Math.abs(tx.amount || 0))}` : `-${fmtGHS(Math.abs(tx.amount || 0))}`}
                   </div>
-                  <div style={{ fontSize: 10.5, color: T.muted, marginTop: 2 }}>{fmtDate(tx.created_at)}</div>
+                  <div style={{ fontSize: 12.5, color: T.muted, marginTop: 2 }}>{fmtDate(tx.created_at)}</div>
                 </div>
               </button>
             );
@@ -4118,22 +4118,22 @@ function CreatorWalletScreen({ account }) {
   if (walletPage && payStep) {
     return (
       <div style={{ padding: 16 }}>
-        <button onClick={() => setPayStep(null)} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, marginBottom: 16 }}>
+        <button onClick={() => setPayStep(null)} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, marginBottom: 16 }}>
           <ChevronLeft size={16} /> Back
         </button>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, marginBottom: 4 }}>{walletPage === "topup" ? "Top Up Wallet" : "Withdraw Funds"}</div>
-        <div style={{ fontSize: 12, color: T.muted, marginBottom: 20 }}>Via {payStep.label}</div>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: T.paper, marginBottom: 4 }}>{walletPage === "topup" ? "Top Up Wallet" : "Withdraw Funds"}</div>
+        <div style={{ fontSize: 14, color: T.muted, marginBottom: 20 }}>Via {payStep.label}</div>
         {msg ? (
-          <div style={{ background: `rgba(122,158,134,0.12)`, border: `1px solid ${T.sage}44`, borderRadius: 14, padding: 18, marginBottom: 16, fontSize: 13, color: T.sage, lineHeight: 1.6 }}>{msg}</div>
+          <div style={{ background: `rgba(122,158,134,0.12)`, border: `1px solid ${T.sage}44`, borderRadius: 14, padding: 18, marginBottom: 16, fontSize: 15, color: T.sage, lineHeight: 1.6 }}>{msg}</div>
         ) : null}
-        <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 6 }}>Amount (GHS)</label>
+        <label style={{ fontSize: 13, color: T.muted, fontWeight: 600, display: "block", marginBottom: 6 }}>Amount (GHS)</label>
         <input
           type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)}
           placeholder="0.00"
-          style={{ ...getInputStyle(), width: "100%", marginBottom: 16, fontSize: 20, fontFamily: FONT_HEAD, fontWeight: 700, textAlign: "center" }}
+          style={{ ...getInputStyle(), width: "100%", marginBottom: 16, fontSize: 21, fontFamily: FONT_HEAD, fontWeight: 700, textAlign: "center" }}
         />
         {!msg && (
-          <button onClick={handleSubmit} disabled={busy} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+          <button onClick={handleSubmit} disabled={busy} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: "pointer" }}>
             {busy ? "Processing…" : walletPage === "topup" ? `Top Up ${amount ? fmtGHS(+amount) : ""}` : `Withdraw ${amount ? fmtGHS(+amount) : ""}`}
           </button>
         )}
@@ -4144,22 +4144,22 @@ function CreatorWalletScreen({ account }) {
   if (walletPage) {
     return (
       <div style={{ padding: 16 }}>
-        <button onClick={() => setWalletPage(null)} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, marginBottom: 16 }}>
+        <button onClick={() => setWalletPage(null)} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, marginBottom: 16 }}>
           <ChevronLeft size={16} /> Back
         </button>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, marginBottom: 16 }}>{walletPage === "topup" ? "Select Top-Up Method" : walletPage === "withdraw" ? "Select Withdrawal Method" : "Transaction History"}</div>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: T.paper, marginBottom: 16 }}>{walletPage === "topup" ? "Select Top-Up Method" : walletPage === "withdraw" ? "Select Withdrawal Method" : "Transaction History"}</div>
         {walletPage === "history" ? (
           txns.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "32px 0", color: T.muted, fontSize: 13 }}>No transactions yet.</div>
+            <div style={{ textAlign: "center", padding: "32px 0", color: T.muted, fontSize: 15 }}>No transactions yet.</div>
           ) : txns.map((tx, i) => {
             const isPos = (tx.amount || 0) > 0;
             return (
               <div key={tx.id || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 0", borderBottom: i < txns.length - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
                 <div>
-                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper }}>{tx.type || "Transaction"}</div>
-                  <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{fmtDate(tx.created_at)} · {tx.status || "pending"}</div>
+                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper }}>{tx.type || "Transaction"}</div>
+                  <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{fmtDate(tx.created_at)} · {tx.status || "pending"}</div>
                 </div>
-                <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: isPos ? T.goldBright : T.rust }}>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 16, color: isPos ? T.goldBright : T.rust }}>
                   {isPos ? "+" : ""}{fmtGHS(Math.abs(tx.amount || 0))}
                 </div>
               </div>
@@ -4167,8 +4167,8 @@ function CreatorWalletScreen({ account }) {
           })
         ) : PAYMENT_METHODS.map(m => (
           <button key={m.id} onClick={() => setPayStep(m)} style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10, cursor: "pointer" }}>
-            <span style={{ fontSize: 24 }}>{m.icon}</span>
-            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>{m.label}</span>
+            <span style={{ fontSize: 25 }}>{m.icon}</span>
+            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 16, color: T.paper }}>{m.label}</span>
             <ChevronRight size={16} color={T.muted} style={{ marginLeft: "auto" }} />
           </button>
         ))}
@@ -4196,10 +4196,10 @@ function CreatorWalletScreen({ account }) {
           <div style={{ position: "absolute", top: -30, right: -30, width: 130, height: 130, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
           <div style={{ position: "absolute", bottom: -20, right: 30, width: 90, height: 90, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
 
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11, color: "rgba(0,0,0,0.55)", letterSpacing: 1.5, marginBottom: 24 }}>CREATOR WALLET</div>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 30, color: T.ink, letterSpacing: -0.5 }}>{fmtGHS(balance)}</div>
-          <div style={{ fontSize: 11, color: "rgba(0,0,0,0.55)", marginTop: 4, fontFamily: FONT_HEAD }}>Available Balance</div>
-          <div style={{ position: "absolute", bottom: 20, right: 22, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, color: "rgba(0,0,0,0.4)" }}>RainX</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: "rgba(0,0,0,0.55)", letterSpacing: 1.5, marginBottom: 24 }}>CREATOR WALLET</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 31, color: T.ink, letterSpacing: -0.5 }}>{fmtGHS(balance)}</div>
+          <div style={{ fontSize: 13, color: "rgba(0,0,0,0.55)", marginTop: 4, fontFamily: FONT_HEAD }}>Available Balance</div>
+          <div style={{ position: "absolute", bottom: 20, right: 22, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: "rgba(0,0,0,0.4)" }}>RainX</div>
         </div>
       </div>
 
@@ -4209,27 +4209,27 @@ function CreatorWalletScreen({ account }) {
           <div style={{ width: 44, height: 44, borderRadius: "50%", background: `rgba(198,161,91,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <ArrowUpCircle size={22} color={T.gold} />
           </div>
-          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper }}>Top Up</span>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper }}>Top Up</span>
         </button>
         <button onClick={() => setWalletPage("withdraw")} style={{ flex: 1, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "16px 0", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
           <div style={{ width: 44, height: 44, borderRadius: "50%", background: `rgba(176,96,74,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <ArrowDownCircle size={22} color={T.rust} />
           </div>
-          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper }}>Withdraw</span>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper }}>Withdraw</span>
         </button>
         <button onClick={() => setWalletPage("history")} style={{ flex: 1, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "16px 0", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
           <div style={{ width: 44, height: 44, borderRadius: "50%", background: `rgba(91,156,246,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <ScrollText size={22} color="#5B9CF6" />
           </div>
-          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper }}>History</span>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper }}>History</span>
         </button>
       </div>
 
       {/* Recent transactions */}
       <div style={{ padding: "22px 16px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>Recent Transactions</span>
-          <button onClick={() => setWalletPage("history")} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", fontSize: 12, fontFamily: FONT_HEAD, fontWeight: 600, display: "flex", alignItems: "center", gap: 2 }}>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 16, color: T.paper }}>Recent Transactions</span>
+          <button onClick={() => setWalletPage("history")} style={{ background: "none", border: "none", color: T.goldBright, cursor: "pointer", fontSize: 14, fontFamily: FONT_HEAD, fontWeight: 600, display: "flex", alignItems: "center", gap: 2 }}>
             View all <ChevronRight size={14} />
           </button>
         </div>
@@ -4243,11 +4243,11 @@ function CreatorWalletScreen({ account }) {
                     {isPos ? <ArrowUpCircle size={18} color={T.gold} /> : <ArrowDownCircle size={18} color={T.rust} />}
                   </div>
                   <div>
-                    <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper }}>{tx.type}</div>
-                    <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{tx.description || ""} · {fmtDate(tx.created_at)}</div>
+                    <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper }}>{tx.type}</div>
+                    <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{tx.description || ""} · {fmtDate(tx.created_at)}</div>
                   </div>
                 </div>
-                <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: isPos ? T.goldBright : T.rust }}>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: isPos ? T.goldBright : T.rust }}>
                   {isPos ? "+" : ""}{fmtGHS(Math.abs(tx.amount || 0))}
                 </div>
               </div>
@@ -4275,7 +4275,7 @@ function HeaderAvatar({ account, morePage, T }) {
   const initial = (account?.email || "?")[0].toUpperCase();
   return url
     ? <img src={url} alt="me" style={{ width:34, height:34, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} />
-    : <div style={{ width:34, height:34, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.ink }}>{initial}</div>;
+    : <div style={{ width:34, height:34, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize: 16, color:T.ink }}>{initial}</div>;
 }
 
 function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, onLogoutConfirm, setTab, entitlement, themeMode, setThemeMode, morePage, setMorePage, setProfileFromHeader }) {
@@ -4563,11 +4563,11 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       <div style={{ padding:"8px 20px 18px", display:"flex", alignItems:"center", gap:14 }}>
         {avatarUrl
           ? <img src={avatarUrl} alt="avatar" style={{ width:56, height:56, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} />
-          : <div style={{ width:56, height:56, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
+          : <div style={{ width:56, height:56, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize: 21, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
         }
         <div style={{ flex:1 }}>
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>{username || account?.email?.split("@")[0] || "User"}</div>
-          {username && <div style={{ fontSize:11.5, color:T.muted, marginTop:2 }}>@{username}</div>}
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 19, color:T.paper }}>{username || account?.email?.split("@")[0] || "User"}</div>
+          {username && <div style={{ fontSize: 13.5, color:T.muted, marginTop:2 }}>@{username}</div>}
         </div>
       </div>
       {/* Menu cards */}
@@ -4585,7 +4585,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
                 <item.icon size={18} color={T.ink} />
               </div>
               <div style={{ width:28, height:3, borderRadius:2, background:T.gold, marginTop:6 }} />
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{item.label}</div>
+              <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 16, color:T.paper }}>{item.label}</div>
             </button>
           ))}
         </div>
@@ -4598,7 +4598,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           </div>
           <div>
             <div style={{ width:28, height:3, borderRadius:2, background:T.gold, marginBottom:8 }} />
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Trader Wallet</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 16, color:T.paper }}>Trader Wallet</div>
           </div>
         </button>
         {/* Settings */}
@@ -4610,7 +4610,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           </div>
           <div>
             <div style={{ width:28, height:3, borderRadius:2, background:T.gold, marginBottom:8 }} />
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Settings</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 16, color:T.paper }}>Settings</div>
           </div>
         </button>
         {/* Logout */}
@@ -4622,12 +4622,12 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           </div>
           <div>
             <div style={{ width:28, height:3, borderRadius:2, background:T.rust, marginBottom:8 }} />
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.rust }}>Logout</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 16, color:T.rust }}>Logout</div>
           </div>
         </button>
       </div>
       <div style={{ padding:"24px 20px 0", textAlign:"center" }}>
-        <div style={{ fontSize:10.5, color:T.muted, lineHeight:1.7 }}>RainX is an analysis tool, not a broker.<br/>AI analysis is not financial advice.</div>
+        <div style={{ fontSize: 12.5, color:T.muted, lineHeight:1.7 }}>RainX is an analysis tool, not a broker.<br/>AI analysis is not financial advice.</div>
       </div>
     </div>
   );
@@ -4668,11 +4668,11 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:22, padding:"0 4px" }}>
                 {avatarUrl
                   ? <img src={avatarUrl} style={{ width:46, height:46, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} alt="" />
-                  : <div style={{ width:46, height:46, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
+                  : <div style={{ width:46, height:46, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize: 18, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
                 }
                 <div>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{fullName || username || account?.email?.split("@")[0]}</div>
-                  {username && <div style={{ fontSize:12, color:T.muted }}>@{username}</div>}
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 17, color:T.paper }}>{fullName || username || account?.email?.split("@")[0]}</div>
+                  {username && <div style={{ fontSize: 14, color:T.muted }}>@{username}</div>}
                 </div>
               </div>
               {[
@@ -4681,8 +4681,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               ].map(({ emoji, label, action }) => (
                 <button key={label} onClick={action}
                   style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"14px 8px", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, cursor:"pointer" }}>
-                  <span style={{ fontSize:20 }}>{emoji}</span>
-                  <span style={{ fontFamily:FONT_HEAD, fontWeight:600, fontSize:14, color:T.paper }}>{label}</span>
+                  <span style={{ fontSize: 21 }}>{emoji}</span>
+                  <span style={{ fontFamily:FONT_HEAD, fontWeight:600, fontSize: 16, color:T.paper }}>{label}</span>
                 </button>
               ))}
             </div>
@@ -4694,7 +4694,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           <button onClick={() => setMorePage("profile-menu")} style={{ width:36, height:36, borderRadius:"50%", background:"rgba(255,255,255,0.07)", border:"none", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
             <ChevronLeft size={20} color={T.paper} />
           </button>
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>Profile</div>
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 17, color:T.paper }}>Profile</div>
           <div style={{ width:36 }} />
         </div>
 
@@ -4721,7 +4721,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ width:92, height:92, borderRadius:"50%", border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}`, overflow:"hidden", position:"relative" }}>
               {avatarUrl
                 ? <img src={avatarUrl} alt="avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                : <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:32 }}>{profileInitial}</div>
+                : <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize: 33 }}>{profileInitial}</div>
               }
               {/* Camera overlay on avatar */}
               <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.35)", display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"50%" }}>
@@ -4733,11 +4733,11 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           {/* Share + Edit profile buttons — right side, below banner */}
           <div style={{ position:"absolute", bottom:-44, right:14, display:"flex", alignItems:"center", gap:8 }}>
             <button onClick={() => setShowShareSheet(true)}
-              style={{ background:"none", border:`1.5px solid ${T.cardBorder}`, borderRadius:22, padding:"9px 16px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
+              style={{ background:"none", border:`1.5px solid ${T.cardBorder}`, borderRadius:22, padding:"9px 16px", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15, color:T.paper, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
               Share
             </button>
             <button onClick={() => setMorePage("profile-edit")}
-              style={{ background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, border:"none", borderRadius:22, padding:"9px 16px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.ink, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
+              style={{ background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, border:"none", borderRadius:22, padding:"9px 16px", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15, color:T.ink, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
               Edit profile
             </button>
           </div>
@@ -4749,34 +4749,34 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         {/* ── Profile info ── */}
         <div style={{ padding:"0 16px 8px" }}>
           <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
-            <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.paper, lineHeight:1.2 }}>{fullName || username || account?.email}</span>
+            <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 21, color:T.paper, lineHeight:1.2 }}>{fullName || username || account?.email}</span>
             <VerifBadgeIcon size={18} />
           </div>
-          {username && <div style={{ fontSize:13.5, color:T.muted, marginBottom:7 }}>@{username}</div>}
-          {bio && <div style={{ fontSize:13.5, color:T.paper, marginBottom:9, lineHeight:1.65 }}>{bio}</div>}
+          {username && <div style={{ fontSize: 15.5, color:T.muted, marginBottom:7 }}>@{username}</div>}
+          {bio && <div style={{ fontSize: 15.5, color:T.paper, marginBottom:9, lineHeight:1.65 }}>{bio}</div>}
           <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:"4px 14px", marginBottom:9 }}>
-            {location && <span style={{ display:"flex", alignItems:"center", gap:4, fontSize:12.5, color:T.muted }}>
+            {location && <span style={{ display:"flex", alignItems:"center", gap:4, fontSize: 14.5, color:T.muted }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
               {location}
             </span>}
-            {joinedLabel && <span style={{ display:"flex", alignItems:"center", gap:4, fontSize:12.5, color:T.muted }}>
+            {joinedLabel && <span style={{ display:"flex", alignItems:"center", gap:4, fontSize: 14.5, color:T.muted }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               {joinedLabel}
             </span>}
-            {dobDisplay && <span style={{ display:"flex", alignItems:"center", gap:4, fontSize:12.5, color:T.muted }}>
+            {dobDisplay && <span style={{ display:"flex", alignItems:"center", gap:4, fontSize: 14.5, color:T.muted }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               {dobDisplay}
             </span>}
           </div>
           <div style={{ display:"flex", gap:20, marginBottom:10 }}>
-            <span><strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{profileFollowing}</strong><span style={{ fontSize:14, color:T.muted }}> Following</span></span>
-            <span><strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{profileFollowers}</strong><span style={{ fontSize:14, color:T.muted }}> Followers</span></span>
+            <span><strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 17, color:T.paper }}>{profileFollowing}</strong><span style={{ fontSize: 16, color:T.muted }}> Following</span></span>
+            <span><strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 17, color:T.paper }}>{profileFollowers}</strong><span style={{ fontSize: 16, color:T.muted }}> Followers</span></span>
           </div>
           {mutualFollowers.length > 0 && (
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, fontSize:12.5, color:T.muted }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, fontSize: 14.5, color:T.muted }}>
               <div style={{ display:"flex", alignItems:"center" }}>
                 {mutualFollowers.slice(0, 3).map((f, i) => (
-                  <div key={f.id} style={{ width:22, height:22, borderRadius:"50%", marginLeft:i > 0 ? -7 : 0, border:`1.5px solid ${T.ink}`, overflow:"hidden", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:700, fontSize:8, color:T.ink, flexShrink:0 }}>
+                  <div key={f.id} style={{ width:22, height:22, borderRadius:"50%", marginLeft:i > 0 ? -7 : 0, border:`1.5px solid ${T.ink}`, overflow:"hidden", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 10, color:T.ink, flexShrink:0 }}>
                     {f.avatar_url ? <img src={f.avatar_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" /> : (f.username || f.email || "?")[0]?.toUpperCase()}
                   </div>
                 ))}
@@ -4788,7 +4788,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
         {/* ── Posts header ── */}
         <div style={{ borderTop:`1px solid ${T.cardBorder}`, padding:"12px 16px 0" }}>
-          <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper, borderBottom:`2px solid ${T.gold}`, paddingBottom:10, display:"inline-block" }}>Posts</span>
+          <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15.5, color:T.paper, borderBottom:`2px solid ${T.gold}`, paddingBottom:10, display:"inline-block" }}>Posts</span>
         </div>
 
         {/* ── Profile Composer FAB ── */}
@@ -4816,9 +4816,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
         {/* ── Profile posts feed ── */}
         {profilePostsLoading ? (
-          <div style={{ fontSize:13, color:T.muted, padding:"28px 0", textAlign:"center" }}>Loading…</div>
+          <div style={{ fontSize: 15, color:T.muted, padding:"28px 0", textAlign:"center" }}>Loading…</div>
         ) : profilePosts.length === 0 ? (
-          <div style={{ fontSize:13, color:T.muted, padding:"28px 0", textAlign:"center" }}>No posts yet.</div>
+          <div style={{ fontSize: 15, color:T.muted, padding:"28px 0", textAlign:"center" }}>No posts yet.</div>
         ) : (
           <CommunityProfileFeed
             posts={profilePosts}
@@ -4860,10 +4860,10 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", position:"sticky", top:0, zIndex:10, background:T.ink, borderBottom:`1px solid ${T.cardBorder}` }}>
           <button onClick={() => setMorePage("profile")} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:6, color:T.paper }}>
             <ChevronLeft size={22} color={T.paper} />
-            <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.paper }}>Edit profile</span>
+            <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 18, color:T.paper }}>Edit profile</span>
           </button>
           <button onClick={saveProfileExtended} disabled={savingProfile}
-            style={{ background:"none", border:"none", cursor:"pointer", fontFamily:FONT_HEAD, fontWeight:700, fontSize:15, color:T.gold, padding:"4px 2px" }}>
+            style={{ background:"none", border:"none", cursor:"pointer", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 17, color:T.gold, padding:"4px 2px" }}>
             {savingProfile ? "Saving…" : "Save"}
           </button>
         </div>
@@ -4887,7 +4887,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ width:88, height:88, borderRadius:"50%", border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}`, overflow:"hidden", position:"relative" }}>
               {avatarUrl
                 ? <img src={avatarUrl} alt="avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                : <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:30 }}>{profileInitial}</div>
+                : <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize: 31 }}>{profileInitial}</div>
               }
               <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.35)", display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"50%" }}><CamIcon /></div>
             </div>
@@ -4896,14 +4896,14 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
         {/* ── Edit fields ── */}
         <div style={{ padding:"0 16px 24px" }}>
-          {profileMsg && <div style={{ fontSize:12, color:profileMsg.startsWith("Saved") ? T.sage : T.rust, marginBottom:12, padding:"8px 12px", background:`${profileMsg.startsWith("Saved") ? T.sage : T.rust}18`, borderRadius:8 }}>{profileMsg}</div>}
+          {profileMsg && <div style={{ fontSize: 14, color:profileMsg.startsWith("Saved") ? T.sage : T.rust, marginBottom:12, padding:"8px 12px", background:`${profileMsg.startsWith("Saved") ? T.sage : T.rust}18`, borderRadius:8 }}>{profileMsg}</div>}
 
           {/* Year picker bottom sheet */}
           {showYearPicker && (
             <div onClick={() => setShowYearPicker(false)} style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(0,0,0,0.55)" }}>
               <div onClick={e => e.stopPropagation()} style={{ position:"absolute", bottom:0, left:0, right:0, background:T.card, borderRadius:"20px 20px 0 0", padding:"16px 0 40px", animation:"sheetUp 0.28s ease", maxHeight:"70vh", display:"flex", flexDirection:"column" }}>
                 <div style={{ width:40, height:4, borderRadius:2, background:T.cardBorder, margin:"0 auto 16px", flexShrink:0 }} />
-                <div style={{ textAlign:"center", fontFamily:FONT_HEAD, fontWeight:700, fontSize:15, color:T.paper, marginBottom:8, flexShrink:0 }}>Select Year</div>
+                <div style={{ textAlign:"center", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 17, color:T.paper, marginBottom:8, flexShrink:0 }}>Select Year</div>
                 <div style={{ overflowY:"auto", flex:1 }}>
                   {Array.from({ length: 80 }, (_, i) => 2010 - i).map(y => {
                     const curYear = dob ? dob.split("-")[0] : "";
@@ -4915,7 +4915,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
                         setDob(`${y}-${mm}-${dd}`);
                         setShowYearPicker(false);
                       }}
-                        style={{ width:"100%", padding:"14px 0", background: curYear === String(y) ? `${T.gold}22` : "none", border:"none", borderBottom:`1px solid ${T.cardBorder}33`, color: curYear === String(y) ? T.goldBright : T.paper, fontFamily:FONT_HEAD, fontWeight: curYear === String(y) ? 800 : 400, fontSize:16, cursor:"pointer" }}>
+                        style={{ width:"100%", padding:"14px 0", background: curYear === String(y) ? `${T.gold}22` : "none", border:"none", borderBottom:`1px solid ${T.cardBorder}33`, color: curYear === String(y) ? T.goldBright : T.paper, fontFamily:FONT_HEAD, fontWeight: curYear === String(y) ? 800 : 400, fontSize: 18, cursor:"pointer" }}>
                         {y}
                       </button>
                     );
@@ -4932,25 +4932,25 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             { label:"Username", val:username, set:setUsername, ph:"@handle" },
           ].map(({ label, val, set, ph, multiline }) => (
             <div key={label} style={{ marginBottom:0, paddingBottom:0 }}>
-              <label style={{ fontSize:12, color:T.gold, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>{label}</label>
+              <label style={{ fontSize: 14, color:T.gold, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>{label}</label>
               {multiline
                 ? <textarea value={val} onChange={e => set(e.target.value)} placeholder={ph} rows={3}
-                    style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:15, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", resize:"none", boxSizing:"border-box" }} />
+                    style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize: 17, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", resize:"none", boxSizing:"border-box" }} />
                 : <input type="text" value={val} onChange={e => set(e.target.value)} placeholder={ph}
-                    style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:15, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", boxSizing:"border-box" }} />
+                    style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize: 17, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", boxSizing:"border-box" }} />
               }
             </div>
           ))}
 
           {/* Location with search suggestions */}
           <div style={{ marginBottom:0, paddingBottom:0, position:"relative" }}>
-            <label style={{ fontSize:12, color:T.gold, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>Location</label>
+            <label style={{ fontSize: 14, color:T.gold, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>Location</label>
             <ProfileLocationInput value={location} onChange={setLocation} T={T} FONT_HEAD={FONT_HEAD} />
           </div>
 
           {/* Date of birth — month + day inline, year opens bottom sheet */}
           <div style={{ marginBottom:0, paddingBottom:0 }}>
-            <label style={{ fontSize:12, color:T.gold, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>Date of birth</label>
+            <label style={{ fontSize: 14, color:T.gold, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>Date of birth</label>
             <div style={{ display:"flex", gap:8, alignItems:"center" }}>
               <select
                 value={dob ? dob.split("-")[1] || "" : ""}
@@ -4959,7 +4959,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
                   const y = parts[0] || "2000"; const d = (parts[2] || "01").padStart(2,"0");
                   setDob(`${y}-${e.target.value.padStart(2,"0")}-${d}`);
                 }}
-                style={{ flex:2, background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:14, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none" }}>
+                style={{ flex:2, background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize: 16, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none" }}>
                 <option value="">Month</option>
                 {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m,i) =>
                   <option key={i+1} value={String(i+1).padStart(2,"0")}>{m}</option>
@@ -4974,10 +4974,10 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
                   setDob(`${y}-${m}-${e.target.value.padStart(2,"0")}`);
                 }}
                 placeholder="Day"
-                style={{ flex:1, background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:14, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", textAlign:"center", width:0 }} />
+                style={{ flex:1, background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize: 16, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", textAlign:"center", width:0 }} />
               <button
                 onClick={() => setShowYearPicker(true)}
-                style={{ flex:1.2, background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color: dob && dob.split("-")[0] ? T.paper : T.muted, fontSize:14, padding:"6px 0", fontFamily:FONT_HEAD, textAlign:"center", cursor:"pointer" }}>
+                style={{ flex:1.2, background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color: dob && dob.split("-")[0] ? T.paper : T.muted, fontSize: 16, padding:"6px 0", fontFamily:FONT_HEAD, textAlign:"center", cursor:"pointer" }}>
                 {dob && dob.split("-")[0] ? dob.split("-")[0] : "Year ▾"}
               </button>
             </div>
@@ -4986,11 +4986,11 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           {/* DOB privacy selector */}
           {dob && (
             <div style={{ marginTop:18 }}>
-              <label style={{ fontSize:12, color:T.gold, fontWeight:600, display:"block", marginBottom:8 }}>DOB visibility</label>
+              <label style={{ fontSize: 14, color:T.gold, fontWeight:600, display:"block", marginBottom:8 }}>DOB visibility</label>
               <div style={{ display:"flex", gap:8 }}>
                 {[["daymonth","Day & Month"],["everyone","Full Date"],["friends","Friends"]].map(([v, lbl]) => (
                   <button key={v} onClick={() => { setDobPrivacy(v); lsSet("rainx-dob-privacy", v); }}
-                    style={{ flex:1, fontSize:11, padding:"6px 4px", borderRadius:10, border:`1px solid ${dobPrivacy===v ? T.gold : T.cardBorder}`, background:dobPrivacy===v ? `${T.gold}22` : "none", color:dobPrivacy===v ? T.goldBright : T.muted, cursor:"pointer", fontFamily:FONT_HEAD, fontWeight:600 }}>
+                    style={{ flex:1, fontSize: 13, padding:"6px 4px", borderRadius:10, border:`1px solid ${dobPrivacy===v ? T.gold : T.cardBorder}`, background:dobPrivacy===v ? `${T.gold}22` : "none", color:dobPrivacy===v ? T.goldBright : T.muted, cursor:"pointer", fontFamily:FONT_HEAD, fontWeight:600 }}>
                     {lbl}
                   </button>
                 ))}
@@ -4999,7 +4999,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           )}
 
           <button onClick={() => onLogoutConfirm && onLogoutConfirm()}
-            style={{ width:"100%", marginTop:32, background:"none", border:`1px solid rgba(176,96,74,0.4)`, borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.rust, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+            style={{ width:"100%", marginTop:32, background:"none", border:`1px solid rgba(176,96,74,0.4)`, borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15, color:T.rust, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
             <LogOut size={15} /> Log out
           </button>
         </div>
@@ -5040,15 +5040,15 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
                 <ShieldCheck size={34} color={T.muted} />
               )}
             </div>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.paper, marginBottom: 10 }}>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 19, color: T.paper, marginBottom: 10 }}>
               {isVerif ? verificationLabel : "Not Verified"}
             </div>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: badgeBg, border: `1px solid ${badgeBorder}`, borderRadius: 20, padding: "7px 18px" }}>
               <VerifBadgeIcon size={13} />
-              <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: verificationColor }}>{verificationLabel}</span>
+              <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: verificationColor }}>{verificationLabel}</span>
             </div>
             {isVerif && (
-              <div style={{ marginTop: 12, fontSize: 11.5, color: T.muted, lineHeight: 1.6 }}>
+              <div style={{ marginTop: 12, fontSize: 13.5, color: T.muted, lineHeight: 1.6 }}>
                 {isGolden ? "Premium Bi-Annual subscriber · highest trust level" : "Active subscriber · community trusted"}
               </div>
             )}
@@ -5056,7 +5056,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
           {/* Tier breakdown */}
           <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: "6px 0", marginBottom: 14 }}>
-            <div style={{ padding: "12px 16px 8px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: T.goldBright, letterSpacing: 0.5 }}>HOW IT WORKS</div>
+            <div style={{ padding: "12px 16px 8px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.goldBright, letterSpacing: 0.5 }}>HOW IT WORKS</div>
             {tiers.map((t, i) => {
               const active = entitlement.tier === t.key;
               const tBlue = t.icon === "blue";
@@ -5075,10 +5075,10 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper }}>{t.label} Plan</span>
-                      {active && <span style={{ fontSize: 10, fontWeight: 700, color: tBlue ? "#5B9CF6" : T.goldBright, background: tBlue ? "rgba(91,156,246,0.15)" : "rgba(198,161,91,0.15)", borderRadius: 8, padding: "2px 7px" }}>ACTIVE</span>}
+                      <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper }}>{t.label} Plan</span>
+                      {active && <span style={{ fontSize: 12, fontWeight: 700, color: tBlue ? "#5B9CF6" : T.goldBright, background: tBlue ? "rgba(91,156,246,0.15)" : "rgba(198,161,91,0.15)", borderRadius: 8, padding: "2px 7px" }}>ACTIVE</span>}
                     </div>
-                    <div style={{ fontSize: 11, color: tBlue ? "#5B9CF6" : T.goldBright, marginTop: 2, fontWeight: 600 }}>{t.verif}</div>
+                    <div style={{ fontSize: 13, color: tBlue ? "#5B9CF6" : T.goldBright, marginTop: 2, fontWeight: 600 }}>{t.verif}</div>
                   </div>
                 </div>
               );
@@ -5087,12 +5087,12 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
           {/* CTA */}
           {!isVerif && (
-            <button onClick={() => setMorePage("rewards")} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
+            <button onClick={() => setMorePage("rewards")} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15.5, cursor: "pointer" }}>
               Get Verified — View Plans
             </button>
           )}
           {isVerif && (
-            <button onClick={() => setMorePage("rewards")} style={{ width: "100%", background: "none", border: `1px solid ${verificationColor}`, borderRadius: 13, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer", color: verificationColor }}>
+            <button onClick={() => setMorePage("rewards")} style={{ width: "100%", background: "none", border: `1px solid ${verificationColor}`, borderRadius: 13, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, cursor: "pointer", color: verificationColor }}>
               View Rewards & Balance
             </button>
           )}
@@ -5150,8 +5150,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               {i>0 && <MoreRowDivider />}
               <button onClick={()=>{ lsSet("rainx-theme",val); setThemeMode(val); }} style={{ width:"100%", background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", padding:"13px 16px", gap:12 }}>
                 <div style={{ flex:1, textAlign:"left" }}>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper }}>{label}</div>
-                  <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>{desc}</div>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15.5, color:T.paper }}>{label}</div>
+                  <div style={{ fontSize: 13, color:T.muted, marginTop:2 }}>{desc}</div>
                 </div>
                 <div style={{ width:20, height:20, borderRadius:"50%", border:`2px solid ${themeMode===val?T.gold:T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
                   {themeMode===val && <div style={{ width:10, height:10, borderRadius:"50%", background:T.gold }} />}
@@ -5167,7 +5167,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               <React.Fragment key={val}>
                 {i>0 && <MoreRowDivider />}
                 <button onClick={()=>lsSet("rainx-post-visibility",val)} style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"13px 16px", background:"none", border:"none", cursor:"pointer" }}>
-                  <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper }}>{label}</span>
+                  <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15.5, color:T.paper }}>{label}</span>
                   <div style={{ width:20, height:20, borderRadius:"50%", border:`2px solid ${cur===val?T.gold:T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
                     {cur===val && <div style={{ width:10, height:10, borderRadius:"50%", background:T.gold }} />}
                   </div>
@@ -5234,7 +5234,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             if (window.confirm("Are you sure you want to delete your account? This cannot be undone.")) {
               alert("Please contact support to delete your account.");
             }
-          }} style={{ width: "100%", background: "none", border: `1px solid ${T.rust}44`, borderRadius: 13, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.rust, cursor: "pointer" }}>
+          }} style={{ width: "100%", background: "none", border: `1px solid ${T.rust}44`, borderRadius: 13, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.rust, cursor: "pointer" }}>
             Delete Account
           </button>
         </div>
@@ -5251,10 +5251,10 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:16, padding:16, marginBottom:22 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
           <div>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.goldBright }}>Analytics</div>
-            <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>Your creator performance</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15, color:T.goldBright }}>Analytics</div>
+            <div style={{ fontSize: 13, color:T.muted, marginTop:2 }}>Your creator performance</div>
           </div>
-          <button onClick={() => setMorePage("analytics")} style={{ background:"none", border:"none", color:T.gold, fontSize:11.5, fontFamily:FONT_HEAD, fontWeight:700, cursor:"pointer" }}>View all →</button>
+          <button onClick={() => setMorePage("analytics")} style={{ background:"none", border:"none", color:T.gold, fontSize: 13.5, fontFamily:FONT_HEAD, fontWeight:700, cursor:"pointer" }}>View all →</button>
         </div>
         {/* Mini bar chart sparkline */}
         <div style={{ height:52, display:"flex", alignItems:"flex-end", gap:3, marginBottom:12 }}>
@@ -5264,14 +5264,14 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         </div>
         <div style={{ display:"flex", gap:12, alignItems:"center" }}>
           <div style={{ flex:1 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, color:T.paper }}>{impressionCount.toLocaleString()}</div>
-            <div style={{ fontSize:10.5, color:T.muted, marginTop:1 }}>Total impressions</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 20, color:T.paper }}>{impressionCount.toLocaleString()}</div>
+            <div style={{ fontSize: 12.5, color:T.muted, marginTop:1 }}>Total impressions</div>
           </div>
           <div style={{ flex:1 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, color:T.paper }}>{followerCount.toLocaleString()}</div>
-            <div style={{ fontSize:10.5, color:T.muted, marginTop:1 }}>Followers</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 20, color:T.paper }}>{followerCount.toLocaleString()}</div>
+            <div style={{ fontSize: 12.5, color:T.muted, marginTop:1 }}>Followers</div>
           </div>
-          <button onClick={() => setMorePage("analytics")} style={{ background:`rgba(198,161,91,0.15)`, border:`1px solid ${T.gold}44`, borderRadius:10, padding:"8px 14px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, color:T.gold, cursor:"pointer", flexShrink:0 }}>Open</button>
+          <button onClick={() => setMorePage("analytics")} style={{ background:`rgba(198,161,91,0.15)`, border:`1px solid ${T.gold}44`, borderRadius:10, padding:"8px 14px", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 13.5, color:T.gold, cursor:"pointer", flexShrink:0 }}>Open</button>
         </div>
       </div>
 
@@ -5288,8 +5288,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             </svg>
           </div>
           <div style={{ flex:1, textAlign:"left" }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper }}>Get Verified</div>
-            <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>Earn your badge &amp; unlock rewards</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15.5, color:T.paper }}>Get Verified</div>
+            <div style={{ fontSize: 13, color:T.muted, marginTop:2 }}>Earn your badge &amp; unlock rewards</div>
           </div>
           <ChevronRight size={15} color={T.muted} />
         </button>
@@ -5305,8 +5305,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             return (
               <div key={label} style={{ marginBottom:14 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                  <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.paper }}>{target.toLocaleString()} {label}</span>
-                  <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:done?T.sage:T.gold }}>{val.toLocaleString()}/{target.toLocaleString()}</span>
+                  <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 14, color:T.paper }}>{target.toLocaleString()} {label}</span>
+                  <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 14, color:done?T.sage:T.gold }}>{val.toLocaleString()}/{target.toLocaleString()}</span>
                 </div>
                 <div style={{ height:6, borderRadius:3, background:T.cardBorder, overflow:"hidden" }}>
                   <div style={{ height:"100%", width:`${Math.min(1,val/target)*100}%`, borderRadius:3, background:done?T.sage:T.gold, transition:"width 0.6s ease" }} />
@@ -5314,11 +5314,11 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               </div>
             );
           })}
-          <div style={{ fontSize:11, color:T.muted, lineHeight:1.6, marginBottom:14 }}>A qualified referral is a user who signs up through your link and activates a subscription.</div>
+          <div style={{ fontSize: 13, color:T.muted, lineHeight:1.6, marginBottom:14 }}>A qualified referral is a user who signs up through your link and activates a subscription.</div>
           <button
             disabled={!rewardEligible}
             onClick={rewardEligible ? () => setMorePage("rewards") : undefined}
-            style={{ width:"100%", background:rewardEligible?`linear-gradient(135deg,${T.gold},${T.goldBright})`:"rgba(100,100,100,0.18)", color:rewardEligible?T.ink:"rgba(150,150,150,0.6)", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:rewardEligible?"pointer":"not-allowed", transition:"background 0.3s" }}>
+            style={{ width:"100%", background:rewardEligible?`linear-gradient(135deg,${T.gold},${T.goldBright})`:"rgba(100,100,100,0.18)", color:rewardEligible?T.ink:"rgba(150,150,150,0.6)", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize: 16, cursor:rewardEligible?"pointer":"not-allowed", transition:"background 0.3s" }}>
             Apply Now
           </button>
         </div>
@@ -5345,23 +5345,23 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       </MoreSection>
 
       <div style={{ textAlign: "center", marginTop: 4 }}>
-        <button onClick={() => setShowLegal(true)} style={{ background: "none", border: "none", color: T.muted, fontSize: 10.5, cursor: "pointer", textDecoration: "underline", fontFamily: FONT_BODY }}>Terms & Risk Disclosure</button>
-        <div style={{ fontSize: 10, color: T.muted, marginTop: 4, lineHeight: 1.6 }}>RainX is an analysis tool, not a broker.</div>
+        <button onClick={() => setShowLegal(true)} style={{ background: "none", border: "none", color: T.muted, fontSize: 12.5, cursor: "pointer", textDecoration: "underline", fontFamily: FONT_BODY }}>Terms & Risk Disclosure</button>
+        <div style={{ fontSize: 12, color: T.muted, marginTop: 4, lineHeight: 1.6 }}>RainX is an analysis tool, not a broker.</div>
       </div>
 
       {showLegal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 70, display: "flex", alignItems: "flex-end" }}>
           <div style={{ background: T.card, width: "100%", maxWidth: 480, margin: "0 auto", borderRadius: "16px 16px 0 0", padding: 22, maxHeight: "80vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.goldBright, fontWeight: 800 }}>Terms & Risk Disclosure</div>
+              <div style={{ fontFamily: FONT_HEAD, fontSize: 19, color: T.goldBright, fontWeight: 800 }}>Terms & Risk Disclosure</div>
               <button onClick={() => setShowLegal(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><X size={20} /></button>
             </div>
-            <div style={{ fontSize: 12, color: T.paper, lineHeight: 1.7, fontWeight: 500 }}>
+            <div style={{ fontSize: 14, color: T.paper, lineHeight: 1.7, fontWeight: 500 }}>
               <p><strong>Not financial advice.</strong> RainX and Raina AI provide market analysis and educational commentary only. Nothing in this app is a recommendation to buy, sell, or hold any financial instrument.</p>
               <p><strong>No guaranteed outcomes.</strong> Trading forex, metals, indices, and crypto carries a high level of risk and may not be suitable for all investors. Past performance and AI-generated confidence scores do not guarantee future results.</p>
               <p><strong>Your responsibility.</strong> You are solely responsible for your own trading decisions, position sizing, and risk management. RainX does not execute trades and is not a broker.</p>
               <p><strong>Data.</strong> Market data and analysis in this app may be simulated or delayed pending a live data connection. Always verify prices with your broker before acting.</p>
-              <p style={{ color: T.muted, fontSize: 10.5 }}>This is placeholder legal text and not a substitute for review by a qualified lawyer before public launch.</p>
+              <p style={{ color: T.muted, fontSize: 12.5 }}>This is placeholder legal text and not a substitute for review by a qualified lawyer before public launch.</p>
             </div>
           </div>
         </div>
@@ -5426,10 +5426,10 @@ function AnalyticsScreen({ account }) {
 
   const MetricCard = ({ label, value, delta }) => (
     <div style={{ flex:1, minWidth:"45%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px", marginBottom:10, boxShadow: T.ink==="#FFFFFF" ? "0 1px 6px rgba(0,0,0,0.07)" : "none" }}>
-      <div style={{ fontSize:11, color:T.muted, fontWeight:600, marginBottom:4 }}>{label}</div>
-      <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:24, color:T.paper }}>{typeof value==="number"?value.toLocaleString():value}</div>
+      <div style={{ fontSize: 13, color:T.muted, fontWeight:600, marginBottom:4 }}>{label}</div>
+      <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 25, color:T.paper }}>{typeof value==="number"?value.toLocaleString():value}</div>
       {delta!==undefined && (
-        <div style={{ fontSize:11, fontWeight:700, color:delta>=0?T.sage:T.rust, marginTop:4 }}>{delta>=0?"↑":"↓"} {Math.abs(delta).toLocaleString()} vs prev</div>
+        <div style={{ fontSize: 13, fontWeight:700, color:delta>=0?T.sage:T.rust, marginTop:4 }}>{delta>=0?"↑":"↓"} {Math.abs(delta).toLocaleString()} vs prev</div>
       )}
     </div>
   );
@@ -5453,16 +5453,16 @@ function AnalyticsScreen({ account }) {
     <div style={{ padding:"0 0 24px", background:T.card, minHeight:"100%" }}>
       {/* Header */}
       <div style={{ padding:"20px 16px 12px", borderBottom:`1px solid ${T.cardBorder}` }}>
-        <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:22, color:T.goldBright, letterSpacing:-0.5 }}>ANALYTICS</div>
-        <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Track your creator performance</div>
+        <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 23, color:T.goldBright, letterSpacing:-0.5 }}>ANALYTICS</div>
+        <div style={{ fontSize: 14, color:T.muted, marginTop:2 }}>Track your creator performance</div>
       </div>
 
       {/* Period selector */}
       <div style={{ display:"flex", gap:6, padding:"12px 16px", overflowX:"auto" }}>
         {PERIODS.map(p=>(
-          <button key={p} onClick={()=>{setPeriod(p);setShowCustom(false);}} style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, border:`1px solid ${period===p?T.gold:T.cardBorder}`, background:period===p?"rgba(198,161,91,0.15)":"none", color:period===p?T.gold:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer" }}>{p}</button>
+          <button key={p} onClick={()=>{setPeriod(p);setShowCustom(false);}} style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, border:`1px solid ${period===p?T.gold:T.cardBorder}`, background:period===p?"rgba(198,161,91,0.15)":"none", color:period===p?T.gold:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize: 13.5, cursor:"pointer" }}>{p}</button>
         ))}
-        <button onClick={()=>setShowCustom(v=>!v)} style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, border:`1px solid ${showCustom?T.gold:T.cardBorder}`, background:showCustom?"rgba(198,161,91,0.15)":"none", color:showCustom?T.gold:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer" }}>Custom</button>
+        <button onClick={()=>setShowCustom(v=>!v)} style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, border:`1px solid ${showCustom?T.gold:T.cardBorder}`, background:showCustom?"rgba(198,161,91,0.15)":"none", color:showCustom?T.gold:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize: 13.5, cursor:"pointer" }}>Custom</button>
       </div>
       {showCustom && (
         <div style={{ display:"flex", gap:10, padding:"0 16px 12px" }}>
@@ -5474,7 +5474,7 @@ function AnalyticsScreen({ account }) {
       {/* Tabs */}
       <div style={{ display:"flex", borderBottom:`1px solid ${T.cardBorder}`, marginBottom:16 }}>
         {TABS.map(t=>(
-          <button key={t} onClick={()=>setActiveTab(t)} style={{ flex:1, padding:"10px 0", background:"none", border:"none", borderBottom:`2px solid ${activeTab===t?T.gold:"transparent"}`, color:activeTab===t?T.gold:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer", transition:"color 0.15s" }}>{t}</button>
+          <button key={t} onClick={()=>setActiveTab(t)} style={{ flex:1, padding:"10px 0", background:"none", border:"none", borderBottom:`2px solid ${activeTab===t?T.gold:"transparent"}`, color:activeTab===t?T.gold:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize: 13.5, cursor:"pointer", transition:"color 0.15s" }}>{t}</button>
         ))}
       </div>
 
@@ -5483,7 +5483,7 @@ function AnalyticsScreen({ account }) {
         {activeTab === "Overview" && (
           <>
             {false ? (
-              <div style={{ color:T.muted, fontSize:13, textAlign:"center", paddingTop:32 }}>Loading analytics…</div>
+              <div style={{ color:T.muted, fontSize: 15, textAlign:"center", paddingTop:32 }}>Loading analytics…</div>
             ) : (
               <>
                 <div style={{ display:"flex", flexWrap:"wrap", gap:10, marginBottom:16 }}>
@@ -5494,9 +5494,9 @@ function AnalyticsScreen({ account }) {
                   <MetricCard label="New Followers" value={stats.newFollowers} />
                 </div>
                 <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:16, marginBottom:16 }}>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, marginBottom:4 }}>Post Views — {period}</div>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15, color:T.paper, marginBottom:4 }}>Post Views — {period}</div>
                   <BarChart data={stats.daily} color={T.gold} />
-                  <div style={{ display:"flex", justifyContent:"space-between", fontSize:9.5, color:T.muted, marginTop:6 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", fontSize: 11.5, color:T.muted, marginTop:6 }}>
                     {stats.daily.filter((_,i)=>i===0||i===Math.floor(stats.daily.length/2)||i===stats.daily.length-1).map(d=><span key={d.date}>{d.date}</span>)}
                   </div>
                 </div>
@@ -5507,27 +5507,27 @@ function AnalyticsScreen({ account }) {
 
         {activeTab === "Content" && (
           <div style={{ textAlign:"center", paddingTop:40 }}>
-            <div style={{ fontSize:36, marginBottom:12 }}>📄</div>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:8 }}>Content Breakdown</div>
-            <div style={{ fontSize:12, color:T.muted, lineHeight:1.8 }}>Views, likes, and comments per post will appear here.<br/>Post more to see your top-performing content.</div>
+            <div style={{ fontSize: 37, marginBottom:12 }}>📄</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 17, color:T.paper, marginBottom:8 }}>Content Breakdown</div>
+            <div style={{ fontSize: 14, color:T.muted, lineHeight:1.8 }}>Views, likes, and comments per post will appear here.<br/>Post more to see your top-performing content.</div>
             {stats && stats.posts > 0 && (
-              <div style={{ marginTop:20, fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.gold }}>{stats.posts} posts in this period</div>
+              <div style={{ marginTop:20, fontFamily:FONT_HEAD, fontWeight:700, fontSize: 16, color:T.gold }}>{stats.posts} posts in this period</div>
             )}
           </div>
         )}
 
         {activeTab === "Viewers" && (
           <div style={{ textAlign:"center", paddingTop:40 }}>
-            <div style={{ fontSize:36, marginBottom:12 }}>👥</div>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:8 }}>Viewer Insights</div>
-            <div style={{ fontSize:12, color:T.muted, lineHeight:1.8, marginBottom:20 }}>Demographics, locations, age groups, and active times.<br/>Available once your posts reach broader audiences.</div>
+            <div style={{ fontSize: 37, marginBottom:12 }}>👥</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 17, color:T.paper, marginBottom:8 }}>Viewer Insights</div>
+            <div style={{ fontSize: 14, color:T.muted, lineHeight:1.8, marginBottom:20 }}>Demographics, locations, age groups, and active times.<br/>Available once your posts reach broader audiences.</div>
             <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:18, textAlign:"left" }}>
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, marginBottom:12 }}>Most Active Times (UTC)</div>
+              <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15, color:T.paper, marginBottom:12 }}>Most Active Times (UTC)</div>
               {["00–04","04–08","08–12","12–16","16–20","20–24"].map((slot,i)=>{
                 const h = [20,35,70,100,85,60][i];
                 return (
                   <div key={slot} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
-                    <span style={{ width:40, fontSize:11, color:T.muted, flexShrink:0 }}>{slot}</span>
+                    <span style={{ width:40, fontSize: 13, color:T.muted, flexShrink:0 }}>{slot}</span>
                     <div style={{ flex:1, height:8, borderRadius:4, background:T.cardBorder, overflow:"hidden" }}>
                       <div style={{ height:"100%", width:`${h}%`, borderRadius:4, background:T.gold }} />
                     </div>
@@ -5541,13 +5541,13 @@ function AnalyticsScreen({ account }) {
         {activeTab === "Followers" && (
           <div>
             <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:18, marginBottom:16 }}>
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, marginBottom:4 }}>New Followers</div>
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:28, color:T.goldBright }}>{stats?.newFollowers||0}</div>
-              <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>in the last {period}</div>
+              <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize: 15, color:T.paper, marginBottom:4 }}>New Followers</div>
+              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 29, color:T.goldBright }}>{stats?.newFollowers||0}</div>
+              <div style={{ fontSize: 13, color:T.muted, marginTop:2 }}>in the last {period}</div>
               {stats && <BarChart data={stats.daily.map(d=>({...d,val:0}))} color={T.sage} />}
             </div>
             <div style={{ textAlign:"center", paddingTop:8 }}>
-              <div style={{ fontSize:12, color:T.muted, lineHeight:1.8 }}>Detailed follower demographics and<br/>growth charts will appear as you grow.</div>
+              <div style={{ fontSize: 14, color:T.muted, lineHeight:1.8 }}>Detailed follower demographics and<br/>growth charts will appear as you grow.</div>
             </div>
           </div>
         )}
@@ -5559,7 +5559,7 @@ function AnalyticsScreen({ account }) {
 function Section({ title, icon: Icon, children }) {
   return (
     <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: 14, marginBottom: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_HEAD, fontSize: 14, color: T.goldBright, fontWeight: 700, marginBottom: 8 }}><Icon size={15} /> {title}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_HEAD, fontSize: 16, color: T.goldBright, fontWeight: 700, marginBottom: 8 }}><Icon size={15} /> {title}</div>
       {children}
     </div>
   );
@@ -5603,12 +5603,12 @@ function InstallBanner() {
       style={{ position: "fixed", top: 10, left: 10, right: 10, maxWidth: 460, margin: "0 auto", zIndex: 110, background: T.card, border: `1px solid ${T.gold}`, borderRadius: 12, padding: "10px 12px", boxShadow: "0 8px 24px rgba(0,0,0,0.5)", display: "flex", alignItems: "center", gap: 10, fontFamily: FONT_BODY, transform: `translateX(${dragX}px)`, opacity: Math.max(0, 1 - Math.abs(dragX) / 200), transition: dragging.current ? "none" : "transform 0.2s, opacity 0.2s" }}
     >
       <div style={{ flex: 1 }}>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.goldBright }}>Install RainX</div>
-        <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>Add to your home screen for quick access</div>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.goldBright }}>Install RainX</div>
+        <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>Add to your home screen for quick access</div>
       </div>
       <button
         onClick={async () => { setVisible(false); deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') localStorage.setItem('rainx-install-dismissed', '1'); setDeferredPrompt(null); }}
-        style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 8, padding: "7px 12px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
+        style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 8, padding: "7px 12px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}
       >
         Install
       </button>
