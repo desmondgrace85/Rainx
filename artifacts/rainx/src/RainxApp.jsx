@@ -3226,8 +3226,10 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ telegram_id: webId, mt5_login: mt5Login.trim(), mt5_password: mt5Password, mt5_server: mt5Server.trim(), account_mode: mode }),
           });
-          const d = await r.json();
-          if (!r.ok) throw new Error(d.detail || `Error ${r.status}`);
+          const raw = await r.text();
+          let d = {};
+          try { d = JSON.parse(raw); } catch {}
+          if (!r.ok) throw new Error(d.detail || d.error || (raw.length < 200 ? raw : `Server error ${r.status}`));
           setApiKey(d.api_key);
           await loadAccount();
         } else {
