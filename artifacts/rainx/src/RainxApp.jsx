@@ -3159,7 +3159,7 @@ const SCALP_SYMBOLS = [
       const [mt5Password, setMt5Password] = useState("");
       const [mt5Server, setMt5Server] = useState("");
       const [mt5UserId, setMt5UserId] = useState(() => lsGet("rainx-mt5-uid") || "");
-      const [selectedSymbol, setSelectedSymbol] = useState(() => lsGet("rainx-scalp-sym") || "");
+      const [selectedSymbol, setSelectedSymbol] = useState(() => lsGet("rainx-scalp-sym") || "XAUUSD");
       const [symbolSearch, setSymbolSearch] = useState("");
       const lastFiredSignalRef = useRef("");
       const lastSmartSignalRef = useRef("");
@@ -3230,8 +3230,10 @@ const SCALP_SYMBOLS = [
           if (r.status === 404) { setPhase("setup"); setMt5(null); return; }
           if (!r.ok) { setPhase("setup"); return; }
           const data = await r.json();
-          const accountData = data?.account || data;
-          setMt5(accountData);
+          const accountData = data?.account || data?.data || data;
+          // Normalise balance field — MetaAPI can return it at different paths
+          const balance = accountData?.balance ?? accountData?.account_balance ?? accountData?.free_margin ?? 0;
+          setMt5({ ...accountData, balance });
           if (accountData?.api_key) setApiKey(accountData.api_key);
           const sr = await fetch(`/api/mt5/settings/${id}`);
           let settings = null;
@@ -3446,7 +3448,7 @@ const SCALP_SYMBOLS = [
             <span>Risk Settings</span>
             <ChevronRight size={18} color={T.muted} style={{ transform: riskOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
           </button>
-          {riskOpen && <div style={{ borderTop: `1px solid ${T.cardBorder}`, padding: "14px 16px 16px" }}><RiskForm /></div>}
+          {riskOpen && <div style={{ borderTop: `1px solid ${T.cardBorder}`, padding: "14px 16px 16px" }}>{RiskForm()}</div>}
         </div>
       );
 
@@ -3519,7 +3521,7 @@ const SCALP_SYMBOLS = [
             <div style={{ fontSize: 12.5, color: T.muted, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{mt5?.broker_name || "Broker"} · {(mt5?.account_mode || "demo").toUpperCase()} · #{mt5?.account_number || "—"}</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
-            <div style={{ textAlign: "right" }}><div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.goldBright }}>${money(mt5?.balance ?? mt5?.equity)}</div><div style={{ fontSize: 11.5, color: T.muted }}>{active && perf ? `${(Number(perf.total_profit) || 0) >= 0 ? "+" : ""}${money(perf.total_profit)} P&L` : "Balance"}</div></div>
+            <div style={{ textAlign: "right" }}><div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.goldBright }}>{mt5?.currency || ""} {money(mt5?.balance ?? mt5?.account_balance ?? mt5?.equity ?? 0)}</div><div style={{ fontSize: 11.5, color: T.muted }}>{active && perf ? `${(Number(perf.total_profit) || 0) >= 0 ? "+" : ""}${money(perf.total_profit)} P&L` : "Balance"}</div></div>
             <button onClick={disconnect} aria-label="Disconnect MT5" title="Disconnect MT5" style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "transparent", color: T.muted, border: `1px solid ${T.cardBorder}`, cursor: "pointer", transition: "all 0.2s" }}><LogOut size={16} /></button>
           </div>
         </div>
@@ -3562,7 +3564,7 @@ const SCALP_SYMBOLS = [
           {connectMethod === "metaapi" ? <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}><div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.goldBright, marginBottom: 4 }}><Key size={16} /> MT5 Credentials</div><div style={{ fontSize: 12.5, color: T.muted, marginBottom: 14, lineHeight: 1.6 }}>Your credentials are encrypted in transit and used only to connect your trading account.</div><div style={{ marginBottom: 14 }}><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>MT5 Login Number</div><input type="text" value={mt5Login} onChange={e => setMt5Login(e.target.value)} placeholder="e.g. 12345678" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /></div><div style={{ marginBottom: 14 }}><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>MT5 Password</div><input type="password" value={mt5Password} onChange={e => setMt5Password(e.target.value)} placeholder="Master or Investor password" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /></div><div><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>Broker Server</div><input type="text" value={mt5Server} onChange={e => setMt5Server(e.target.value)} placeholder="e.g. ICMarkets-Demo" list="broker-servers" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /><datalist id="broker-servers">{BROKER_SERVERS.map(s => <option key={s} value={s} />)}</datalist></div></div> : <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}><div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.goldBright, marginBottom: 4 }}><Key size={16} /> EA Desktop Mode</div><div style={{ fontSize: 13, color: T.muted, lineHeight: 1.7 }}>Generate an API key, install the Raina AI Expert Advisor in MetaTrader 5, and keep MT5 open on a PC or VPS.</div></div>}
           {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 10, padding: "10px 12px", background: `${T.rust}15`, borderRadius: 9, lineHeight: 1.5 }}>{err}</div>}
           <button onClick={handleConnect} disabled={busy} style={{ width: "100%", background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>{busy ? "Connecting…" : connectMethod === "metaapi" ? "Connect via MetaAPI" : "Generate API Key & Connect"}</button>
-          <Disclaimer />
+          {Disclaimer()}
         </div>
       );
 
@@ -3571,19 +3573,19 @@ const SCALP_SYMBOLS = [
           <div style={{ background: `${T.gold}14`, border: `1px solid ${T.gold}55`, borderRadius: 14, padding: "14px 16px", marginBottom: 16, textAlign: "center" }}><Activity size={20} color={T.goldBright} /><div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright, margin: "6px 0 4px" }}>Waiting for MT5 connection</div><div style={{ fontSize: 13.5, color: T.muted, lineHeight: 1.6 }}>Install the Expert Advisor in MetaTrader 5 to complete setup. This page checks automatically every 30 seconds.</div></div>
           {apiKey && <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}><div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginBottom: 10 }}>Your API Key</div><div style={{ display: "flex", alignItems: "center", gap: 8, background: T.ink, borderRadius: 9, padding: "10px 12px" }}><div style={{ flex: 1, fontFamily: "monospace", fontSize: 13, color: T.gold, wordBreak: "break-all" }}>{showKey ? apiKey : "●".repeat(Math.min(apiKey.length, 36))}</div><button onClick={() => setShowKey(v => !v)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}>{showKey ? <EyeOff size={16} /> : <Eye size={16} />}</button><button onClick={() => navigator.clipboard?.writeText(apiKey)} style={{ background: "none", border: "none", color: T.gold, cursor: "pointer", fontSize: 12.5, fontFamily: FONT_BODY }}>Copy</button></div></div>}
           <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}><div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginBottom: 10 }}>EA Installation Steps</div>{["Get the EA file from the Raina AI Telegram bot", "In MT5, open the data folder and place the EA in MQL5/Experts", "Restart MT5 and drag RainaAI EA onto any chart", "Paste the API key into the EA settings", "Enable Auto Trading in MT5", "Keep MT5 open on a PC or VPS"].map((step, i) => <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "flex-start" }}><span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.gold, minWidth: 16 }}>{i + 1}.</span><span style={{ fontSize: 13.5, color: T.paper, lineHeight: 1.6 }}>{step}</span></div>)}</div>
-          <Disclaimer />
+          {Disclaimer()}
         </div>
       );
 
       const PhaseConnected = () => (
         <div>
-          <AccountHeader />
-          <SymbolPicker />
-          <ModeToggle />
-          <RiskSettings />
+          {AccountHeader({})}
+          {SymbolPicker()}
+          {ModeToggle()}
+          {RiskSettings()}
           {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 10 }}>{err}</div>}
           <button onClick={handleToggle} disabled={busy || !selectedSymbol} style={{ width: "100%", background: selectedSymbol ? `linear-gradient(135deg,${T.gold},${T.goldBright})` : T.card, color: selectedSymbol ? T.ink : T.muted, border: selectedSymbol ? "none" : `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy || !selectedSymbol ? "not-allowed" : "pointer", marginBottom: 14, transition: "all 0.2s" }}>{busy ? "Please wait…" : selectedSymbol ? `Start ${scalpMode === "quick" ? "Quick" : "Smart"} Scalp` : "Select a market to start scalping"}</button>
-          <Disclaimer />
+          {Disclaimer()}
         </div>
       );
 
@@ -3591,9 +3593,9 @@ const SCALP_SYMBOLS = [
         const pnl = Number(perf?.total_profit) || 0;
         return (
           <div>
-            <AccountHeader active />
-            {selectedSymbol ? <div style={{ background: `${T.gold}15`, border: `1px solid ${T.gold}40`, borderRadius: 11, padding: "9px 12px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}><div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13.5, fontFamily: FONT_HEAD, fontWeight: 800, color: T.goldBright }}><Activity size={16} /> {selectedSymbol}</div><button onClick={() => { setSelectedSymbol(""); lsSet("rainx-scalp-sym", ""); }} style={{ background: "none", border: "none", color: T.muted, fontSize: 12, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 600 }}>Change</button></div> : <SymbolPicker />}
-            <ModeToggle />
+            {AccountHeader({ active: true })}
+            {selectedSymbol ? <div style={{ background: `${T.gold}15`, border: `1px solid ${T.gold}40`, borderRadius: 11, padding: "9px 12px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}><div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13.5, fontFamily: FONT_HEAD, fontWeight: 800, color: T.goldBright }}><Activity size={16} /> {selectedSymbol}</div><button onClick={() => { setSelectedSymbol(""); lsSet("rainx-scalp-sym", ""); }} style={{ background: "none", border: "none", color: T.muted, fontSize: 12, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 600 }}>Change</button></div> : {SymbolPicker()}}
+            {ModeToggle()}
             {perf && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
                 {[
@@ -3647,8 +3649,8 @@ const SCALP_SYMBOLS = [
                 </div>
               )}
             </div>
-            <SmartAlert />
-            <RiskSettings />
+            {SmartAlert()}
+            {RiskSettings()}
             {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 10, lineHeight: 1.5 }}>{err}</div>}
             <button onClick={handleToggle} disabled={busy} style={{ width: "100%", background: `${T.rust}18`, color: T.rust, border: `1px solid ${T.rust}55`, borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>{busy ? "Please wait…" : "Pause Scalping"}</button>
           </div>
@@ -3660,7 +3662,7 @@ const SCALP_SYMBOLS = [
           <div style={{ fontFamily: FONT_HEAD, fontSize: 20, color: T.goldBright, fontWeight: 800, marginBottom: 2 }}>Scalping</div>
           <div style={{ fontSize: 13.5, color: T.muted, marginBottom: 16, lineHeight: 1.6 }}>Raina AI premium scalping engine with live market signals for your MT5 account.</div>
           <BlurGate unlocked={unlocked} requiredLabel="Monthly" onSubscribe={onSubscribe} minHeight={440}>
-            {phase === "loading" ? <div style={{ textAlign: "center", padding: 40, color: T.muted, fontSize: 15 }}>Loading…</div> : phase === "setup" ? <PhaseSetup /> : phase === "pending" ? <PhasePending /> : phase === "connected" ? <PhaseConnected /> : phase === "active" ? <PhaseActive /> : <PhaseSetup />}
+            {phase === "loading" ? <div style={{ textAlign: "center", padding: 40, color: T.muted, fontSize: 15 }}>Loading…</div> : phase === "setup" ? PhaseSetup() : phase === "pending" ? PhasePending() : phase === "connected" ? PhaseConnected() : phase === "active" ? PhaseActive() : PhaseSetup()}
           </BlurGate>
         </div>
       );
