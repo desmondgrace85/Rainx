@@ -3162,17 +3162,19 @@ const SCALP_SYMBOLS = [
     const [symbolSearch, setSymbolSearch]   = useState("");
 
     // ── Data loaders ───────────────────────────────────────────────────────────
-    const loadTrades = useCallback(async () => {
-      if (!mt5UserId) return;
+    const loadTrades = useCallback(async (uid) => {
+      const id = uid || mt5UserId;
+      if (!id) return;
       try {
-        const r = await fetch(`/api/mt5/trades/${mt5UserId}`);
+        const r = await fetch(`/api/mt5/trades/${id}`);
         if (r.ok) { const d = await r.json(); setTrades(Array.isArray(d) ? d : (d.trades || [])); }
       } catch {}
     }, [mt5UserId]);
 
-    const loadPerf = useCallback(async () => {
-      if (!mt5UserId) return;
-      try { const r = await fetch(`/api/mt5/performance/${mt5UserId}`); if (r.ok) setPerf(await r.json()); } catch {}
+    const loadPerf = useCallback(async (uid) => {
+      const id = uid || mt5UserId;
+      if (!id) return;
+      try { const r = await fetch(`/api/mt5/performance/${id}`); if (r.ok) setPerf(await r.json()); } catch {}
     }, [mt5UserId]);
 
     const loadSignals = useCallback(async (sym) => {
@@ -3190,16 +3192,17 @@ const SCALP_SYMBOLS = [
       setSigLoading(false);
     }, [selectedSymbol]);
 
-    const loadAccount = useCallback(async () => {
-      if (!mt5UserId) return;
+    const loadAccount = useCallback(async (uid) => {
+      const id = uid || mt5UserId;
+      if (!id) return;
       try {
-        const r = await fetch(`/api/mt5/account/${mt5UserId}`);
+        const r = await fetch(`/api/mt5/account/${id}`);
         if (r.status === 404) { setPhase("setup"); setMt5(null); return; }
         if (!r.ok) { setPhase("setup"); return; }
         const data = await r.json();
         setMt5(data);
         setApiKey(data.api_key);
-        const sr = await fetch(`/api/mt5/settings/${mt5UserId}`);
+        const sr = await fetch(`/api/mt5/settings/${id}`);
         let s = null;
         if (sr.ok) {
           s = await sr.json();
@@ -3210,8 +3213,8 @@ const SCALP_SYMBOLS = [
           setPhase("pending");
         } else if (s?.scalping_enabled) {
           setPhase("active");
-          loadTrades();
-          loadPerf();
+          loadTrades(id);
+          loadPerf(id);
         } else {
           setPhase("connected");
         }
@@ -3270,7 +3273,7 @@ const SCALP_SYMBOLS = [
           const uid = mt5Login.trim();
           setMt5UserId(uid);
           lsSet("rainx-mt5-uid", uid);
-          await loadAccount();
+          await loadAccount(uid);
         } else {
           const r = await fetch("/api/mt5/connect", {
             method: "POST", headers: { "content-type": "application/json" },
