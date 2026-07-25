@@ -3129,6 +3129,11 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
     return Math.abs(parseInt(hex, 16) % 1_000_000_000) || 1;
     }
 
+const SCALP_SYMBOLS = [
+  { group: "Forex",       symbols: ["EURUSD","GBPUSD","USDJPY","XAUUSD","USDCHF","AUDUSD","USDCAD","NZDUSD"] },
+  { group: "Crypto",      symbols: ["BTCUSDT","ETHUSDT","DOGEUSD","SOLUSD","XRPUSDT"] },
+  { group: "Commodities", symbols: ["USOIL","SILVER","COPPER"] },
+];
     function ScalpingTab({ account, entitlement, onSubscribe }) {
     const unlocked = hasAccess(entitlement.tier, "monthly");
     const webId    = account?.id ? webUserId(account.id) : null;
@@ -3152,40 +3157,49 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
     const [mt5Login, setMt5Login]           = useState("");
     const [mt5Password, setMt5Password]     = useState("");
     const [mt5Server, setMt5Server]         = useState("");
+    const [mt5UserId, setMt5UserId]         = useState(() => lsGet("rainx-mt5-uid") || "");
+    const [selectedSymbol, setSelectedSymbol] = useState(() => lsGet("rainx-scalp-sym") || "");
+    const [symbolSearch, setSymbolSearch]   = useState("");
 
     // ── Data loaders ───────────────────────────────────────────────────────────
     const loadTrades = useCallback(async () => {
-      if (!webId) return;
-      try { const r = await fetch(`/api/mt5/trades/${webId}`); if (r.ok) setTrades(await r.json()); } catch {}
-    }, [webId]);
+      if (!mt5UserId) return;
+      try {
+        const r = await fetch(`/api/mt5/trades/${mt5UserId}`);
+        if (r.ok) { const d = await r.json(); setTrades(Array.isArray(d) ? d : (d.trades || [])); }
+      } catch {}
+    }, [mt5UserId]);
 
     const loadPerf = useCallback(async () => {
-      if (!webId) return;
-      try { const r = await fetch(`/api/mt5/performance/${webId}`); if (r.ok) setPerf(await r.json()); } catch {}
-    }, [webId]);
+      if (!mt5UserId) return;
+      try { const r = await fetch(`/api/mt5/performance/${mt5UserId}`); if (r.ok) setPerf(await r.json()); } catch {}
+    }, [mt5UserId]);
 
-    const loadSignals = useCallback(async () => {
+    const loadSignals = useCallback(async (sym) => {
+      const target = sym || selectedSymbol;
+      if (!target) return;
       setSigLoading(true);
       try {
-        const r = await fetch("/api/scan/scalp?only_actionable=true&timeframe=5m");
+        const r = await fetch(`/api/signals/scalp/${target}?timeframe=5m`);
         if (r.ok) {
           const d = await r.json();
-          setSignals((Array.isArray(d) ? d : []).filter(s => s.direction !== "HOLD").sort((a, b) => b.confidence - a.confidence).slice(0, 6));
+          const arr = Array.isArray(d) ? d : [d];
+          setSignals(arr.filter(s => s && s.direction !== "HOLD").slice(0, 6));
         }
       } catch {}
       setSigLoading(false);
-    }, []);
+    }, [selectedSymbol]);
 
     const loadAccount = useCallback(async () => {
-      if (!webId) return;
+      if (!mt5UserId) return;
       try {
-        const r = await fetch(`/api/mt5/account/${webId}`);
+        const r = await fetch(`/api/mt5/account/${mt5UserId}`);
         if (r.status === 404) { setPhase("setup"); setMt5(null); return; }
         if (!r.ok) { setPhase("setup"); return; }
         const data = await r.json();
         setMt5(data);
         setApiKey(data.api_key);
-        const sr = await fetch(`/api/mt5/settings/${webId}`);
+        const sr = await fetch(`/api/mt5/settings/${mt5UserId}`);
         let s = null;
         if (sr.ok) {
           s = await sr.json();
@@ -3202,16 +3216,38 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
           setPhase("connected");
         }
       } catch { setPhase("setup"); }
-    }, [webId, loadTrades, loadPerf]);
+    }, [mt5UserId, loadTrades, loadPerf]);
 
     useEffect(() => {
-      if (!unlocked || !webId) return;
+      if (!unlocked || !mt5UserId) return;
       loadAccount();
-      loadSignals();
       const pa = setInterval(loadAccount, 30_000);
-      const ps = setInterval(loadSignals, 90_000);
-      return () => { clearInterval(pa); clearInterval(ps); };
-    }, [unlocked, webId, loadAccount, loadSignals]);
+      return () => { clearInterval(pa); };
+    }, [unlocked, mt5UserId, loadAccount]);
+
+    // ── Signal polling (active phase: 60s interval, auto-fire toggle on high confidence) ──
+    const lastFiredConfRef = useRef(0);
+    useEffect(() => {
+      if (phase !== "active" || !selectedSymbol || !mt5UserId) return;
+      loadSignals(selectedSymbol);
+      const poll = setInterval(() => {
+        loadSignals(selectedSymbol);
+      }, 60_000);
+      return () => clearInterval(poll);
+    }, [phase, selectedSymbol, mt5UserId, loadSignals]);
+
+    useEffect(() => {
+      if (phase !== "active" || !signals.length || !mt5UserId) return;
+      const top = signals[0];
+      if (top && top.confidence >= 70 && top.confidence !== lastFiredConfRef.current) {
+        lastFiredConfRef.current = top.confidence;
+        fetch("/api/mt5/scalping/toggle", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ user_id: mt5UserId }),
+        }).catch(() => {});
+      }
+    }, [signals, phase, mt5UserId]);
 
     // ── Actions ────────────────────────────────────────────────────────────────
     const handleConnect = async () => {
@@ -3224,22 +3260,26 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
           const r = await fetch("/api/mt5/connect/metaapi", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ telegram_id: webId, mt5_login: mt5Login.trim(), mt5_password: mt5Password, mt5_server: mt5Server.trim(), account_mode: mode }),
+            body: JSON.stringify({ mt5_login: mt5Login.trim(), mt5_password: mt5Password, mt5_server: mt5Server.trim(), account_mode: mode, name: "RainX User" }),
           });
           const raw = await r.text();
           let d = {};
           try { d = JSON.parse(raw); } catch {}
           if (!r.ok) throw new Error(d.detail || d.error || (raw.length < 200 ? raw : `Server error ${r.status}`));
           setApiKey(d.api_key);
+          const uid = mt5Login.trim();
+          setMt5UserId(uid);
+          lsSet("rainx-mt5-uid", uid);
           await loadAccount();
         } else {
           const r = await fetch("/api/mt5/connect", {
             method: "POST", headers: { "content-type": "application/json" },
-            body: JSON.stringify({ telegram_id: webId, account_mode: mode }),
+            body: JSON.stringify({ account_mode: mode }),
           });
           if (!r.ok) throw new Error(`Error ${r.status}`);
           const d = await r.json();
           setApiKey(d.api_key);
+          if (mt5Login.trim()) { setMt5UserId(mt5Login.trim()); lsSet("rainx-mt5-uid", mt5Login.trim()); }
           setPhase("pending");
         }
       } catch (e) { setErr(e.message); }
@@ -3249,7 +3289,7 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
     const handleSaveSettings = async () => {
       setBusy(true); setErr("");
       try {
-        const r = await fetch("/api/mt5/settings", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ telegram_id: webId, ...localS, scalping_enabled: rSettings?.scalping_enabled ?? false }) });
+        const r = await fetch("/api/mt5/settings", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user_id: mt5UserId, ...localS, scalping_enabled: rSettings?.scalping_enabled ?? false }) });
         if (!r.ok) throw new Error(`Error ${r.status}`);
         setSaved(true); setTimeout(() => setSaved(false), 2200);
         await loadAccount();
@@ -3260,7 +3300,7 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
     const handleToggle = async () => {
       setBusy(true); setErr("");
       try {
-        const r = await fetch("/api/mt5/scalping/toggle", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ telegram_id: webId }) });
+        const r = await fetch("/api/mt5/scalping/toggle", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user_id: mt5UserId }) });
         if (!r.ok) throw new Error(`Error ${r.status}`);
         await loadAccount();
       } catch (e) { setErr(e.message); }
@@ -3330,6 +3370,62 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
         {sig.explanation && <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.5, marginTop: 6 }}>{sig.explanation.slice(0, 130)}{sig.explanation.length > 130 ? "…" : ""}</div>}
       </div>
     );
+
+
+    // ── Symbol picker component ────────────────────────────────────────────────
+    const SymbolPicker = () => {
+      const allSyms = SCALP_SYMBOLS.flatMap(g => g.symbols.map(s => ({ s, g: g.group })));
+      const filtered = symbolSearch
+        ? allSyms.filter(({ s }) => s.includes(symbolSearch.toUpperCase()))
+        : null;
+      return (
+        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper, marginBottom: 10 }}>Select Market</div>
+          <input
+            type="text"
+            placeholder="Search symbol…"
+            value={symbolSearch}
+            onChange={e => setSymbolSearch(e.target.value)}
+            style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, fontSize: 14, padding: "8px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box", marginBottom: 10 }}
+          />
+          {filtered ? (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {filtered.map(({ s }) => (
+                <button key={s} onClick={() => { setSelectedSymbol(s); lsSet("rainx-scalp-sym", s); setSymbolSearch(""); }}
+                  style={{ padding: "6px 12px", borderRadius: 8, fontSize: 13, fontFamily: FONT_HEAD, fontWeight: 700, cursor: "pointer",
+                    background: selectedSymbol === s ? T.gold : T.ink,
+                    color: selectedSymbol === s ? T.ink : T.muted,
+                    border: `1px solid ${selectedSymbol === s ? T.gold : T.cardBorder}` }}>
+                  {s}
+                </button>
+              ))}
+              {filtered.length === 0 && <div style={{ fontSize: 13, color: T.muted }}>No symbols match.</div>}
+            </div>
+          ) : (
+            SCALP_SYMBOLS.map(({ group, symbols }) => (
+              <div key={group} style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 12, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 5, textTransform: "uppercase", letterSpacing: 1 }}>{group}</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {symbols.map(sym => (
+                    <button key={sym} onClick={() => { setSelectedSymbol(sym); lsSet("rainx-scalp-sym", sym); }}
+                      style={{ padding: "6px 12px", borderRadius: 8, fontSize: 13, fontFamily: FONT_HEAD, fontWeight: 700, cursor: "pointer",
+                        background: selectedSymbol === sym ? T.gold : T.ink,
+                        color: selectedSymbol === sym ? T.ink : T.muted,
+                        border: `1px solid ${selectedSymbol === sym ? T.gold : T.cardBorder}`,
+                        transition: "background 0.15s,color 0.15s" }}>
+                      {sym}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+          {selectedSymbol && (
+            <div style={{ marginTop: 8, fontSize: 13, color: T.sage, fontFamily: FONT_HEAD, fontWeight: 700 }}>✓ {selectedSymbol} selected</div>
+          )}
+        </div>
+      );
+    };
 
     // ── Phase: Setup ───────────────────────────────────────────────────────────
     const BROKER_SERVERS = [
@@ -3478,13 +3574,14 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
             <div style={{ fontSize: 12, color: T.muted }}>Balance</div>
           </div>
         </div>
+        <SymbolPicker />
         <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
           <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper, marginBottom: 14 }}>Risk Settings</div>
           <RiskForm />
         </div>
-        <button onClick={handleToggle} disabled={busy}
-          style={{ width: "100%", background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy ? "not-allowed" : "pointer", marginBottom: 14 }}>
-          {busy ? "Please wait…" : "🚀 Activate Raina AI Scalping"}
+        <button onClick={handleToggle} disabled={busy || !selectedSymbol}
+          style={{ width: "100%", background: selectedSymbol ? `linear-gradient(135deg,${T.gold},${T.goldBright})` : T.card, color: selectedSymbol ? T.ink : T.muted, border: selectedSymbol ? "none" : `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: (busy || !selectedSymbol) ? "not-allowed" : "pointer", marginBottom: 14 }}>
+          {busy ? "Please wait…" : selectedSymbol ? `🚀 Start Scalping ${selectedSymbol}` : "Select a market to start scalping"}
         </button>
         <Disclaimer />
       </div>
@@ -3493,7 +3590,7 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
     // ── Phase: Active (live feed) ──────────────────────────────────────────────
     const PhaseActive = () => (
       <div>
-        <div style={{ background: `${T.sage}18`, border: `1px solid ${T.sage}44`, borderRadius: 12, padding: "12px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ background: `${T.sage}18`, border: `1px solid ${T.sage}44`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.sage }}>🤖 Scalping Active</div>
             <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{mt5?.broker_name} · {(mt5?.account_mode || "").toUpperCase()} · #{mt5?.account_number}</div>
@@ -3503,6 +3600,14 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
             {perf && <div style={{ fontSize: 12.5, color: (perf.total_profit ?? 0) >= 0 ? T.sage : T.rust, fontWeight: 700 }}>{(perf.total_profit ?? 0) >= 0 ? "+" : ""}{(perf.total_profit ?? 0).toFixed(2)} P&L</div>}
           </div>
         </div>
+        {selectedSymbol ? (
+          <div style={{ background: `${T.gold}15`, border: `1px solid ${T.gold}40`, borderRadius: 10, padding: "8px 14px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ fontSize: 14, fontFamily: FONT_HEAD, fontWeight: 800, color: T.goldBright }}>📊 {selectedSymbol}</div>
+            <button onClick={() => { setSelectedSymbol(""); lsSet("rainx-scalp-sym", ""); }} style={{ background: "none", border: "none", color: T.muted, fontSize: 12, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 600 }}>Change</button>
+          </div>
+        ) : (
+          <SymbolPicker />
+        )}
 
         {perf && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
