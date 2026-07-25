@@ -3255,26 +3255,47 @@ const SCALP_SYMBOLS = [
     // ── Actions ────────────────────────────────────────────────────────────────
     const handleConnect = async () => {
       setBusy(true); setErr("");
-      try {
-        if (connectMethod === "metaapi") {
-          if (!mt5Login.trim()) throw new Error("MT5 login number is required");
-          if (!mt5Password.trim()) throw new Error("MT5 password is required");
-          if (!mt5Server.trim()) throw new Error("Broker server is required — find it in MT5 Help → About");
+      const uid = mt5Login.trim();
+      if (connectMethod === "metaapi") {
+        if (!uid) { setErr("MT5 login number is required"); setBusy(false); return; }
+        if (!mt5Password.trim()) { setErr("MT5 password is required"); setBusy(false); return; }
+        if (!mt5Server.trim()) { setErr("Broker server is required — find it in MT5 Help → About"); setBusy(false); return; }
+        // Always store the uid so loadAccount can use it
+        setMt5UserId(uid);
+        lsSet("rainx-mt5-uid", uid);
+        try {
           const r = await fetch("/api/mt5/connect/metaapi", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ mt5_login: mt5Login.trim(), mt5_password: mt5Password, mt5_server: mt5Server.trim(), account_mode: mode, name: "RainX User" }),
+            body: JSON.stringify({ mt5_login: uid, mt5_password: mt5Password.trim(), mt5_server: mt5Server.trim(), account_mode: mode, name: "RainX User" }),
           });
           const raw = await r.text();
           let d = {};
           try { d = JSON.parse(raw); } catch {}
-          if (!r.ok) throw new Error(d.detail || d.error || (raw.length < 200 ? raw : `Server error ${r.status}`));
-          setApiKey(d.api_key);
-          const uid = mt5Login.trim();
-          setMt5UserId(uid);
-          lsSet("rainx-mt5-uid", uid);
-          await loadAccount(uid);
-        } else {
+          if (d.api_key) setApiKey(d.api_key);
+          if (!r.ok) {
+            // Connect failed — but account may already exist, try loading it anyway
+            const existing = await fetch(`/api/mt5/account/${uid}`);
+            if (existing.ok) {
+              await loadAccount(uid);
+              setBusy(false);
+              return;
+            }
+            throw new Error(d.detail || d.error || (raw.length < 200 ? raw : `Server error ${r.status}`));
+          }
+        } catch (e) {
+          // Network/timeout — account may still have been created, check
+          try {
+            const existing = await fetch(`/api/mt5/account/${uid}`);
+            if (existing.ok) { await loadAccount(uid); setBusy(false); return; }
+          } catch {}
+          setErr(e.message);
+          setBusy(false);
+          return;
+        }
+        await loadAccount(uid);
+      } else {
+        try {
           const r = await fetch("/api/mt5/connect", {
             method: "POST", headers: { "content-type": "application/json" },
             body: JSON.stringify({ account_mode: mode }),
@@ -3282,10 +3303,10 @@ const SCALP_SYMBOLS = [
           if (!r.ok) throw new Error(`Error ${r.status}`);
           const d = await r.json();
           setApiKey(d.api_key);
-          if (mt5Login.trim()) { setMt5UserId(mt5Login.trim()); lsSet("rainx-mt5-uid", mt5Login.trim()); }
+          if (uid) { setMt5UserId(uid); lsSet("rainx-mt5-uid", uid); }
           setPhase("pending");
-        }
-      } catch (e) { setErr(e.message); }
+        } catch (e) { setErr(e.message); }
+      }
       setBusy(false);
     };
 
