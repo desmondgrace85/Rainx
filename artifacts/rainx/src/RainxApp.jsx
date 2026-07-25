@@ -3209,9 +3209,7 @@ const SCALP_SYMBOLS = [
           setRSettings(s);
           setLocalS({ risk_percent: s.risk_percent ?? 1.0, max_open_trades: s.max_open_trades ?? 3, min_confidence: s.min_confidence ?? 70.0, daily_loss_limit: s.daily_loss_limit ?? 5.0 });
         }
-        if (!data.is_connected) {
-          setPhase("pending");
-        } else if (s?.scalping_enabled) {
+        if (s?.scalping_enabled) {
           setPhase("active");
           loadTrades(id);
           loadPerf(id);
@@ -3222,8 +3220,7 @@ const SCALP_SYMBOLS = [
     }, [mt5UserId, loadTrades, loadPerf]);
 
     useEffect(() => {
-      if (!unlocked) { setPhase("setup"); return; }
-      if (!mt5UserId) { setPhase("setup"); return; }
+      if (!unlocked || !mt5UserId) return;
       loadAccount();
       const pa = setInterval(loadAccount, 30_000);
       return () => { clearInterval(pa); };
