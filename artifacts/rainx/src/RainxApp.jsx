@@ -3135,584 +3135,535 @@ const SCALP_SYMBOLS = [
   { group: "Commodities", symbols: ["USOIL","SILVER","COPPER"] },
 ];
     function ScalpingTab({ account, entitlement, onSubscribe }) {
-    const unlocked = hasAccess(entitlement.tier, "monthly");
-    const webId    = account?.id ? webUserId(account.id) : null;
+      const unlocked = hasAccess(entitlement.tier, "monthly");
 
-    // ── State ──────────────────────────────────────────────────────────────────
-    const [mt5, setMt5]             = useState(null);
-    const [rSettings, setRSettings] = useState(null);
-    const [phase, setPhase]         = useState("loading"); // loading|setup|pending|connected|active
-    const [apiKey, setApiKey]       = useState(null);
-    const [mode, setMode]           = useState("demo");
-    const [signals, setSignals]     = useState([]);
-    const [trades, setTrades]       = useState([]);
-    const [perf, setPerf]           = useState(null);
-    const [busy, setBusy]           = useState(false);
-    const [err, setErr]             = useState("");
-    const [saved, setSaved]         = useState(false);
-    const [showKey, setShowKey]     = useState(false);
-    const [sigLoading, setSigLoading] = useState(false);
-    const [localS, setLocalS]       = useState({ risk_percent: 1.0, max_open_trades: 3, min_confidence: 70.0, daily_loss_limit: 5.0 });
-    const [connectMethod, setConnectMethod] = useState("metaapi"); // "metaapi" | "ea"
-    const [mt5Login, setMt5Login]           = useState("");
-    const [mt5Password, setMt5Password]     = useState("");
-    const [mt5Server, setMt5Server]         = useState("");
-    const [mt5UserId, setMt5UserId]         = useState(() => lsGet("rainx-mt5-uid") || "");
-    const [selectedSymbol, setSelectedSymbol] = useState(() => lsGet("rainx-scalp-sym") || "");
-    const [symbolSearch, setSymbolSearch]   = useState("");
+      const [mt5, setMt5] = useState(null);
+      const [rSettings, setRSettings] = useState(null);
+      const [phase, setPhase] = useState("loading");
+      const [apiKey, setApiKey] = useState(null);
+      const [mode, setMode] = useState("demo");
+      const [scalpMode, setScalpMode] = useState("smart");
+      const [signals, setSignals] = useState([]);
+      const [trades, setTrades] = useState([]);
+      const [perf, setPerf] = useState(null);
+      const [busy, setBusy] = useState(false);
+      const [err, setErr] = useState("");
+      const [saved, setSaved] = useState(false);
+      const [showKey, setShowKey] = useState(false);
+      const [sigLoading, setSigLoading] = useState(false);
+      const [smartAlert, setSmartAlert] = useState(null);
+      const [riskOpen, setRiskOpen] = useState(false);
+      const [localS, setLocalS] = useState({ risk_percent: 1.0, max_open_trades: 3, min_confidence: 70.0, daily_loss_limit: 5.0 });
+      const [connectMethod, setConnectMethod] = useState("metaapi");
+      const [mt5Login, setMt5Login] = useState("");
+      const [mt5Password, setMt5Password] = useState("");
+      const [mt5Server, setMt5Server] = useState("");
+      const [mt5UserId, setMt5UserId] = useState(() => lsGet("rainx-mt5-uid") || "");
+      const [selectedSymbol, setSelectedSymbol] = useState(() => lsGet("rainx-scalp-sym") || "");
+      const [symbolSearch, setSymbolSearch] = useState("");
+      const lastFiredSignalRef = useRef("");
+      const lastSmartSignalRef = useRef("");
 
-    // ── Data loaders ───────────────────────────────────────────────────────────
-    const loadTrades = useCallback(async (uid) => {
-      const id = uid || mt5UserId;
-      if (!id) return;
-      try {
-        const r = await fetch(`/api/mt5/trades/${id}`);
-        if (r.ok) { const d = await r.json(); setTrades(Array.isArray(d) ? d : (d.trades || [])); }
-      } catch {}
-    }, [mt5UserId]);
+      const signalConfidence = (sig) => Math.round(Number(sig?.confidence) || 0);
+      const signalKey = (sig) => [sig?.asset, sig?.direction, sig?.confidence, sig?.entry_zone?.[0], sig?.stop_loss, sig?.take_profit?.[0]].join("|");
+      const money = (value) => {
+        const number = Number(value) || 0;
+        return number.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      };
+      const price = (value) => {
+        if (value == null || value === "") return "—";
+        const number = Number(value);
+        if (!Number.isFinite(number)) return String(value);
+        return number >= 100 ? number.toFixed(2) : number.toFixed(5);
+      };
+      const getTopSignal = (items) => items.reduce((top, item) => signalConfidence(item) > signalConfidence(top) ? item : top, null);
 
-    const loadPerf = useCallback(async (uid) => {
-      const id = uid || mt5UserId;
-      if (!id) return;
-      try { const r = await fetch(`/api/mt5/performance/${id}`); if (r.ok) setPerf(await r.json()); } catch {}
-    }, [mt5UserId]);
+      const loadTrades = useCallback(async (uid) => {
+        const id = uid || mt5UserId;
+        if (!id) return;
+        try {
+          const r = await fetch(`/api/mt5/trades/${id}`);
+          if (r.ok) {
+            const d = await r.json();
+            setTrades(Array.isArray(d) ? d : (d.trades || []));
+          }
+        } catch {}
+      }, [mt5UserId]);
 
-    const loadSignals = useCallback(async (sym) => {
-      const target = sym || selectedSymbol;
-      if (!target) return;
-      setSigLoading(true);
-      try {
-        const r = await fetch(`/api/signals/scalp/${target}?timeframe=5m`);
-        if (r.ok) {
+      const loadPerf = useCallback(async (uid) => {
+        const id = uid || mt5UserId;
+        if (!id) return;
+        try {
+          const r = await fetch(`/api/mt5/performance/${id}`);
+          if (r.ok) setPerf(await r.json());
+        } catch {}
+      }, [mt5UserId]);
+
+      const loadSignals = useCallback(async (sym) => {
+        const target = sym || selectedSymbol;
+        if (!target) return;
+        setSigLoading(true);
+        try {
+          const r = await fetch(`/api/signals/scalp/${target}?timeframe=5m`);
+          if (!r.ok) throw new Error(`Signal service returned ${r.status}`);
           const d = await r.json();
-          const arr = Array.isArray(d) ? d : [d];
-          setSignals(arr.filter(s => s && s.direction !== "HOLD").slice(0, 6));
+          const raw = Array.isArray(d) ? d : Array.isArray(d?.signals) ? d.signals : d?.signal ? [d.signal] : d && typeof d === "object" ? [d] : [];
+          const actionable = raw
+            .filter((s) => s && s.direction && s.direction !== "HOLD")
+            .sort((a, b) => signalConfidence(b) - signalConfidence(a))
+            .slice(0, 6);
+          setSignals(actionable);
+          setErr("");
+        } catch (e) {
+          setSignals([]);
+          setErr(e.message || "Unable to load signals right now.");
+        } finally {
+          setSigLoading(false);
         }
-      } catch {}
-      setSigLoading(false);
-    }, [selectedSymbol]);
+      }, [selectedSymbol]);
 
-    const loadAccount = useCallback(async (uid) => {
-      const id = uid || mt5UserId;
-      if (!id) return;
-      try {
-        const r = await fetch(`/api/mt5/account/${id}`);
-        if (r.status === 404) { setPhase("setup"); setMt5(null); return; }
-        if (!r.ok) { setPhase("setup"); return; }
-        const data = await r.json();
-        setMt5(data);
-        setApiKey(data.api_key);
-        const sr = await fetch(`/api/mt5/settings/${id}`);
-        let s = null;
-        if (sr.ok) {
-          s = await sr.json();
-          setRSettings(s);
-          setLocalS({ risk_percent: s.risk_percent ?? 1.0, max_open_trades: s.max_open_trades ?? 3, min_confidence: s.min_confidence ?? 70.0, daily_loss_limit: s.daily_loss_limit ?? 5.0 });
+      const loadAccount = useCallback(async (uid) => {
+        const id = uid || mt5UserId;
+        if (!id) return;
+        try {
+          const r = await fetch(`/api/mt5/account/${id}`);
+          if (r.status === 404) { setPhase("setup"); setMt5(null); return; }
+          if (!r.ok) { setPhase("setup"); return; }
+          const data = await r.json();
+          const accountData = data?.account || data;
+          setMt5(accountData);
+          if (accountData?.api_key) setApiKey(accountData.api_key);
+          const sr = await fetch(`/api/mt5/settings/${id}`);
+          let settings = null;
+          if (sr.ok) {
+            const settingsData = await sr.json();
+            settings = settingsData?.settings || settingsData;
+            setRSettings(settings);
+            setLocalS({
+              risk_percent: settings?.risk_percent ?? 1.0,
+              max_open_trades: settings?.max_open_trades ?? 3,
+              min_confidence: settings?.min_confidence ?? 70.0,
+              daily_loss_limit: settings?.daily_loss_limit ?? 5.0,
+            });
+          }
+          if (settings?.scalping_enabled) {
+            setPhase("active");
+            loadTrades(id);
+            loadPerf(id);
+          } else {
+            setPhase("connected");
+          }
+        } catch {
+          setPhase("setup");
         }
-        if (s?.scalping_enabled) {
-          setPhase("active");
-          loadTrades(id);
-          loadPerf(id);
-        } else {
-          setPhase("connected");
-        }
-      } catch { setPhase("setup"); }
-    }, [mt5UserId, loadTrades, loadPerf]);
+      }, [mt5UserId, loadTrades, loadPerf]);
 
-    useEffect(() => {
-      if (!unlocked) { setPhase("setup"); return; }
-      if (!mt5UserId) { setPhase("setup"); return; }
-      loadAccount();
-      const pa = setInterval(loadAccount, 30_000);
-      return () => { clearInterval(pa); };
-    }, [unlocked, mt5UserId, loadAccount]);
+      useEffect(() => {
+        if (!unlocked) { setPhase("setup"); return; }
+        if (!mt5UserId) { setPhase("setup"); return; }
+        loadAccount();
+        const accountPoll = setInterval(loadAccount, 30_000);
+        return () => clearInterval(accountPoll);
+      }, [unlocked, mt5UserId, loadAccount]);
 
-    // ── Signal polling (active phase: 60s interval, auto-fire toggle on high confidence) ──
-    const lastFiredConfRef = useRef(0);
-    useEffect(() => {
-      if (phase !== "active" || !selectedSymbol || !mt5UserId) return;
-      loadSignals(selectedSymbol);
-      const poll = setInterval(() => {
+      useEffect(() => {
+        if (phase !== "active" || !selectedSymbol || !mt5UserId) return;
         loadSignals(selectedSymbol);
-      }, 60_000);
-      return () => clearInterval(poll);
-    }, [phase, selectedSymbol, mt5UserId, loadSignals]);
+        const interval = scalpMode === "quick" ? 30_000 : 60_000;
+        const signalPoll = setInterval(() => loadSignals(selectedSymbol), interval);
+        return () => clearInterval(signalPoll);
+      }, [phase, selectedSymbol, mt5UserId, scalpMode, loadSignals]);
 
-    useEffect(() => {
-      if (phase !== "active" || !signals.length || !mt5UserId) return;
-      const top = signals[0];
-      if (top && top.confidence >= 70 && top.confidence !== lastFiredConfRef.current) {
-        lastFiredConfRef.current = top.confidence;
+      useEffect(() => {
+        if (phase !== "active" || scalpMode !== "quick" || !mt5UserId) return;
+        const top = getTopSignal(signals);
+        if (!top || signalConfidence(top) < 50) return;
+        const key = signalKey(top);
+        if (!key || key === lastFiredSignalRef.current) return;
+        lastFiredSignalRef.current = key;
         fetch("/api/mt5/scalping/toggle", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ user_id: mt5UserId }),
-        }).catch(() => {});
-      }
-    }, [signals, phase, mt5UserId]);
+          body: JSON.stringify({ user_id: mt5UserId, symbol: top.asset, direction: top.direction, confidence: signalConfidence(top) }),
+        }).then((r) => {
+          if (!r.ok) throw new Error(`Quick Scalp execution failed (${r.status})`);
+          loadTrades();
+          loadPerf();
+        }).catch((e) => {
+          lastFiredSignalRef.current = "";
+          setErr(e.message || "Quick Scalp could not execute the signal.");
+        });
+      }, [signals, phase, scalpMode, mt5UserId, loadTrades, loadPerf]);
 
-    // ── Actions ────────────────────────────────────────────────────────────────
-    const handleConnect = async () => {
-      setBusy(true); setErr("");
-      const uid = mt5Login.trim();
-      if (connectMethod === "metaapi") {
-        if (!uid) { setErr("MT5 login number is required"); setBusy(false); return; }
-        if (!mt5Password.trim()) { setErr("MT5 password is required"); setBusy(false); return; }
-        if (!mt5Server.trim()) { setErr("Broker server is required — find it in MT5 Help → About"); setBusy(false); return; }
-        // Always store the uid so loadAccount can use it
-        setMt5UserId(uid);
-        lsSet("rainx-mt5-uid", uid);
+      useEffect(() => {
+        if (phase !== "active" || scalpMode !== "smart") return;
+        const top = getTopSignal(signals);
+        if (!top || signalConfidence(top) < 60) return;
+        const key = signalKey(top);
+        if (!key || key === lastSmartSignalRef.current) return;
+        lastSmartSignalRef.current = key;
+        setSmartAlert(top);
+      }, [signals, phase, scalpMode]);
+
+      const handleConnect = async () => {
+        setBusy(true); setErr("");
+        const uid = mt5Login.trim();
+        if (connectMethod === "metaapi") {
+          if (!uid) { setErr("MT5 login number is required"); setBusy(false); return; }
+          if (!mt5Password.trim()) { setErr("MT5 password is required"); setBusy(false); return; }
+          if (!mt5Server.trim()) { setErr("Broker server is required — find it in MT5 Help → About"); setBusy(false); return; }
+          setMt5UserId(uid);
+          lsSet("rainx-mt5-uid", uid);
+          try {
+            const r = await fetch("/api/mt5/connect/metaapi", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ mt5_login: uid, mt5_password: mt5Password.trim(), mt5_server: mt5Server.trim(), account_mode: mode, name: "RainX User" }),
+            });
+            const raw = await r.text();
+            let d = {};
+            try { d = JSON.parse(raw); } catch {}
+            if (d.api_key) setApiKey(d.api_key);
+            if (!r.ok) {
+              const existing = await fetch(`/api/mt5/account/${uid}`);
+              if (existing.ok) { await loadAccount(uid); setBusy(false); return; }
+              throw new Error(d.detail || d.error || (raw.length < 200 ? raw : `Server error ${r.status}`));
+            }
+          } catch (e) {
+            try {
+              const existing = await fetch(`/api/mt5/account/${uid}`);
+              if (existing.ok) { await loadAccount(uid); setBusy(false); return; }
+            } catch {}
+            setErr(e.message || "Unable to connect MT5"); setBusy(false); return;
+          }
+          await loadAccount(uid);
+        } else {
+          try {
+            const r = await fetch("/api/mt5/connect", {
+              method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ account_mode: mode }),
+            });
+            if (!r.ok) throw new Error(`Error ${r.status}`);
+            const d = await r.json();
+            setApiKey(d.api_key);
+            if (uid) { setMt5UserId(uid); lsSet("rainx-mt5-uid", uid); }
+            setPhase("pending");
+          } catch (e) { setErr(e.message || "Unable to create connection"); }
+        }
+        setBusy(false);
+      };
+
+      const handleSaveSettings = async () => {
+        setBusy(true); setErr("");
         try {
-          const r = await fetch("/api/mt5/connect/metaapi", {
+          const r = await fetch("/api/mt5/settings", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ mt5_login: uid, mt5_password: mt5Password.trim(), mt5_server: mt5Server.trim(), account_mode: mode, name: "RainX User" }),
-          });
-          const raw = await r.text();
-          let d = {};
-          try { d = JSON.parse(raw); } catch {}
-          if (d.api_key) setApiKey(d.api_key);
-          if (!r.ok) {
-            // Connect failed — but account may already exist, try loading it anyway
-            const existing = await fetch(`/api/mt5/account/${uid}`);
-            if (existing.ok) {
-              await loadAccount(uid);
-              setBusy(false);
-              return;
-            }
-            throw new Error(d.detail || d.error || (raw.length < 200 ? raw : `Server error ${r.status}`));
-          }
-        } catch (e) {
-          // Network/timeout — account may still have been created, check
-          try {
-            const existing = await fetch(`/api/mt5/account/${uid}`);
-            if (existing.ok) { await loadAccount(uid); setBusy(false); return; }
-          } catch {}
-          setErr(e.message);
-          setBusy(false);
-          return;
-        }
-        await loadAccount(uid);
-      } else {
-        try {
-          const r = await fetch("/api/mt5/connect", {
-            method: "POST", headers: { "content-type": "application/json" },
-            body: JSON.stringify({ account_mode: mode }),
+            body: JSON.stringify({ user_id: mt5UserId, ...localS, scalping_enabled: rSettings?.scalping_enabled ?? false }),
           });
           if (!r.ok) throw new Error(`Error ${r.status}`);
-          const d = await r.json();
-          setApiKey(d.api_key);
-          if (uid) { setMt5UserId(uid); lsSet("rainx-mt5-uid", uid); }
-          setPhase("pending");
-        } catch (e) { setErr(e.message); }
-      }
-      setBusy(false);
-    };
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2200);
+          await loadAccount();
+        } catch (e) { setErr(e.message || "Unable to save settings"); }
+        setBusy(false);
+      };
 
-    const handleSaveSettings = async () => {
-      setBusy(true); setErr("");
-      try {
-        const r = await fetch("/api/mt5/settings", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user_id: mt5UserId, ...localS, scalping_enabled: rSettings?.scalping_enabled ?? false }) });
-        if (!r.ok) throw new Error(`Error ${r.status}`);
-        setSaved(true); setTimeout(() => setSaved(false), 2200);
-        await loadAccount();
-      } catch (e) { setErr(e.message); }
-      setBusy(false);
-    };
+      const handleToggle = async () => {
+        setBusy(true); setErr("");
+        try {
+          const r = await fetch("/api/mt5/scalping/toggle", {
+            method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user_id: mt5UserId }),
+          });
+          if (!r.ok) throw new Error(`Error ${r.status}`);
+          await loadAccount();
+        } catch (e) { setErr(e.message || "Unable to update scalping"); }
+        setBusy(false);
+      };
 
-    const handleToggle = async () => {
-      setBusy(true); setErr("");
-      try {
-        const r = await fetch("/api/mt5/scalping/toggle", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user_id: mt5UserId }) });
-        if (!r.ok) throw new Error(`Error ${r.status}`);
-        await loadAccount();
-      } catch (e) { setErr(e.message); }
-      setBusy(false);
-    };
+      const handleExecuteSignal = async (sig) => {
+        if (!sig || !mt5UserId) return;
+        setBusy(true); setErr("");
+        try {
+          const r = await fetch("/api/mt5/scalping/toggle", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ user_id: mt5UserId, symbol: sig.asset, direction: sig.direction, confidence: signalConfidence(sig) }),
+          });
+          if (!r.ok) throw new Error(`Smart Scalp execution failed (${r.status})`);
+          setSmartAlert(null);
+          lastSmartSignalRef.current = signalKey(sig);
+          await Promise.all([loadTrades(), loadPerf()]);
+        } catch (e) { setErr(e.message || "Smart Scalp could not execute the signal."); }
+        setBusy(false);
+      };
 
-    // ── Shared sub-components ──────────────────────────────────────────────────
-    const dirColor  = (d) => d === "BUY" ? T.sage : d === "SELL" ? T.rust : T.muted;
-    const riskColor = (r) => r === "LOW" ? T.sage : r === "HIGH" ? T.rust : T.gold;
+      const disconnect = () => {
+        lsSet("rainx-mt5-uid", "");
+        lsSet("rainx-scalp-sym", "");
+        setMt5UserId("");
+        setSelectedSymbol("");
+        setMt5(null); setRSettings(null); setSignals([]); setTrades([]); setPerf(null); setSmartAlert(null); setApiKey(null);
+        lastFiredSignalRef.current = "";
+        lastSmartSignalRef.current = "";
+        setPhase("setup");
+      };
 
-    const Disclaimer = () => (
-      <div style={{ padding: "12px 14px", background: `${T.rust}15`, border: `1px solid ${T.rust}33`, borderRadius: 12, marginTop: 14 }}>
-        <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.7 }}>
-          <strong style={{ color: T.rust }}>⚠ Risk Disclaimer</strong> — Automated scalping involves significant risk of loss. Short-timeframe trading amplifies exposure. Only use a dedicated account with capital you can afford to lose. Past performance does not guarantee future results.
-        </div>
-      </div>
-    );
-
-    const RiskForm = () => (
-      <div>
-        {[
-          { key: "risk_percent",     label: "Risk per trade (%)",      min: 0.1, max: 5,  step: 0.1 },
-          { key: "max_open_trades",  label: "Max simultaneous trades", min: 1,   max: 10, step: 1   },
-          { key: "min_confidence",   label: "Min confidence (%)",      min: 50,  max: 95, step: 1   },
-          { key: "daily_loss_limit", label: "Daily loss limit (%)",    min: 1,   max: 20, step: 0.5 },
-        ].map(({ key, label, min, max, step }) => (
-          <div key={key} style={{ marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 13.5, color: T.muted }}>{label}</span>
-              <span style={{ fontSize: 13.5, color: T.goldBright, fontFamily: FONT_HEAD, fontWeight: 700 }}>{localS[key]}</span>
-            </div>
-            <input type="range" min={min} max={max} step={step} value={localS[key]}
-              onChange={e => setLocalS(p => ({ ...p, [key]: parseFloat(e.target.value) }))}
-              style={{ width: "100%", accentColor: T.gold }} />
+      const Disclaimer = () => (
+        <div style={{ padding: "12px 14px", background: `${T.rust}15`, border: `1px solid ${T.rust}33`, borderRadius: 14, marginTop: 14 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 12.5, color: T.muted, lineHeight: 1.7 }}>
+            <ShieldCheck size={16} color={T.rust} style={{ flexShrink: 0, marginTop: 2 }} />
+            <span><strong style={{ color: T.rust }}>Risk Disclaimer</strong> — Automated scalping involves significant risk of loss. Short-timeframe trading amplifies exposure. Only use a dedicated account with capital you can afford to lose. Past performance does not guarantee future results.</span>
           </div>
-        ))}
-        {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 8 }}>{err}</div>}
-        <button onClick={handleSaveSettings} disabled={busy}
-          style={{ width: "100%", background: saved ? T.sage : `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, cursor: busy ? "not-allowed" : "pointer", transition: "background 0.3s" }}>
-          {saved ? "Saved ✓" : busy ? "Saving…" : "Save Settings"}
-        </button>
-      </div>
-    );
-
-    const SignalCard = ({ sig }) => (
-      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15.5, color: T.paper }}>{sig.asset}</span>
-          <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: dirColor(sig.direction), background: `${dirColor(sig.direction)}22`, borderRadius: 6, padding: "2px 7px" }}>{sig.direction}</span>
-            <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: riskColor(sig.risk_level), background: `${riskColor(sig.risk_level)}22`, borderRadius: 6, padding: "2px 7px" }}>{sig.risk_level}</span>
-            <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 12.5, color: T.goldBright }}>{Math.round(sig.confidence)}%</span>
-          </div>
-        </div>
-        {sig.entry_zone && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 6 }}>
-            <div><div style={{ fontSize: 11.5, color: T.muted, marginBottom: 1 }}>Entry</div><div style={{ fontSize: 13, color: T.paper, fontWeight: 600 }}>{sig.entry_zone[0]?.toFixed(5)}–{sig.entry_zone[1]?.toFixed(5)}</div></div>
-            {sig.stop_loss != null && <div><div style={{ fontSize: 11.5, color: T.muted, marginBottom: 1 }}>SL</div><div style={{ fontSize: 13, color: T.rust, fontWeight: 600 }}>{sig.stop_loss?.toFixed(5)}</div></div>}
-            {sig.take_profit?.[0] != null && <div><div style={{ fontSize: 11.5, color: T.muted, marginBottom: 1 }}>TP1</div><div style={{ fontSize: 13, color: T.sage, fontWeight: 600 }}>{sig.take_profit[0]?.toFixed(5)}</div></div>}
-          </div>
-        )}
-        <div style={{ display: "flex", gap: 10 }}>
-          {sig.risk_reward_ratio != null && <span style={{ fontSize: 12, color: T.gold }}>RR {sig.risk_reward_ratio}:1</span>}
-          {sig.timeframe && <span style={{ fontSize: 12, color: T.muted }}>{sig.timeframe}</span>}
-          {sig.take_profit?.[1] != null && <span style={{ fontSize: 12, color: T.muted }}>TP2 {sig.take_profit[1]?.toFixed(5)}</span>}
-        </div>
-        {sig.explanation && <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.5, marginTop: 6 }}>{sig.explanation.slice(0, 130)}{sig.explanation.length > 130 ? "…" : ""}</div>}
-      </div>
-    );
-
-
-    // ── Symbol picker component ────────────────────────────────────────────────
-    const SymbolPicker = () => {
-      const allSyms = SCALP_SYMBOLS.flatMap(g => g.symbols.map(s => ({ s, g: g.group })));
-      const filtered = symbolSearch
-        ? allSyms.filter(({ s }) => s.includes(symbolSearch.toUpperCase()))
-        : null;
-      return (
-        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper, marginBottom: 10 }}>Select Market</div>
-          <input
-            type="text"
-            placeholder="Search symbol…"
-            value={symbolSearch}
-            onChange={e => setSymbolSearch(e.target.value)}
-            style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, fontSize: 14, padding: "8px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box", marginBottom: 10 }}
-          />
-          {filtered ? (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {filtered.map(({ s }) => (
-                <button key={s} onClick={() => { setSelectedSymbol(s); lsSet("rainx-scalp-sym", s); setSymbolSearch(""); }}
-                  style={{ padding: "6px 12px", borderRadius: 8, fontSize: 13, fontFamily: FONT_HEAD, fontWeight: 700, cursor: "pointer",
-                    background: selectedSymbol === s ? T.gold : T.ink,
-                    color: selectedSymbol === s ? T.ink : T.muted,
-                    border: `1px solid ${selectedSymbol === s ? T.gold : T.cardBorder}` }}>
-                  {s}
-                </button>
-              ))}
-              {filtered.length === 0 && <div style={{ fontSize: 13, color: T.muted }}>No symbols match.</div>}
-            </div>
-          ) : (
-            SCALP_SYMBOLS.map(({ group, symbols }) => (
-              <div key={group} style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 12, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 5, textTransform: "uppercase", letterSpacing: 1 }}>{group}</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {symbols.map(sym => (
-                    <button key={sym} onClick={() => { setSelectedSymbol(sym); lsSet("rainx-scalp-sym", sym); }}
-                      style={{ padding: "6px 12px", borderRadius: 8, fontSize: 13, fontFamily: FONT_HEAD, fontWeight: 700, cursor: "pointer",
-                        background: selectedSymbol === sym ? T.gold : T.ink,
-                        color: selectedSymbol === sym ? T.ink : T.muted,
-                        border: `1px solid ${selectedSymbol === sym ? T.gold : T.cardBorder}`,
-                        transition: "background 0.15s,color 0.15s" }}>
-                      {sym}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
-          {selectedSymbol && (
-            <div style={{ marginTop: 8, fontSize: 13, color: T.sage, fontFamily: FONT_HEAD, fontWeight: 700 }}>✓ {selectedSymbol} selected</div>
-          )}
         </div>
       );
-    };
 
-    // ── Phase: Setup ───────────────────────────────────────────────────────────
-    const BROKER_SERVERS = [
-      "ICMarkets-Live","ICMarkets-Demo","Exness-Real","Exness-MT5Trial","FTMO-Server",
-      "XM.COM-Real 3","XM.COM-Demo","HFMarkets-Live Server","Pepperstone-Edge-Live",
-      "Pepperstone-MT5-Live","OctaFX-Real","FBS-Real","Tickmill-Live","Vantage-Real",
-      "GO Markets Group-Live","Axiory-Real","EasyMarkets-MT5 Real","ThinkMarkets-Live",
-    ];
-
-    const PhaseSetup = () => (
-      <div>
-        {/* Demo tip */}
-        <div style={{ background: `${T.sage}14`, border: `1px solid ${T.sage}44`, borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
-          <div style={{ fontSize: 13, color: T.sage, fontWeight: 700, marginBottom: 3 }}>💡 New to scalping? Start with a Demo account</div>
-          <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>
-            Open a free demo account on any MT5 broker (FTMO, ICMarkets, XM, Exness…), connect it here, and test Raina AI scalping with virtual funds before going live. No money at risk.
-          </div>
-        </div>
-
-        {/* Connection method */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 13.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Connection Method</div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {[["metaapi","MetaAPI (Cloud)"],["ea","EA Desktop"]].map(([m,label]) => (
-              <button key={m} onClick={() => { setConnectMethod(m); setErr(""); }}
-                style={{ flex:1, background: connectMethod===m ? T.gold : T.card, color: connectMethod===m ? T.ink : T.muted, border: `1px solid ${connectMethod===m ? T.gold : T.cardBorder}`, borderRadius:10, padding:"10px 6px", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 13, cursor:"pointer", transition:"background 0.2s,color 0.2s" }}>
-                {label}
-              </button>
-            ))}
-          </div>
-          {connectMethod === "metaapi" && (
-            <div style={{ fontSize: 12.5, color:T.muted, marginTop:6, lineHeight:1.5 }}>Recommended — no PC or VPS needed. Raina AI stays connected to your broker 24/7 via MetaAPI cloud.</div>
-          )}
-          {connectMethod === "ea" && (
-            <div style={{ fontSize: 12.5, color:T.muted, marginTop:6, lineHeight:1.5 }}>Install an Expert Advisor in your local MetaTrader 5. MT5 must stay open on a PC or VPS for trades to execute.</div>
-          )}
-        </div>
-
-        {/* Account mode */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 13.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Account Mode</div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {["demo","live"].map(m => (
-              <button key={m} onClick={() => setMode(m)}
-                style={{ flex:1, background: mode===m ? T.gold : T.card, color: mode===m ? T.ink : T.muted, border: `1px solid ${mode===m ? T.gold : T.cardBorder}`, borderRadius:10, padding:"10px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize: 14.5, cursor:"pointer", textTransform:"capitalize", transition:"background 0.2s,color 0.2s" }}>
-                {m === "demo" ? "📊 Demo" : "🔴 Live"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {connectMethod === "metaapi" ? (
-          <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"14px 16px", marginBottom:16 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 14.5, color:T.goldBright, marginBottom:4 }}>MT5 Credentials</div>
-            <div style={{ fontSize: 12.5, color:T.muted, marginBottom:14, lineHeight:1.6 }}>
-              Raina AI connects securely via MetaAPI. Your credentials are encrypted in transit and never stored in plain text.
-            </div>
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize: 13, color:T.muted, fontWeight:700, marginBottom:4 }}>MT5 Login Number</div>
-              <input type="text" value={mt5Login} onChange={e => setMt5Login(e.target.value)} placeholder="e.g. 12345678"
-                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize: 15, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
-              <div style={{ fontSize: 12, color:T.muted, marginTop:3 }}>The account number from your broker's welcome email.</div>
-            </div>
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize: 13, color:T.muted, fontWeight:700, marginBottom:4 }}>MT5 Password</div>
-              <input type="password" value={mt5Password} onChange={e => setMt5Password(e.target.value)} placeholder="Master or Investor password"
-                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize: 15, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
-              <div style={{ fontSize: 12, color:T.muted, marginTop:3 }}>Use your Master password for automated trading (not the Investor/read-only password).</div>
-            </div>
-            <div style={{ marginBottom:6 }}>
-              <div style={{ fontSize: 13, color:T.muted, fontWeight:700, marginBottom:4 }}>Broker Server</div>
-              <input type="text" value={mt5Server} onChange={e => setMt5Server(e.target.value)} placeholder="e.g. ICMarkets-Demo"
-                list="broker-servers"
-                style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, color:T.paper, fontSize: 15, padding:"10px 12px", fontFamily:FONT_BODY, outline:"none", boxSizing:"border-box" }} />
-              <datalist id="broker-servers">{BROKER_SERVERS.map(s => <option key={s} value={s} />)}</datalist>
-              <div style={{ fontSize: 12, color:T.muted, marginTop:3 }}>Find this in MT5 → Help → About MetaTrader 5. Type it exactly (case-sensitive).</div>
-            </div>
-          </div>
-        ) : (
-          <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"14px 16px", marginBottom:16 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize: 14.5, color:T.goldBright, marginBottom:4 }}>EA Desktop Mode</div>
-            <div style={{ fontSize: 13, color:T.muted, lineHeight:1.7 }}>
-              Click below to generate your API key. Then install the Expert Advisor from the Raina AI Telegram bot in your MetaTrader 5. Paste the key into the EA settings — Raina AI will start queuing trades automatically.
-            </div>
-          </div>
-        )}
-
-        {err && <div style={{ fontSize: 13.5, color:T.rust, marginBottom:10, padding:"10px 12px", background:`${T.rust}15`, borderRadius:8, lineHeight:1.5 }}>{err}</div>}
-        <button onClick={handleConnect} disabled={busy}
-          style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize: 16, cursor: busy ? "not-allowed" : "pointer" }}>
-          {busy ? "Connecting…" : connectMethod === "metaapi" ? "Connect via MetaAPI" : "Generate API Key & Connect"}
-        </button>
-        <Disclaimer />
-      </div>
-    );
-
-    // ── Phase: Pending (EA not yet connected) ──────────────────────────────────
-    const PhasePending = () => (
-      <div>
-        <div style={{ background: `${T.gold}14`, border: `1px solid ${T.gold}55`, borderRadius: 12, padding: "14px 16px", marginBottom: 16, textAlign: "center" }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright, marginBottom: 4 }}>Waiting for MT5 Connection</div>
-          <div style={{ fontSize: 13.5, color: T.muted, lineHeight: 1.6 }}>Install the Expert Advisor in MetaTrader 5 to complete setup. This page checks automatically every 30s.</div>
-        </div>
-        {apiKey && (
-          <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginBottom: 10 }}>Your API Key</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, background: T.ink, borderRadius: 8, padding: "10px 12px" }}>
-              <div style={{ flex: 1, fontFamily: "monospace", fontSize: 13, color: T.gold, wordBreak: "break-all" }}>
-                {showKey ? apiKey : "●".repeat(Math.min(apiKey.length, 36))}
-              </div>
-              <button onClick={() => setShowKey(v => !v)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 12.5, fontFamily: FONT_BODY, flexShrink: 0 }}>{showKey ? "Hide" : "Show"}</button>
-              <button onClick={() => navigator.clipboard?.writeText(apiKey)} style={{ background: "none", border: "none", color: T.gold, cursor: "pointer", fontSize: 12.5, fontFamily: FONT_BODY, flexShrink: 0 }}>Copy</button>
-            </div>
-          </div>
-        )}
-        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginBottom: 10 }}>EA Installation Steps</div>
+      const RiskForm = () => (
+        <div>
           {[
-            "Get the EA file from the Raina AI Telegram bot — send /mt5connect and choose Desktop",
-            "In MT5: File → Open Data Folder → MQL5 → Experts — paste RainaAI_EA.mq5",
-            "Restart MT5, find RainaAI EA in the Navigator panel, drag it onto any chart",
-            "In the EA settings dialog, paste your API Key above then click OK",
-            "Enable the Auto Trading button in the MT5 top toolbar",
-            "Keep MT5 open on a PC or VPS — trades execute through your local terminal",
-          ].map((step, i) => (
-            <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "flex-start" }}>
-              <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.gold, minWidth: 16 }}>{i + 1}.</span>
-              <span style={{ fontSize: 13.5, color: T.paper, lineHeight: 1.6 }}>{step}</span>
+            { key: "risk_percent", label: "Risk per trade (%)", min: 0.1, max: 5, step: 0.1 },
+            { key: "max_open_trades", label: "Max simultaneous trades", min: 1, max: 10, step: 1 },
+            { key: "min_confidence", label: "Min confidence (%)", min: 50, max: 95, step: 1 },
+            { key: "daily_loss_limit", label: "Daily loss limit (%)", min: 1, max: 20, step: 0.5 },
+          ].map(({ key, label, min, max, step }) => (
+            <div key={key} style={{ marginBottom: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ fontSize: 13.5, color: T.muted }}>{label}</span>
+                <span style={{ fontSize: 13.5, color: T.goldBright, fontFamily: FONT_HEAD, fontWeight: 700 }}>{localS[key]}</span>
+              </div>
+              <input type="range" min={min} max={max} step={step} value={localS[key]} onChange={e => setLocalS(p => ({ ...p, [key]: parseFloat(e.target.value) }))} style={{ width: "100%", accentColor: T.gold }} />
             </div>
           ))}
+          {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 8, lineHeight: 1.5 }}>{err}</div>}
+          <button onClick={handleSaveSettings} disabled={busy} style={{ width: "100%", background: saved ? T.sage : `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
+            {saved ? "Saved" : busy ? "Saving…" : "Save Settings"}
+          </button>
         </div>
-        <Disclaimer />
-      </div>
-    );
+      );
 
-    // ── Phase: Connected (scalping not yet enabled) ────────────────────────────
-    const PhaseConnected = () => (
-      <div>
-        <div style={{ background: `${T.sage}18`, border: `1px solid ${T.sage}44`, borderRadius: 12, padding: "12px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.sage }}>MT5 Connected ✓</div>
-            <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{mt5?.broker_name || "Broker"} · {(mt5?.account_mode || "demo").toUpperCase()} · #{mt5?.account_number || "—"}</div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: T.goldBright }}>${(mt5?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-            <div style={{ fontSize: 12, color: T.muted }}>Balance</div>
-          </div>
+      const RiskSettings = () => (
+        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, marginBottom: 16, overflow: "hidden" }}>
+          <button onClick={() => setRiskOpen(v => !v)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: "none", color: T.paper, padding: "14px 16px", cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, transition: "all 0.2s" }}>
+            <span>Risk Settings</span>
+            <ChevronRight size={18} color={T.muted} style={{ transform: riskOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
+          </button>
+          {riskOpen && <div style={{ borderTop: `1px solid ${T.cardBorder}`, padding: "14px 16px 16px" }}><RiskForm /></div>}
         </div>
-        <SymbolPicker />
-        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper, marginBottom: 14 }}>Risk Settings</div>
-          <RiskForm />
-        </div>
-        <button onClick={handleToggle} disabled={busy || !selectedSymbol}
-          style={{ width: "100%", background: selectedSymbol ? `linear-gradient(135deg,${T.gold},${T.goldBright})` : T.card, color: selectedSymbol ? T.ink : T.muted, border: selectedSymbol ? "none" : `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: (busy || !selectedSymbol) ? "not-allowed" : "pointer", marginBottom: 14 }}>
-          {busy ? "Please wait…" : selectedSymbol ? `🚀 Start Scalping ${selectedSymbol}` : "Select a market to start scalping"}
-        </button>
-        <Disclaimer />
-      </div>
-    );
+      );
 
-    // ── Phase: Active (live feed) ──────────────────────────────────────────────
-    const PhaseActive = () => (
-      <div>
-        <div style={{ background: `${T.sage}18`, border: `1px solid ${T.sage}44`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.sage }}>🤖 Scalping Active</div>
-            <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{mt5?.broker_name} · {(mt5?.account_mode || "").toUpperCase()} · #{mt5?.account_number}</div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: T.goldBright }}>${(mt5?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-            {perf && <div style={{ fontSize: 12.5, color: (perf.total_profit ?? 0) >= 0 ? T.sage : T.rust, fontWeight: 700 }}>{(perf.total_profit ?? 0) >= 0 ? "+" : ""}{(perf.total_profit ?? 0).toFixed(2)} P&L</div>}
-          </div>
-        </div>
-        {selectedSymbol ? (
-          <div style={{ background: `${T.gold}15`, border: `1px solid ${T.gold}40`, borderRadius: 10, padding: "8px 14px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ fontSize: 14, fontFamily: FONT_HEAD, fontWeight: 800, color: T.goldBright }}>📊 {selectedSymbol}</div>
-            <button onClick={() => { setSelectedSymbol(""); lsSet("rainx-scalp-sym", ""); }} style={{ background: "none", border: "none", color: T.muted, fontSize: 12, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 600 }}>Change</button>
-          </div>
-        ) : (
-          <SymbolPicker />
-        )}
-
-        {perf && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
-            {[
-              { label: "Win Rate",     val: `${perf.win_rate ?? 0}%`,          col: T.sage  },
-              { label: "Total Trades", val: perf.total_trades ?? 0,            col: T.paper },
-              { label: "P&L",          val: `${(perf.total_profit ?? 0) >= 0 ? "+" : ""}${(perf.total_profit ?? 0).toFixed(2)}`, col: (perf.total_profit ?? 0) >= 0 ? T.sage : T.rust },
-            ].map(({ label, val, col }) => (
-              <div key={label} style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 10, padding: "10px 8px", textAlign: "center" }}>
-                <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: col }}>{val}</div>
-                <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2 }}>{label}</div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {trades.length > 0 && (
-          <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper, marginBottom: 10 }}>Open Trades ({trades.length})</div>
-            {trades.map((t, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: i < trades.length - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
-                <div>
-                  <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper }}>{t.asset}</span>
-                  <span style={{ marginLeft: 8, fontSize: 12.5, color: t.direction === "BUY" ? T.sage : T.rust, fontFamily: FONT_HEAD, fontWeight: 700 }}>{t.direction}</span>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 13, color: T.muted }}>Lot {t.lot_size}</div>
-                  {t.confidence && <div style={{ fontSize: 12, color: T.muted }}>{t.confidence}% conf</div>}
+      const SignalCard = ({ sig }) => {
+        const confidence = signalConfidence(sig);
+        const isBuy = sig.direction === "BUY";
+        const DirectionIcon = isBuy ? TrendingUp : TrendingDown;
+        return (
+          <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 14, marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: `${T.gold}18`, color: T.goldBright, flexShrink: 0 }}><DirectionIcon size={18} /></div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15.5, color: T.paper }}>{sig.asset || "—"}</div>
+                  <div style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>{sig.timeframe || "5m"} timeframe</div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper }}>Live Scalp Signals</div>
-            <button onClick={loadSignals} disabled={sigLoading}
-              style={{ background: "none", border: "none", color: T.gold, fontSize: 13.5, fontFamily: FONT_HEAD, fontWeight: 700, cursor: sigLoading ? "not-allowed" : "pointer" }}>
-              {sigLoading ? "…" : "↺ Refresh"}
-            </button>
-          </div>
-          {sigLoading && signals.length === 0 && (
-            <div style={{ textAlign: "center", color: T.muted, fontSize: 14, padding: 20 }}>Loading signals…</div>
-          )}
-          {signals.map((sig, i) => <SignalCard key={`${sig.asset}-${i}`} sig={sig} />)}
-          {!sigLoading && signals.length === 0 && (
-            <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "20px 16px", textAlign: "center" }}>
-              <div style={{ fontSize: 14, color: T.muted }}>No actionable signals right now.</div>
-              <div style={{ fontSize: 13, color: T.muted, marginTop: 4 }}>Raina AI is monitoring markets — signals appear when conditions are met.</div>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 12.5, color: T.paper, border: `1px solid ${T.cardBorder}`, borderRadius: 6, padding: "3px 7px" }}>{sig.direction}</div>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.goldBright, marginTop: 5 }}>{confidence}%</div>
+              </div>
             </div>
-          )}
+            <div style={{ height: 4, background: `${T.muted}25`, borderRadius: 99, overflow: "hidden", margin: "13px 0 14px" }}><div style={{ width: `${Math.min(100, Math.max(0, confidence))}%`, height: "100%", background: confidence >= 70 ? T.goldBright : T.gold, borderRadius: 99, transition: "all 0.2s" }} /></div>
+            <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", gap: 8 }}>
+              <div><div style={{ fontSize: 11.5, color: T.muted, marginBottom: 3 }}>Entry</div><div style={{ fontSize: 13, color: T.paper, fontWeight: 600 }}>{sig.entry_zone ? `${price(sig.entry_zone[0])}–${price(sig.entry_zone[1])}` : price(sig.entry)}</div></div>
+              <div><div style={{ fontSize: 11.5, color: T.muted, marginBottom: 3 }}>SL</div><div style={{ fontSize: 13, color: T.paper, fontWeight: 600 }}>{price(sig.stop_loss)}</div></div>
+              <div><div style={{ fontSize: 11.5, color: T.muted, marginBottom: 3 }}>TP1</div><div style={{ fontSize: 13, color: T.paper, fontWeight: 600 }}>{price(sig.take_profit?.[0] ?? sig.take_profit)}</div></div>
+            </div>
+            <div style={{ display: "flex", gap: 14, marginTop: 13, paddingTop: 10, borderTop: `1px solid ${T.cardBorder}`, fontSize: 12, color: T.muted }}>
+              <span>RR {sig.risk_reward_ratio != null ? `${sig.risk_reward_ratio}:1` : "—"}</span>
+              <span>Risk {sig.risk_level || "—"}</span>
+            </div>
+          </div>
+        );
+      };
+
+      const SymbolPicker = () => {
+        const allSyms = SCALP_SYMBOLS.flatMap(g => g.symbols.map(s => ({ s, g: g.group })));
+        const filtered = symbolSearch ? allSyms.filter(({ s }) => s.includes(symbolSearch.toUpperCase())) : null;
+        const choose = (symbol) => { setSelectedSymbol(symbol); lsSet("rainx-scalp-sym", symbol); setSymbolSearch(""); };
+        return (
+          <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper, marginBottom: 10 }}>Select Market</div>
+            <input type="text" placeholder="Search symbol" value={symbolSearch} onChange={e => setSymbolSearch(e.target.value)} style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 14, padding: "9px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box", marginBottom: 12 }} />
+            {filtered ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{filtered.map(({ s }) => <button key={s} onClick={() => choose(s)} style={{ padding: "7px 12px", borderRadius: 8, fontSize: 13, fontFamily: FONT_HEAD, fontWeight: 700, cursor: "pointer", background: selectedSymbol === s ? T.gold : T.ink, color: selectedSymbol === s ? T.ink : T.muted, border: `1px solid ${selectedSymbol === s ? T.gold : T.cardBorder}`, transition: "all 0.2s" }}>{s}</button>)}{filtered.length === 0 && <div style={{ fontSize: 13, color: T.muted }}>No symbols match.</div>}</div>
+            ) : SCALP_SYMBOLS.map(({ group, symbols }) => (
+              <div key={group} style={{ marginBottom: 10 }}><div style={{ fontSize: 11.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>{group}</div><div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{symbols.map(sym => <button key={sym} onClick={() => choose(sym)} style={{ padding: "7px 12px", borderRadius: 8, fontSize: 13, fontFamily: FONT_HEAD, fontWeight: 700, cursor: "pointer", background: selectedSymbol === sym ? T.gold : T.ink, color: selectedSymbol === sym ? T.ink : T.muted, border: `1px solid ${selectedSymbol === sym ? T.gold : T.cardBorder}`, transition: "all 0.2s" }}>{sym}</button>)}</div></div>
+            ))}
+            {selectedSymbol && <div style={{ marginTop: 5, fontSize: 12.5, color: T.goldBright, fontFamily: FONT_HEAD, fontWeight: 700 }}>{selectedSymbol} selected</div>}
+          </div>
+        );
+      };
+
+      const ModeToggle = () => (
+        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5, marginBottom: 16 }}>
+          {[{ key: "quick", label: "Quick Scalp", hint: "Enters immediately", Icon: Zap }, { key: "smart", label: "Smart Scalp", hint: "Waits for setup", Icon: Activity }].map(({ key, label, hint, Icon }) => (
+            <button key={key} onClick={() => { setScalpMode(key); setSmartAlert(null); }} style={{ display: "flex", alignItems: "center", gap: 9, textAlign: "left", background: scalpMode === key ? `${T.gold}20` : "transparent", color: scalpMode === key ? T.goldBright : T.muted, border: scalpMode === key ? `1px solid ${T.gold}66` : "1px solid transparent", borderRadius: 10, padding: "10px 9px", cursor: "pointer", transition: "all 0.2s" }}>
+              <Icon size={17} />
+              <span><span style={{ display: "block", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 12.5 }}>{label}</span><span style={{ display: "block", fontSize: 10.5, marginTop: 2, color: T.muted }}>{hint}</span></span>
+            </button>
+          ))}
         </div>
+      );
 
-        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper, marginBottom: 14 }}>Risk Settings</div>
-          <RiskForm />
+      const AccountHeader = ({ active = false }) => (
+        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "13px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.paper }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: active ? T.sage : T.gold, display: "inline-block" }} />{active ? "Scalping active" : "MT5 connected"}</div>
+            <div style={{ fontSize: 12.5, color: T.muted, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{mt5?.broker_name || "Broker"} · {(mt5?.account_mode || "demo").toUpperCase()} · #{mt5?.account_number || "—"}</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
+            <div style={{ textAlign: "right" }}><div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.goldBright }}>${money(mt5?.balance ?? mt5?.equity)}</div><div style={{ fontSize: 11.5, color: T.muted }}>{active && perf ? `${(Number(perf.total_profit) || 0) >= 0 ? "+" : ""}${money(perf.total_profit)} P&L` : "Balance"}</div></div>
+            <button onClick={disconnect} aria-label="Disconnect MT5" title="Disconnect MT5" style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "transparent", color: T.muted, border: `1px solid ${T.cardBorder}`, cursor: "pointer", transition: "all 0.2s" }}><LogOut size={16} /></button>
+          </div>
         </div>
+      );
 
-        <button onClick={handleToggle} disabled={busy}
-          style={{ width: "100%", background: `${T.rust}22`, color: T.rust, border: `1px solid ${T.rust}44`, borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, cursor: busy ? "not-allowed" : "pointer" }}>
-          {busy ? "Please wait…" : "Pause Scalping"}
-        </button>
-      </div>
-    );
+      const SmartAlert = () => {
+        if (!smartAlert || scalpMode !== "smart") return null;
+        return (
+          <div style={{ background: `${T.gold}16`, border: `1px solid ${T.gold}66`, borderRadius: 14, padding: 14, marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, color: T.goldBright, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14 }}>
+                <Bell size={16} /> Setup ready
+              </div>
+              <button onClick={() => setSmartAlert(null)} aria-label="Dismiss signal" style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}>
+                <X size={16} />
+              </button>
+            </div>
+            <div style={{ fontSize: 13.5, color: T.paper, lineHeight: 1.5 }}>
+              <strong>{smartAlert.asset}</strong> is showing a {smartAlert.direction} setup at {signalConfidence(smartAlert)}% confidence.
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button onClick={() => handleExecuteSignal(smartAlert)} disabled={busy} style={{ flex: 1, background: T.gold, color: T.ink, border: "none", borderRadius: 9, padding: "9px 12px", fontFamily: FONT_HEAD, fontWeight: 800, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
+                Execute
+              </button>
+              <button onClick={() => setSmartAlert(null)} style={{ flex: 1, background: "transparent", color: T.muted, border: `1px solid ${T.cardBorder}`, borderRadius: 9, padding: "9px 12px", fontFamily: FONT_HEAD, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>
+                Dismiss
+              </button>
+            </div>
+          </div>
+        );
+      };
 
-    // ── Root render ────────────────────────────────────────────────────────────
-    return (
-      <div style={{ padding: "16px 16px 90px" }}>
-        <div style={{ fontFamily: FONT_HEAD, fontSize: 20, color: T.goldBright, fontWeight: 800, marginBottom: 2 }}>Scalping</div>
-        <div style={{ fontSize: 13.5, color: T.muted, marginBottom: 16, lineHeight: 1.6 }}>Raina AI premium scalping engine — 1m/5m/15m signals auto-queued to your MT5.</div>
+      const BROKER_SERVERS = ["ICMarkets-Live", "ICMarkets-Demo", "Exness-Real", "Exness-MT5Trial", "FTMO-Server", "XM.COM-Real 3", "XM.COM-Demo", "HFMarkets-Live Server", "Pepperstone-Edge-Live", "Pepperstone-MT5-Live", "OctaFX-Real", "FBS-Real", "Tickmill-Live", "Vantage-Real", "GO Markets Group-Live", "Axiory-Real", "EasyMarkets-MT5 Real", "ThinkMarkets-Live"];
 
-        <BlurGate unlocked={unlocked} requiredLabel="Monthly" onSubscribe={onSubscribe} minHeight={440}>
-          {phase === "loading"    ? <div style={{ textAlign: "center", padding: 40, color: T.muted, fontSize: 15 }}>Loading…</div>
-           : phase === "setup"    ? PhaseSetup()
-           : phase === "pending"  ? PhasePending()
-           : phase === "connected"? PhaseConnected()
-           : phase === "active"   ? PhaseActive()
-           : PhaseSetup()}
-        </BlurGate>
-      </div>
-    );
+      const PhaseSetup = () => (
+        <div>
+          <div style={{ background: `${T.sage}14`, border: `1px solid ${T.sage}44`, borderRadius: 14, padding: "12px 16px", marginBottom: 16 }}><div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, color: T.sage, fontWeight: 700, marginBottom: 3 }}><ShieldCheck size={16} /> Start with a Demo account</div><div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>Open a free demo account on any MT5 broker and test Raina AI scalping with virtual funds before going live.</div></div>
+          <div style={{ marginBottom: 16 }}><div style={{ fontSize: 13.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Connection Method</div><div style={{ display: "flex", gap: 8 }}>{[["metaapi", "MetaAPI (Cloud)"], ["ea", "EA Desktop"]].map(([m, label]) => <button key={m} onClick={() => { setConnectMethod(m); setErr(""); }} style={{ flex: 1, background: connectMethod === m ? T.gold : T.card, color: connectMethod === m ? T.ink : T.muted, border: `1px solid ${connectMethod === m ? T.gold : T.cardBorder}`, borderRadius: 10, padding: "10px 6px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer", transition: "all 0.2s" }}>{label}</button>)}</div><div style={{ fontSize: 12.5, color: T.muted, marginTop: 6, lineHeight: 1.5 }}>{connectMethod === "metaapi" ? "Recommended — no PC or VPS needed. Raina AI stays connected to your broker through MetaAPI cloud." : "Install an Expert Advisor in your local MetaTrader 5. MT5 must stay open on a PC or VPS."}</div></div>
+          <div style={{ marginBottom: 16 }}><div style={{ fontSize: 13.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Account Mode</div><div style={{ display: "flex", gap: 8 }}>{["demo", "live"].map(m => <button key={m} onClick={() => setMode(m)} style={{ flex: 1, background: mode === m ? T.gold : T.card, color: mode === m ? T.ink : T.muted, border: `1px solid ${mode === m ? T.gold : T.cardBorder}`, borderRadius: 10, padding: "10px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, cursor: "pointer", textTransform: "capitalize", transition: "all 0.2s" }}>{m}</button>)}</div></div>
+          {connectMethod === "metaapi" ? <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}><div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.goldBright, marginBottom: 4 }}><Key size={16} /> MT5 Credentials</div><div style={{ fontSize: 12.5, color: T.muted, marginBottom: 14, lineHeight: 1.6 }}>Your credentials are encrypted in transit and used only to connect your trading account.</div><div style={{ marginBottom: 14 }}><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>MT5 Login Number</div><input type="text" value={mt5Login} onChange={e => setMt5Login(e.target.value)} placeholder="e.g. 12345678" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /></div><div style={{ marginBottom: 14 }}><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>MT5 Password</div><input type="password" value={mt5Password} onChange={e => setMt5Password(e.target.value)} placeholder="Master or Investor password" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /></div><div><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>Broker Server</div><input type="text" value={mt5Server} onChange={e => setMt5Server(e.target.value)} placeholder="e.g. ICMarkets-Demo" list="broker-servers" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /><datalist id="broker-servers">{BROKER_SERVERS.map(s => <option key={s} value={s} />)}</datalist></div></div> : <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}><div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.goldBright, marginBottom: 4 }}><Key size={16} /> EA Desktop Mode</div><div style={{ fontSize: 13, color: T.muted, lineHeight: 1.7 }}>Generate an API key, install the Raina AI Expert Advisor in MetaTrader 5, and keep MT5 open on a PC or VPS.</div></div>}
+          {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 10, padding: "10px 12px", background: `${T.rust}15`, borderRadius: 9, lineHeight: 1.5 }}>{err}</div>}
+          <button onClick={handleConnect} disabled={busy} style={{ width: "100%", background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>{busy ? "Connecting…" : connectMethod === "metaapi" ? "Connect via MetaAPI" : "Generate API Key & Connect"}</button>
+          <Disclaimer />
+        </div>
+      );
+
+      const PhasePending = () => (
+        <div>
+          <div style={{ background: `${T.gold}14`, border: `1px solid ${T.gold}55`, borderRadius: 14, padding: "14px 16px", marginBottom: 16, textAlign: "center" }}><Activity size={20} color={T.goldBright} /><div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright, margin: "6px 0 4px" }}>Waiting for MT5 connection</div><div style={{ fontSize: 13.5, color: T.muted, lineHeight: 1.6 }}>Install the Expert Advisor in MetaTrader 5 to complete setup. This page checks automatically every 30 seconds.</div></div>
+          {apiKey && <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}><div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginBottom: 10 }}>Your API Key</div><div style={{ display: "flex", alignItems: "center", gap: 8, background: T.ink, borderRadius: 9, padding: "10px 12px" }}><div style={{ flex: 1, fontFamily: "monospace", fontSize: 13, color: T.gold, wordBreak: "break-all" }}>{showKey ? apiKey : "●".repeat(Math.min(apiKey.length, 36))}</div><button onClick={() => setShowKey(v => !v)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}>{showKey ? <EyeOff size={16} /> : <Eye size={16} />}</button><button onClick={() => navigator.clipboard?.writeText(apiKey)} style={{ background: "none", border: "none", color: T.gold, cursor: "pointer", fontSize: 12.5, fontFamily: FONT_BODY }}>Copy</button></div></div>}
+          <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}><div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginBottom: 10 }}>EA Installation Steps</div>{["Get the EA file from the Raina AI Telegram bot", "In MT5, open the data folder and place the EA in MQL5/Experts", "Restart MT5 and drag RainaAI EA onto any chart", "Paste the API key into the EA settings", "Enable Auto Trading in MT5", "Keep MT5 open on a PC or VPS"].map((step, i) => <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "flex-start" }}><span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.gold, minWidth: 16 }}>{i + 1}.</span><span style={{ fontSize: 13.5, color: T.paper, lineHeight: 1.6 }}>{step}</span></div>)}</div>
+          <Disclaimer />
+        </div>
+      );
+
+      const PhaseConnected = () => (
+        <div>
+          <AccountHeader />
+          <SymbolPicker />
+          <ModeToggle />
+          <RiskSettings />
+          {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 10 }}>{err}</div>}
+          <button onClick={handleToggle} disabled={busy || !selectedSymbol} style={{ width: "100%", background: selectedSymbol ? `linear-gradient(135deg,${T.gold},${T.goldBright})` : T.card, color: selectedSymbol ? T.ink : T.muted, border: selectedSymbol ? "none" : `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy || !selectedSymbol ? "not-allowed" : "pointer", marginBottom: 14, transition: "all 0.2s" }}>{busy ? "Please wait…" : selectedSymbol ? `Start ${scalpMode === "quick" ? "Quick" : "Smart"} Scalp` : "Select a market to start scalping"}</button>
+          <Disclaimer />
+        </div>
+      );
+
+      const PhaseActive = () => {
+        const pnl = Number(perf?.total_profit) || 0;
+        return (
+          <div>
+            <AccountHeader active />
+            {selectedSymbol ? <div style={{ background: `${T.gold}15`, border: `1px solid ${T.gold}40`, borderRadius: 11, padding: "9px 12px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}><div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13.5, fontFamily: FONT_HEAD, fontWeight: 800, color: T.goldBright }}><Activity size={16} /> {selectedSymbol}</div><button onClick={() => { setSelectedSymbol(""); lsSet("rainx-scalp-sym", ""); }} style={{ background: "none", border: "none", color: T.muted, fontSize: 12, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 600 }}>Change</button></div> : <SymbolPicker />}
+            <ModeToggle />
+            {perf && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+                {[
+                  { label: "Win Rate", val: `${perf.win_rate ?? 0}%`, col: T.paper },
+                  { label: "Trades", val: perf.total_trades ?? 0, col: T.paper },
+                  { label: "P&L", val: `${pnl >= 0 ? "+" : ""}${money(pnl)}`, col: pnl >= 0 ? T.sage : T.rust },
+                ].map(({ label, val, col }) => (
+                  <div key={label} style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "11px 8px", textAlign: "center" }}>
+                    <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: col }}>{val}</div>
+                    <div style={{ fontSize: 11.5, color: T.muted, marginTop: 3 }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {trades.length > 0 && (
+              <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "12px 14px", marginBottom: 16 }}>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper, marginBottom: 10 }}>Open Trades <span style={{ color: T.muted, fontWeight: 500 }}>({trades.length})</span></div>
+                {trades.map((trade, i) => {
+                  const TradeIcon = trade.direction === "SELL" ? TrendingDown : TrendingUp;
+                  return (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: i < trades.length - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                        <TradeIcon size={17} color={T.goldBright} />
+                        <div>
+                          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper }}>{trade.asset || "—"}</div>
+                          <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{trade.direction || "—"}</div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right", fontSize: 13, color: T.muted }}>Lot {trade.lot_size ?? "—"}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper }}>
+                  <Activity size={16} color={T.goldBright} /> Live Signals
+                </div>
+                <button onClick={() => loadSignals()} disabled={sigLoading} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", color: T.gold, fontSize: 13, fontFamily: FONT_HEAD, fontWeight: 700, cursor: sigLoading ? "not-allowed" : "pointer" }}>
+                  <ArrowRight size={14} style={{ transform: "rotate(-45deg)" }} /> {sigLoading ? "Loading" : "Refresh"}
+                </button>
+              </div>
+              {sigLoading && signals.length === 0 && <div style={{ textAlign: "center", color: T.muted, fontSize: 14, padding: 20 }}>Loading signals…</div>}
+              {signals.map((sig, i) => <SignalCard key={`${signalKey(sig)}-${i}`} sig={sig} />)}
+              {!sigLoading && signals.length === 0 && (
+                <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "20px 16px", textAlign: "center" }}>
+                  <Activity size={20} color={T.muted} />
+                  <div style={{ fontSize: 14, color: T.muted, marginTop: 8 }}>No actionable signals right now.</div>
+                  <div style={{ fontSize: 13, color: T.muted, marginTop: 4 }}>Raina AI is monitoring markets. Signals appear when conditions are met.</div>
+                </div>
+              )}
+            </div>
+            <SmartAlert />
+            <RiskSettings />
+            {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 10, lineHeight: 1.5 }}>{err}</div>}
+            <button onClick={handleToggle} disabled={busy} style={{ width: "100%", background: `${T.rust}18`, color: T.rust, border: `1px solid ${T.rust}55`, borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>{busy ? "Please wait…" : "Pause Scalping"}</button>
+          </div>
+        );
+      };
+
+      return (
+        <div style={{ padding: "16px 16px 90px" }}>
+          <div style={{ fontFamily: FONT_HEAD, fontSize: 20, color: T.goldBright, fontWeight: 800, marginBottom: 2 }}>Scalping</div>
+          <div style={{ fontSize: 13.5, color: T.muted, marginBottom: 16, lineHeight: 1.6 }}>Raina AI premium scalping engine with live market signals for your MT5 account.</div>
+          <BlurGate unlocked={unlocked} requiredLabel="Monthly" onSubscribe={onSubscribe} minHeight={440}>
+            {phase === "loading" ? <div style={{ textAlign: "center", padding: 40, color: T.muted, fontSize: 15 }}>Loading…</div> : phase === "setup" ? <PhaseSetup /> : phase === "pending" ? <PhasePending /> : phase === "connected" ? <PhaseConnected /> : phase === "active" ? <PhaseActive /> : <PhaseSetup />}
+          </BlurGate>
+        </div>
+      );
     }
 
 
