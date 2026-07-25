@@ -3144,9 +3144,11 @@ const SCALP_SYMBOLS = [
       const [mode, setMode] = useState("demo");
       const [scalpMode, setScalpMode] = useState("smart");
       const [signals, setSignals] = useState([]);
+      const [holdSignal, setHoldSignal] = useState(null); // HOLD state: market not ready
       const [trades, setTrades] = useState([]);
       const [perf, setPerf] = useState(null);
       const [busy, setBusy] = useState(false);
+      const [balanceSyncing, setBalanceSyncing] = useState(false);
       const [err, setErr] = useState("");
       const [saved, setSaved] = useState(false);
       const [showKey, setShowKey] = useState(false);
@@ -3214,15 +3216,37 @@ const SCALP_SYMBOLS = [
             .filter((s) => s && s.direction && s.direction !== "HOLD")
             .sort((a, b) => signalConfidence(b) - signalConfidence(a))
             .slice(0, 6);
+          // Also capture the HOLD signal so we can show why there's no setup yet
+          const hold = raw.find((s) => s && (s.direction === "HOLD" || !s.direction));
           setSignals(actionable);
+          setHoldSignal(actionable.length === 0 ? (hold || null) : null);
           setErr("");
         } catch (e) {
           setSignals([]);
+          setHoldSignal(null);
           setErr(e.message || "Unable to load signals right now.");
         } finally {
           setSigLoading(false);
         }
       }, [selectedSymbol]);
+
+      const handleSyncBalance = useCallback(async () => {
+        if (!mt5UserId || balanceSyncing) return;
+        setBalanceSyncing(true);
+        try {
+          await fetch(`/api/mt5/balance/refresh/${mt5UserId}`, { method: "POST" });
+          // Poll every 15 s for up to 3 minutes to detect when balance arrives
+          let attempts = 0;
+          const poll = setInterval(async () => {
+            attempts++;
+            await loadAccount(mt5UserId);
+            if (attempts >= 12) clearInterval(poll);
+          }, 15000);
+          setTimeout(() => setBalanceSyncing(false), 180000);
+        } catch {
+          setBalanceSyncing(false);
+        }
+      }, [mt5UserId, balanceSyncing]);
 
       const loadAccount = useCallback(async (uid) => {
         const id = uid || mt5UserId;
@@ -3549,18 +3573,40 @@ const SCALP_SYMBOLS = [
         </>
       );
 
-      const AccountHeader = ({ active = false }) => (
-        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "13px 14px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.paper }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: active ? T.sage : T.gold, display: "inline-block" }} />{active ? "Scalping active" : "MT5 connected"}</div>
-            <div style={{ fontSize: 12.5, color: T.muted, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{mt5?.broker_name || "Broker"} · {(mt5?.account_mode || "demo").toUpperCase()} · #{mt5?.account_number || "—"}</div>
+      const AccountHeader = ({ active = false }) => {
+        const bal = mt5?.balance ?? mt5?.account_balance ?? mt5?.equity ?? 0;
+        const currency = mt5?.currency || rSettings?.account_currency || "";
+        const balanceZero = !bal || Number(bal) === 0;
+        return (
+          <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "13px 14px", marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.paper }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: active ? T.sage : T.gold, display: "inline-block" }} />{active ? "Scalping active" : "MT5 connected"}</div>
+                <div style={{ fontSize: 12.5, color: T.muted, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{mt5?.broker_name || "Broker"} · {(mt5?.account_mode || "demo").toUpperCase()} · #{mt5?.account_number || "—"}</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.goldBright }}>{currency} {money(bal)}</div>
+                  <div style={{ fontSize: 11.5, color: T.muted }}>{active && perf ? `${(Number(perf.total_profit) || 0) >= 0 ? "+" : ""}${money(perf.total_profit)} P&L` : "Balance"}</div>
+                </div>
+                <button onClick={() => setShowDisconnectConfirm(true)} aria-label="Disconnect MT5" title="Disconnect MT5" style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "transparent", color: T.muted, border: `1px solid ${T.cardBorder}`, cursor: "pointer", transition: "all 0.2s" }}><LogOut size={16} /></button>
+              </div>
+            </div>
+            {balanceZero && (
+              <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", background: `${T.gold}12`, border: `1px solid ${T.gold}33`, borderRadius: 9, padding: "8px 11px" }}>
+                <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.5 }}>
+                  {balanceSyncing ? "⏳ Syncing balance from MetaAPI… check back in ~60 s" : "Balance not yet synced from your broker."}
+                </div>
+                {!balanceSyncing && (
+                  <button onClick={handleSyncBalance} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 7, padding: "5px 11px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, cursor: "pointer", flexShrink: 0, marginLeft: 8 }}>
+                    Sync
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
-            <div style={{ textAlign: "right" }}><div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.goldBright }}>{mt5?.currency || ""} {money(mt5?.balance ?? mt5?.account_balance ?? mt5?.equity ?? 0)}</div><div style={{ fontSize: 11.5, color: T.muted }}>{active && perf ? `${(Number(perf.total_profit) || 0) >= 0 ? "+" : ""}${money(perf.total_profit)} P&L` : "Balance"}</div></div>
-            <button onClick={() => setShowDisconnectConfirm(true)} aria-label="Disconnect MT5" title="Disconnect MT5" style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "transparent", color: T.muted, border: `1px solid ${T.cardBorder}`, cursor: "pointer", transition: "all 0.2s" }}><LogOut size={16} /></button>
-          </div>
-        </div>
-      );
+        );
+      };
 
       const SmartAlert = () => {
         if (!smartAlert || scalpMode !== "smart") return null;
@@ -3677,10 +3723,29 @@ const SCALP_SYMBOLS = [
               {sigLoading && signals.length === 0 && <div style={{ textAlign: "center", color: T.muted, fontSize: 14, padding: 20 }}>Loading signals…</div>}
               {signals.map((sig, i) => <SignalCard key={`${signalKey(sig)}-${i}`} sig={sig} />)}
               {!sigLoading && signals.length === 0 && (
-                <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "20px 16px", textAlign: "center" }}>
+                <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "18px 16px", textAlign: "center" }}>
                   <Activity size={20} color={T.muted} />
-                  <div style={{ fontSize: 14, color: T.muted, marginTop: 8 }}>No actionable signals right now.</div>
-                  <div style={{ fontSize: 13, color: T.muted, marginTop: 4 }}>Raina AI is monitoring markets. Signals appear when conditions are met.</div>
+                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginTop: 8 }}>
+                    No trade setup yet
+                  </div>
+                  {holdSignal ? (
+                    <>
+                      <div style={{ fontSize: 12.5, color: T.muted, marginTop: 8, lineHeight: 1.65, textAlign: "left", background: `${T.ink}99`, borderRadius: 9, padding: "9px 11px" }}>
+                        {holdSignal.explanation || "Market is in a consolidation zone — waiting for a clear directional move."}
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, padding: "7px 11px", background: `${T.gold}12`, borderRadius: 9 }}>
+                        <div style={{ fontSize: 12, color: T.muted }}>Current confidence</div>
+                        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: Math.round(holdSignal.confidence || 0) >= 40 ? T.gold : T.muted }}>
+                          {Math.round(holdSignal.confidence || 0)}% <span style={{ fontSize: 11, color: T.muted, fontWeight: 500 }}>/ 55% needed</span>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 12, color: T.muted, marginTop: 7, lineHeight: 1.5 }}>
+                        Signal fires when multiple indicators align. Raina AI refreshes every {scalpMode === "quick" ? "30" : "60"} seconds.
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 13, color: T.muted, marginTop: 4 }}>Raina AI is monitoring markets. Signals appear when conditions are met.</div>
+                  )}
                 </div>
               )}
             </div>
