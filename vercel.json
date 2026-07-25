@@ -1,5 +1,5 @@
 {
-  "installCommand": "npm install -g pnpm && pnpm install --no-frozen-lockfile",
+  "installCommand": "npm install -g pnpm@9 && pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm --filter @workspace/rainx exec vite build --config vite.config.vercel.ts",
   "outputDirectory": "artifacts/rainx/dist",
   "rewrites": [
