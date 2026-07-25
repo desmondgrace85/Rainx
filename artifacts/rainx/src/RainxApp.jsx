@@ -3629,7 +3629,7 @@ const SCALP_SYMBOLS = [
         return (
           <div>
             {AccountHeader({ active: true })}
-            {selectedSymbol ? <div style={{ background: `${T.gold}15`, border: `1px solid ${T.gold}40`, borderRadius: 11, padding: "9px 12px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}><div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13.5, fontFamily: FONT_HEAD, fontWeight: 800, color: T.goldBright }}><Activity size={16} /> {selectedSymbol}</div><button onClick={() => { setSelectedSymbol(""); lsSet("rainx-scalp-sym", ""); }} style={{ background: "none", border: "none", color: T.muted, fontSize: 12, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 600 }}>Change</button></div> : {SymbolPicker()}}
+            {selectedSymbol ? <div style={{ background: `${T.gold}15`, border: `1px solid ${T.gold}40`, borderRadius: 11, padding: "9px 12px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}><div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13.5, fontFamily: FONT_HEAD, fontWeight: 800, color: T.goldBright }}><Activity size={16} /> {selectedSymbol}</div><button onClick={() => { setSelectedSymbol(""); lsSet("rainx-scalp-sym", ""); }} style={{ background: "none", border: "none", color: T.muted, fontSize: 12, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 600 }}>Change</button></div> : SymbolPicker()}
             {ModeToggle()}
             {perf && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
