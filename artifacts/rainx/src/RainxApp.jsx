@@ -3161,6 +3161,8 @@ const SCALP_SYMBOLS = [
       const [mt5UserId, setMt5UserId] = useState(() => lsGet("rainx-mt5-uid") || "");
       const [selectedSymbol, setSelectedSymbol] = useState(() => lsGet("rainx-scalp-sym") || "XAUUSD");
       const [symbolSearch, setSymbolSearch] = useState("");
+      const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
+      const [pendingScalpMode, setPendingScalpMode] = useState(null);
       const lastFiredSignalRef = useRef("");
       const lastSmartSignalRef = useRef("");
 
@@ -3283,12 +3285,15 @@ const SCALP_SYMBOLS = [
         const key = signalKey(top);
         if (!key || key === lastFiredSignalRef.current) return;
         lastFiredSignalRef.current = key;
-        fetch("/api/mt5/scalping/toggle", {
+        fetch("/api/mt5/scalping/execute", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ user_id: mt5UserId, symbol: top.asset, direction: top.direction, confidence: signalConfidence(top) }),
-        }).then((r) => {
-          if (!r.ok) throw new Error(`Quick Scalp execution failed (${r.status})`);
+        }).then(async (r) => {
+          if (!r.ok) {
+            const d = await r.json().catch(() => ({}));
+            throw new Error(d.detail || `Quick Scalp failed (${r.status})`);
+          }
           loadTrades();
           loadPerf();
         }).catch((e) => {
@@ -3386,12 +3391,15 @@ const SCALP_SYMBOLS = [
         if (!sig || !mt5UserId) return;
         setBusy(true); setErr("");
         try {
-          const r = await fetch("/api/mt5/scalping/toggle", {
+          const r = await fetch("/api/mt5/scalping/execute", {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ user_id: mt5UserId, symbol: sig.asset, direction: sig.direction, confidence: signalConfidence(sig) }),
           });
-          if (!r.ok) throw new Error(`Smart Scalp execution failed (${r.status})`);
+          if (!r.ok) {
+            const d = await r.json().catch(() => ({}));
+            throw new Error(d.detail || `Smart Scalp failed (${r.status})`);
+          }
           setSmartAlert(null);
           lastSmartSignalRef.current = signalKey(sig);
           await Promise.all([loadTrades(), loadPerf()]);
@@ -3504,14 +3512,41 @@ const SCALP_SYMBOLS = [
       };
 
       const ModeToggle = () => (
-        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5, marginBottom: 16 }}>
-          {[{ key: "quick", label: "Quick Scalp", hint: "Enters immediately", Icon: Zap }, { key: "smart", label: "Smart Scalp", hint: "Waits for setup", Icon: Activity }].map(({ key, label, hint, Icon }) => (
-            <button key={key} onClick={() => { setScalpMode(key); setSmartAlert(null); }} style={{ display: "flex", alignItems: "center", gap: 9, textAlign: "left", background: scalpMode === key ? `${T.gold}20` : "transparent", color: scalpMode === key ? T.goldBright : T.muted, border: scalpMode === key ? `1px solid ${T.gold}66` : "1px solid transparent", borderRadius: 10, padding: "10px 9px", cursor: "pointer", transition: "all 0.2s" }}>
-              <Icon size={17} />
-              <span><span style={{ display: "block", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 12.5 }}>{label}</span><span style={{ display: "block", fontSize: 10.5, marginTop: 2, color: T.muted }}>{hint}</span></span>
-            </button>
-          ))}
-        </div>
+        <>
+          <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5, marginBottom: 16 }}>
+            {[{ key: "quick", label: "Quick Scalp", hint: "Enters immediately", Icon: Zap }, { key: "smart", label: "Smart Scalp", hint: "Waits for setup", Icon: Activity }].map(({ key, label, hint, Icon }) => (
+              <button key={key} onClick={() => {
+                if (scalpMode === key) return;
+                if (phase === "active") {
+                  // Require confirmation before switching while scalping is live
+                  setPendingScalpMode(key);
+                } else {
+                  setScalpMode(key); setSmartAlert(null);
+                }
+              }} style={{ display: "flex", alignItems: "center", gap: 9, textAlign: "left", background: scalpMode === key ? `${T.gold}20` : "transparent", color: scalpMode === key ? T.goldBright : T.muted, border: scalpMode === key ? `1px solid ${T.gold}66` : "1px solid transparent", borderRadius: 10, padding: "10px 9px", cursor: "pointer", transition: "all 0.2s" }}>
+                <Icon size={17} />
+                <span><span style={{ display: "block", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 12.5 }}>{label}</span><span style={{ display: "block", fontSize: 10.5, marginTop: 2, color: T.muted }}>{hint}</span></span>
+              </button>
+            ))}
+          </div>
+          {/* Mode-switch confirmation (shown only when scalping is active) */}
+          {pendingScalpMode && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+              <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 20, padding: "24px 20px", maxWidth: 340, width: "100%" }}>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.paper, marginBottom: 8 }}>Switch to {pendingScalpMode === "quick" ? "Quick" : "Smart"} Scalp?</div>
+                <div style={{ fontSize: 13.5, color: T.muted, lineHeight: 1.6, marginBottom: 20 }}>
+                  {pendingScalpMode === "quick"
+                    ? "Quick Scalp enters trades automatically as soon as a signal fires. Switching now will change how new signals are handled — existing open trades are not affected."
+                    : "Smart Scalp alerts you before each trade so you can approve or dismiss it. Switching now will stop automatic entries — you must confirm each signal manually."}
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setPendingScalpMode(null)} style={{ flex: 1, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, color: T.paper, cursor: "pointer" }}>Cancel</button>
+                  <button onClick={() => { setScalpMode(pendingScalpMode); setSmartAlert(null); setPendingScalpMode(null); }} style={{ flex: 1, background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: T.ink, cursor: "pointer" }}>Switch</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       );
 
       const AccountHeader = ({ active = false }) => (
@@ -3522,7 +3557,7 @@ const SCALP_SYMBOLS = [
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
             <div style={{ textAlign: "right" }}><div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.goldBright }}>{mt5?.currency || ""} {money(mt5?.balance ?? mt5?.account_balance ?? mt5?.equity ?? 0)}</div><div style={{ fontSize: 11.5, color: T.muted }}>{active && perf ? `${(Number(perf.total_profit) || 0) >= 0 ? "+" : ""}${money(perf.total_profit)} P&L` : "Balance"}</div></div>
-            <button onClick={disconnect} aria-label="Disconnect MT5" title="Disconnect MT5" style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "transparent", color: T.muted, border: `1px solid ${T.cardBorder}`, cursor: "pointer", transition: "all 0.2s" }}><LogOut size={16} /></button>
+            <button onClick={() => setShowDisconnectConfirm(true)} aria-label="Disconnect MT5" title="Disconnect MT5" style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "transparent", color: T.muted, border: `1px solid ${T.cardBorder}`, cursor: "pointer", transition: "all 0.2s" }}><LogOut size={16} /></button>
           </div>
         </div>
       );
@@ -3664,6 +3699,19 @@ const SCALP_SYMBOLS = [
           <BlurGate unlocked={unlocked} requiredLabel="Monthly" onSubscribe={onSubscribe} minHeight={440}>
             {phase === "loading" ? <div style={{ textAlign: "center", padding: 40, color: T.muted, fontSize: 15 }}>Loading…</div> : phase === "setup" ? PhaseSetup() : phase === "pending" ? PhasePending() : phase === "connected" ? PhaseConnected() : phase === "active" ? PhaseActive() : PhaseSetup()}
           </BlurGate>
+          {/* Disconnect confirmation modal */}
+          {showDisconnectConfirm && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+              <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 20, padding: "24px 20px", maxWidth: 340, width: "100%" }}>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.paper, marginBottom: 8 }}>Disconnect MT5?</div>
+                <div style={{ fontSize: 13.5, color: T.muted, lineHeight: 1.6, marginBottom: 20 }}>This will stop scalping and remove your MT5 connection from this device. Open trades on your broker are not affected.</div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setShowDisconnectConfirm(false)} style={{ flex: 1, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, color: T.paper, cursor: "pointer" }}>Cancel</button>
+                  <button onClick={() => { setShowDisconnectConfirm(false); disconnect(); }} style={{ flex: 1, background: "#E53935", border: "none", borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: "#fff", cursor: "pointer" }}>Disconnect</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
