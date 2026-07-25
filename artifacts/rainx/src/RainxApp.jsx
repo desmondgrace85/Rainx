@@ -3222,7 +3222,8 @@ const SCALP_SYMBOLS = [
     }, [mt5UserId, loadTrades, loadPerf]);
 
     useEffect(() => {
-      if (!unlocked || !mt5UserId) return;
+      if (!unlocked) { setPhase("setup"); return; }
+      if (!mt5UserId) { setPhase("setup"); return; }
       loadAccount();
       const pa = setInterval(loadAccount, 30_000);
       return () => { clearInterval(pa); };
