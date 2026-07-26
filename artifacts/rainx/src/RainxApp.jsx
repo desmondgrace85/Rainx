@@ -3317,7 +3317,7 @@ const SCALP_SYMBOLS = [
         fetch("/api/mt5/scalping/execute", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ user_id: mt5UserId, symbol: top.asset, direction: top.direction, confidence: signalConfidence(top) }),
+          body: JSON.stringify({ user_id: mt5UserId, symbol: top.asset, direction: top.direction, confidence: signalConfidence(top), mode: "quick" }),
         }).then(async (r) => {
           if (!r.ok) {
             const d = await r.json().catch(() => ({}));
