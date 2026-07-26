@@ -3374,16 +3374,20 @@ const SCALP_SYMBOLS = [
           }
           await loadAccount(uid);
         } else {
+          // EA Desktop mode — create account record, return api_key for EA installation
           try {
-            const r = await fetch("/api/mt5/connect", {
-              method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ account_mode: mode }),
+            const r = await fetch("/api/mt5/connect/ea", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ mt5_login: uid || "", account_mode: mode }),
             });
             if (!r.ok) throw new Error(`Error ${r.status}`);
             const d = await r.json();
             setApiKey(d.api_key);
-            if (uid) { setMt5UserId(uid); lsSet("rainx-mt5-uid", uid); }
+            const resolvedUid = d.user_id || uid;
+            if (resolvedUid) { setMt5UserId(resolvedUid); lsSet("rainx-mt5-uid", resolvedUid); }
             setPhase("pending");
-          } catch (e) { setErr(e.message || "Unable to create connection"); }
+          } catch (e) { setErr(e.message || "Unable to create EA connection"); }
         }
         setBusy(false);
       };
@@ -3656,9 +3660,49 @@ const SCALP_SYMBOLS = [
 
       const PhasePending = () => (
         <div>
-          <div style={{ background: `${T.gold}14`, border: `1px solid ${T.gold}55`, borderRadius: 14, padding: "14px 16px", marginBottom: 16, textAlign: "center" }}><Activity size={20} color={T.goldBright} /><div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright, margin: "6px 0 4px" }}>Waiting for MT5 connection</div><div style={{ fontSize: 13.5, color: T.muted, lineHeight: 1.6 }}>Install the Expert Advisor in MetaTrader 5 to complete setup. This page checks automatically every 30 seconds.</div></div>
-          {apiKey && <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}><div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginBottom: 10 }}>Your API Key</div><div style={{ display: "flex", alignItems: "center", gap: 8, background: T.ink, borderRadius: 9, padding: "10px 12px" }}><div style={{ flex: 1, fontFamily: "monospace", fontSize: 13, color: T.gold, wordBreak: "break-all" }}>{showKey ? apiKey : "●".repeat(Math.min(apiKey.length, 36))}</div><button onClick={() => setShowKey(v => !v)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}>{showKey ? <EyeOff size={16} /> : <Eye size={16} />}</button><button onClick={() => navigator.clipboard?.writeText(apiKey)} style={{ background: "none", border: "none", color: T.gold, cursor: "pointer", fontSize: 12.5, fontFamily: FONT_BODY }}>Copy</button></div></div>}
-          <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}><div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginBottom: 10 }}>EA Installation Steps</div>{["Get the EA file from the Raina AI Telegram bot", "In MT5, open the data folder and place the EA in MQL5/Experts", "Restart MT5 and drag RainaAI EA onto any chart", "Paste the API key into the EA settings", "Enable Auto Trading in MT5", "Keep MT5 open on a PC or VPS"].map((step, i) => <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "flex-start" }}><span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.gold, minWidth: 16 }}>{i + 1}.</span><span style={{ fontSize: 13.5, color: T.paper, lineHeight: 1.6 }}>{step}</span></div>)}</div>
+          <div style={{ background: `${T.gold}14`, border: `1px solid ${T.gold}55`, borderRadius: 14, padding: "14px 16px", marginBottom: 16, textAlign: "center" }}>
+            <Activity size={20} color={T.goldBright} />
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright, margin: "6px 0 4px" }}>Waiting for MT5 connection</div>
+            <div style={{ fontSize: 13.5, color: T.muted, lineHeight: 1.6 }}>Install the Expert Advisor in MetaTrader 5 to complete setup. This page checks automatically every 30 seconds.</div>
+          </div>
+
+          {apiKey && (
+            <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginBottom: 10 }}>Your API Key</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: T.ink, borderRadius: 9, padding: "10px 12px", marginBottom: 12 }}>
+                <div style={{ flex: 1, fontFamily: "monospace", fontSize: 13, color: T.gold, wordBreak: "break-all" }}>{showKey ? apiKey : "●".repeat(Math.min(apiKey.length, 36))}</div>
+                <button onClick={() => setShowKey(v => !v)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}>{showKey ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+                <button onClick={() => navigator.clipboard?.writeText(apiKey)} style={{ background: "none", border: "none", color: T.gold, cursor: "pointer", fontSize: 12.5, fontFamily: FONT_BODY }}>Copy</button>
+              </div>
+              {mt5UserId && (
+                <a
+                  href={`/api/mt5/ea/download/${mt5UserId}`}
+                  download={`RainX_Scalper.mq5`}
+                  style={{ display: "block", width: "100%", background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 10, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, cursor: "pointer", textAlign: "center", textDecoration: "none", boxSizing: "border-box" }}
+                >
+                  ⬇ Download EA File (.mq5)
+                </a>
+              )}
+            </div>
+          )}
+
+          <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginBottom: 10 }}>EA Installation Steps</div>
+            {[
+              "Download the EA file above (it has your API key pre-filled)",
+              "In MT5 → File → Open Data Folder → MQL5 → Experts",
+              "Copy RainX_Scalper.mq5 into the Experts folder",
+              "Restart MT5 — the EA appears in your Navigator panel",
+              "Drag it onto any chart (currency pair doesn't matter)",
+              "MT5 → Tools → Options → Expert Advisors → tick 'Allow WebRequests' → add: raina-ai-production-b247.up.railway.app",
+              "Click ▶ Auto Trading and keep MT5 open (PC or VPS)",
+            ].map((step, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "flex-start" }}>
+                <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.gold, minWidth: 18 }}>{i + 1}.</span>
+                <span style={{ fontSize: 13, color: T.paper, lineHeight: 1.65 }}>{step}</span>
+              </div>
+            ))}
+          </div>
           {Disclaimer()}
         </div>
       );
