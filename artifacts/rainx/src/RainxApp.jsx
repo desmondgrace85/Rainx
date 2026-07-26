@@ -3582,40 +3582,255 @@ const SCALP_SYMBOLS = [
         </>
       );
 
-      const AccountHeader = ({ active = false }) => {
-        const bal = mt5?.balance ?? mt5?.account_balance ?? mt5?.equity ?? 0;
-        const currency = mt5?.currency || rSettings?.account_currency || "";
-        const balanceZero = !bal || Number(bal) === 0;
+      // ── SparkLine: decorative direction-aware SVG chart ──
+      const SparkLine = ({ direction = "HOLD", width = 120, height = 44 }) => {
+        const pts = direction === "BUY"
+          ? [0.78, 0.72, 0.68, 0.60, 0.55, 0.42, 0.38, 0.28, 0.20, 0.12]
+          : direction === "SELL"
+          ? [0.18, 0.22, 0.28, 0.24, 0.38, 0.42, 0.36, 0.52, 0.62, 0.76]
+          : [0.52, 0.45, 0.55, 0.48, 0.52, 0.46, 0.54, 0.50, 0.46, 0.52];
+        const col = direction === "BUY" ? T.sage : direction === "SELL" ? T.rust : T.muted;
+        const step = width / (pts.length - 1);
+        const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${(i * step).toFixed(1)},${(p * height).toFixed(1)}`).join(" ");
+        const fillPath = linePath + ` L${width},${height} L0,${height} Z`;
+        const uid = `sp-${direction}-${width}`;
         return (
-          <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "13px 14px", marginBottom: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 7, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.paper }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: active ? T.sage : T.gold, display: "inline-block" }} />{active ? "Scalping active" : "MT5 connected"}</div>
-                <div style={{ fontSize: 12.5, color: T.muted, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{mt5?.broker_name || "Broker"} · {(mt5?.account_mode || "demo").toUpperCase()} · #{mt5?.account_number || "—"}</div>
+          <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ display: "block", overflow: "visible" }}>
+            <defs>
+              <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={col} stopOpacity="0.25" />
+                <stop offset="100%" stopColor={col} stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
+            <path d={fillPath} fill={`url(#${uid})`} />
+            <path d={linePath} fill="none" stroke={col} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        );
+      };
+
+      // ── HeroCard: large top card ──
+      const HeroCard = ({ active }) => {
+        const topSig = signals.length > 0 ? getTopSignal(signals) : null;
+        const direction = topSig?.direction || null;
+        const confidence = topSig ? signalConfidence(topSig) : 0;
+        const bal = mt5?.balance ?? mt5?.account_balance ?? mt5?.equity ?? 0;
+        const currency = mt5?.currency || rSettings?.account_currency || "USD";
+        const pnl = Number(perf?.total_profit) || 0;
+        const pnlPositive = pnl >= 0;
+        const balanceZero = !bal || Number(bal) === 0;
+        const isBuy = direction === "BUY";
+        const isSell = direction === "SELL";
+        const dirCol = isBuy ? T.sage : isSell ? T.rust : T.muted;
+        return (
+          <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 22, padding: "16px 16px 14px", marginBottom: 12, overflow: "hidden" }}>
+            {/* Status + broker row */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: active ? T.sage : T.gold, display: "inline-block", boxShadow: active ? `0 0 6px ${T.sage}88` : "none" }} />
+                <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: active ? T.sage : T.gold }}>{active ? "Scalping Active" : "MT5 Connected"}</span>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
+              <button onClick={() => setShowDisconnectConfirm(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                <Activity size={13} color={T.gold} />
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.goldBright }}>{currency} {money(bal)}</div>
-                  <div style={{ fontSize: 11.5, color: T.muted }}>{active && perf ? `${(Number(perf.total_profit) || 0) >= 0 ? "+" : ""}${money(perf.total_profit)} P&L` : "Balance"}</div>
+                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: T.goldBright }}>{mt5?.broker_name || "Broker"}</div>
+                  <div style={{ fontSize: 10.5, color: T.muted }}>{(mt5?.account_mode || "demo").toUpperCase()} · #{mt5?.account_number || "—"}</div>
                 </div>
-                <button onClick={() => setShowDisconnectConfirm(true)} aria-label="Disconnect MT5" title="Disconnect MT5" style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "transparent", color: T.muted, border: `1px solid ${T.cardBorder}`, cursor: "pointer", transition: "all 0.2s" }}><LogOut size={16} /></button>
+              </button>
+            </div>
+
+            {/* Main row: left (symbol + direction + chart) | divider | right (balance + P&L) */}
+            <div style={{ display: "flex", gap: 14, alignItems: "stretch" }}>
+              {/* Left */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+                  <span style={{ fontFamily: FONT_HEAD, fontWeight: 900, fontSize: 22, color: T.paper, letterSpacing: -0.5 }}>{selectedSymbol || "—"}</span>
+                  <span style={{ color: T.gold, fontSize: 15 }}>★</span>
+                </div>
+                {direction ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <span style={{ background: `${dirCol}22`, border: `1px solid ${dirCol}66`, borderRadius: 8, padding: "4px 10px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: dirCol }}>
+                      {direction}{isBuy ? " ↗" : isSell ? " ↘" : ""}
+                    </span>
+                    <div>
+                      <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright }}>{confidence}%</span>
+                      <span style={{ fontSize: 10.5, color: T.muted, marginLeft: 3 }}>Confidence</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: T.muted, marginBottom: 6 }}>{active ? "Monitoring markets…" : "Start scalping to see signals"}</div>
+                )}
+                <div style={{ borderRadius: 10, overflow: "hidden", marginTop: 6 }}>
+                  <SparkLine direction={direction || "HOLD"} width={130} height={46} />
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div style={{ width: 1, background: T.cardBorder, alignSelf: "stretch", flexShrink: 0 }} />
+
+              {/* Right: balance + P&L */}
+              <div style={{ flexShrink: 0, minWidth: 110, display: "flex", flexDirection: "column", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 10.5, color: T.muted, marginBottom: 2 }}>Balance</div>
+                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 900, fontSize: 20, color: T.paper, lineHeight: 1 }}>{money(bal)}</div>
+                  <div style={{ fontSize: 10.5, color: T.muted, marginTop: 2 }}>{currency}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10.5, color: T.muted, marginBottom: 2 }}>P&amp;L Today</div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                    <div>
+                      <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: pnlPositive ? T.sage : T.rust }}>
+                        {pnlPositive ? "+" : ""}{money(pnl)}
+                      </div>
+                      <div style={{ fontSize: 10.5, color: T.muted }}>{currency}</div>
+                    </div>
+                    <button onClick={handleSyncBalance} disabled={balanceSyncing} title="Sync balance" style={{ width: 32, height: 32, borderRadius: 9, border: `1px solid ${T.cardBorder}`, background: balanceSyncing ? `${T.gold}22` : "transparent", color: balanceSyncing ? T.gold : T.muted, display: "grid", placeItems: "center", cursor: balanceSyncing ? "not-allowed" : "pointer", flexShrink: 0, transition: "all 0.2s" }}>
+                      <Activity size={15} />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
+
+            {/* Balance warning strip */}
             {balanceZero && (
-              <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", background: `${T.gold}12`, border: `1px solid ${T.gold}33`, borderRadius: 9, padding: "8px 11px" }}>
-                <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.5 }}>
-                  {balanceSyncing ? "⏳ Syncing balance from MetaAPI… check back in ~60 s" : "Balance not yet synced from your broker."}
-                </div>
+              <div style={{ marginTop: 12, background: `${T.gold}12`, border: `1px solid ${T.gold}33`, borderRadius: 9, padding: "7px 11px", fontSize: 12, color: T.muted, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span>{balanceSyncing ? "⏳ Syncing from MetaAPI…" : "Balance not yet synced."}</span>
                 {!balanceSyncing && (
-                  <button onClick={handleSyncBalance} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 7, padding: "5px 11px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, cursor: "pointer", flexShrink: 0, marginLeft: 8 }}>
-                    Sync
-                  </button>
+                  <button onClick={handleSyncBalance} style={{ background: "none", border: "none", color: T.gold, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, cursor: "pointer", padding: 0 }}>Sync now</button>
                 )}
               </div>
             )}
           </div>
         );
       };
+
+      // ── ScalpModeCards: Quick + Smart side-by-side ──
+      const ScalpModeCards = () => (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+          {[
+            { key: "quick", label: "Quick Scalping", hint: "Enters immediately", Icon: Zap },
+            { key: "smart", label: "Smart Scalping", hint: "Waits for better setup", Icon: Activity },
+          ].map(({ key, label, hint, Icon }) => {
+            const isActive = scalpMode === key;
+            return (
+              <button key={key} onClick={() => {
+                if (scalpMode === key) return;
+                if (phase === "active") { setPendingScalpMode(key); }
+                else { setScalpMode(key); setSmartAlert(null); }
+              }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, textAlign: "left", background: T.card, border: `1.5px solid ${isActive ? T.gold : T.cardBorder}`, borderRadius: 18, padding: "13px 11px 13px 12px", cursor: "pointer", transition: "all 0.2s" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 9 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 11, background: `${T.gold}20`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+                    <Icon size={18} color={T.goldBright} />
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 12.5, color: T.paper, lineHeight: 1.2 }}>{label}</div>
+                    <div style={{ fontSize: 10.5, color: T.muted, marginTop: 3, lineHeight: 1.3 }}>{hint}</div>
+                  </div>
+                </div>
+                <ChevronRight size={15} color={isActive ? T.gold : T.muted} style={{ flexShrink: 0 }} />
+              </button>
+            );
+          })}
+        </div>
+      );
+
+      // ── HotMarkets: horizontal scrollable signal cards ──
+      const HotMarkets = ({ onSeeAll }) => {
+        const defaultSyms = SCALP_SYMBOLS.flatMap(g => g.symbols).slice(0, 6);
+        const items = signals.length > 0
+          ? signals.slice(0, 6).map(sig => ({ sym: sig.asset, sig }))
+          : defaultSyms.map(sym => ({ sym, sig: null }));
+        const TAGS = ["Hot", "Strong", "Rising", "Active", "Watch", "Trending"];
+        const tagColor = (t) => t === "Hot" ? T.rust : t === "Strong" ? T.sage : T.gold;
+        return (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 16 }}>🔥</span>
+                <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.paper }}>Hot Markets</span>
+              </div>
+              <button onClick={onSeeAll} style={{ display: "flex", alignItems: "center", gap: 2, background: "none", border: "none", color: T.gold, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                See all <ChevronRight size={14} color={T.gold} />
+              </button>
+            </div>
+
+            {/* Horizontal scroll container */}
+            <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4, scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", msOverflowStyle: "none", scrollbarWidth: "none" }}>
+              {items.map(({ sym, sig }, i) => {
+                const dir = sig?.direction || null;
+                const conf = sig ? signalConfidence(sig) : 0;
+                const isBuy = dir === "BUY";
+                const isSell = dir === "SELL";
+                const dirCol = isBuy ? T.sage : isSell ? T.rust : T.gold;
+                const dirLabel = isBuy ? "BUY" : isSell ? "SELL" : "WAIT";
+                const tag = TAGS[i % TAGS.length];
+                const tagCol = tagColor(tag);
+                const SEG = 8;
+                const filled = Math.round((conf / 100) * SEG);
+                return (
+                  <div key={sym} style={{ flexShrink: 0, width: 172, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 18, padding: "13px 12px 12px", scrollSnapAlign: "start" }}>
+                    {/* Symbol + tag */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: `${T.gold}22`, border: `1.5px solid ${T.gold}55`, display: "grid", placeItems: "center", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 12, color: T.goldBright, flexShrink: 0 }}>
+                          {sym.charAt(0)}
+                        </div>
+                        <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 12, color: T.paper }}>{sym}</span>
+                      </div>
+                      {sig && <span style={{ fontSize: 10, fontWeight: 700, color: tagCol, background: `${tagCol}22`, borderRadius: 6, padding: "2px 7px", fontFamily: FONT_HEAD, flexShrink: 0 }}>{tag}</span>}
+                    </div>
+
+                    {/* Sparkline */}
+                    <div style={{ borderRadius: 8, overflow: "hidden", marginBottom: 8 }}>
+                      <SparkLine direction={dir || "HOLD"} width={148} height={48} />
+                    </div>
+
+                    {/* Direction + confidence */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 5 }}>
+                      <span style={{ fontFamily: FONT_HEAD, fontWeight: 900, fontSize: 15, color: dirCol }}>{dirLabel}</span>
+                      <div style={{ textAlign: "right" }}>
+                        <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: T.paper }}>{conf || "—"}%</span>
+                        <div style={{ fontSize: 9.5, color: T.muted, lineHeight: 1 }}>Confidence</div>
+                      </div>
+                    </div>
+
+                    {/* Segmented confidence bar */}
+                    <div style={{ display: "flex", gap: 2.5, marginBottom: 10 }}>
+                      {Array.from({ length: SEG }).map((_, j) => (
+                        <div key={j} style={{ flex: 1, height: 4, borderRadius: 99, background: j < filled ? dirCol : `${T.muted}33`, transition: "all 0.2s" }} />
+                      ))}
+                    </div>
+
+                    {/* Scalp Now */}
+                    <button
+                      onClick={() => {
+                        if (sig) { handleExecuteSignal(sig); }
+                        else { setSelectedSymbol(sym); lsSet("rainx-scalp-sym", sym); }
+                      }}
+                      disabled={busy}
+                      style={{ width: "100%", background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 10, padding: "9px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, cursor: busy ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "opacity 0.2s" }}
+                    >
+                      Scalp Now <ArrowRight size={13} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Scroll indicator dots */}
+            {items.length > 2 && (
+              <div style={{ display: "flex", justifyContent: "center", gap: 5, marginTop: 8 }}>
+                {Array.from({ length: Math.min(3, Math.ceil(items.length / 2)) }).map((_, i) => (
+                  <div key={i} style={{ width: i === 0 ? 18 : 6, height: 6, borderRadius: 99, background: i === 0 ? T.gold : `${T.muted}44` }} />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // ── [kept] AccountHeader alias used by PhaseSetup error path ──
+      const AccountHeader = ({ active = false }) => <HeroCard active={active} />;
 
       const SmartAlert = () => {
         if (!smartAlert || scalpMode !== "smart") return null;
@@ -3709,12 +3924,14 @@ const SCALP_SYMBOLS = [
 
       const PhaseConnected = () => (
         <div>
-          {AccountHeader({})}
+          <HeroCard active={false} />
+          <ScalpModeCards />
           {SymbolPicker()}
-          {ModeToggle()}
           {RiskSettings()}
-          {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 10 }}>{err}</div>}
-          <button onClick={handleToggle} disabled={busy || !selectedSymbol} style={{ width: "100%", background: selectedSymbol ? `linear-gradient(135deg,${T.gold},${T.goldBright})` : T.card, color: selectedSymbol ? T.ink : T.muted, border: selectedSymbol ? "none" : `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy || !selectedSymbol ? "not-allowed" : "pointer", marginBottom: 14, transition: "all 0.2s" }}>{busy ? "Please wait…" : selectedSymbol ? `Start ${scalpMode === "quick" ? "Quick" : "Smart"} Scalp` : "Select a market to start scalping"}</button>
+          {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 10, padding: "10px 12px", background: `${T.rust}15`, borderRadius: 9, lineHeight: 1.5 }}>{err}</div>}
+          <button onClick={handleToggle} disabled={busy || !selectedSymbol} style={{ width: "100%", background: selectedSymbol ? `linear-gradient(135deg,${T.gold},${T.goldBright})` : T.card, color: selectedSymbol ? T.ink : T.muted, border: selectedSymbol ? "none" : `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy || !selectedSymbol ? "not-allowed" : "pointer", marginBottom: 14, transition: "all 0.2s" }}>
+            {busy ? "Please wait…" : selectedSymbol ? `Start ${scalpMode === "quick" ? "Quick" : "Smart"} Scalp` : "Select a market to start scalping"}
+          </button>
           {Disclaimer()}
         </div>
       );
@@ -3723,60 +3940,79 @@ const SCALP_SYMBOLS = [
         const pnl = Number(perf?.total_profit) || 0;
         return (
           <div>
-            {AccountHeader({ active: true })}
-            {selectedSymbol ? <div style={{ background: `${T.gold}15`, border: `1px solid ${T.gold}40`, borderRadius: 11, padding: "9px 12px", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}><div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13.5, fontFamily: FONT_HEAD, fontWeight: 800, color: T.goldBright }}><Activity size={16} /> {selectedSymbol}</div><button onClick={() => { setSelectedSymbol(""); lsSet("rainx-scalp-sym", ""); }} style={{ background: "none", border: "none", color: T.muted, fontSize: 12, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 600 }}>Change</button></div> : SymbolPicker()}
-            {ModeToggle()}
+            {/* 1 — Hero card */}
+            <HeroCard active />
+
+            {/* 2 — Mode selector cards */}
+            <ScalpModeCards />
+
+            {/* 3 — Hot Markets horizontal scroll */}
+            <HotMarkets onSeeAll={() => {}} />
+
+            {/* 4 — Smart alert */}
+            {SmartAlert()}
+
+            {/* 5 — Performance stats */}
             {perf && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
-                {[
-                  { label: "Win Rate", val: `${perf.win_rate ?? 0}%`, col: T.paper },
-                  { label: "Trades", val: perf.total_trades ?? 0, col: T.paper },
-                  { label: "P&L", val: `${pnl >= 0 ? "+" : ""}${money(pnl)}`, col: pnl >= 0 ? T.sage : T.rust },
-                ].map(({ label, val, col }) => (
-                  <div key={label} style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "11px 8px", textAlign: "center" }}>
-                    <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: col }}>{val}</div>
-                    <div style={{ fontSize: 11.5, color: T.muted, marginTop: 3 }}>{label}</div>
-                  </div>
-                ))}
+              <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 18, padding: "14px 14px 12px", marginBottom: 12 }}>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, color: T.paper, marginBottom: 12 }}>Performance</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                  {[
+                    { label: "Win Rate", val: `${perf.win_rate ?? 0}%`, col: T.paper },
+                    { label: "Trades", val: perf.total_trades ?? 0, col: T.paper },
+                    { label: "P&L", val: `${pnl >= 0 ? "+" : ""}${money(pnl)}`, col: pnl >= 0 ? T.sage : T.rust },
+                  ].map(({ label, val, col }) => (
+                    <div key={label} style={{ background: `${T.ink}88`, borderRadius: 12, padding: "11px 8px", textAlign: "center" }}>
+                      <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: col }}>{val}</div>
+                      <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>{label}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+
+            {/* 6 — Open trades */}
             {trades.length > 0 && (
-              <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "12px 14px", marginBottom: 16 }}>
-                <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper, marginBottom: 10 }}>Open Trades <span style={{ color: T.muted, fontWeight: 500 }}>({trades.length})</span></div>
+              <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 18, padding: "14px", marginBottom: 12 }}>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, color: T.paper, marginBottom: 12 }}>
+                  Open Trades <span style={{ color: T.muted, fontWeight: 500 }}>({trades.length})</span>
+                </div>
                 {trades.map((trade, i) => {
                   const TradeIcon = trade.direction === "SELL" ? TrendingDown : TrendingUp;
                   return (
                     <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: i < trades.length - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                        <TradeIcon size={17} color={T.goldBright} />
+                        <div style={{ width: 32, height: 32, borderRadius: 9, background: `${T.gold}18`, display: "grid", placeItems: "center" }}>
+                          <TradeIcon size={16} color={T.goldBright} />
+                        </div>
                         <div>
-                          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper }}>{trade.asset || "—"}</div>
-                          <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{trade.direction || "—"}</div>
+                          <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>{trade.asset || "—"}</div>
+                          <div style={{ fontSize: 11.5, color: T.muted, marginTop: 1 }}>{trade.direction || "—"}</div>
                         </div>
                       </div>
-                      <div style={{ textAlign: "right", fontSize: 13, color: T.muted }}>Lot {trade.lot_size ?? "—"}</div>
+                      <div style={{ fontSize: 13, color: T.muted }}>Lot {trade.lot_size ?? "—"}</div>
                     </div>
                   );
                 })}
               </div>
             )}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 7, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, color: T.paper }}>
-                  <Activity size={16} color={T.goldBright} /> Live Signals
+
+            {/* 7 — Live Signals detail */}
+            <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 18, padding: "14px", marginBottom: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, color: T.paper }}>
+                  <Activity size={15} color={T.goldBright} /> Live Signals
                 </div>
-                <button onClick={() => loadSignals()} disabled={sigLoading} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", color: T.gold, fontSize: 13, fontFamily: FONT_HEAD, fontWeight: 700, cursor: sigLoading ? "not-allowed" : "pointer" }}>
-                  <ArrowRight size={14} style={{ transform: "rotate(-45deg)" }} /> {sigLoading ? "Loading" : "Refresh"}
+                <button onClick={() => loadSignals()} disabled={sigLoading} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: T.gold, fontSize: 12.5, fontFamily: FONT_HEAD, fontWeight: 700, cursor: sigLoading ? "not-allowed" : "pointer" }}>
+                  <ArrowRight size={13} style={{ transform: "rotate(-45deg)" }} /> {sigLoading ? "Loading…" : "Refresh"}
                 </button>
               </div>
-              {sigLoading && signals.length === 0 && <div style={{ textAlign: "center", color: T.muted, fontSize: 14, padding: 20 }}>Loading signals…</div>}
+              {sigLoading && signals.length === 0 && <div style={{ textAlign: "center", color: T.muted, fontSize: 13.5, padding: "14px 0" }}>Loading signals…</div>}
               {signals.map((sig, i) => <SignalCard key={`${signalKey(sig)}-${i}`} sig={sig} />)}
               {!sigLoading && signals.length === 0 && (
-                <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "18px 16px", textAlign: "center" }}>
+                <div style={{ textAlign: "center", padding: "8px 0" }}>
                   <Activity size={20} color={T.muted} />
-                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginTop: 8 }}>
-                    No trade setup yet
-                  </div>
+                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginTop: 8 }}>No trade setup yet</div>
                   {holdSignal ? (
                     <>
                       <div style={{ fontSize: 12.5, color: T.muted, marginTop: 8, lineHeight: 1.65, textAlign: "left", background: `${T.ink}99`, borderRadius: 9, padding: "9px 11px" }}>
@@ -3788,32 +4024,71 @@ const SCALP_SYMBOLS = [
                           {Math.round(holdSignal.confidence || 0)}% <span style={{ fontSize: 11, color: T.muted, fontWeight: 500 }}>/ 55% needed</span>
                         </div>
                       </div>
-                      <div style={{ fontSize: 12, color: T.muted, marginTop: 7, lineHeight: 1.5 }}>
-                        Signal fires when multiple indicators align. Raina AI refreshes every {scalpMode === "quick" ? "30" : "60"} seconds.
-                      </div>
                     </>
                   ) : (
-                    <div style={{ fontSize: 13, color: T.muted, marginTop: 4 }}>Raina AI is monitoring markets. Signals appear when conditions are met.</div>
+                    <div style={{ fontSize: 12.5, color: T.muted, marginTop: 5 }}>Raina AI is monitoring. Signals appear when conditions align.</div>
                   )}
                 </div>
               )}
             </div>
-            {SmartAlert()}
+
+            {/* 8 — Risk settings (collapsible) */}
             {RiskSettings()}
-            {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 10, lineHeight: 1.5 }}>{err}</div>}
-            <button onClick={handleToggle} disabled={busy} style={{ width: "100%", background: `${T.rust}18`, color: T.rust, border: `1px solid ${T.rust}55`, borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>{busy ? "Please wait…" : "Pause Scalping"}</button>
+
+            {/* 9 — Error */}
+            {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 10, padding: "10px 12px", background: `${T.rust}15`, borderRadius: 9, lineHeight: 1.5 }}>{err}</div>}
+
+            {/* 10 — Pause button */}
+            <button onClick={handleToggle} disabled={busy} style={{ width: "100%", background: `${T.rust}18`, color: T.rust, border: `1px solid ${T.rust}55`, borderRadius: 14, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
+              {busy ? "Please wait…" : "Pause Scalping"}
+            </button>
           </div>
         );
       };
 
       return (
-        <div style={{ padding: "16px 16px 90px" }}>
-          <div style={{ fontFamily: FONT_HEAD, fontSize: 20, color: T.goldBright, fontWeight: 800, marginBottom: 2 }}>Scalping</div>
-          <div style={{ fontSize: 13.5, color: T.muted, marginBottom: 16, lineHeight: 1.6 }}>Raina AI premium scalping engine with live market signals for your MT5 account.</div>
-          <BlurGate unlocked={unlocked} requiredLabel="Monthly" onSubscribe={onSubscribe} minHeight={440}>
-            {phase === "loading" ? <div style={{ textAlign: "center", padding: 40, color: T.muted, fontSize: 15 }}>Loading…</div> : phase === "setup" ? PhaseSetup() : phase === "pending" ? PhasePending() : phase === "connected" ? PhaseConnected() : phase === "active" ? PhaseActive() : PhaseSetup()}
-          </BlurGate>
-          {/* Disconnect confirmation modal */}
+        <div style={{ padding: "0 0 90px" }}>
+          {/* ── Page header ── */}
+          <div style={{ padding: "18px 16px 12px", textAlign: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+              <Zap size={18} color={T.goldBright} />
+              <span style={{ fontFamily: FONT_HEAD, fontWeight: 900, fontSize: 22, color: T.goldBright }}>RainX</span>
+            </div>
+            <div style={{ fontSize: 12, color: T.muted, marginTop: 2, fontFamily: FONT_HEAD, fontWeight: 600, letterSpacing: 0.3 }}>Scalping Engine</div>
+          </div>
+
+          {/* ── Content ── */}
+          <div style={{ padding: "0 14px" }}>
+            <BlurGate unlocked={unlocked} requiredLabel="Monthly" onSubscribe={onSubscribe} minHeight={440}>
+              {phase === "loading"
+                ? <div style={{ textAlign: "center", padding: 40, color: T.muted, fontSize: 15 }}>Loading…</div>
+                : phase === "setup"    ? PhaseSetup()
+                : phase === "pending"  ? PhasePending()
+                : phase === "connected"? PhaseConnected()
+                : phase === "active"   ? PhaseActive()
+                : PhaseSetup()}
+            </BlurGate>
+          </div>
+
+          {/* ── Mode-switch confirmation modal ── */}
+          {pendingScalpMode && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+              <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 20, padding: "24px 20px", maxWidth: 340, width: "100%" }}>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.paper, marginBottom: 8 }}>Switch to {pendingScalpMode === "quick" ? "Quick" : "Smart"} Scalp?</div>
+                <div style={{ fontSize: 13.5, color: T.muted, lineHeight: 1.6, marginBottom: 20 }}>
+                  {pendingScalpMode === "quick"
+                    ? "Quick Scalp enters trades automatically as soon as a signal fires. Switching now will change how new signals are handled — existing open trades are not affected."
+                    : "Smart Scalp alerts you before each trade so you can approve or dismiss it. Switching now will stop automatic entries — you must confirm each signal manually."}
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setPendingScalpMode(null)} style={{ flex: 1, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, color: T.paper, cursor: "pointer" }}>Cancel</button>
+                  <button onClick={() => { setScalpMode(pendingScalpMode); setSmartAlert(null); setPendingScalpMode(null); }} style={{ flex: 1, background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: T.ink, cursor: "pointer" }}>Switch</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Disconnect confirmation modal ── */}
           {showDisconnectConfirm && (
             <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
               <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 20, padding: "24px 20px", maxWidth: 340, width: "100%" }}>
