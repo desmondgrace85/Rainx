@@ -104,7 +104,7 @@ export default function LightweightChart({
         fixLeftEdge: false,
         lockVisibleTimeRangeOnResize: true,
       },
-      handleScroll:  !compact,
+      handleScroll:  compact ? false : { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
       handleScale:   !compact,
       width:  el.clientWidth  || 340,
       height: Math.max(el.clientHeight || 0, containerHeight, window.innerHeight * 0.22, 160),

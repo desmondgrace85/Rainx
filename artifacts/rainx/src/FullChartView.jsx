@@ -205,7 +205,7 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
       },
       width:  containerRef.current.clientWidth  || 400,
       height: containerRef.current.clientHeight || 500,
-      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: true },
+      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
       handleScale:  { axisPressedMouseMove: { time: true, price: true }, mouseWheel: true, pinch: true },
     });
 
@@ -495,7 +495,7 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
 
   // Analysis summary for the panel
   const aiRows = [
-    { label: "Market Structure", value: session?.steps?.find(s => s.id === "structure")?.status === "done" ? "Bullish" : "Analyzing…", color: BULL },
+    { label: "Market Structure", value: session?.steps?.find(s => s.id === "structure")?.status === "done" ? (sessionSetup?.bias === "SELL" ? "Bearish" : "Bullish") : "Analyzing…", color: sessionSetup?.bias === "SELL" ? RED : BULL },
     { label: "Trend Strength",   value: session?.steps?.find(s => s.id === "trend")?.status === "done" ? "Strong"  : "—", color: BULL },
     { label: "Key Level",        value: sessionSetup?.tp1 ? `${fmtPrice(sessionSetup.tp1)} (Target)` : "—", color: GOLD },
     { label: "Support Level",    value: sessionSetup?.stopLoss ? fmtPrice(sessionSetup.stopLoss) : "—", color: GOLD },

@@ -1227,7 +1227,10 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
         </button>
 
         {/* Banner */}
-        <div style={{ width:"100%", height:110, background:`linear-gradient(135deg,#1a160d 0%,#231d10 55%,${T.gold}28 100%)` }} />
+        {profile.cover_url
+          ? <img src={profile.cover_url} alt="" style={{ width:"100%", height:110, objectFit:"cover", display:"block" }} />
+          : <div style={{ width:"100%", height:110, background:`linear-gradient(135deg,#1a160d 0%,#231d10 55%,${T.gold}28 100%)` }} />
+        }
 
         {/* Avatar overlaps banner bottom */}
         <div style={{ position:"absolute", bottom:-48, left:14, borderRadius:"50%", border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}`, overflow:"hidden", width:92, height:92 }}>
@@ -1275,6 +1278,31 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
         </div>
         <div style={{ fontSize:13.5, color:T.muted, marginBottom:8 }}>@{handle}</div>
         {profile.bio && <div style={{ fontSize:13.5, color:T.paper, marginBottom:10, lineHeight:1.65 }}>{profile.bio}</div>}
+        {profile.location && (
+          <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:13, color:T.muted, marginBottom:8 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>{profile.location}</span>
+          </div>
+        )}
+        {profile.date_of_birth && (() => {
+          try {
+            const parts = profile.date_of_birth.split("-");
+            const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+            const dob_privacy = profile.dob_privacy || "daymonth";
+            const month = months[parseInt(parts[1],10)-1] || "";
+            const day = parseInt(parts[2],10);
+            const year = parts[0];
+            let dobText = "";
+            if (dob_privacy === "everyone") dobText = `${month} ${day}, ${year}`;
+            else if (dob_privacy === "friends" || dob_privacy === "daymonth") dobText = `${month} ${day}`;
+            return dobText ? (
+              <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:13, color:T.muted, marginBottom:8 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span>Born {dobText}</span>
+              </div>
+            ) : null;
+          } catch { return null; }
+        })()}
         {joinedLabel && (
           <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:13, color:T.muted, marginBottom:10 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>

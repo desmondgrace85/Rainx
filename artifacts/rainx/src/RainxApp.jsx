@@ -1602,7 +1602,7 @@ function MainAppContent({ account, onLogout }) {
             map[row.symbol][row.timeframe] = {
               bias: row.bias, confidence: row.confidence, entry: row.entry, stop_loss: row.stop_loss,
               take_profit_1: row.take_profit_1, take_profit_2: row.take_profit_2, risk_level: row.risk_level,
-              reason: row.reason, digits: inst.digits, name: inst.name,
+              reason: row.reason, digits: inst.digits, name: inst.name, timeframe: row.timeframe,
               timeframeLabel: TIMEFRAMES.find((t) => t.key === row.timeframe)?.label || row.timeframe,
               generatedAt: new Date(row.generated_at).getTime(), status: row.status, milestones: row.milestones || [],
             };
@@ -1746,7 +1746,7 @@ function MainAppContent({ account, onLogout }) {
 
       {(tab === "home" || tab === "markets") && <div style={{ background: T.card, borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
         {/* ── Profile avatar trigger ── */}
-        <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); goTab("more"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
+        <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
           <HeaderAvatar account={account} morePage={morePage} T={T} />
         </button>
         <div style={{ textAlign: "center" }}>
@@ -1801,6 +1801,15 @@ function MainAppContent({ account, onLogout }) {
         {tab === "more" && <MoreTabErrorBoundary><MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} /></MoreTabErrorBoundary>}
       </div>
 
+      {/* ── Profile overlay — opens over any tab when accessed from header/sidebar ── */}
+      {profileFromHeader && morePage && tab !== "more" && (
+        <div style={{ position:"fixed", inset:0, zIndex:65, background:T.ink, overflowY:"auto" }}>
+          <MoreTabErrorBoundary>
+            <MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} />
+          </MoreTabErrorBoundary>
+        </div>
+      )}
+
       {/* ── Sidebar drawer (hamburger menu) ──────────────────────────────── */}
       {showSidebar && (
         <div style={{ position:"fixed", inset:0, zIndex:80, display:"flex" }}>
@@ -1820,7 +1829,7 @@ function MainAppContent({ account, onLogout }) {
               <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.goldBright, letterSpacing:-0.3, marginBottom:2 }}>RainX</div>
               <div style={{ fontSize:10, color:T.muted, fontWeight:600 }}>Powered by Raina AI</div>
               {/* Clickable Profile */}
-              <button onClick={() => { setMorePage("profile"); goTab("more"); setShowSidebar(false); }} style={{ marginTop:18, width:"100%", display:"flex", alignItems:"center", gap:12, background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"12px 14px", cursor:"pointer", textAlign:"left" }}>
+              <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); setShowSidebar(false); }} style={{ marginTop:18, width:"100%", display:"flex", alignItems:"center", gap:12, background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"12px 14px", cursor:"pointer", textAlign:"left" }}>
                 <div style={{ width:44, height:44, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>
                   {(account?.email || "?")[0].toUpperCase()}
                 </div>
@@ -2572,7 +2581,36 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
       .catch(() => {});
     return () => { cancelled = true; };
   }, [activeSymbol, session?.symbol, activeChartTf]);
-  const chartCandles = realCandles.length ? realCandles : candles;
+
+  // Poll the candles API every 30 s so the chart keeps refreshing with new bars
+  useEffect(() => {
+    const sym = session?.symbol || activeSymbol;
+    if (!sym) return;
+    const id = setInterval(() => {
+      fetch(`${BASE_URL_H}/api/candles?symbol=${encodeURIComponent(sym)}&interval=${activeChartTf}&limit=120`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (!data) return;
+          const vals = Array.isArray(data) ? data : (data.values || []);
+          const converted = vals.slice().reverse().map(c => ({
+            t: new Date(c.datetime || c.time || 0).getTime(),
+            open: +c.open, high: +c.high, low: +c.low, close: +c.close,
+          })).filter(c => c.t > 0 && isFinite(c.open));
+          if (converted.length) setRealCandles(converted);
+        }).catch(() => {});
+    }, 30000);
+    return () => clearInterval(id);
+  }, [activeSymbol, session?.symbol, activeChartTf]);
+
+  // Merge the live price into the last candle so the chart animates in real-time
+  const chartCandles = React.useMemo(() => {
+    const base = realCandles.length ? realCandles : candles;
+    if (!base.length || !last) return base;
+    const arr = base.slice();
+    const tail = { ...arr[arr.length - 1], close: last, high: Math.max(arr[arr.length - 1].high, last), low: Math.min(arr[arr.length - 1].low, last) };
+    arr[arr.length - 1] = tail;
+    return arr;
+  }, [realCandles, candles, last]);
 
   // State label
   const stateLabel = session ? {
@@ -2799,7 +2837,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
           {/* 4-column grid */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:1, marginBottom:1 }}>
             {[
-              { label:"Bias", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:800, fontSize:13 }}>BUY ↗</span> },
+              { label:"Bias", val: <span style={{ color:session.setup.bias==="SELL"?T.rust:T.sage, fontFamily:FONT_HEAD, fontWeight:800, fontSize:13 }}>{session.setup.bias} {session.setup.bias==="SELL"?"↘":"↗"}</span> },
               { label:"Entry Zone", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11 }}>{session.setup.entryLow.toFixed(inst.digits)} – {session.setup.entryHigh.toFixed(inst.digits)}</span> },
               { label:"Take Profit 1", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12 }}>{session.setup.tp1.toFixed(inst.digits)}</span> },
               { label:"Analysis Reason", val: null, wide:true },
@@ -5070,7 +5108,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       <style>{"@keyframes slideInRight { from { transform: translateX(24px); opacity:0; } to { transform: translateX(0); opacity:1; } }"}</style>
       {/* Header */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px 8px" }}>
-        <button onClick={() => { setMorePage(null); setTab("home"); if (setProfileFromHeader) setProfileFromHeader(false); }} style={{ background:"none", border:"none", cursor:"pointer", color:T.muted, padding:4 }}>
+        <button onClick={() => { setMorePage(null); if (setProfileFromHeader) setProfileFromHeader(false); }} style={{ background:"none", border:"none", cursor:"pointer", color:T.muted, padding:4 }}>
           <X size={22} />
         </button>
         <div style={{ display:"flex", gap:14, alignItems:"center" }}>
