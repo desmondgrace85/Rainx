@@ -105,7 +105,7 @@ export default function LightweightChart({
         lockVisibleTimeRangeOnResize: true,
       },
       handleScroll:  compact ? false : { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
-      handleScale:   !compact,
+      handleScale:   compact ? false : { axisPressedMouseMove: { time: true, price: true }, mouseWheel: true, pinch: true, vertTouchDrag: true },
       width:  el.clientWidth  || 340,
       height: Math.max(el.clientHeight || 0, containerHeight, window.innerHeight * 0.22, 160),
     });

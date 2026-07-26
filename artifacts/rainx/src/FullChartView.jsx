@@ -206,7 +206,7 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
       width:  containerRef.current.clientWidth  || 400,
       height: containerRef.current.clientHeight || 500,
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
-      handleScale:  { axisPressedMouseMove: { time: true, price: true }, mouseWheel: true, pinch: true },
+      handleScale:  { axisPressedMouseMove: { time: true, price: true }, mouseWheel: true, pinch: true, vertTouchDrag: true },
     });
 
     // Candlestick series
