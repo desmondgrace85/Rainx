@@ -3208,7 +3208,12 @@ const SCALP_SYMBOLS = [
         if (!target) return;
         setSigLoading(true);
         try {
-          const r = await fetch(`/api/signals/scalp/${target}?timeframe=5m`);
+          // Quick Scalp uses the velocity/momentum endpoint — always returns BUY or SELL.
+          // Smart Scalp uses the setup-based endpoint — may return HOLD.
+          const url = scalpMode === "quick"
+            ? `/api/signals/quick/${target}`
+            : `/api/signals/scalp/${target}?timeframe=5m`;
+          const r = await fetch(url);
           if (!r.ok) throw new Error(`Signal service returned ${r.status}`);
           const d = await r.json();
           const raw = Array.isArray(d) ? d : Array.isArray(d?.signals) ? d.signals : d?.signal ? [d.signal] : d && typeof d === "object" ? [d] : [];
@@ -3216,10 +3221,10 @@ const SCALP_SYMBOLS = [
             .filter((s) => s && s.direction && s.direction !== "HOLD")
             .sort((a, b) => signalConfidence(b) - signalConfidence(a))
             .slice(0, 6);
-          // Also capture the HOLD signal so we can show why there's no setup yet
+          // Capture HOLD signal so Smart Scalp can explain why it's waiting
           const hold = raw.find((s) => s && (s.direction === "HOLD" || !s.direction));
           setSignals(actionable);
-          setHoldSignal(actionable.length === 0 ? (hold || null) : null);
+          setHoldSignal(actionable.length === 0 && scalpMode !== "quick" ? (hold || null) : null);
           setErr("");
         } catch (e) {
           setSignals([]);
@@ -3228,7 +3233,7 @@ const SCALP_SYMBOLS = [
         } finally {
           setSigLoading(false);
         }
-      }, [selectedSymbol]);
+      }, [selectedSymbol, scalpMode]);
 
       const handleSyncBalance = useCallback(async () => {
         if (!mt5UserId || balanceSyncing) return;
