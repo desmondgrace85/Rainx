@@ -1097,7 +1097,9 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
   useEffect(() => {
     (async () => {
       const { data: p } = await supabase.from("public_profiles").select("*").eq("id", userId).single();
-      setProfile(p);
+      // Fetch public fields not exposed by the view
+      const { data: extras } = await supabase.from("profiles").select("cover_url, location").eq("id", userId).single();
+      setProfile({ ...p, ...(extras || {}) });
       const { data: postRows } = await supabase.from("community_posts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
       setPosts(postRows || []);
       const { count: followers } = await supabase.from("follows").select("*", { count: "exact", head: true }).eq("followed_id", userId);
