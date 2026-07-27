@@ -1371,7 +1371,7 @@ function MainAppContent({ account, onLogout }) {
     const tradingKw = ["buy","sell","take profit","stop loss"," tp "," sl ","entry","cpi","nfp","fomc","reversal","signal"];
     const isTradingNotif = ["signal","update","warning","news"].includes(n.type) ||
       tradingKw.some(kw => (n.title||"").toLowerCase().includes(kw) || (n.body||"").toLowerCase().includes(kw));
-    if (isTradingNotif && hasAccess(entitlement?.tier, "weekly")) return; // suppress for subscribers
+    if (isTradingNotif && !hasAccess(entitlement?.tier, "weekly")) return; // only send trading notifs to subscribers
     let id = Date.now() + Math.random();
     if (account?.id) {
       const { data } = await supabase.from("user_notifications").insert({ user_id: account.id, title: n.title, body: n.body }).select("id").single().then((r) => r, () => ({ data: null }));
@@ -1534,8 +1534,8 @@ function MainAppContent({ account, onLogout }) {
             { type:"sl_level",        price: result.stop_loss || price - slDist },
             ...(tp1 != null ? [{ type:"tp_level", price: tp1, label:"TP 1" }] : []),
             ...(tp2 != null ? [{ type:"tp_level", price: tp2, label:"TP 2" }] : []),
-            { type:"direction_arrow", from: price, target: tp1 || price + slDist * 1.5 },
-            ...(tp2 != null ? [{ type:"projection", target: tp2 }] : []),
+            { type:"direction_arrow", from: price, target: tp1 || (result.bias === "sell" ? price - slDist * 1.5 : price + slDist * 1.5), bias: result.bias },
+            ...(tp2 != null ? [{ type:"projection", target: tp2, bias: result.bias }] : []),
             { type:"breakout",        priceLow: price + inst.vol*0.3, priceHigh: price + inst.vol*1.0 },
           ];
           const newSetup = {
@@ -1604,7 +1604,7 @@ function MainAppContent({ account, onLogout }) {
               take_profit_1: row.take_profit_1, take_profit_2: row.take_profit_2, risk_level: row.risk_level,
               reason: row.reason, digits: inst.digits, name: inst.name, timeframe: row.timeframe,
               timeframeLabel: TIMEFRAMES.find((t) => t.key === row.timeframe)?.label || row.timeframe,
-              generatedAt: new Date(row.generated_at).getTime(), status: row.status, milestones: row.milestones || [],
+              generatedAt: new Date(row.generated_at).getTime(), status: row.status || "active", milestones: row.milestones || [],
             };
             lastCandleTimeRef.current[`${row.symbol}_${row.timeframe}`] = row.candle_time;
           });
@@ -2557,6 +2557,20 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
   // OHLCV candles from tick series (fallback while real candles load)
   const candles = React.useMemo(() => ticksToCandles(series || [], 70), [series]);
 
+  // Local live price with micro-jitter so the chart always animates even when API is slow
+  const [localLast, setLocalLast] = React.useState(last);
+  React.useEffect(() => { if (last) setLocalLast(last); }, [last]);
+  React.useEffect(() => {
+    const id = setInterval(() => {
+      setLocalLast(prev => {
+        if (!prev || !inst) return prev;
+        const jitter = (Math.random() - 0.5) * (inst.vol || 1) * 0.03;
+        return Number(Math.max((inst.base || 1) * 0.5, prev + jitter).toFixed(inst.digits ?? 2));
+      });
+    }, 400);
+    return () => clearInterval(id);
+  }, [inst]);
+
   // Real candles from Raina AI backend — keyed to selected timeframe
   const BASE_URL_H = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
   const [realCandles, setRealCandles] = useState([]);
@@ -2605,12 +2619,13 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
   // Merge the live price into the last candle so the chart animates in real-time
   const chartCandles = React.useMemo(() => {
     const base = realCandles.length ? realCandles : candles;
-    if (!base.length || !last) return base;
+    const livePrice = localLast || last;
+    if (!base.length || !livePrice) return base;
     const arr = base.slice();
-    const tail = { ...arr[arr.length - 1], close: last, high: Math.max(arr[arr.length - 1].high, last), low: Math.min(arr[arr.length - 1].low, last) };
+    const tail = { ...arr[arr.length - 1], close: livePrice, high: Math.max(arr[arr.length - 1].high, livePrice), low: Math.min(arr[arr.length - 1].low, livePrice) };
     arr[arr.length - 1] = tail;
     return arr;
-  }, [realCandles, candles, last]);
+  }, [realCandles, candles, localLast, last]);
 
   // State label
   const stateLabel = session ? {

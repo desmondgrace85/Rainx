@@ -334,12 +334,13 @@ export default function LightweightChart({
 
         case "direction_arrow":
         case "projection":
-          // Render as a subtle gold line from last candle toward target
+          // Render as a directional line — red for sell, blue for buy
           if (o.target && bars.length) {
             const lastBar = bars[bars.length - 1];
+            const arrowColor = (o.bias === "sell" || o.bias === "SELL") ? RED_LINE : BULL_COLOR;
             try {
               const ls = chartRef.current.addLineSeries({
-                color: BULL_COLOR,
+                color: arrowColor,
                 lineWidth: 2,
                 lineStyle: LineStyle.Solid,
                 priceLineVisible: false,
@@ -363,6 +364,36 @@ export default function LightweightChart({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [overlays, candles]);
 
+  // ── Touch handlers: block vertical scroll on chart pane, allow on price scale strip ──
+  // Uses native (non-passive) listeners so preventDefault() actually works.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const PRICE_SCALE_WIDTH = 65;
+    let startX = 0, startY = 0, onScale = false;
+
+    const onStart = (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      const rect = el.getBoundingClientRect();
+      onScale = startX >= rect.right - PRICE_SCALE_WIDTH;
+    };
+    const onMove = (e) => {
+      if (onScale) return; // allow vertical drag on price scale
+      const dx = Math.abs(e.touches[0].clientX - startX);
+      const dy = Math.abs(e.touches[0].clientY - startY);
+      if (dx > dy || dy < 8) e.preventDefault(); // block page scroll while panning chart
+    };
+
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove",  onMove,  { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove",  onMove);
+    };
+  // re-attach if compact/isDark changes (chart remounts)
+  }, [compact, isDark]);
+
   return (
     <>
       <style>{`
@@ -372,7 +403,7 @@ export default function LightweightChart({
       `}</style>
       <div
         ref={containerRef}
-        style={{ width: "100%", height: containerHeight, minHeight: containerHeight, overflow: "hidden", position: "relative" }}
+        style={{ width: "100%", height: containerHeight, minHeight: containerHeight, overflow: "hidden", position: "relative", touchAction: "pan-y" }}
       />
     </>
   );
