@@ -27,6 +27,12 @@ function timeAgo(dateStr) {
   if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
   return new Date(dateStr).toLocaleDateString();
 }
+function formatCount(n) {
+  if (!n || n < 1) return "0";
+  if (n >= 1000000) return (n / 1000000).toFixed(n >= 10000000 ? 0 : 1).replace(/\.0$/, "") + "M";
+  if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, "") + "k";
+  return String(n);
+}
 function extractHashtags(text) {
   const matches = text.match(/#\w+/g) || [];
   return [...new Set(matches.map((h) => h.toLowerCase()))];
@@ -888,16 +894,16 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
 
       <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 10 }}>
         <button onClick={() => onToggleLike(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : T.muted }}>
-          <Heart size={14} strokeWidth={1.5} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5 }}>{ld.count}</span>
+          <Heart size={14} strokeWidth={1.5} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5 }}>{formatCount(post.likes_count || ld.count)}</span>
         </button>
         <button onClick={() => setShowComments((v) => !v)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: showComments ? T.gold : T.muted }}>
-          <MessageCircle size={14} strokeWidth={1.5} /> <span style={{ fontSize: 11.5 }}>{post.comment_count || ""}</span>
+          <MessageCircle size={14} strokeWidth={1.5} /> <span style={{ fontSize: 11.5 }}>{formatCount(post.comment_count || 0)}</span>
         </button>
         <button onClick={() => onToggleRepost(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: rd.repostedByMe ? T.sage : T.muted }}>
-          <Repeat2 size={14} strokeWidth={1.5} /> <span style={{ fontSize: 11.5 }}>{rd.count}</span>
+          <Repeat2 size={14} strokeWidth={1.5} /> <span style={{ fontSize: 11.5 }}>{formatCount(rd.count)}</span>
         </button>
         <button onClick={() => isOwn && onActivityOpen && onActivityOpen(post)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: isOwn ? "pointer" : "default", color: isOwn ? T.gold : T.muted }}>
-          <AnalyticsBarIcon size={14} color={isOwn ? T.gold : "rgba(120,120,120,0.7)"} /> <span style={{ fontSize: 11.5 }}>{post.views || 0}</span>
+          <AnalyticsBarIcon size={14} color={isOwn ? T.gold : "rgba(120,120,120,0.7)"} /> <span style={{ fontSize: 11.5 }}>{formatCount(post.views || 0)}</span>
         </button>
         {profile?.isPro && post.user_id !== account.id && (
           <GiftIconButton profile={profile} account={account} />
@@ -915,6 +921,9 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
 function SuggestedAccounts({ account, onOpenProfile }) {
   const [suggestions, setSuggestions] = useState(null);
   const [followingIds, setFollowingIds] = useState(new Set());
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem("rainx-suggested-dismissed") === "1"; } catch { return false; }
+  });
 
   useEffect(() => {
     (async () => {
@@ -944,11 +953,16 @@ function SuggestedAccounts({ account, onOpenProfile }) {
     setSuggestions((list) => list.filter((p) => p.id !== id));
   };
 
-  if (!suggestions || suggestions.length === 0) return null;
+  if (dismissed || !suggestions || suggestions.length === 0) return null;
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, marginBottom: 8, letterSpacing: 0.5 }}>SUGGESTED ACCOUNTS</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <div style={{ fontSize: 11, color: T.muted, fontWeight: 700, letterSpacing: 0.5 }}>SUGGESTED ACCOUNTS</div>
+        <button onClick={() => { setDismissed(true); try { localStorage.setItem("rainx-suggested-dismissed", "1"); } catch {} }} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 3, padding: "2px 6px" }}>
+          <X size={12} /> Close
+        </button>
+      </div>
       <div style={{ display: "flex", gap: 8, overflowX: "auto" }}>
         {suggestions.map((p) => (
           <div key={p.id} style={{ flexShrink: 0, width: 140, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: 12 }}>
@@ -1130,7 +1144,14 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
       const { data: extras } = await supabase.from("profiles").select("cover_url, location, full_name, username, date_of_birth, dob_privacy, education, certifications").eq("id", userId).single();
       setProfile({ ...p, ...(extras || {}) });
       const { data: postRows } = await supabase.from("community_posts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
-      setPosts(postRows || []);
+      let profilePosts = postRows || [];
+      if (profilePosts.length) {
+        const { data: allComments } = await supabase.from("post_comments").select("post_id").in("post_id", profilePosts.map(r => r.id));
+        const cCounts = {};
+        (allComments || []).forEach(c => { cCounts[c.post_id] = (cCounts[c.post_id] || 0) + 1; });
+        profilePosts = profilePosts.map(r => ({ ...r, comment_count: cCounts[r.id] || r.comment_count || 0 }));
+      }
+      setPosts(profilePosts);
       const { count: followers } = await supabase.from("follows").select("*", { count: "exact", head: true }).eq("followed_id", userId);
       const { count: following } = await supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", userId);
       setCounts({ followers: followers || 0, following: following || 0 });
@@ -1469,7 +1490,7 @@ const NOTIF_LABELS = {
   comment_like: "liked your comment.",
 };
 
-function CommunityNotifBell({ account }) {
+function CommunityNotifBell({ account, onOpenProfile }) {
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -1497,8 +1518,8 @@ function CommunityNotifBell({ account }) {
     if (unreadIds.length) await supabase.from("community_notifications").update({ read: true }).in("id", unreadIds);
   };
 
-  const filterMap = { all: () => true, likes: (n) => n.type === "like" || n.type === "comment_like", replies: (n) => n.type === "reply", mentions: (n) => n.type === "mention", reposts: (n) => n.type === "repost" };
-  const filtered = (notifs || []).filter(filterMap[filter]);
+  const filterMap = { all: () => true, likes: (n) => n.type === "like" || n.type === "comment_like", replies: (n) => n.type === "reply", mentions: (n) => n.type === "mention", reposts: (n) => n.type === "repost", followers: (n) => n.type === "follow" };
+  const filtered = (notifs || []).filter(filterMap[filter] || (() => true));
 
   return (
     <>
@@ -1507,41 +1528,43 @@ function CommunityNotifBell({ account }) {
         {unreadCount > 0 && <span style={{ position: "absolute", top: -5, right: -7, width: 9, height: 9, borderRadius: "50%", background: T.gold, border: `1px solid ${T.ink}` }} />}
       </button>
       {open && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 70 }} onClick={() => setOpen(false)}>
-          <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "88%", maxWidth: 380, background: T.card, display: "flex", flexDirection: "column", animation: "slideInPanel 0.25s ease-out" }} onClick={(e) => e.stopPropagation()}>
-            {/* Sticky header */}
-            <div style={{ flexShrink: 0, padding: "18px 18px 0" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.paper, fontWeight: 800 }}>Community Notifications</div>
-                <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><X size={20} /></button>
-              </div>
-              <button onClick={markAllRead} style={{ background: "none", border: "none", color: T.gold, fontSize: 12, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 14 }}>Mark all as read</button>
-              <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto", paddingBottom: 2 }}>
-                {["all", "likes", "replies", "mentions", "reposts"].map((f) => (
-                  <button key={f} onClick={() => setFilter(f)} style={{ flexShrink: 0, background: filter === f ? T.gold : "none", color: filter === f ? T.ink : T.muted, border: `1px solid ${filter === f ? T.gold : T.cardBorder}`, borderRadius: 20, padding: "6px 13px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", textTransform: "capitalize" }}>{f}</button>
-                ))}
-              </div>
+        <div style={{ position: "fixed", inset: 0, background: T.ink, zIndex: 70, display: "flex", flexDirection: "column", animation: "slideInPanel 0.25s ease-out" }}>
+          {/* Sticky header */}
+          <div style={{ flexShrink: 0, padding: "16px 18px 0", borderBottom: `1px solid ${T.cardBorder}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <div style={{ fontFamily: FONT_HEAD, fontSize: 18, color: T.paper, fontWeight: 800 }}>Community Notifications</div>
+              <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><X size={22} /></button>
             </div>
-            {/* Scrollable list */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "0 18px 24px" }}>
-              {filtered.length === 0 ? (
-                <div style={{ fontSize: 13, color: T.muted, paddingTop: 8 }}>Nothing here yet.</div>
-              ) : filtered.map((n) => {
-                const actor = actorsMap[n.actor_id];
-                return (
-                  <div key={n.id} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "13px 0", borderBottom: `1px solid ${T.cardBorder}` }}>
-                    <Avatar name={actor?.display_name} size={36} avatarUrl={actor?.avatar_url} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, color: T.paper, lineHeight: 1.45 }}>
-                        <strong style={{ color: T.paper }}>{actor?.display_name || "Someone"}</strong> {NOTIF_LABELS[n.type]}
-                      </div>
-                      <div style={{ fontSize: 11.5, color: T.muted, marginTop: 3 }}>{timeAgo(n.created_at)}</div>
+            <button onClick={markAllRead} style={{ background: "none", border: "none", color: T.gold, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 12 }}>Mark all as read</button>
+            <div className="hide-scroll" style={{ display: "flex", gap: 6, marginBottom: 12, overflowX: "auto", msOverflowStyle: "none", scrollbarWidth: "none" }}>
+              {["all", "likes", "replies", "mentions", "reposts", "followers"].map((f) => (
+                <button key={f} onClick={() => setFilter(f)} style={{ flexShrink: 0, background: filter === f ? T.gold : "none", color: filter === f ? T.ink : T.muted, border: `1px solid ${filter === f ? T.gold : T.cardBorder}`, borderRadius: 20, padding: "6px 13px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", textTransform: "capitalize" }}>{f}</button>
+              ))}
+            </div>
+          </div>
+          {/* Scrollable list */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "0 18px 24px" }}>
+            {filtered.length === 0 ? (
+              <div style={{ fontSize: 14, color: T.muted, paddingTop: 16 }}>Nothing here yet.</div>
+            ) : filtered.map((n) => {
+              const actor = actorsMap[n.actor_id];
+              return (
+                <div key={n.id} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "14px 0", borderBottom: `1px solid ${T.cardBorder}` }}>
+                  <button onClick={() => { if (actor?.id && onOpenProfile) { setOpen(false); onOpenProfile(actor.id); } }} style={{ background: "none", border: "none", padding: 0, cursor: actor?.id ? "pointer" : "default", flexShrink: 0 }}>
+                    <Avatar name={actor?.display_name} size={42} avatarUrl={actor?.avatar_url} />
+                  </button>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, color: T.paper, lineHeight: 1.55 }}>
+                      <button onClick={() => { if (actor?.id && onOpenProfile) { setOpen(false); onOpenProfile(actor.id); } }} style={{ background: "none", border: "none", padding: 0, cursor: actor?.id ? "pointer" : "default" }}>
+                        <strong style={{ color: T.goldBright, fontFamily: FONT_HEAD }}>{actor?.display_name || "Someone"}</strong>
+                      </button>{" "}{NOTIF_LABELS[n.type] || n.type}
                     </div>
-                    {!n.read && <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.gold, marginTop: 5, flexShrink: 0 }} />}
+                    <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>{timeAgo(n.created_at)}</div>
                   </div>
-                );
-              })}
-            </div>
+                  {!n.read && <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.gold, marginTop: 6, flexShrink: 0 }} />}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -1793,14 +1816,16 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
       const postIds = rows.map((r) => r.id);
       const { data: likes } = await supabase.from("post_likes").select("post_id, user_id").in("post_id", postIds);
       const ld = {};
-      postIds.forEach((id) => { ld[id] = { count: 0, likedByMe: false }; });
-      (likes || []).forEach((l) => { ld[l.post_id].count += 1; if (l.user_id === account.id) ld[l.post_id].likedByMe = true; });
+      const postsById = Object.fromEntries(rows.map(r => [r.id, r]));
+      // Use post.likes_count from DB as source of truth; only use post_likes rows to detect likedByMe
+      postIds.forEach((id) => { ld[id] = { count: postsById[id]?.likes_count || 0, likedByMe: false }; });
+      (likes || []).forEach((l) => { if (l.user_id === account.id && ld[l.post_id]) ld[l.post_id].likedByMe = true; });
       setLikeData(ld);
 
       const { data: reposts } = await supabase.from("post_reposts").select("post_id, user_id").in("post_id", postIds);
       const rd = {};
-      postIds.forEach((id) => { rd[id] = { count: 0, repostedByMe: false }; });
-      (reposts || []).forEach((r) => { rd[r.post_id].count += 1; if (r.user_id === account.id) rd[r.post_id].repostedByMe = true; });
+      postIds.forEach((id) => { rd[id] = { count: postsById[id]?.reposts_count || 0, repostedByMe: false }; });
+      (reposts || []).forEach((r) => { if (r.user_id === account.id && rd[r.post_id]) rd[r.post_id].repostedByMe = true; });
       setRepostData(rd);
 
       // Only count a view once per post per session - loadPosts() re-runs after
@@ -1896,7 +1921,7 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
 
       {/* Top bar: bell left, chat right, NO Community title */}
       <div style={{ display: "flex", alignItems: "center", padding: "12px 16px 0", gap: 8 }}>
-        <CommunityNotifBell account={account} />
+        <CommunityNotifBell account={account} onOpenProfile={setViewingUserId} />
         <div style={{ flex: 1, display: "flex", justifyContent: "center", gap: 0 }}>
           {/* For you / Following tabs */}
           <button onClick={() => setFeedTab("foryou")} style={{ background: "none", border: "none", cursor: "pointer", padding: "8px 16px", borderBottom: `2px solid ${feedTab==="foryou"?T.gold:"transparent"}`, color: feedTab==="foryou"?T.paper:T.muted, fontWeight: feedTab==="foryou"?700:500, fontSize: 14, transition: "color 0.15s" }}>For you</button>

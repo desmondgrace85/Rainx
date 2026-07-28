@@ -1099,7 +1099,7 @@ function MainAppContent({ account, onLogout }) {
   const seriesMapRef = useRef(seriesMap);
   seriesMapRef.current = seriesMap;
   const entitlement = useEntitlement(account.id);
-  const [morePage, setMorePage] = useState(() => { const p = lsGet("rainx-morepage"); if (p === "profile-edit") return "profile"; return ["profile-menu","profile","verification","rewards","wallet","history","scalping","analytics","settings","notifications","security"].includes(p) ? p : null; });
+  const [morePage, setMorePage] = useState(null); // don't restore stale sub-pages from localStorage on startup
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const [tab, setTab] = useState(() => { const t = lsGet("rainx-tab"); return ["home","markets","community","more"].includes(t) ? t : "home"; });
@@ -1361,7 +1361,8 @@ function MainAppContent({ account, onLogout }) {
   Object.assign(T, isDark ? DARK_TOKENS : LIGHT_TOKENS);
   useEffect(() => { document.body.style.background = T.ink; }, [isDark]);
   useEffect(() => { lsSet("rainx-tab", tab); }, [tab]);
-  useEffect(() => { if (morePage !== null) lsSet("rainx-morepage", morePage); else lsDelete("rainx-morepage"); }, [morePage]);
+  // Don't persist morePage to localStorage — restoring stale sub-pages causes "old page flicker" on load
+  // useEffect(() => { if (morePage !== null) lsSet("rainx-morepage", morePage); else lsDelete("rainx-morepage"); }, [morePage]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -1869,8 +1870,8 @@ function MainAppContent({ account, onLogout }) {
       )}
 
       {showNotifPanel && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 60, display: "flex", justifyContent: "flex-end" }}>
-          <div style={{ background: T.card, width: "88%", maxWidth: 380, height: "100%", display: "flex", flexDirection: "column" }}>
+        <div style={{ position: "fixed", inset: 0, background: T.ink, zIndex: 60, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
             {/* Header */}
             <div style={{ padding: "16px 18px 10px", borderBottom: `1px solid ${T.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
               <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.goldBright, fontWeight: 700 }}>Notifications</div>
