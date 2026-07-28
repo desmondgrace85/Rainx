@@ -165,27 +165,36 @@ async function notify(userId, actorId, type, postId) {
 }
 async function fetchProfilesMap(ids) {
   if (!ids.length) return {};
-  const { data } = await supabase.from("public_profiles").select("*").in("id", ids);
+  const [{ data: pub }, { data: priv }] = await Promise.all([
+    supabase.from("public_profiles").select("*").in("id", ids),
+    supabase.from("profiles").select("id, full_name, username").in("id", ids),
+  ]);
   const map = {};
-  (data || []).forEach((p) => { map[p.id] = p; });
+  (pub || []).forEach((p) => { map[p.id] = { ...p }; });
+  (priv || []).forEach((p) => {
+    if (map[p.id]) {
+      map[p.id].full_name = p.full_name;
+      map[p.id].username = p.username;
+    }
+  });
   return map;
 }
 
-function GoldBadge({ size = 13 }) {
+function GoldBadge({ size = 17 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" style={{ flexShrink: 0 }} title="Admin">
       <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484zm-6.616-3.334l-4.334 6.5c-.145.217-.382.334-.625.334-.143 0-.288-.04-.416-.126l-.115-.094-2.415-2.415c-.293-.293-.293-.768 0-1.06s.768-.294 1.06 0l1.77 1.767 3.825-5.74c.23-.345.696-.436 1.04-.207.346.23.44.696.21 1.04z" fill="#dcab00" />
     </svg>
   );
 }
-function BlueBadge({ size = 13 }) {
+function BlueBadge({ size = 17 }) {
   return (
     <svg width={size} height={size} viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }} title="Blue Verified">
       <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1d9bf0" />
     </svg>
   );
 }
-function GoldenBadge({ size = 13 }) {
+function GoldenBadge({ size = 17 }) {
   return (
     <svg width={size} height={size} viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }} title="Golden Verified">
       <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#E3C077" />
@@ -812,10 +821,17 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       {/* Content column */}
       <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <button onClick={() => onOpenProfile(post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: T.paper }}>{profile?.full_name || profile?.display_name || "user"}</span>
-          <Badge isAdmin={profile?.is_admin} badge={profile?.badge} isPro={profile?.isPro} />
-          <span style={{ fontSize: 11, color: T.muted }}>{timeAgo(post.created_at)}</span>
+        <button onClick={() => onOpenProfile(post.user_id)} style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "none", border: "none", cursor: "pointer", padding: 0, flex: 1 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: T.paper }}>{profile?.full_name || profile?.display_name || "user"}</span>
+              <Badge isAdmin={profile?.is_admin} badge={profile?.badge} isPro={profile?.isPro} />
+              <span style={{ fontSize: 11, color: T.muted }}>{timeAgo(post.created_at)}</span>
+            </div>
+            {(profile?.username || profile?.display_name) && (
+              <span style={{ fontSize: 11, color: T.muted }}>@{profile?.username || profile?.display_name}</span>
+            )}
+          </div>
         </button>
         <div style={{ position: "relative" }}>
           <button onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><MoreHorizontal size={16} /></button>
@@ -905,8 +921,16 @@ function SuggestedAccounts({ account, onOpenProfile }) {
       const { data: myFollows } = await supabase.from("follows").select("followed_id").eq("follower_id", account.id);
       const followedSet = new Set((myFollows || []).map((f) => f.followed_id));
       setFollowingIds(followedSet);
-      const { data } = await supabase.from("public_profiles").select("*").neq("id", account.id).order("created_at", { ascending: false }).limit(10);
-      setSuggestions((data || []).filter((p) => !followedSet.has(p.id)).slice(0, 5));
+      const { data: pub } = await supabase.from("public_profiles").select("*").neq("id", account.id).order("created_at", { ascending: false }).limit(20);
+      const filtered = (pub || []).filter((p) => !followedSet.has(p.id)).slice(0, 5);
+      if (filtered.length) {
+        const { data: priv } = await supabase.from("profiles").select("id, full_name, username").in("id", filtered.map(p => p.id));
+        const privMap = {};
+        (priv || []).forEach(p => { privMap[p.id] = p; });
+        setSuggestions(filtered.map(p => ({ ...p, full_name: privMap[p.id]?.full_name, username: privMap[p.id]?.username })));
+      } else {
+        setSuggestions([]);
+      }
     })();
   }, [account.id]);
 
@@ -929,10 +953,15 @@ function SuggestedAccounts({ account, onOpenProfile }) {
         {suggestions.map((p) => (
           <div key={p.id} style={{ flexShrink: 0, width: 140, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: 12 }}>
             <button onClick={() => onOpenProfile(p.id)} style={{ background: "none", border: "none", padding: 0, textAlign: "left", cursor: "pointer", width: "100%" }}>
-              <Avatar name={p.display_name} size={28} avatarUrl={p.avatar_url} />
-              <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: T.paper, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.display_name}</span>
-                <Badge isAdmin={p.is_admin} badge={p.badge} />
+              <Avatar name={p.full_name || p.display_name} size={28} avatarUrl={p.avatar_url} />
+              <div style={{ display: "flex", flexDirection: "column", marginTop: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: T.paper, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.full_name || p.display_name}</span>
+                  <Badge isAdmin={p.is_admin} badge={p.badge} />
+                </div>
+                {(p.username || p.display_name) && (
+                  <span style={{ fontSize: 10, color: T.muted }}>@{p.username || p.display_name}</span>
+                )}
               </div>
             </button>
             <button onClick={() => toggleFollow(p.id)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, width: "100%", marginTop: 8, background: T.gold, color: T.ink, border: "none", borderRadius: 8, padding: "6px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11, cursor: "pointer" }}>
@@ -1097,8 +1126,8 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
   useEffect(() => {
     (async () => {
       const { data: p } = await supabase.from("public_profiles").select("*").eq("id", userId).single();
-      // Fetch public fields not exposed by the view
-      const { data: extras } = await supabase.from("profiles").select("cover_url, location").eq("id", userId).single();
+      // Fetch fields not exposed by the public_profiles view
+      const { data: extras } = await supabase.from("profiles").select("cover_url, location, full_name, username, date_of_birth, dob_privacy, education, certifications").eq("id", userId).single();
       setProfile({ ...p, ...(extras || {}) });
       const { data: postRows } = await supabase.from("community_posts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
       setPosts(postRows || []);
@@ -1275,7 +1304,7 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
       {/* ── Profile info ── */}
       <div style={{ padding:"0 16px 8px" }}>
         <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:2, flexWrap:"wrap" }}>
-          <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.paper, lineHeight:1.25 }}>{profile.display_name}</span>
+          <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.paper, lineHeight:1.25 }}>{profile.full_name || profile.display_name}</span>
           <Badge isAdmin={profile.is_admin} badge={profile.badge} />
         </div>
         <div style={{ fontSize:13.5, color:T.muted, marginBottom:8 }}>@{handle}</div>
