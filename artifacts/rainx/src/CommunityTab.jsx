@@ -894,7 +894,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
 
       <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 10 }}>
         <button onClick={() => onToggleLike(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : T.muted }}>
-          <Heart size={14} strokeWidth={1.5} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5 }}>{formatCount(post.likes_count || ld.count)}</span>
+          <Heart size={14} strokeWidth={1.5} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5 }}>{formatCount(ld.count)}</span>
         </button>
         <button onClick={() => setShowComments((v) => !v)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: showComments ? T.gold : T.muted }}>
           <MessageCircle size={14} strokeWidth={1.5} /> <span style={{ fontSize: 11.5 }}>{formatCount(post.comment_count || 0)}</span>
@@ -1363,11 +1363,11 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
         )}
         <div style={{ display:"flex", gap:20, marginBottom:mutualFollowers.length > 0 ? 10 : 14 }}>
           <button onClick={() => setShowFollowList("following")} style={{ background:"none", border:"none", cursor:"pointer", padding:0, textAlign:"left" }}>
-            <strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{counts.following.toLocaleString()}</strong>
+            <strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{formatCount(counts.following)}</strong>
             <span style={{ fontSize:14, color:T.muted }}> Following</span>
           </button>
           <button onClick={() => setShowFollowList("followers")} style={{ background:"none", border:"none", cursor:"pointer", padding:0, textAlign:"left" }}>
-            <strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{counts.followers.toLocaleString()}</strong>
+            <strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{formatCount(counts.followers)}</strong>
             <span style={{ fontSize:14, color:T.muted }}> Followers</span>
           </button>
         </div>
@@ -1818,9 +1818,11 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
       const { data: likes } = await supabase.from("post_likes").select("post_id, user_id").in("post_id", postIds);
       const ld = {};
       const postsById = Object.fromEntries(rows.map(r => [r.id, r]));
-      // Use post.likes_count from DB as source of truth; only use post_likes rows to detect likedByMe
-      postIds.forEach((id) => { ld[id] = { count: postsById[id]?.likes_count || 0, likedByMe: false }; });
-      (likes || []).forEach((l) => { if (l.user_id === account.id && ld[l.post_id]) ld[l.post_id].likedByMe = true; });
+      // Count post_likes rows for likedByMe + raw count, then take max with likes_count from DB
+      // (DB likes_count is set by seed script and is accurate; post_likes query caps at 1000 rows)
+      postIds.forEach((id) => { ld[id] = { count: 0, likedByMe: false }; });
+      (likes || []).forEach((l) => { if (ld[l.post_id]) { ld[l.post_id].count += 1; if (l.user_id === account.id) ld[l.post_id].likedByMe = true; } });
+      postIds.forEach((id) => { const dbCount = postsById[id]?.likes_count || 0; if (dbCount > ld[id].count) ld[id].count = dbCount; });
       setLikeData(ld);
 
       const { data: reposts } = await supabase.from("post_reposts").select("post_id, user_id").in("post_id", postIds);

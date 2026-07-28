@@ -1099,7 +1099,7 @@ function MainAppContent({ account, onLogout }) {
   const seriesMapRef = useRef(seriesMap);
   seriesMapRef.current = seriesMap;
   const entitlement = useEntitlement(account.id);
-  const [morePage, setMorePage] = useState(null); // don't restore stale sub-pages from localStorage on startup
+  const [morePage, setMorePage] = useState(() => lsGet("rainx-morepage") || null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const [tab, setTab] = useState(() => { const t = lsGet("rainx-tab"); return ["home","markets","community","more"].includes(t) ? t : "home"; });
@@ -1361,8 +1361,7 @@ function MainAppContent({ account, onLogout }) {
   Object.assign(T, isDark ? DARK_TOKENS : LIGHT_TOKENS);
   useEffect(() => { document.body.style.background = T.ink; }, [isDark]);
   useEffect(() => { lsSet("rainx-tab", tab); }, [tab]);
-  // Don't persist morePage to localStorage — restoring stale sub-pages causes "old page flicker" on load
-  // useEffect(() => { if (morePage !== null) lsSet("rainx-morepage", morePage); else lsDelete("rainx-morepage"); }, [morePage]);
+  useEffect(() => { if (morePage !== null) lsSet("rainx-morepage", morePage); else lsDelete("rainx-morepage"); }, [morePage]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
