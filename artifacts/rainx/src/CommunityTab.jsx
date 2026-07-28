@@ -1529,6 +1529,7 @@ function CommunityNotifBell({ account, onOpenProfile }) {
       </button>
       {open && (
         <div style={{ position: "fixed", inset: 0, background: T.ink, zIndex: 70, display: "flex", flexDirection: "column", animation: "slideInPanel 0.25s ease-out" }}>
+          <style>{'.hide-scroll::-webkit-scrollbar{display:none}'}</style>
           {/* Sticky header */}
           <div style={{ flexShrink: 0, padding: "16px 18px 0", borderBottom: `1px solid ${T.cardBorder}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -1554,7 +1555,7 @@ function CommunityNotifBell({ account, onOpenProfile }) {
                     <Avatar name={actor?.display_name} size={42} avatarUrl={actor?.avatar_url} />
                   </button>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 15, color: T.paper, lineHeight: 1.55 }}>
+                    <div style={{ fontSize: 16, color: T.paper, lineHeight: 1.55 }}>
                       <button onClick={() => { if (actor?.id && onOpenProfile) { setOpen(false); onOpenProfile(actor.id); } }} style={{ background: "none", border: "none", padding: 0, cursor: actor?.id ? "pointer" : "default" }}>
                         <strong style={{ color: T.goldBright, fontFamily: FONT_HEAD }}>{actor?.display_name || "Someone"}</strong>
                       </button>{" "}{NOTIF_LABELS[n.type] || n.type}
