@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import CommunityChat from "./CommunityChat";
+
+const BASE_URL = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
 import {
   Send, Trash2, Edit3, X, BadgeCheck, Heart, Eye, MessageCircle, Repeat2, MessageSquareDashed,
   UserPlus, UserCheck, ArrowLeft, Bell, MoreHorizontal, Plus, Hash, AtSign, Flag, ChevronRight, MessageSquare,
@@ -1140,9 +1142,13 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
   useEffect(() => {
     (async () => {
       const { data: p } = await supabase.from("public_profiles").select("*").eq("id", userId).single();
-      // Fetch fields not exposed by the public_profiles view
-      const { data: extras } = await supabase.from("profiles").select("cover_url, location, full_name, username, date_of_birth, dob_privacy, education, certifications").eq("id", userId).single();
-      setProfile({ ...p, ...(extras || {}) });
+      // Fetch cover_url/location via API (uses service key to bypass RLS so any viewer can see them)
+      let extras = {};
+      try {
+        const r = await fetch(`${BASE_URL}/api/public-profile/${userId}`);
+        if (r.ok) extras = await r.json();
+      } catch (_) {}
+      setProfile({ ...p, ...extras });
       const { data: postRows } = await supabase.from("community_posts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
       let profilePosts = postRows || [];
       if (profilePosts.length) {
