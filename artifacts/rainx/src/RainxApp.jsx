@@ -1102,7 +1102,7 @@ function MainAppContent({ account, onLogout }) {
   const [morePage, setMorePage] = useState(() => lsGet("rainx-morepage") || null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const [tab, setTab] = useState(() => { const t = lsGet("rainx-tab"); return ["home","markets","community","more"].includes(t) ? t : "home"; });
+  const [tab, setTab] = useState(() => { const t = lsGet("rainx-tab"); return ["home","markets","community","more","history","scalping","subscribe"].includes(t) ? t : "home"; });
   const [profileFromHeader, setProfileFromHeader] = useState(false);
   const [communityProfileOpen, setCommunityProfileOpen] = useState(false);
 

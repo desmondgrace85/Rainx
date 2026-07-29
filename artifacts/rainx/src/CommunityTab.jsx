@@ -30,7 +30,7 @@ function timeAgo(dateStr) {
 function formatCount(n) {
   if (!n || n < 1) return "0";
   if (n >= 1000000) return (n / 1000000).toFixed(n >= 10000000 ? 0 : 1).replace(/\.0$/, "") + "M";
-  if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, "") + "k";
+  if (n >= 1000) return (n / 1000).toFixed(n >= 100000 ? 0 : 1).replace(/\.0$/, "") + "k";
   return String(n);
 }
 function extractHashtags(text) {
@@ -1111,7 +1111,7 @@ function FollowListModal({ userId, type, onClose, onOpenProfile }) {
                 style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"10px 0", background:"none", border:"none", cursor:"pointer", borderBottom:`1px solid ${T.cardBorder}`, textAlign:"left" }}>
                 <Avatar name={p?.display_name} size={36} avatarUrl={p?.avatar_url} />
                 <div>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper }}>{p?.display_name || "user"}</div>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper }}>{p?.display_name || p?.full_name || p?.username || "user"}</div>
                   {p?.bio && <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>{p.bio.slice(0,50)}</div>}
                 </div>
                 <Badge isAdmin={p?.is_admin} badge={p?.badge} />
@@ -1420,9 +1420,12 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
     const ids = posts.map(p => p.id);
     (async () => {
       const { data: likes } = await supabase.from("post_likes").select("post_id, user_id").in("post_id", ids);
+      const postsById = Object.fromEntries(posts.map(p => [p.id, p]));
       const ld = {};
       ids.forEach(id => { ld[id] = { count: 0, likedByMe: false }; });
       (likes || []).forEach(l => { if (ld[l.post_id]) { ld[l.post_id].count += 1; if (l.user_id === account.id) ld[l.post_id].likedByMe = true; } });
+      // Use DB likes_count when it's higher (seed script sets accurate counts; post_likes caps at 1000 rows)
+      ids.forEach(id => { const dbCount = postsById[id]?.likes_count || 0; if (dbCount > ld[id].count) ld[id].count = dbCount; });
       setLikeData(ld);
 
       const { data: reposts } = await supabase.from("post_reposts").select("post_id, user_id").in("post_id", ids);
