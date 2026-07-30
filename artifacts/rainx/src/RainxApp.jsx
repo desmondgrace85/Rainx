@@ -5416,11 +5416,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               ? <img src={coverUrl} style={{ width:"100%", height:110, objectFit:"cover", display:"block" }} alt="" />
               : <div style={{ width:"100%", height:110, background:`linear-gradient(135deg,#1a160d 0%,#231d10 55%,${T.gold}28 100%)` }} />
             }
-            {/* Camera overlay on banner */}
-            <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.18)" }}>
-              <div style={{ background:"rgba(0,0,0,0.45)", borderRadius:"50%", padding:8, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <CamIcon />
-              </div>
+            {/* Camera badge — small corner icon, does not cover the photo */}
+            <div style={{ position:"absolute", bottom:8, right:8, background:"rgba(0,0,0,0.55)", borderRadius:"50%", padding:7, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" }}>
+              <CamIcon />
             </div>
           </label>
 
@@ -5432,8 +5430,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
                 ? <img src={avatarUrl} alt="avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                 : <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:32 }}>{profileInitial}</div>
               }
-              {/* Camera overlay on avatar */}
-              <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.35)", display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"50%" }}>
+              {/* Camera badge on avatar — bottom-right corner only */}
+              <div style={{ position:"absolute", bottom:2, right:2, background:"rgba(0,0,0,0.6)", borderRadius:"50%", padding:5, display:"flex", alignItems:"center", justifyContent:"center" }}>
                 <CamIcon />
               </div>
             </div>
@@ -5590,8 +5588,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               ? <img src={coverUrl} style={{ width:"100%", height:110, objectFit:"cover", display:"block" }} alt="" />
               : <div style={{ width:"100%", height:110, background:`linear-gradient(135deg,#1a160d 0%,#231d10 55%,${T.gold}28 100%)` }} />
             }
-            <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.2)" }}>
-              <div style={{ background:"rgba(0,0,0,0.5)", borderRadius:"50%", padding:9, display:"flex" }}><CamIcon /></div>
+            {/* Camera badge — small corner icon, does not cover the photo */}
+            <div style={{ position:"absolute", bottom:8, right:8, background:"rgba(0,0,0,0.55)", borderRadius:"50%", padding:7, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)" }}>
+              <CamIcon />
             </div>
           </label>
           {/* Avatar */}
@@ -5602,7 +5601,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
                 ? <img src={avatarUrl} alt="avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                 : <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:30 }}>{profileInitial}</div>
               }
-              <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.35)", display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"50%" }}><CamIcon /></div>
+              {/* Camera badge — bottom-right corner only */}
+              <div style={{ position:"absolute", bottom:2, right:2, background:"rgba(0,0,0,0.6)", borderRadius:"50%", padding:5, display:"flex", alignItems:"center", justifyContent:"center" }}><CamIcon /></div>
             </div>
           </label>
         </div>
