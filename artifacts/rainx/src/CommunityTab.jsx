@@ -1427,13 +1427,12 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
     if (!posts.length) return;
     const ids = posts.map(p => p.id);
     (async () => {
-      const { data: likes } = await supabase.from("post_likes").select("post_id, user_id").in("post_id", ids);
+      // Separate query for current user's likes only (avoids 1000-row Supabase cap with seed data)
       const postsById = Object.fromEntries(posts.map(p => [p.id, p]));
+      const { data: myLikeRows } = await supabase.from("post_likes").select("post_id").in("post_id", ids).eq("user_id", account.id);
+      const myLikedSet = new Set((myLikeRows || []).map(r => r.post_id));
       const ld = {};
-      ids.forEach(id => { ld[id] = { count: 0, likedByMe: false }; });
-      (likes || []).forEach(l => { if (ld[l.post_id]) { ld[l.post_id].count += 1; if (l.user_id === account.id) ld[l.post_id].likedByMe = true; } });
-      // Use DB likes_count when it's higher (seed script sets accurate counts; post_likes caps at 1000 rows)
-      ids.forEach(id => { const dbCount = postsById[id]?.likes_count || 0; if (dbCount > ld[id].count) ld[id].count = dbCount; });
+      ids.forEach(id => { ld[id] = { count: postsById[id]?.likes_count || 0, likedByMe: myLikedSet.has(id) }; });
       setLikeData(ld);
 
       const { data: reposts } = await supabase.from("post_reposts").select("post_id, user_id").in("post_id", ids);
@@ -1694,7 +1693,9 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
   const [profilesMap, setProfilesMap] = useState({});
   const [likeData, setLikeData] = useState({});
   const [repostData, setRepostData] = useState({});
-  const [viewingUserId, setViewingUserId] = useState(null);
+  const [viewingUserId, setViewingUserId] = useState(() => {
+    try { return localStorage.getItem("community-viewing-user") || null; } catch { return null; }
+  });
   const [hashtags, setHashtags] = useState([]);
   const [activeHashtag, setActiveHashtag] = useState(null);
   const [onlineCount, setOnlineCount] = useState(null);
@@ -1745,6 +1746,14 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, [account?.id]);
+
+  // Persist viewingUserId so page refresh returns to the same profile
+  useEffect(() => {
+    try {
+      if (viewingUserId) localStorage.setItem("community-viewing-user", viewingUserId);
+      else localStorage.removeItem("community-viewing-user");
+    } catch {}
+  }, [viewingUserId]);
 
   // Notify parent when community profile view opens/closes (for bottom nav hiding)
   useEffect(() => {
@@ -1826,14 +1835,12 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
 
     if (rows.length) {
       const postIds = rows.map((r) => r.id);
-      const { data: likes } = await supabase.from("post_likes").select("post_id, user_id").in("post_id", postIds);
-      const ld = {};
+      // Separate query for current user's likes only (avoids 1000-row Supabase cap with seed data)
       const postsById = Object.fromEntries(rows.map(r => [r.id, r]));
-      // Count post_likes rows for likedByMe + raw count, then take max with likes_count from DB
-      // (DB likes_count is set by seed script and is accurate; post_likes query caps at 1000 rows)
-      postIds.forEach((id) => { ld[id] = { count: 0, likedByMe: false }; });
-      (likes || []).forEach((l) => { if (ld[l.post_id]) { ld[l.post_id].count += 1; if (l.user_id === account.id) ld[l.post_id].likedByMe = true; } });
-      postIds.forEach((id) => { const dbCount = postsById[id]?.likes_count || 0; if (dbCount > ld[id].count) ld[id].count = dbCount; });
+      const { data: myLikeRows } = await supabase.from("post_likes").select("post_id").in("post_id", postIds).eq("user_id", account.id);
+      const myLikedSet = new Set((myLikeRows || []).map(r => r.post_id));
+      const ld = {};
+      postIds.forEach((id) => { ld[id] = { count: postsById[id]?.likes_count || 0, likedByMe: myLikedSet.has(id) }; });
       setLikeData(ld);
 
       const { data: reposts } = await supabase.from("post_reposts").select("post_id, user_id").in("post_id", postIds);
