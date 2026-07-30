@@ -1146,6 +1146,13 @@ function MainAppContent({ account, onLogout }) {
   });
   const [profileFromHeader, setProfileFromHeader] = useState(() => routeRead().flag === "h");
   const [communityProfileOpen, setCommunityProfileOpen] = useState(false);
+  // Lazy keep-alive: set to true on first visit, stays true so the tab never unmounts again
+  const [communityMounted, setCommunityMounted] = useState(false);
+  const [scalpingMounted,  setScalpingMounted]  = useState(false);
+  useEffect(() => {
+    if (tab === "community" && !communityMounted) setCommunityMounted(true);
+    if (tab === "scalping"  && !scalpingMounted)  setScalpingMounted(true);
+  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Telegram-style animated navigation ───────────────────────────────────
   const prevTabRef = useRef("home");
@@ -1826,13 +1833,18 @@ function MainAppContent({ account, onLogout }) {
         </button>
       </div>}
 
-      {/* Community and Scalping stay mounted (CSS-hidden) so they load once and open instantly */}
-      <div style={{ display: tab === "community" ? "block" : "none", paddingBottom: 78 }}>
-        <CommunityTab account={account} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />
-      </div>
-      <div style={{ display: tab === "scalping" ? "block" : "none", paddingBottom: 78 }}>
-        <ScalpingTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />
-      </div>
+      {/* Community — lazy keep-alive: mounts on first visit, never unmounts again */}
+      {communityMounted && (
+        <div style={{ display: tab === "community" ? "block" : "none", paddingBottom: 78 }}>
+          <CommunityTab account={account} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />
+        </div>
+      )}
+      {/* Scalping — lazy keep-alive: mounts on first visit, never unmounts again */}
+      {scalpingMounted && (
+        <div style={{ display: tab === "scalping" ? "block" : "none", paddingBottom: 78 }}>
+          <ScalpingTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />
+        </div>
+      )}
 
       {/* Animated tab container — key forces remount, triggering CSS slide per direction */}
       {tab !== "community" && tab !== "scalping" && (
