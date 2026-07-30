@@ -3387,7 +3387,11 @@ const SCALP_SYMBOLS = [
         const id = uid || mt5UserId;
         if (!id) return;
         try {
-          const r = await fetch(`/api/mt5/account/${id}`);
+          // Fetch account + settings in parallel to cut load time in half
+          const [r, sr] = await Promise.all([
+            fetch(`/api/mt5/account/${id}`),
+            fetch(`/api/mt5/settings/${id}`),
+          ]);
           if (r.status === 404) { setPhase("setup"); setMt5(null); return; }
           if (!r.ok) { setPhase("setup"); return; }
           const data = await r.json();
@@ -3396,7 +3400,6 @@ const SCALP_SYMBOLS = [
           const balance = accountData?.balance ?? accountData?.account_balance ?? accountData?.free_margin ?? 0;
           setMt5({ ...accountData, balance });
           if (accountData?.api_key) setApiKey(accountData.api_key);
-          const sr = await fetch(`/api/mt5/settings/${id}`);
           let settings = null;
           if (sr.ok) {
             const settingsData = await sr.json();
@@ -4930,6 +4933,7 @@ function CreatorWalletScreen({ account }) {
 
 function HeaderAvatar({ account, morePage, T }) {
   const [url, setUrl] = React.useState(null);
+  const [loaded, setLoaded] = React.useState(false);
   const [tick, setTick] = React.useState(0);
   React.useEffect(() => {
     const fn = (t) => setTick(t);
@@ -4939,8 +4943,11 @@ function HeaderAvatar({ account, morePage, T }) {
   React.useEffect(() => {
     if (!account?.id) return;
     supabase.from("public_profiles").select("avatar_url").eq("id", account.id).single()
-      .then(({ data }) => { if (data?.avatar_url) setUrl(data.avatar_url); }).catch(() => {});
+      .then(({ data }) => { if (data?.avatar_url) setUrl(data.avatar_url); setLoaded(true); })
+      .catch(() => { setLoaded(true); });
   }, [account?.id, tick]);
+  // Show neutral circle while fetching — no email-derived initial during load
+  if (!loaded) return <div style={{ width:34, height:34, borderRadius:"50%", background:T.cardBorder }} />;
   const initial = (account?.email || "?")[0].toUpperCase();
   return url
     ? <img src={url} alt="me" style={{ width:34, height:34, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} />
@@ -4955,6 +4962,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [savingProfile, setSavingProfile] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [benefits, setBenefits] = useState(DEFAULT_BENEFITS);
   const [verification, setVerification] = useState(null);
   const [showLegal, setShowLegal] = useState(false);
@@ -4998,7 +5006,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         setBio(data.bio || "");
         setAvatarUrl(data.avatar_url || null);
       }
-    });
+      setProfileLoaded(true);
+    }).catch(() => { setProfileLoaded(true); });
     supabase.from("site_content").select("value").eq("key", "more_benefits").single().then(({ data }) => {
       if (data?.value) { try { setBenefits(JSON.parse(data.value)); } catch { /* use defaults */ } }
     });
@@ -5140,7 +5149,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       <ShieldCheck size={size} color={T.muted} />
     );
 
-  const profileInitial = (username || account?.email || "?")[0]?.toUpperCase();
+  // Don't expose email as initial before profile loads — show neutral "?" until username resolves
+  const profileInitial = (username || (profileLoaded ? account?.email : null) || "?")[0]?.toUpperCase();
 
   // ---- Sub-screens ----
   // Extended profile state (load on open)
@@ -5277,7 +5287,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           : <div style={{ width:56, height:56, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
         }
         <div style={{ flex:1 }}>
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>{username || account?.email?.split("@")[0] || "User"}</div>
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>{username || (profileLoaded ? account?.email?.split("@")[0] : null) || (profileLoaded ? "User" : "…")}</div>
           {username && <div style={{ fontSize:11.5, color:T.muted, marginTop:2 }}>@{username}</div>}
         </div>
       </div>
@@ -5468,7 +5478,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         {/* ── Profile info ── */}
         <div style={{ padding:"0 16px 8px" }}>
           <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
-            <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.paper, lineHeight:1.2 }}>{fullName || username || account?.email}</span>
+            <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.paper, lineHeight:1.2 }}>{fullName || username || (profileLoaded ? account?.email : "")}</span>
             <VerifBadgeIcon size={18} />
           </div>
           {username && <div style={{ fontSize:13.5, color:T.muted, marginBottom:7 }}>@{username}</div>}

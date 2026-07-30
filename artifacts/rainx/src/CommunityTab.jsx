@@ -1230,10 +1230,30 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
 
   const toggleNotifPref = (key) => setNotifPrefs(prev => ({ ...prev, [key]: !prev[key] }));
 
-  if (!profile || posts === null) return (
-    <div style={{ padding: 24, color: T.muted, fontSize: 13, textAlign: "center" }}>Loading profile…</div>
-  );
   const isOwnProfile = userId === account.id;
+
+  if (!profile || posts === null) return (
+    <div style={{ minHeight:"100%", background:T.ink }}>
+      <style>{`@keyframes pvSlideIn{from{transform:translateX(28px);opacity:0}to{transform:translateX(0);opacity:1}} @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
+      {/* Banner + back button visible immediately — no black rectangle */}
+      <div style={{ position:"relative", animation:"pvSlideIn 0.22s ease" }}>
+        <button onClick={onBack} style={{ position:"absolute", top:12, left:12, zIndex:5, width:34, height:34, borderRadius:"50%", background:"rgba(30,30,30,0.75)", border:"none", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
+          <ArrowLeft size={17} color="#fff" />
+        </button>
+        {profile?.cover_url
+          ? <img src={profile.cover_url} alt="" style={{ width:"100%", height:110, objectFit:"cover", display:"block" }} />
+          : <div style={{ width:"100%", height:110, background:`linear-gradient(135deg,#1a160d 0%,#231d10 55%,${T.gold}28 100%)` }} />
+        }
+      </div>
+      <div style={{ height:60 }} />
+      {/* Skeleton for name / handle / bio */}
+      <div style={{ padding:"0 16px" }}>
+        <div style={{ height:22, borderRadius:6, background:T.cardBorder, width:"52%", marginBottom:9, animation:"pulse 1.4s ease-in-out infinite" }} />
+        <div style={{ height:13, borderRadius:6, background:T.cardBorder, width:"32%", marginBottom:12, animation:"pulse 1.4s ease-in-out infinite" }} />
+        <div style={{ height:12, borderRadius:6, background:T.cardBorder, width:"70%", animation:"pulse 1.4s ease-in-out infinite" }} />
+      </div>
+    </div>
+  );
 
   const joinedLabel = profile.created_at ? (() => {
     const d = new Date(profile.created_at);
@@ -1313,8 +1333,8 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
       <div style={{ position:"relative", animation:"pvSlideIn 0.22s ease" }}>
         {/* Floating back button over banner */}
         <button onClick={onBack}
-          style={{ position:"absolute", top:12, left:12, zIndex:5, width:34, height:34, borderRadius:"50%", background:"rgba(15,14,11,0.6)", border:"none", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
-          <ArrowLeft size={17} color={T.paper} />
+          style={{ position:"absolute", top:12, left:12, zIndex:5, width:34, height:34, borderRadius:"50%", background:"rgba(30,30,30,0.75)", border:"none", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
+          <ArrowLeft size={17} color="#fff" />
         </button>
 
         {/* Banner */}
@@ -1846,72 +1866,76 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
   const loadPosts = useCallback(async () => {
     setPostsLoading(true);
     const { data } = await supabase.from("community_posts").select("*").order("created_at", { ascending: false }).limit(100);
-    let rows = data || [];
+    const rows = data || [];
 
-    if (rows.length) {
-      const { data: allComments } = await supabase.from("post_comments").select("post_id").in("post_id", rows.map((r) => r.id));
-      const counts = {};
-      (allComments || []).forEach((c) => { counts[c.post_id] = (counts[c.post_id] || 0) + 1; });
-      rows = rows.map((r) => ({ ...r, comment_count: counts[r.id] || 0 }));
-    }
+    // Show posts immediately — users see content without waiting for secondary data
+    setPosts(rows);
+    setPostsLoading(false);
 
+    if (!rows.length) return;
+
+    const postIds = rows.map((r) => r.id);
+    const userIds = [...new Set(rows.map((r) => r.user_id))];
+
+    // Compute hashtags synchronously (cheap CPU work, no network)
     setHashtags((() => {
       const freq = {};
       rows.forEach((r) => extractHashtags(r.text).forEach((h) => { freq[h] = (freq[h] || 0) + 1; }));
       return Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([tag]) => tag);
     })());
 
-    const userIds = [...new Set(rows.map((r) => r.user_id))];
-    const pMap = await fetchProfilesMap(userIds);
-    if (userIds.length) {
-      const { data: subRows } = await supabase.from("subscriptions").select("user_id, status, expires_at, plan").eq("status", "active").in("user_id", userIds);
-      (subRows || []).forEach((s) => {
-        if (!pMap[s.user_id]) return;
-        const active = s.plan === "vip_lifetime" || (s.expires_at && new Date(s.expires_at) > new Date());
-        if (!active) return;
-        // Only set badge from subscriptions if the DB hasn't already set one
-        if (!pMap[s.user_id].badge) {
-          pMap[s.user_id].badge = s.plan === "biannual" ? "golden" : "blue";
-        }
-        pMap[s.user_id].isPro = true;
-      });
-    }
+    // View counting — fire-and-forget, does not block UI
+    const newlyVisible = postIds.filter((id) => !viewedPostIdsRef.current.has(id));
+    newlyVisible.forEach((id) => {
+      viewedPostIdsRef.current.add(id);
+      supabase.rpc("increment_post_views", { post_id: id }).then(() => {}, () => {});
+    });
+
+    // Load ALL secondary data in parallel — posts are already showing above
+    const [commentsResult, pMap, likesResult, repostsResult, subResult] = await Promise.all([
+      supabase.from("post_comments").select("post_id").in("post_id", postIds),
+      fetchProfilesMap(userIds),
+      supabase.from("post_likes").select("post_id, user_id").in("post_id", postIds).limit(5000),
+      supabase.from("post_reposts").select("post_id, user_id").in("post_id", postIds),
+      userIds.length
+        ? supabase.from("subscriptions").select("user_id, status, expires_at, plan").eq("status", "active").in("user_id", userIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    // Enrich profiles with subscription badges
+    (subResult?.data || []).forEach((s) => {
+      if (!pMap[s.user_id]) return;
+      const active = s.plan === "vip_lifetime" || (s.expires_at && new Date(s.expires_at) > new Date());
+      if (!active) return;
+      if (!pMap[s.user_id].badge) {
+        pMap[s.user_id].badge = s.plan === "biannual" ? "golden" : "blue";
+      }
+      pMap[s.user_id].isPro = true;
+    });
     setProfilesMap((m) => ({ ...m, ...pMap }));
-    // Set posts AFTER profilesMap is updated so PostCard never renders with a missing profile
-    setPosts(rows);
-    setPostsLoading(false);
 
-    if (rows.length) {
-      const postIds = rows.map((r) => r.id);
-      // Fetch all likes for visible posts (user_id+post_id) so we get real counts AND likedByMe in one query.
-      // Use limit(5000) to override Supabase's default 1000-row cap for posts with many likes.
-      const { data: allLikeRows } = await supabase.from("post_likes").select("post_id, user_id").in("post_id", postIds).limit(5000);
-      const likeCounts = {};
-      const myLikedSet = new Set();
-      postIds.forEach(id => { likeCounts[id] = 0; });
-      (allLikeRows || []).forEach(r => {
-        if (likeCounts.hasOwnProperty(r.post_id)) likeCounts[r.post_id]++;
-        if (r.user_id === account.id) myLikedSet.add(r.post_id);
-      });
-      const ld = {};
-      postIds.forEach((id) => { ld[id] = { count: likeCounts[id], likedByMe: myLikedSet.has(id) }; });
-      setLikeData(ld);
+    // Update comment counts in existing posts
+    const cCounts = {};
+    (commentsResult?.data || []).forEach((c) => { cCounts[c.post_id] = (cCounts[c.post_id] || 0) + 1; });
+    setPosts((prev) => prev.map((r) => ({ ...r, comment_count: cCounts[r.id] ?? r.comment_count ?? 0 })));
 
-      const { data: reposts } = await supabase.from("post_reposts").select("post_id, user_id").in("post_id", postIds);
-      const rd = {};
-      postIds.forEach((id) => { rd[id] = { count: 0, repostedByMe: false }; });
-      (reposts || []).forEach((r) => { if (rd[r.post_id]) { rd[r.post_id].count += 1; if (r.user_id === account.id) rd[r.post_id].repostedByMe = true; } });
-      setRepostData(rd);
+    // Like data
+    const likeCounts = {};
+    const myLikedSet = new Set();
+    postIds.forEach((id) => { likeCounts[id] = 0; });
+    (likesResult?.data || []).forEach((r) => {
+      if (likeCounts.hasOwnProperty(r.post_id)) likeCounts[r.post_id]++;
+      if (r.user_id === account.id) myLikedSet.add(r.post_id);
+    });
+    const ld = {};
+    postIds.forEach((id) => { ld[id] = { count: likeCounts[id], likedByMe: myLikedSet.has(id) }; });
+    setLikeData(ld);
 
-      // Only count a view once per post per session - loadPosts() re-runs after
-      // every like/comment/edit/delete to refresh the feed, so without this
-      // guard every interaction would inflate every visible post's view count.
-      const newlyVisible = postIds.filter((id) => !viewedPostIdsRef.current.has(id));
-      newlyVisible.forEach((id) => {
-        viewedPostIdsRef.current.add(id);
-        supabase.rpc("increment_post_views", { post_id: id }).then(() => {}, () => {});
-      });
-    }
+    // Repost data
+    const rd = {};
+    postIds.forEach((id) => { rd[id] = { count: 0, repostedByMe: false }; });
+    (repostsResult?.data || []).forEach((r) => { if (rd[r.post_id]) { rd[r.post_id].count += 1; if (r.user_id === account.id) rd[r.post_id].repostedByMe = true; } });
+    setRepostData(rd);
   }, [account.id]);
 
   useEffect(() => {
@@ -1936,16 +1960,25 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
   const toggleLike = async (postId, authorId) => {
     const cur = likeData[postId] || { count: 0, likedByMe: false };
     if (cur.likedByMe) {
-      const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", account.id);
-      if (error) { if (process.env.NODE_ENV !== "production") console.error("Unlike failed:", error.message); return; }
+      // Optimistic: remove like immediately so UI responds at once
       const newCount = Math.max(0, cur.count - 1);
       setLikeData((d) => ({ ...d, [postId]: { count: newCount, likedByMe: false } }));
+      const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", account.id);
+      if (error) {
+        setLikeData((d) => ({ ...d, [postId]: cur })); // roll back on failure
+        return;
+      }
       supabase.from("community_posts").update({ likes_count: newCount }).eq("id", postId).then(() => {}, () => {});
     } else {
-      const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: account.id });
-      if (error) { if (process.env.NODE_ENV !== "production") console.error("Like failed:", error.message); return; }
+      // Optimistic: add like immediately so UI responds at once
       const newCount = cur.count + 1;
       setLikeData((d) => ({ ...d, [postId]: { count: newCount, likedByMe: true } }));
+      const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: account.id });
+      if (error) {
+        if (error.code === "23505") return; // duplicate — already liked, optimistic state is correct
+        setLikeData((d) => ({ ...d, [postId]: cur })); // roll back on other errors
+        return;
+      }
       supabase.from("community_posts").update({ likes_count: newCount }).eq("id", postId).then(() => {}, () => {});
       notify(authorId, account.id, "like", postId);
     }
