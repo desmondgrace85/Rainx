@@ -2626,6 +2626,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
   const [showActivity, setShowActivity] = useState(false);
   const [showFullChart, setShowFullChart] = useState(false);
   const [activeChartTf, setActiveChartTf] = useState("15m");   // chart candle timeframe — does NOT control AI analysis duration
+  const [sigTf, setSigTf] = useState("15m");   // signal card timeframe tab
 
   // Sync dark canvas flag
   setIsDarkCanvas(T.ink === "#0F0E0B");
@@ -2865,125 +2866,112 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
         })}
       </div>
 
-      {/* ── Analysis Progress Panel ──────────────────────────────────────── */}
-      {session && (
-        <div style={{ margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, color:T.paper }}>Raina AI Analysis Progress</div>
-            <button onClick={() => {/* view full */}} style={{ background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:8, padding:"4px 10px", fontFamily:FONT_HEAD, fontSize:11, fontWeight:700, color:T.gold, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>View Full <ChevronRight size={12} /></button>
-          </div>
-          {/* ── AI status indicator — shown when analyzing but no signal yet ── */}
-          {!session.setup && session.state === "analyzing" && (
-            <div style={{ background:`${T.gold}11`, border:`1px solid ${T.gold}33`, borderRadius:10, padding:"10px 14px", marginBottom:12, display:"flex", alignItems:"center", gap:10 }}>
-              <div style={{ width:8, height:8, borderRadius:"50%", background:T.gold, flexShrink:0, animation:"pulse 1.5s infinite" }} />
+      {/* ── Signal Timeframe Tabs ───────────────────────────────────────── */}
+      <div style={{ display:"flex", gap:0, margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:4 }}>
+        {[{key:"15m",label:"15 Minute"},{key:"1h",label:"1 Hour"}].map(({key,label})=>{
+          const active = sigTf === key;
+          return (
+            <button key={key} onClick={()=>setSigTf(key)} style={{ flex:1, background:active?T.gold:"transparent", color:active?T.ink:T.muted, border:"none", borderRadius:8, padding:"9px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:"pointer", transition:"all 0.2s", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              {active && <span style={{ width:7, height:7, borderRadius:"50%", background:T.ink, display:"inline-block", flexShrink:0 }} />}
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Signal Card ──────────────────────────────────────────────────── */}
+      {(()=>{
+        const setup = session?.setup;
+        const sym = session?.symbol || activeSymbol || "—";
+        const tfLabel = sigTf === "15m" ? "15 Minute" : "1 Hour";
+        const genTime = session?.activities?.length
+          ? (session.activities[session.activities.length-1]?.time || new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"}))
+          : new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+
+        // Market closed state
+        if (!marketOpen && (activeMarkets.length > 0 || !!session)) {
+          return (
+            <div style={{ margin:"8px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"32px 20px", textAlign:"center" }}>
+              <div style={{ fontSize:34, marginBottom:10 }}>🌙</div>
+              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.paper, marginBottom:6 }}>Market is closed</div>
+              <div style={{ fontSize:12, color:T.muted, lineHeight:1.6 }}>No new signals will load until trading resumes.</div>
+            </div>
+          );
+        }
+
+        // Analyzing — no setup yet
+        if (!session || (!setup && session.state === "analyzing")) {
+          return (
+            <div style={{ margin:"8px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"28px 20px", textAlign:"center" }}>
+              <div style={{ width:8, height:8, borderRadius:"50%", background:T.gold, margin:"0 auto 12px", animation:"pulse 1.5s infinite" }} />
+              <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.gold, marginBottom:4 }}>Analyzing market…</div>
+              <div style={{ fontSize:12, color:T.muted }}>A signal will appear when a strong setup is confirmed.</div>
+            </div>
+          );
+        }
+
+        const bias = setup?.bias || "HOLD";
+        const isBuy = bias === "BUY", isSell = bias === "SELL", isHold = !isBuy && !isSell;
+        const confidence = setup?.confidence ?? 0;
+        const dotColor = isBuy ? T.sage : isSell ? T.rust : T.muted;
+        const actText = session?.activities?.[0]?.text || "";
+        const hasSlHit = actText.toLowerCase().includes("stop loss");
+        const hasTpHit = actText.toLowerCase().includes("take profit");
+        let message = null;
+        if (isHold) message = "No trade recommended right now - signals are mixed. No entry, stop loss, or take profit is being tracked for this call.";
+        else if (hasSlHit) message = "Stop Loss hit. Your capital was protected by our risk-management limits. We are analyzing the next high-probability market setup.";
+        else if (hasTpHit) message = "Take Profit hit. Well done. We are scanning for the next high-probability setup.";
+        const fmt = n => (n != null && isFinite(n)) ? Number(n).toFixed(inst?.digits ?? 2) : "—";
+        const entry = setup?.entry ?? (setup?.entryLow != null && setup?.entryHigh != null ? (setup.entryLow + setup.entryHigh) / 2 : null);
+
+        return (
+          <div style={{ margin:"8px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px" }}>
+            {/* Header: symbol + badge */}
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
               <div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.gold }}>Hold — No confirmed setup yet</div>
-                <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>Raina AI is still analyzing. A signal will appear when a strong setup is confirmed.</div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.paper }}>{sym}</div>
+                <div style={{ fontSize:11.5, color:T.muted, marginTop:3 }}>{tfLabel} signal · generated {genTime}</div>
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:6, background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, padding:"5px 10px", flexShrink:0 }}>
+                <div style={{ width:8, height:8, borderRadius:"50%", background:dotColor, flexShrink:0 }} />
+                <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, color:T.paper }}>{bias}</span>
               </div>
             </div>
-          )}
-          {/* Step row */}
-          <div style={{ display:"flex", gap:0, alignItems:"flex-start" }}>
-            {(session.steps || STEP_DEFS.map(s => ({...s, status:"pending"}))).map((step, i, arr) => {
-              const done = step.status === "done";
-              const active = step.status === "active";
-              const pending = step.status === "pending";
-              return (
-                <React.Fragment key={step.id}>
-                  <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
-                    {/* Circle */}
-                    <div style={{ width:28, height:28, borderRadius:"50%", background:done ? T.sage : active ? T.gold : T.cardBorder, border:`2px solid ${done ? T.sage : active ? T.gold : T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                      {done ? <span style={{ color:"#fff", fontSize:12, fontWeight:800 }}>✓</span>
-                        : <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:10, color:active ? T.ink : T.muted }}>{i+1}</span>}
-                    </div>
-                    <div style={{ textAlign:"center" }}>
-                      <div style={{ fontFamily:FONT_HEAD, fontSize:10, fontWeight:700, color:done ? T.paper : active ? T.gold : T.muted, lineHeight:1.3 }}>{step.label}</div>
-                      <div style={{ fontSize:9.5, color:done ? T.sage : active ? T.muted : T.cardBorder, marginTop:2 }}>{done ? step.done : active ? "In progress" : "Pending"}</div>
-                    </div>
-                  </div>
-                  {/* Connector */}
-                  {i < arr.length - 1 && (
-                    <div style={{ marginTop:13, height:2, width:12, background:done ? T.sage : T.cardBorder, flexShrink:0 }} />
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Trade Setup Card ─────────────────────────────────────────────── */}
-      {session?.setup && (
-        <div style={{ margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.paper }}>Potential Trade Setup</div>
-            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              <span style={{ background:`${T.sage}22`, color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize:10, borderRadius:6, padding:"3px 8px" }}>Watching</span>
-              <div style={{ textAlign:"right" }}>
-                <div style={{ fontSize:9, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600 }}>AI Confidence</div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.goldBright }}>{session.setup.confidence}%</div>
-              </div>
+            {/* Confidence row */}
+            <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, padding:"6px 0", borderBottom:`1px solid ${T.cardBorder}` }}>
+              <span style={{ color:T.muted }}>Confidence</span>
+              <span style={{ color:T.paper, fontWeight:700 }}>{confidence}%</span>
             </div>
-          </div>
-          {/* 4-column grid */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:1, marginBottom:1 }}>
-            {[
-              { label:"Bias", val: <span style={{ color:session.setup.bias==="SELL"?T.rust:T.sage, fontFamily:FONT_HEAD, fontWeight:800, fontSize:13 }}>{session.setup.bias} {session.setup.bias==="SELL"?"↘":"↗"}</span> },
-              { label:"Entry Zone", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11 }}>{session.setup.entryLow.toFixed(inst.digits)} – {session.setup.entryHigh.toFixed(inst.digits)}</span> },
-              { label:"Take Profit 1", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12 }}>{session.setup.tp1.toFixed(inst.digits)}</span> },
-              { label:"Analysis Reason", val: null, wide:true },
-            ].map((cell, i) => (
-              <div key={i} style={{ background:T.ink, borderRadius:8, padding:"10px 10px", border:`1px solid ${T.cardBorder}` }}>
-                <div style={{ fontSize:10, color:T.muted, fontWeight:700, fontFamily:FONT_HEAD, marginBottom:4 }}>{cell.label.toUpperCase()}</div>
-                {cell.val || <div style={{ fontSize:10, color:T.muted, lineHeight:1.5 }}>{session.setup.reason}</div>}
+            {/* Message box */}
+            {message && (
+              <div style={{ background:`${T.cardBorder}40`, border:`1px solid ${T.cardBorder}`, borderRadius:10, padding:"10px 12px", margin:"8px 0" }}>
+                <div style={{ fontSize:12.5, color:T.paper, lineHeight:1.6 }}>{message}</div>
               </div>
-            ))}
-          </div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:1, marginTop:1 }}>
-            {[
-              { label:"Risk / Reward", val: <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.paper }}>1 : {session.setup.rr}</span> },
-              { label:"Stop Loss", val: <span style={{ color:T.rust, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12 }}>{session.setup.stopLoss.toFixed(inst.digits)}</span> },
-              { label:"Take Profit 2", val: <span style={{ color:T.sage, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12 }}>{session.setup.tp2.toFixed(inst.digits)}</span> },
-              { label:"", val: null },
-            ].map((cell, i) => (
-              <div key={i} style={{ background:T.ink, borderRadius:8, padding:"10px 10px", border:`1px solid ${T.cardBorder}` }}>
-                <div style={{ fontSize:10, color:T.muted, fontWeight:700, fontFamily:FONT_HEAD, marginBottom:4 }}>{cell.label.toUpperCase()}</div>
-                {cell.val}
-              </div>
-            ))}
-          </div>
-          <div style={{ marginTop:12, fontSize:10.5, color:T.muted, lineHeight:1.6 }}>
-            Raina AI continues to monitor the market and will alert you when the setup is confirmed.
-          </div>
-        </div>
-      )}
-
-      {/* ── Activity Feed ────────────────────────────────────────────────── */}
-      {session?.activities?.length > 0 && (
-        <div style={{ margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px" }}>
-          <button onClick={() => setShowActivity(v => !v)} style={{ width:"100%", background:"none", border:"none", display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", padding:0 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, color:T.paper }}>Raina AI Activity</div>
-            <ChevronRight size={14} color={T.muted} style={{ transform: showActivity ? "rotate(90deg)" : "rotate(0)", transition:"transform 0.2s" }} />
-          </button>
-          {showActivity && (
-            <div style={{ marginTop:12 }}>
-              {session.activities.slice(0, 8).map((a, i) => (
-                <div key={i} style={{ borderBottom: i < session.activities.slice(0,8).length-1 ? `1px solid ${T.cardBorder}` : "none", padding:"8px 0" }}>
-                  <span style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, marginRight:8 }}>{a.time}</span>
-                  <span style={{ fontSize:12, color:T.paper, lineHeight:1.5 }}>{a.text}</span>
+            )}
+            {/* Trade rows — BUY / SELL only */}
+            {!isHold && setup && (
+              <>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, padding:"6px 0", borderBottom:`1px solid ${T.cardBorder}` }}>
+                  <span style={{ color:T.muted }}>Entry</span>
+                  <span style={{ color:T.paper, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{fmt(entry)}</span>
                 </div>
-              ))}
-            </div>
-          )}
-          {!showActivity && session.activities.length > 0 && (
-            <div style={{ marginTop:10, padding:"8px 0 0" }}>
-              <span style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, marginRight:8 }}>{session.activities[0].time}</span>
-              <span style={{ fontSize:12, color:T.paper }}>{session.activities[0].text}</span>
-            </div>
-          )}
-        </div>
-      )}
-
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, padding:"6px 0", borderBottom:`1px solid ${T.cardBorder}` }}>
+                  <span style={{ color:T.muted }}>Stop Loss</span>
+                  <span style={{ color:T.rust, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{fmt(setup.stopLoss)}</span>
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, padding:"6px 0", borderBottom:`1px solid ${T.cardBorder}` }}>
+                  <span style={{ color:T.muted }}>Take Profit 1</span>
+                  <span style={{ color:T.sage, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{fmt(setup.tp1)}</span>
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, padding:"6px 0" }}>
+                  <span style={{ color:T.muted }}>Take Profit 2</span>
+                  <span style={{ color:T.sage, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{fmt(setup.tp2)}</span>
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
       {/* Session complete panel */}
       {session?.state === "completed" && (
         <div style={{ margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"20px 16px", textAlign:"center" }}>
