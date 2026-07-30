@@ -334,24 +334,36 @@ export default function LightweightChart({
 
         case "direction_arrow":
         case "projection":
-          // Render as a directional line — red for sell, blue for buy
-          if (o.target && bars.length) {
-            const lastBar = bars[bars.length - 1];
-            const arrowColor = (o.bias === "sell" || o.bias === "SELL") ? RED_LINE : BULL_COLOR;
+          // Render as a shaded translucent zone (entry → target) — green for BUY, red for SELL
+          if (o.target && o.from != null && bars.length) {
+            const isBull   = !(o.bias === "sell" || o.bias === "SELL");
+            const zoneTop  = Math.max(o.from, o.target);
+            const zoneBot  = Math.min(o.from, o.target);
+            const fillRgba = isBull ? "rgba(34,197,94,0.13)"  : "rgba(239,68,68,0.13)";
+            const edgeRgba = isBull ? "rgba(34,197,94,0.40)"  : "rgba(239,68,68,0.40)";
             try {
-              const ls = chartRef.current.addLineSeries({
-                color: arrowColor,
-                lineWidth: 2,
-                lineStyle: LineStyle.Solid,
-                priceLineVisible: false,
-                lastValueVisible: false,
-                crosshairMarkerVisible: false,
+              // Filled zone across all bars
+              const hs = chartRef.current.addHistogramSeries({
+                color: fillRgba, priceLineVisible: false, lastValueVisible: false,
               });
-              const futureTime = lastBar.time + 60 * 15 * 4; // ~4 candles ahead
-              ls.setData([
-                { time: lastBar.time, value: lastBar.close },
-                { time: futureTime,   value: o.target },
-              ]);
+              hs.applyOptions({ base: zoneBot });
+              hs.setData(bars.map(b => ({ time: b.time, value: zoneTop, color: fillRgba })));
+              lineRefs.current.push(hs);
+              // Top edge dashed line
+              const tl = chartRef.current.addLineSeries({ color: edgeRgba, lineWidth: 1, lineStyle: LineStyle.Dashed, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+              tl.setData(bars.map(b => ({ time: b.time, value: zoneTop })));
+              lineRefs.current.push(tl);
+              // Bottom edge dashed line
+              const bl = chartRef.current.addLineSeries({ color: edgeRgba, lineWidth: 1, lineStyle: LineStyle.Dashed, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+              bl.setData(bars.map(b => ({ time: b.time, value: zoneBot })));
+              lineRefs.current.push(bl);
+            } catch {}
+          } else if (o.target && bars.length) {
+            // projection only (no from) — soft dotted line at TP2 level
+            const col = (o.bias === "sell" || o.bias === "SELL") ? "rgba(239,68,68,0.35)" : "rgba(34,197,94,0.35)";
+            try {
+              const ls = chartRef.current.addLineSeries({ color: col, lineWidth: 1, lineStyle: LineStyle.Dotted, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+              ls.setData(bars.map(b => ({ time: b.time, value: o.target })));
               lineRefs.current.push(ls);
             } catch {}
           }
