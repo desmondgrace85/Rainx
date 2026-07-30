@@ -3450,7 +3450,7 @@ const SCALP_SYMBOLS = [
         fetch("/api/mt5/scalping/execute", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ user_id: mt5UserId, symbol: top.asset, direction: top.direction, confidence: signalConfidence(top), mode: "quick" }),
+          body: JSON.stringify({ user_id: mt5UserId, symbol: top.asset, direction: top.direction, confidence: signalConfidence(top), mode: "quick", stop_loss: top.stop_loss ?? null, take_profit: Array.isArray(top.take_profit) ? (top.take_profit[0] ?? null) : (top.take_profit ?? null) }),
         }).then(async (r) => {
           if (!r.ok) {
             const d = await r.json().catch(() => ({}));
@@ -3560,7 +3560,7 @@ const SCALP_SYMBOLS = [
           const r = await fetch("/api/mt5/scalping/execute", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ user_id: mt5UserId, symbol: sig.asset, direction: sig.direction, confidence: signalConfidence(sig) }),
+            body: JSON.stringify({ user_id: mt5UserId, symbol: sig.asset, direction: sig.direction, confidence: signalConfidence(sig), stop_loss: sig.stop_loss ?? null, take_profit: Array.isArray(sig.take_profit) ? (sig.take_profit[0] ?? null) : (sig.take_profit ?? null) }),
           });
           if (!r.ok) {
             const d = await r.json().catch(() => ({}));
