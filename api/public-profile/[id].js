@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   if (!SERVICE_KEY) return res.status(500).json({ error: "Server misconfiguration: SUPABASE_SERVICE_KEY not set." });
 
   try {
-    const qs = `id=eq.${id}&select=id,cover_url,location,full_name,username,display_name,date_of_birth,dob_privacy`;
+    const qs = `id=eq.${id}&select=id,cover_url,location,full_name,username,display_name,date_of_birth,dob_privacy,bio,avatar_url,is_admin,badge`;
     const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?${qs}`, {
       headers: {
         apikey: SERVICE_KEY,

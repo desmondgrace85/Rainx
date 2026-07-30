@@ -1458,12 +1458,17 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
     if (!posts.length) return;
     const ids = posts.map(p => p.id);
     (async () => {
-      // Separate query for current user's likes only (avoids 1000-row Supabase cap with seed data)
-      const postsById = Object.fromEntries(posts.map(p => [p.id, p]));
-      const { data: myLikeRows } = await supabase.from("post_likes").select("post_id").in("post_id", ids).eq("user_id", account.id);
-      const myLikedSet = new Set((myLikeRows || []).map(r => r.post_id));
+      // Fetch all likes for these posts (post_id+user_id) to get real counts and likedByMe together.
+      const { data: allLikeRows } = await supabase.from("post_likes").select("post_id, user_id").in("post_id", ids).limit(5000);
+      const likeCounts = {};
+      const myLikedSet = new Set();
+      ids.forEach(id => { likeCounts[id] = 0; });
+      (allLikeRows || []).forEach(r => {
+        if (likeCounts.hasOwnProperty(r.post_id)) likeCounts[r.post_id]++;
+        if (r.user_id === account.id) myLikedSet.add(r.post_id);
+      });
       const ld = {};
-      ids.forEach(id => { ld[id] = { count: postsById[id]?.likes_count || 0, likedByMe: myLikedSet.has(id) }; });
+      ids.forEach(id => { ld[id] = { count: likeCounts[id], likedByMe: myLikedSet.has(id) }; });
       setLikeData(ld);
 
       const { data: reposts } = await supabase.from("post_reposts").select("post_id, user_id").in("post_id", ids);
@@ -1479,11 +1484,15 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
     if (cur.likedByMe) {
       const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", account.id);
       if (error) { if (process.env.NODE_ENV !== "production") console.error("Unlike failed:", error.message); return; }
-      setLikeData(d => ({ ...d, [postId]: { count: Math.max(0, cur.count - 1), likedByMe: false } }));
+      const newCount = Math.max(0, cur.count - 1);
+      setLikeData(d => ({ ...d, [postId]: { count: newCount, likedByMe: false } }));
+      supabase.from("community_posts").update({ likes_count: newCount }).eq("id", postId).then(() => {}, () => {});
     } else {
       const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: account.id });
       if (error) { if (process.env.NODE_ENV !== "production") console.error("Like failed:", error.message); return; }
-      setLikeData(d => ({ ...d, [postId]: { count: cur.count + 1, likedByMe: true } }));
+      const newCount = cur.count + 1;
+      setLikeData(d => ({ ...d, [postId]: { count: newCount, likedByMe: true } }));
+      supabase.from("community_posts").update({ likes_count: newCount }).eq("id", postId).then(() => {}, () => {});
     }
   };
 
@@ -1874,12 +1883,18 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
 
     if (rows.length) {
       const postIds = rows.map((r) => r.id);
-      // Separate query for current user's likes only (avoids 1000-row Supabase cap with seed data)
-      const postsById = Object.fromEntries(rows.map(r => [r.id, r]));
-      const { data: myLikeRows } = await supabase.from("post_likes").select("post_id").in("post_id", postIds).eq("user_id", account.id);
-      const myLikedSet = new Set((myLikeRows || []).map(r => r.post_id));
+      // Fetch all likes for visible posts (user_id+post_id) so we get real counts AND likedByMe in one query.
+      // Use limit(5000) to override Supabase's default 1000-row cap for posts with many likes.
+      const { data: allLikeRows } = await supabase.from("post_likes").select("post_id, user_id").in("post_id", postIds).limit(5000);
+      const likeCounts = {};
+      const myLikedSet = new Set();
+      postIds.forEach(id => { likeCounts[id] = 0; });
+      (allLikeRows || []).forEach(r => {
+        if (likeCounts.hasOwnProperty(r.post_id)) likeCounts[r.post_id]++;
+        if (r.user_id === account.id) myLikedSet.add(r.post_id);
+      });
       const ld = {};
-      postIds.forEach((id) => { ld[id] = { count: postsById[id]?.likes_count || 0, likedByMe: myLikedSet.has(id) }; });
+      postIds.forEach((id) => { ld[id] = { count: likeCounts[id], likedByMe: myLikedSet.has(id) }; });
       setLikeData(ld);
 
       const { data: reposts } = await supabase.from("post_reposts").select("post_id, user_id").in("post_id", postIds);
@@ -1923,11 +1938,15 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
     if (cur.likedByMe) {
       const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", account.id);
       if (error) { if (process.env.NODE_ENV !== "production") console.error("Unlike failed:", error.message); return; }
-      setLikeData((d) => ({ ...d, [postId]: { count: Math.max(0, cur.count - 1), likedByMe: false } }));
+      const newCount = Math.max(0, cur.count - 1);
+      setLikeData((d) => ({ ...d, [postId]: { count: newCount, likedByMe: false } }));
+      supabase.from("community_posts").update({ likes_count: newCount }).eq("id", postId).then(() => {}, () => {});
     } else {
       const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: account.id });
       if (error) { if (process.env.NODE_ENV !== "production") console.error("Like failed:", error.message); return; }
-      setLikeData((d) => ({ ...d, [postId]: { count: cur.count + 1, likedByMe: true } }));
+      const newCount = cur.count + 1;
+      setLikeData((d) => ({ ...d, [postId]: { count: newCount, likedByMe: true } }));
+      supabase.from("community_posts").update({ likes_count: newCount }).eq("id", postId).then(() => {}, () => {});
       notify(authorId, account.id, "like", postId);
     }
   };

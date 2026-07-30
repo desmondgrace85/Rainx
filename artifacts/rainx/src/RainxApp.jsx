@@ -1826,7 +1826,16 @@ function MainAppContent({ account, onLogout }) {
         </button>
       </div>}
 
+      {/* Community and Scalping stay mounted (CSS-hidden) so they load once and open instantly */}
+      <div style={{ display: tab === "community" ? "block" : "none", paddingBottom: 78 }}>
+        <CommunityTab account={account} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />
+      </div>
+      <div style={{ display: tab === "scalping" ? "block" : "none", paddingBottom: 78 }}>
+        <ScalpingTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />
+      </div>
+
       {/* Animated tab container — key forces remount, triggering CSS slide per direction */}
+      {tab !== "community" && tab !== "scalping" && (
       <div
         key={tab}
         className={tabDirRef.current >= 0 ? "rx-slide-right" : "rx-slide-left"}
@@ -1850,12 +1859,11 @@ function MainAppContent({ account, onLogout }) {
       >
         {tab === "home" && <HomeTab inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessions={sessions} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} seriesMap={seriesMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} />}
         {tab === "markets" && <MarketsTab seriesMap={seriesMap} signalsMap={signalsMap} activeSymbol={activeSymbol} onSelect={(s) => { setActiveSymbol(s); goTab("home", -1); }} themeMode={themeMode} />}
-        {tab === "community" && <CommunityTab account={account} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />}
         {tab === "history" && <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />}
-        {tab === "scalping" && <ScalpingTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />}
         {tab === "subscribe" && <SubscribeScreen account={account} entitlement={entitlement} onBack={() => goTab("more", -1)} />}
         {tab === "more" && <MoreTabErrorBoundary><MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} /></MoreTabErrorBoundary>}
       </div>
+      )}
 
       {/* ── Profile overlay — opens over any tab when accessed from header/sidebar ── */}
       {profileFromHeader && morePage && tab !== "more" && (
@@ -4993,37 +5001,50 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     supabase.from("profiles").update({ verification_status: expected }).eq("id", account.id).then(() => {});
   }, [account?.id, entitlement.tier]);
 
-  const compressImage = (file, maxDim = 300, quality = 0.7) => new Promise((resolve, reject) => {
+  const compressImage = (file, maxDim = 400, quality = 0.82) => new Promise((resolve, reject) => {
     const img = new Image();
-    const reader = new FileReader();
-    reader.onload = (e) => { img.src = e.target.result; };
-    reader.onerror = reject;
+    const src = URL.createObjectURL(file);
     img.onload = () => {
-      let { width, height } = img;
-      if (width > height && width > maxDim) { height *= maxDim / width; width = maxDim; }
-      else if (height > maxDim) { width *= maxDim / height; height = maxDim; }
+      let { width: w, height: h } = img;
+      if (w > maxDim || h > maxDim) {
+        if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else        { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
       const canvas = document.createElement("canvas");
-      canvas.width = width; canvas.height = height;
-      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-      canvas.toBlob((blob) => resolve(blob), "image/jpeg", quality);
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(src);
+      // Prefer WebP; fall back to JPEG if browser returns null blob
+      canvas.toBlob((blob) => {
+        if (blob) { resolve(blob); return; }
+        canvas.toBlob((jpegBlob) => resolve(jpegBlob || file), "image/jpeg", quality);
+      }, "image/webp", quality);
     };
-    img.onerror = reject;
-    reader.readAsDataURL(file);
+    img.onerror = () => { URL.revokeObjectURL(src); reject(new Error("Image load failed")); };
+    img.src = src;
   });
+
+  // Helper: detect the actual MIME type from a Blob (WebP or JPEG)
+  const blobMime = (blob) => blob?.type || "image/jpeg";
 
   const uploadAvatar = async (file) => {
     setUploadingAvatar(true);
     try {
-      const blob = await compressImage(file);
-      const path = `${account.id}/avatar.jpg`;
-      const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
-      if (upErr && upErr.statusCode !== "200" && upErr.statusCode !== "409") throw upErr;
+      const blob = await compressImage(file, 400, 0.82);
+      if (!blob) throw new Error("Image compression returned empty result");
+      const mime = blobMime(blob);
+      const ext = mime === "image/webp" ? "webp" : "jpg";
+      const path = `${account.id}/avatar.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: mime });
+      if (upErr) throw new Error("Storage upload failed: " + upErr.message);
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      if (!urlData?.publicUrl) throw new Error("Could not get public URL after upload");
       const versionedUrl = `${urlData.publicUrl}?v=${Date.now()}`;
       const { error: dbErr } = await supabase.from("profiles").update({ avatar_url: versionedUrl }).eq("id", account.id);
       if (dbErr) throw new Error("Failed to save photo: " + dbErr.message);
       setAvatarUrl(versionedUrl);
       notifyAvatarRefresh();
+      setProfileMsg("Photo updated. ✓");
     } catch (err) { setProfileMsg("Photo upload failed: " + (err?.message || "unknown")); }
     setUploadingAvatar(false);
   };
@@ -5032,11 +5053,15 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     if (!file) return;
     setUploadingCover(true);
     try {
-      const blob = await compressImage(file, 1200, 0.8);
-      const path = `${account.id}/cover.jpg`;
-      const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
-      if (upErr && upErr.statusCode !== "200" && upErr.statusCode !== "409") throw upErr;
+      const blob = await compressImage(file, 1280, 0.82);
+      if (!blob) throw new Error("Image compression returned empty result");
+      const mime = blobMime(blob);
+      const ext = mime === "image/webp" ? "webp" : "jpg";
+      const path = `${account.id}/cover.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: mime });
+      if (upErr) throw new Error("Storage upload failed: " + upErr.message);
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+      if (!urlData?.publicUrl) throw new Error("Could not get public URL after upload");
       const versionedUrl = `${urlData.publicUrl}?v=${Date.now()}`;
       const { error: dbErr } = await supabase.from("profiles").update({ cover_url: versionedUrl }).eq("id", account.id);
       if (dbErr) throw new Error("Cover save failed: " + dbErr.message);
