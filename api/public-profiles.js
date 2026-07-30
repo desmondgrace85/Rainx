@@ -7,7 +7,8 @@ export default async function handler(req, res) {
   if (!ids.length) return res.status(200).json([]);
 
   const SUPABASE_URL = process.env.SUPABASE_URL || "https://fsndqkacfizulovhfldz.supabase.co";
-  const SERVICE_KEY  = process.env.SUPABASE_SERVICE_KEY || "sb_secret_9D_bl0IUCrO3Ge8srbXfBA_Cnf_xwXX";
+  const SERVICE_KEY  = process.env.SUPABASE_SERVICE_KEY;
+  if (!SERVICE_KEY) return res.status(500).json({ error: "Server misconfiguration: SUPABASE_SERVICE_KEY not set." });
 
   try {
     const qs = `id=in.(${ids.join(",")})&select=id,full_name,username,display_name,avatar_url,bio,is_admin,badge,cover_url,location`;

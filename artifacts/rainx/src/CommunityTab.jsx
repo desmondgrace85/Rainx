@@ -481,9 +481,10 @@ function Composer({ account, onPosted, compact, themeTokens }) {
     // Upload each
     const uploaded = await Promise.all(toUpload.map(async (file, i) => {
       try {
-        const ext = file.name.split(".").pop() || "jpg";
-        const path = `posts/${account.id}/${Date.now()}_${i}.${ext}`;
-        const { error } = await supabase.storage.from("post-images").upload(path, file, { upsert: true });
+        // Compress to WebP before upload — same path as the full composer
+        const blob = await compressToWebP(file);
+        const path = `posts/${account.id}/${Date.now()}_${i}.webp`;
+        const { error } = await supabase.storage.from("post-images").upload(path, blob, { contentType: "image/webp", upsert: true });
         if (error) return null;
         const { data: { publicUrl } } = supabase.storage.from("post-images").getPublicUrl(path);
         return publicUrl;
@@ -663,7 +664,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
             <Avatar name={p?.display_name} size={24} avatarUrl={p?.avatar_url} />
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: T.paper }}>{p?.display_name || "user"}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: T.paper }}>{p?.display_name || p?.username || <span style={{ color: T.muted }}>…</span>}</span>
                 <Badge isAdmin={p?.is_admin} badge={p?.badge} />
                 <span style={{ fontSize: 9.5, color: T.muted }}>· {timeAgo(c.created_at)}</span>
               </div>
@@ -1077,22 +1078,33 @@ function GiftModal({ profile, onClose, senderAccount }) {
 
 // ---------- Followers / Following list modal ----------
 function FollowListModal({ userId, type, onClose, onOpenProfile }) {
-  const [list, setList] = useState(null);
-  const [profilesMap, setProfilesMap] = useState({});
+  // null = still loading; [] = loaded but empty; [...] = loaded with data
+  const [rows, setRows] = useState(null); // { uid, profile }[]
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
     (async () => {
-      let rows;
-      if (type === "followers") {
-        const { data } = await supabase.from("follows").select("follower_id").eq("followed_id", userId);
-        rows = (data || []).map(r => r.follower_id);
-      } else {
-        const { data } = await supabase.from("follows").select("followed_id").eq("follower_id", userId);
-        rows = (data || []).map(r => r.followed_id);
+      setRows(null);
+      setLoadError(null);
+      try {
+        let ids;
+        if (type === "followers") {
+          const { data, error } = await supabase.from("follows").select("follower_id").eq("followed_id", userId);
+          if (error) throw error;
+          ids = (data || []).map(r => r.follower_id);
+        } else {
+          const { data, error } = await supabase.from("follows").select("followed_id").eq("follower_id", userId);
+          if (error) throw error;
+          ids = (data || []).map(r => r.followed_id);
+        }
+        if (!ids.length) { setRows([]); return; }
+        // Fetch profiles BEFORE rendering the list — no "user" fallback flash
+        const pMap = await fetchProfilesMap(ids);
+        const resolved = ids.map(uid => ({ uid, profile: pMap[uid] || null }));
+        setRows(resolved);
+      } catch (err) {
+        setLoadError(err?.message || "Failed to load.");
       }
-      setList(rows);
-      const pMap = await fetchProfilesMap(rows);
-      setProfilesMap(pMap);
     })();
   }, [userId, type]);
 
@@ -1104,18 +1116,26 @@ function FollowListModal({ userId, type, onClose, onOpenProfile }) {
           <button onClick={onClose} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><X size={20} /></button>
         </div>
         <div style={{ overflowY:"auto", flex:1 }}>
-          {list === null ? (
+          {rows === null && !loadError && (
             <div style={{ color:T.muted, fontSize:13, textAlign:"center", paddingTop:20 }}>Loading…</div>
-          ) : list.length === 0 ? (
+          )}
+          {loadError && (
+            <div style={{ color:T.rust, fontSize:13, textAlign:"center", paddingTop:20 }}>Couldn't load {type}: {loadError}</div>
+          )}
+          {rows !== null && !loadError && rows.length === 0 && (
             <div style={{ color:T.muted, fontSize:13, textAlign:"center", paddingTop:20 }}>No {type} yet.</div>
-          ) : list.map(uid => {
-            const p = profilesMap[uid];
+          )}
+          {rows !== null && !loadError && rows.map(({ uid, profile: p }) => {
+            const displayName = p?.display_name || p?.full_name || p?.username;
             return (
               <button key={uid} onClick={() => { onClose(); onOpenProfile(uid); }}
                 style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"10px 0", background:"none", border:"none", cursor:"pointer", borderBottom:`1px solid ${T.cardBorder}`, textAlign:"left" }}>
-                <Avatar name={p?.display_name} size={36} avatarUrl={p?.avatar_url} />
+                <Avatar name={displayName} size={36} avatarUrl={p?.avatar_url} />
                 <div>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper }}>{p?.display_name || p?.full_name || p?.username || "user"}</div>
+                  {displayName
+                    ? <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper }}>{displayName}</div>
+                    : <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.muted }}>Unknown user</div>
+                  }
                   {p?.bio && <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>{p.bio.slice(0,50)}</div>}
                 </div>
                 <Badge isAdmin={p?.is_admin} badge={p?.badge} />
@@ -1143,14 +1163,19 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
 
   useEffect(() => {
     (async () => {
-      const { data: p } = await supabase.from("public_profiles").select("*").eq("id", userId).single();
-      // Fetch cover_url/location via API (uses service key to bypass RLS so any viewer can see them)
-      let extras = {};
+      // Single authoritative fetch via API (service key, bypasses RLS, returns all public-safe fields)
       try {
         const r = await fetch(`${BASE_URL}/api/public-profile/${userId}`);
-        if (r.ok) extras = await r.json();
-      } catch (_) {}
-      setProfile({ ...p, ...extras });
+        if (!r.ok) throw new Error(`Profile API returned ${r.status}`);
+        const data = await r.json();
+        if (data?.error) throw new Error(data.error);
+        setProfile(data);
+      } catch (apiErr) {
+        // Fallback: public_profiles view (may lack cover_url/location)
+        const { data: p, error: dbErr } = await supabase.from("public_profiles").select("*").eq("id", userId).single();
+        if (dbErr || !p) { setProfile({}); } else { setProfile(p); }
+        if (process.env.NODE_ENV !== "production") console.error("Profile load fallback:", apiErr?.message);
+      }
       const { data: postRows } = await supabase.from("community_posts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
       let profilePosts = postRows || [];
       if (profilePosts.length) {
@@ -1186,11 +1211,13 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
 
   const toggleFollow = async () => {
     if (isFollowing) {
-      await supabase.from("follows").delete().eq("follower_id", account.id).eq("followed_id", userId);
+      const { error } = await supabase.from("follows").delete().eq("follower_id", account.id).eq("followed_id", userId);
+      if (error) { if (process.env.NODE_ENV !== "production") console.error("Unfollow failed:", error.message); return; }
       setIsFollowing(false);
       setCounts((c) => ({ ...c, followers: Math.max(0, c.followers - 1) }));
     } else {
-      await supabase.from("follows").insert({ follower_id: account.id, followed_id: userId });
+      const { error } = await supabase.from("follows").insert({ follower_id: account.id, followed_id: userId });
+      if (error) { if (process.env.NODE_ENV !== "production") console.error("Follow failed:", error.message); return; }
       notify(userId, account.id, "follow", null);
       setIsFollowing(true);
       setCounts((c) => ({ ...c, followers: c.followers + 1 }));
@@ -1446,10 +1473,12 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
   const toggleLike = async (postId, authorId) => {
     const cur = likeData[postId] || { count: 0, likedByMe: false };
     if (cur.likedByMe) {
-      await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", account.id);
+      const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", account.id);
+      if (error) { if (process.env.NODE_ENV !== "production") console.error("Unlike failed:", error.message); return; }
       setLikeData(d => ({ ...d, [postId]: { count: Math.max(0, cur.count - 1), likedByMe: false } }));
     } else {
-      await supabase.from("post_likes").insert({ post_id: postId, user_id: account.id });
+      const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: account.id });
+      if (error) { if (process.env.NODE_ENV !== "production") console.error("Like failed:", error.message); return; }
       setLikeData(d => ({ ...d, [postId]: { count: cur.count + 1, likedByMe: true } }));
     }
   };
@@ -1457,10 +1486,12 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
   const toggleRepost = async (postId, authorId) => {
     const cur = repostData[postId] || { count: 0, repostedByMe: false };
     if (cur.repostedByMe) {
-      await supabase.from("post_reposts").delete().eq("post_id", postId).eq("user_id", account.id);
+      const { error } = await supabase.from("post_reposts").delete().eq("post_id", postId).eq("user_id", account.id);
+      if (error) { if (process.env.NODE_ENV !== "production") console.error("Unrepost failed:", error.message); return; }
       setRepostData(d => ({ ...d, [postId]: { count: Math.max(0, cur.count - 1), repostedByMe: false } }));
     } else {
-      await supabase.from("post_reposts").insert({ post_id: postId, user_id: account.id });
+      const { error } = await supabase.from("post_reposts").insert({ post_id: postId, user_id: account.id });
+      if (error) { if (process.env.NODE_ENV !== "production") console.error("Repost failed:", error.message); return; }
       setRepostData(d => ({ ...d, [postId]: { count: cur.count + 1, repostedByMe: true } }));
     }
   };
@@ -1877,10 +1908,12 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
   const toggleLike = async (postId, authorId) => {
     const cur = likeData[postId] || { count: 0, likedByMe: false };
     if (cur.likedByMe) {
-      await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", account.id);
+      const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", account.id);
+      if (error) { if (process.env.NODE_ENV !== "production") console.error("Unlike failed:", error.message); return; }
       setLikeData((d) => ({ ...d, [postId]: { count: Math.max(0, cur.count - 1), likedByMe: false } }));
     } else {
-      await supabase.from("post_likes").insert({ post_id: postId, user_id: account.id });
+      const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: account.id });
+      if (error) { if (process.env.NODE_ENV !== "production") console.error("Like failed:", error.message); return; }
       setLikeData((d) => ({ ...d, [postId]: { count: cur.count + 1, likedByMe: true } }));
       notify(authorId, account.id, "like", postId);
     }
@@ -1888,10 +1921,12 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
   const toggleRepost = async (postId, authorId) => {
     const cur = repostData[postId] || { count: 0, repostedByMe: false };
     if (cur.repostedByMe) {
-      await supabase.from("post_reposts").delete().eq("post_id", postId).eq("user_id", account.id);
+      const { error } = await supabase.from("post_reposts").delete().eq("post_id", postId).eq("user_id", account.id);
+      if (error) { if (process.env.NODE_ENV !== "production") console.error("Unrepost failed:", error.message); return; }
       setRepostData((d) => ({ ...d, [postId]: { count: Math.max(0, cur.count - 1), repostedByMe: false } }));
     } else {
-      await supabase.from("post_reposts").insert({ post_id: postId, user_id: account.id });
+      const { error } = await supabase.from("post_reposts").insert({ post_id: postId, user_id: account.id });
+      if (error) { if (process.env.NODE_ENV !== "production") console.error("Repost failed:", error.message); return; }
       setRepostData((d) => ({ ...d, [postId]: { count: cur.count + 1, repostedByMe: true } }));
       notify(authorId, account.id, "repost", postId);
     }

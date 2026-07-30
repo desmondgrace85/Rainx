@@ -182,6 +182,35 @@ function lsSet(key, value) {
 function lsDelete(key) {
   try { localStorage.removeItem(key); } catch { delete memoryStore[key]; }
 }
+
+// ── URL-hash routing helpers — keeps current page alive across refresh ────────
+const _ROUTE_TABS = ["home","markets","community","more","history","scalping","subscribe"];
+function routeRead() {
+  try {
+    const h = window.location.hash.slice(1);
+    if (!h) return { tab: null, sub: null, flag: null };
+    const [a, b, c] = h.split("/");
+    return { tab: _ROUTE_TABS.includes(a) ? a : null, sub: b || null, flag: c || null };
+  } catch { return { tab: null, sub: null, flag: null }; }
+}
+function routeWrite(tab, sub, flag) {
+  try {
+    let h = tab || "home";
+    if (sub)  h += "/" + encodeURIComponent(sub);
+    if (flag) h += "/" + flag;
+    const next = "#" + h;
+    if (window.location.hash !== next) history.pushState(null, "", next);
+  } catch {}
+}
+function routeReplace(tab, sub, flag) {
+  try {
+    let h = tab || "home";
+    if (sub)  h += "/" + encodeURIComponent(sub);
+    if (flag) h += "/" + flag;
+    const next = "#" + h;
+    if (window.location.hash !== next) history.replaceState(null, "", next);
+  } catch {}
+}
 async function storageGet(key, shared) {
   if (typeof window !== "undefined" && window.storage && typeof window.storage.get === "function") {
     try { return await window.storage.get(key, shared); } catch { /* fall through */ }
@@ -1099,11 +1128,23 @@ function MainAppContent({ account, onLogout }) {
   const seriesMapRef = useRef(seriesMap);
   seriesMapRef.current = seriesMap;
   const entitlement = useEntitlement(account.id);
-  const [morePage, setMorePage] = useState(() => lsGet("rainx-morepage") || null);
+  // ── Route state: URL hash is the source of truth; localStorage is fallback ─
+  const [morePage, setMorePage] = useState(() => {
+    const { tab: rt, sub } = routeRead();
+    // Only restore morePage from URL if the URL tab is "more" (or profileFromHeader overlay)
+    if (rt === "more" && sub) return sub;
+    if (rt && sub && rt !== "community") return sub; // e.g. #home/profile-menu/h
+    return lsGet("rainx-morepage") || null;
+  });
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const [tab, setTab] = useState(() => { const t = lsGet("rainx-tab"); return ["home","markets","community","more","history","scalping","subscribe"].includes(t) ? t : "home"; });
-  const [profileFromHeader, setProfileFromHeader] = useState(false);
+  const [tab, setTab] = useState(() => {
+    const { tab: urlTab } = routeRead();
+    if (urlTab) return urlTab;
+    const t = lsGet("rainx-tab");
+    return _ROUTE_TABS.includes(t) ? t : "home";
+  });
+  const [profileFromHeader, setProfileFromHeader] = useState(() => routeRead().flag === "h");
   const [communityProfileOpen, setCommunityProfileOpen] = useState(false);
 
   // ── Telegram-style animated navigation ───────────────────────────────────
@@ -1117,6 +1158,7 @@ function MainAppContent({ account, onLogout }) {
     prevTabRef.current = key;
     setTab(key);
     setProfileFromHeader(false);
+    routeWrite(key, null, null);
   };
   const [activeSymbol, setActiveSymbol] = useState(() => {
     const saved = lsGet("rainx-active-symbol");
@@ -1362,6 +1404,19 @@ function MainAppContent({ account, onLogout }) {
   useEffect(() => { document.body.style.background = T.ink; }, [isDark]);
   useEffect(() => { lsSet("rainx-tab", tab); }, [tab]);
   useEffect(() => { if (morePage !== null) lsSet("rainx-morepage", morePage); else lsDelete("rainx-morepage"); }, [morePage]);
+  // Keep URL hash in sync with current route state (replaceState — no new history entry)
+  useEffect(() => { routeReplace(tab, morePage, profileFromHeader ? "h" : null); }, [tab, morePage, profileFromHeader]);
+  // Sync browser Back/Forward to React state
+  useEffect(() => {
+    const onPop = () => {
+      const { tab: t, sub: mp, flag } = routeRead();
+      if (t) { prevTabRef.current = t; setTab(t); }
+      setMorePage(mp ?? null);
+      setProfileFromHeader(flag === "h");
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -1746,7 +1801,7 @@ function MainAppContent({ account, onLogout }) {
 
       {(tab === "home" || tab === "markets") && <div style={{ background: T.card, borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
         {/* ── Profile avatar trigger ── */}
-        <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
+        <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); routeWrite(tab, "profile-menu", "h"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
           <HeaderAvatar account={account} morePage={morePage} T={T} />
         </button>
         <div style={{ textAlign: "center" }}>
@@ -1829,7 +1884,7 @@ function MainAppContent({ account, onLogout }) {
               <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.goldBright, letterSpacing:-0.3, marginBottom:2 }}>RainX</div>
               <div style={{ fontSize:10, color:T.muted, fontWeight:600 }}>Powered by Raina AI</div>
               {/* Clickable Profile */}
-              <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); setShowSidebar(false); }} style={{ marginTop:18, width:"100%", display:"flex", alignItems:"center", gap:12, background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"12px 14px", cursor:"pointer", textAlign:"left" }}>
+              <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); setShowSidebar(false); routeWrite(tab, "profile-menu", "h"); }} style={{ marginTop:18, width:"100%", display:"flex", alignItems:"center", gap:12, background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"12px 14px", cursor:"pointer", textAlign:"left" }}>
                 <div style={{ width:44, height:44, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>
                   {(account?.email || "?")[0].toUpperCase()}
                 </div>
@@ -4962,8 +5017,11 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       if (upErr && upErr.statusCode !== "200" && upErr.statusCode !== "409") throw upErr;
       const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
       const versionedUrl = `${urlData.publicUrl}?v=${Date.now()}`;
-      await supabase.from("profiles").update({ cover_url: versionedUrl }).eq("id", account.id);
-      setCoverUrl(versionedUrl);
+      const { error: dbErr } = await supabase.from("profiles").update({ cover_url: versionedUrl }).eq("id", account.id);
+      if (dbErr) throw new Error("Cover save failed: " + dbErr.message);
+      // Re-read to confirm persistence
+      const { data: confirmed } = await supabase.from("profiles").select("cover_url").eq("id", account.id).single();
+      setCoverUrl(confirmed?.cover_url || versionedUrl);
     } catch (err) { setProfileMsg("Cover upload failed: " + (err?.message || "unknown")); }
     setUploadingCover(false);
   };
@@ -4978,8 +5036,11 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       if (upErr && upErr.statusCode !== '200' && upErr.statusCode !== '409') throw upErr;
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path);
       const versionedUrl = `${urlData.publicUrl}?v=${Date.now()}`;
-      await supabase.from('profiles').update({ cover_url: versionedUrl }).eq('id', account.id);
-      setCoverUrl(versionedUrl);
+      const { error: dbErr } = await supabase.from('profiles').update({ cover_url: versionedUrl }).eq('id', account.id);
+      if (dbErr) throw new Error('Cover save failed: ' + dbErr.message);
+      // Re-read to confirm persistence
+      const { data: confirmed } = await supabase.from('profiles').select('cover_url').eq('id', account.id).single();
+      setCoverUrl(confirmed?.cover_url || versionedUrl);
     } catch (err) { setProfileMsg('Cover upload failed: ' + (err?.message || 'unknown')); }
     setUploadingCover(false);
   };
@@ -5099,10 +5160,10 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     }
 
     // Re-read ALL fields from DB to confirm the save and refresh UI
-    const { data: fresh } = await supabase.from("profiles")
+    const { data: fresh, error: reReadErr } = await supabase.from("profiles")
       .select("username, bio, avatar_url, full_name, location, date_of_birth, cover_url")
       .eq("id", account.id).single();
-    if (fresh) {
+    if (fresh && !reReadErr) {
       if (fresh.username   !== undefined) setUsername(fresh.username || "");
       if (fresh.bio        !== undefined) setBio(fresh.bio || "");
       if (fresh.avatar_url)               setAvatarUrl(fresh.avatar_url);
@@ -5110,10 +5171,14 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       if (fresh.location      !== undefined) setLocation(fresh.location || "");
       if (fresh.date_of_birth !== undefined) setDob(fresh.date_of_birth || "");
       if (fresh.cover_url)               setCoverUrl(fresh.cover_url);
+      setSavingProfile(false);
+      setProfileMsg("Saved. ✓");
+      notifyAvatarRefresh();
+    } else {
+      setSavingProfile(false);
+      setProfileMsg(reReadErr ? "Saved but couldn't confirm — please refresh." : "Saved. ✓");
+      notifyAvatarRefresh();
     }
-    setSavingProfile(false);
-    setProfileMsg("Saved. ✓");
-    notifyAvatarRefresh();
   };
 
   if (cropFile) return <CoverCropModal file={cropFile} onConfirm={blob => { setCropFile(null); uploadCoverBlob(blob); }} onCancel={() => { setCropFile(null); }} T={T} FONT_HEAD={FONT_HEAD} />;
