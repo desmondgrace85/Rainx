@@ -173,18 +173,20 @@ async function notify(userId, actorId, type, postId) {
 }
 async function fetchProfilesMap(ids) {
   if (!ids.length) return {};
-  const [{ data: pub }, { data: priv }] = await Promise.all([
-    supabase.from("public_profiles").select("*").in("id", ids),
-    supabase.from("profiles").select("id, full_name, username").in("id", ids),
-  ]);
+  // Use service-key API endpoint so full_name/username/display_name are not blocked by RLS
+  try {
+    const r = await fetch(`${BASE_URL}/api/public-profiles?ids=${ids.join(",")}`);
+    if (r.ok) {
+      const rows = await r.json();
+      const map = {};
+      (rows || []).forEach((p) => { map[p.id] = p; });
+      return map;
+    }
+  } catch (_) {}
+  // Fallback: public_profiles view only
+  const { data: pub } = await supabase.from("public_profiles").select("*").in("id", ids);
   const map = {};
   (pub || []).forEach((p) => { map[p.id] = { ...p }; });
-  (priv || []).forEach((p) => {
-    if (map[p.id]) {
-      map[p.id].full_name = p.full_name;
-      map[p.id].username = p.username;
-    }
-  });
   return map;
 }
 
