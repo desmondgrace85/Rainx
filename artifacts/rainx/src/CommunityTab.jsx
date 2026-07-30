@@ -835,7 +835,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
         <button onClick={() => onOpenProfile(post.user_id)} style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "none", border: "none", cursor: "pointer", padding: 0, flex: 1 }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: T.paper }}>{profile?.full_name || profile?.display_name || "user"}</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: T.paper }}>{profile?.full_name || profile?.display_name || null}</span>
               <Badge isAdmin={profile?.is_admin} badge={profile?.badge} isPro={profile?.isPro} />
               <span style={{ fontSize: 11, color: T.muted }}>{timeAgo(post.created_at)}</span>
             </div>
@@ -849,7 +849,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           {menuOpen && (
             <PostMenuSheet
               isOwn={isOwn}
-              username={profile?.display_name || "user"}
+              username={profile?.display_name || "…"}
               onClose={() => setMenuOpen(false)}
               onEdit={() => { setEditing(true); setMenuOpen(false); }}
               onDelete={() => { onDelete(post.id); setMenuOpen(false); }}
@@ -1126,16 +1126,13 @@ function FollowListModal({ userId, type, onClose, onOpenProfile }) {
             <div style={{ color:T.muted, fontSize:13, textAlign:"center", paddingTop:20 }}>No {type} yet.</div>
           )}
           {rows !== null && !loadError && rows.map(({ uid, profile: p }) => {
-            const displayName = p?.display_name || p?.full_name || p?.username;
+            const displayName = p?.display_name || p?.full_name || p?.username || `user_${uid.slice(0, 8)}`;
             return (
               <button key={uid} onClick={() => { onClose(); onOpenProfile(uid); }}
                 style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"10px 0", background:"none", border:"none", cursor:"pointer", borderBottom:`1px solid ${T.cardBorder}`, textAlign:"left" }}>
                 <Avatar name={displayName} size={36} avatarUrl={p?.avatar_url} />
                 <div>
-                  {displayName
-                    ? <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper }}>{displayName}</div>
-                    : <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.muted }}>Unknown user</div>
-                  }
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper }}>{displayName}</div>
                   {p?.bio && <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>{p.bio.slice(0,50)}</div>}
                 </div>
                 <Badge isAdmin={p?.is_admin} badge={p?.badge} />
@@ -1171,10 +1168,17 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
         if (data?.error) throw new Error(data.error);
         setProfile(data);
       } catch (apiErr) {
-        // Fallback: public_profiles view (may lack cover_url/location)
-        const { data: p, error: dbErr } = await supabase.from("public_profiles").select("*").eq("id", userId).single();
-        if (dbErr || !p) { setProfile({}); } else { setProfile(p); }
-        if (process.env.NODE_ENV !== "production") console.error("Profile load fallback:", apiErr?.message);
+        // Fallback 1: profiles table directly (authenticated read — includes cover_url/location if RLS permits)
+        const { data: directP } = await supabase.from("profiles")
+          .select("id,cover_url,location,full_name,username,display_name,date_of_birth,dob_privacy,avatar_url,bio,is_admin,badge")
+          .eq("id", userId).single();
+        if (directP) { setProfile(directP); }
+        else {
+          // Fallback 2: public_profiles view (may lack cover_url/location)
+          const { data: p } = await supabase.from("public_profiles").select("*").eq("id", userId).single();
+          setProfile(p || {});
+        }
+        if (process.env.NODE_ENV !== "production") console.error("Profile API fallback used:", apiErr?.message);
       }
       const { data: postRows } = await supabase.from("community_posts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
       let profilePosts = postRows || [];
@@ -1846,7 +1850,6 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
       return Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([tag]) => tag);
     })());
 
-    setPosts(rows);
     const userIds = [...new Set(rows.map((r) => r.user_id))];
     const pMap = await fetchProfilesMap(userIds);
     if (userIds.length) {
@@ -1863,6 +1866,8 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
       });
     }
     setProfilesMap((m) => ({ ...m, ...pMap }));
+    // Set posts AFTER profilesMap is updated so PostCard never renders with a missing profile
+    setPosts(rows);
 
     if (rows.length) {
       const postIds = rows.map((r) => r.id);
@@ -1876,8 +1881,8 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
 
       const { data: reposts } = await supabase.from("post_reposts").select("post_id, user_id").in("post_id", postIds);
       const rd = {};
-      postIds.forEach((id) => { rd[id] = { count: postsById[id]?.reposts_count || 0, repostedByMe: false }; });
-      (reposts || []).forEach((r) => { if (r.user_id === account.id && rd[r.post_id]) rd[r.post_id].repostedByMe = true; });
+      postIds.forEach((id) => { rd[id] = { count: 0, repostedByMe: false }; });
+      (reposts || []).forEach((r) => { if (rd[r.post_id]) { rd[r.post_id].count += 1; if (r.user_id === account.id) rd[r.post_id].repostedByMe = true; } });
       setRepostData(rd);
 
       // Only count a view once per post per session - loadPosts() re-runs after
@@ -2041,4 +2046,4 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
   );
 }
 
-export { PostCard, ProfileFeed, Composer };
+export { PostCard, ProfileFeed, Composer, FollowListModal, formatCount };

@@ -8,7 +8,7 @@ import {
   Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle, Plus,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer } from "./CommunityTab";
+import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, formatCount } from "./CommunityTab";
 import FullChartView from "./FullChartView";
 import LightweightChart from "./LightweightChart";
 
@@ -5091,6 +5091,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [dob, setDob] = useState("");
   const [profileFollowers, setProfileFollowers] = useState(0);
   const [profileFollowing, setProfileFollowing] = useState(0);
+  const [showFollowListOwn, setShowFollowListOwn] = useState(null); // "followers" | "following" | null
   const [dobPrivacy, setDobPrivacy] = useState(() => lsGet("rainx-dob-privacy") || "daymonth");
   const [mutualFollowers, setMutualFollowers] = useState([]);
   const [coverUrl, setCoverUrl] = useState(null);
@@ -5109,7 +5110,21 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       if(data){ setFullName(data.full_name||""); setLocation(data.location||""); setDob(data.date_of_birth||""); if(data.cover_url) setCoverUrl(data.cover_url); }
     }).catch(()=>{});
     setProfilePostsLoading(true);
-    supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false}).then(({data})=>{ setProfilePosts(data||[]); setProfilePostsLoading(false); }).catch(()=>setProfilePostsLoading(false));
+    // Bug 1 fix: compute comment_count from actual post_comments rows (same way Community does it)
+    (async () => {
+      try {
+        const { data } = await supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false});
+        let rows = data || [];
+        if (rows.length) {
+          const { data: allComments } = await supabase.from("post_comments").select("post_id").in("post_id", rows.map(r => r.id));
+          const cCounts = {};
+          (allComments || []).forEach(c => { cCounts[c.post_id] = (cCounts[c.post_id] || 0) + 1; });
+          rows = rows.map(r => ({ ...r, comment_count: cCounts[r.id] || r.comment_count || 0 }));
+        }
+        setProfilePosts(rows);
+        setProfilePostsLoading(false);
+      } catch { setProfilePostsLoading(false); }
+    })();
 
     supabase.from("follows").select("*",{count:"exact",head:true}).eq("followed_id",account.id).then(({count})=>setProfileFollowers(count||0), ()=>{});
     supabase.from("follows").select("*",{count:"exact",head:true}).eq("follower_id",account.id).then(({count})=>setProfileFollowing(count||0), ()=>{});
@@ -5297,6 +5312,16 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       <div style={{ minHeight:"100%", background:T.ink, overflowY:"auto" }}>
         <style>{"@keyframes slideInRight { from { transform:translateX(24px); opacity:0 } to { transform:translateX(0); opacity:1 } } @keyframes sheetUp { from { transform:translateY(100%) } to { transform:translateY(0) } }"}</style>
 
+        {/* ── Bug 2 fix: Followers/Following modal for own profile ── */}
+        {showFollowListOwn && (
+          <FollowListModal
+            userId={account.id}
+            type={showFollowListOwn}
+            onClose={() => setShowFollowListOwn(null)}
+            onOpenProfile={(uid) => { setShowFollowListOwn(null); setTab("community"); }}
+          />
+        )}
+
         {/* ── Share bottom sheet ── */}
         {showShareSheet && (
           <div onClick={() => setShowShareSheet(false)} style={{ position:"fixed", inset:0, zIndex:300, background:"rgba(0,0,0,0.55)" }}>
@@ -5407,8 +5432,12 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             </span>}
           </div>
           <div style={{ display:"flex", gap:20, marginBottom:10 }}>
-            <span><strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{profileFollowing}</strong><span style={{ fontSize:14, color:T.muted }}> Following</span></span>
-            <span><strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{profileFollowers}</strong><span style={{ fontSize:14, color:T.muted }}> Followers</span></span>
+            <button onClick={() => setShowFollowListOwn("following")} style={{ background:"none", border:"none", cursor:"pointer", padding:0, textAlign:"left" }}>
+              <strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{formatCount(profileFollowing)}</strong><span style={{ fontSize:14, color:T.muted }}> Following</span>
+            </button>
+            <button onClick={() => setShowFollowListOwn("followers")} style={{ background:"none", border:"none", cursor:"pointer", padding:0, textAlign:"left" }}>
+              <strong style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{formatCount(profileFollowers)}</strong><span style={{ fontSize:14, color:T.muted }}> Followers</span>
+            </button>
           </div>
           {mutualFollowers.length > 0 && (
             <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, fontSize:12.5, color:T.muted }}>
