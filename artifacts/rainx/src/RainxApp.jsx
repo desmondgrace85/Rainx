@@ -1612,7 +1612,7 @@ function MainAppContent({ account, onLogout }) {
             confidence: result.confidence,
             reason:    result.reason,
           };
-          return { ...prev, [inst.symbol]: { ...sess, overlays: [...base, ...signalOverlays], setup: newSetup } };
+          return { ...prev, [inst.symbol]: { ...sess, overlays: [...base, ...signalOverlays], setupByTf: { ...sess.setupByTf, [tf.key]: newSetup } } };
         });
       }
 
@@ -2881,7 +2881,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
 
       {/* ── Signal Card ──────────────────────────────────────────────────── */}
       {(()=>{
-        const setup = session?.setup;
+        const setup = session?.setupByTf?.[sigTf];
         const sym = session?.symbol || activeSymbol || "—";
         const tfLabel = sigTf === "15m" ? "15 Minute" : "1 Hour";
         const genTime = session?.activities?.length
