@@ -1789,6 +1789,7 @@ function MainAppContent({ account, onLogout }) {
         @keyframes priceFlash { 0% { opacity:0.4; } 100% { opacity:1; } }
         @keyframes rx-slide-in-right { from { transform:translateX(40px); opacity:0; } to { transform:translateX(0); opacity:1; } }
         @keyframes rx-slide-in-left  { from { transform:translateX(-40px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .rx-slide-right { animation: rx-slide-in-right 0.22s cubic-bezier(0.25,0.46,0.45,0.94) backwards; }
         .rx-slide-left  { animation: rx-slide-in-left  0.22s cubic-bezier(0.25,0.46,0.45,0.94) backwards; }
         .hide-scroll::-webkit-scrollbar { display:none; }
@@ -3247,7 +3248,8 @@ const SCALP_SYMBOLS = [
 
       const [mt5, setMt5] = useState(null);
       const [rSettings, setRSettings] = useState(null);
-      const [phase, setPhase] = useState("loading");
+      // Initialize phase synchronously from localStorage so the UI never blocks on a network call
+      const [phase, setPhase] = useState(() => lsGet("rainx-mt5-uid") ? "loading" : "setup");
       const [apiKey, setApiKey] = useState(null);
       const [mode, setMode] = useState("demo");
       const [scalpMode, setScalpMode] = useState("smart");
@@ -4111,9 +4113,7 @@ const SCALP_SYMBOLS = [
                 <div style={{ display: "flex", alignItems: "center", gap: 7, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, color: T.paper }}>
                   <Activity size={15} color={T.goldBright} /> Live Signals
                 </div>
-                <button onClick={() => loadSignals()} disabled={sigLoading} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: T.gold, fontSize: 12.5, fontFamily: FONT_HEAD, fontWeight: 700, cursor: sigLoading ? "not-allowed" : "pointer" }}>
-                  <ArrowRight size={13} style={{ transform: "rotate(-45deg)" }} /> {sigLoading ? "Loading…" : "Refresh"}
-                </button>
+                {sigLoading && <div style={{ width: 18, height: 18, border: `2px solid ${T.cardBorder}`, borderTopColor: T.gold, borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />}
               </div>
               {sigLoading && signals.length === 0 && <div style={{ textAlign: "center", color: T.muted, fontSize: 13.5, padding: "14px 0" }}>Loading signals…</div>}
               {signals.map((sig, i) => <SignalCard key={`${signalKey(sig)}-${i}`} sig={sig} />)}
@@ -4169,7 +4169,28 @@ const SCALP_SYMBOLS = [
           <div style={{ padding: "0 14px" }}>
             <BlurGate unlocked={unlocked} requiredLabel="Monthly" onSubscribe={onSubscribe} minHeight={440}>
               {phase === "loading"
-                ? <div style={{ textAlign: "center", padding: 40, color: T.muted, fontSize: 15 }}>Loading…</div>
+                ? (
+                  <div>
+                    {/* Skeleton — page renders immediately; data loads in background */}
+                    <div style={{ borderRadius: 16, background: T.card, border: `1px solid ${T.cardBorder}`, padding: 18, marginBottom: 12, animation: "pulse 1.4s ease-in-out infinite" }}>
+                      <div style={{ height: 12, borderRadius: 6, background: T.cardBorder, width: "55%", marginBottom: 10 }} />
+                      <div style={{ height: 10, borderRadius: 6, background: T.cardBorder, width: "35%", marginBottom: 18 }} />
+                      <div style={{ display: "flex", gap: 10 }}>
+                        <div style={{ flex: 1, height: 48, borderRadius: 10, background: T.cardBorder }} />
+                        <div style={{ flex: 1, height: 48, borderRadius: 10, background: T.cardBorder }} />
+                      </div>
+                    </div>
+                    <div style={{ borderRadius: 16, background: T.card, border: `1px solid ${T.cardBorder}`, padding: 18, marginBottom: 12, animation: "pulse 1.4s ease-in-out infinite" }}>
+                      <div style={{ height: 10, borderRadius: 6, background: T.cardBorder, width: "45%", marginBottom: 10 }} />
+                      <div style={{ height: 10, borderRadius: 6, background: T.cardBorder, width: "65%", marginBottom: 10 }} />
+                      <div style={{ height: 10, borderRadius: 6, background: T.cardBorder, width: "30%" }} />
+                    </div>
+                    <div style={{ borderRadius: 16, background: T.card, border: `1px solid ${T.cardBorder}`, padding: 18, animation: "pulse 1.4s ease-in-out infinite" }}>
+                      <div style={{ height: 10, borderRadius: 6, background: T.cardBorder, width: "70%", marginBottom: 10 }} />
+                      <div style={{ height: 10, borderRadius: 6, background: T.cardBorder, width: "50%" }} />
+                    </div>
+                  </div>
+                )
                 : phase === "setup"    ? PhaseSetup()
                 : phase === "pending"  ? PhasePending()
                 : phase === "connected"? PhaseConnected()

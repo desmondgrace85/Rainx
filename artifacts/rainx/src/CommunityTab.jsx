@@ -1724,7 +1724,8 @@ function PostActivityScreen({ post, profile, account, likeData, repostData, T, o
 export default function CommunityTab({ account, themeTokens, onViewingProfileChange }) {
   // Sync theme tokens from parent so T reflects the active theme
   if (themeTokens) Object.assign(T, themeTokens);
-  const [posts, setPosts] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [postsLoading, setPostsLoading] = useState(true);
   const [profilesMap, setProfilesMap] = useState({});
   const [likeData, setLikeData] = useState({});
   const [repostData, setRepostData] = useState({});
@@ -1834,6 +1835,7 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
   }, []);
 
   const loadPosts = useCallback(async () => {
+    setPostsLoading(true);
     const { data } = await supabase.from("community_posts").select("*").order("created_at", { ascending: false }).limit(100);
     let rows = data || [];
 
@@ -1868,6 +1870,7 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
     setProfilesMap((m) => ({ ...m, ...pMap }));
     // Set posts AFTER profilesMap is updated so PostCard never renders with a missing profile
     setPosts(rows);
+    setPostsLoading(false);
 
     if (rows.length) {
       const postIds = rows.map((r) => r.id);
@@ -1896,7 +1899,12 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
     }
   }, [account.id]);
 
-  useEffect(() => { loadPosts(); }, [loadPosts]);
+  useEffect(() => {
+    loadPosts();
+    // Auto-refresh feed every 45 s so new posts appear without user action
+    const autoRefreshId = setInterval(() => { loadPosts(); }, 45000);
+    return () => clearInterval(autoRefreshId);
+  }, [loadPosts]);
 
   useEffect(() => {
     const beat = async () => {
@@ -1940,7 +1948,6 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
   const reportPost = async (id) => { await supabase.from("post_reports").insert({ post_id: id, reported_by: account.id }); alert("Reported. Thanks for flagging this."); };
 
   if (viewingUserId) return <ProfileView userId={viewingUserId} account={account} onBack={() => setViewingUserId(null)} onOpenProfile={setViewingUserId} onDmUser={(profile) => { setViewingUserId(null); setChatInitUser(profile); setChatOpen(true); }} />;
-  if (posts === null) return <div style={{ padding: 16, color: T.muted, fontSize: 13 }}>Loading community…</div>;
 
   // Filter posts for "Following" tab — must be declared BEFORE visiblePosts uses it
   const filteredByFeedTab = feedTab === "following"
@@ -2017,7 +2024,23 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
       <SuggestedAccounts account={account} onOpenProfile={setViewingUserId} />
       
 
-      {visiblePosts.length === 0 ? (
+      {postsLoading && posts.length === 0 ? (
+        /* Skeleton post cards — shown while initial load is in-flight */
+        [0,1,2,3].map(i => (
+          <div key={i} style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10, animation: "pulse 1.4s ease-in-out infinite" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: T.cardBorder, flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ height: 10, borderRadius: 5, background: T.cardBorder, width: "40%", marginBottom: 6 }} />
+                <div style={{ height: 9, borderRadius: 5, background: T.cardBorder, width: "25%" }} />
+              </div>
+            </div>
+            <div style={{ height: 10, borderRadius: 5, background: T.cardBorder, width: "90%", marginBottom: 7 }} />
+            <div style={{ height: 10, borderRadius: 5, background: T.cardBorder, width: "70%", marginBottom: 7 }} />
+            <div style={{ height: 10, borderRadius: 5, background: T.cardBorder, width: "55%" }} />
+          </div>
+        ))
+      ) : visiblePosts.length === 0 ? (
         <div style={{ fontSize: 12, color: T.muted, marginTop: 10 }}>No posts yet - be the first to share something.</div>
       ) : visiblePosts.map((p) => (
         <PostCard
