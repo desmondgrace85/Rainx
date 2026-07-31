@@ -1180,7 +1180,27 @@ function MainAppContent({ account, onLogout }) {
   // ─── Per-market sessions map (persisted to localStorage) ────────────────────
   // sessions = { [symbol]: { symbol, name, startTime, stepIndex, steps, activities, overlays, setup, state } }
   const [sessions, setSessions] = useState(() => {
-    try { return JSON.parse(lsGet("rainx-sessions") || "{}"); } catch { return {}; }
+    try {
+      const saved = JSON.parse(lsGet("rainx-sessions") || "{}");
+      // Scrub stale signal overlays for any TF that has a stored HOLD setup.
+      // These were written by the pre-fix code which kept old entry/SL/TP overlays
+      // in overlaysByTf even when the signal turned to HOLD.
+      Object.values(saved).forEach(sess => {
+        if (!sess || typeof sess !== "object") return;
+        if (sess.overlaysByTf && sess.setupByTf) {
+          Object.entries(sess.setupByTf).forEach(([tfKey, setup]) => {
+            if (setup?.bias === "HOLD") {
+              sess.overlaysByTf[tfKey] = [];
+              // Also remove _tf-tagged overlays for this TF from session.overlays
+              if (Array.isArray(sess.overlays)) {
+                sess.overlays = sess.overlays.filter(o => o._tf !== tfKey);
+              }
+            }
+          });
+        }
+      });
+      return saved;
+    } catch { return {}; }
   });
   // Derive the active session (for display) from the currently viewed symbol
   const session = sessions[activeSymbol] || null;
