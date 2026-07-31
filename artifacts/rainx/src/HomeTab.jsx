@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, X, Maximize2, Home } from "lucide-react";
 import LightweightChart from "./LightweightChart";
 import FullChartView from "./FullChartView";
-import { supabase } from "./supabaseClient";
 import {
   T, FONT_HEAD, FONT_BODY,
   ALL_ASSETS, INSTRUMENTS, ASSET_CATALOG, ANALYSIS_DURATIONS, STEP_DEFS, TIMEFRAMES,
@@ -12,6 +11,7 @@ import {
   lsGet, lsSet, storageGet, storageSet,
 } from "./shared";
 
+let isDarkCanvas = false;
 function setIsDarkCanvas(v) { isDarkCanvas = v; }
 
 function CandlestickChart({ candles, overlays, inst, containerHeight = 260 }) {

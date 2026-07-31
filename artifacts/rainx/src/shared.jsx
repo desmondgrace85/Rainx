@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Area, ComposedChart, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import {
   Bell, Home, Briefcase, MessageCircle, MoreHorizontal, Settings, X,
   TrendingUp, TrendingDown, Minus, Activity, Send, Calendar as CalendarIcon,
@@ -8,9 +7,6 @@ import {
   Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle, Plus,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, formatCount } from "./CommunityTab";
-import FullChartView from "./FullChartView";
-import LightweightChart from "./LightweightChart";
 
 // ---------- Design tokens ----------
 export const T = {

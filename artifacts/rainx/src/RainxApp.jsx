@@ -1603,7 +1603,6 @@ function MainAppContent({ account, onLogout }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Candlestick chart — swipeable, MT5-style, black & blue colour scheme
 // ─────────────────────────────────────────────────────────────────────────────
-let isDarkCanvas = false;
 function ChatTab({ inst, analysis, last, account }) {
   const storageKey = `rainx:chat:${account?.email || "guest"}:${inst.symbol}`;
   const [messages, setMessages] = useState(null);
