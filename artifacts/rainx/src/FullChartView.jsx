@@ -412,7 +412,7 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
           addPL(o.price, GREEN, o.label || "TP", LineStyle.Dashed, 1.5, true);
           break;
         case "sl_level":
-          addPL(o.price, RED, "Stop Loss", LineStyle.Solid, 2, true);
+          addPL(o.price, RED, o.label || "Stop Loss", LineStyle.Solid, 2, true);
           break;
         case "trendline": {
           if (!bars.length) break;
@@ -434,9 +434,40 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
         case "direction_arrow":
         case "projection": {
           if (!bars.length || !o.target) break;
-          const last = bars[bars.length - 1];
-          const futureT = last.time + (activeTf === "1m" ? 60 : activeTf === "5m" ? 300 : activeTf === "15m" ? 900 : activeTf === "1h" ? 3600 : 3600) * 4;
-          addLineSeries([{ time: last.time, value: last.close }, { time: futureT, value: o.target }], BULL, 2, LineStyle.Solid);
+          if (o.from != null) {
+            // Shaded zone from entry to target — green BUY, red SELL (on main price scale)
+            const isBull   = !(o.bias === "sell" || o.bias === "SELL");
+            const zoneTop  = Math.max(o.from, o.target);
+            const zoneBot  = Math.min(o.from, o.target);
+            const fillRgba = isBull ? "rgba(34,197,94,0.15)"  : "rgba(239,68,68,0.15)";
+            const edgeRgba = isBull ? "rgba(34,197,94,0.50)"  : "rgba(239,68,68,0.50)";
+            try {
+              if (typeof chartRef.current.addBaselineSeries === "function") {
+                const bs = chartRef.current.addBaselineSeries({
+                  baseValue: { type: "price", price: zoneBot },
+                  topLineColor: edgeRgba, topFillColor1: fillRgba, topFillColor2: fillRgba,
+                  bottomLineColor: "transparent", bottomFillColor1: "transparent", bottomFillColor2: "transparent",
+                  lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+                });
+                bs.setData(bars.map(b => ({ time: b.time, value: zoneTop })));
+                lineRefs.current.push(bs);
+              } else {
+                const tl = chartRef.current.addLineSeries({ color: edgeRgba, lineWidth: 1.5, lineStyle: LineStyle.Dashed, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+                tl.setData(bars.map(b => ({ time: b.time, value: zoneTop })));
+                lineRefs.current.push(tl);
+              }
+              const bl = chartRef.current.addLineSeries({ color: edgeRgba, lineWidth: 1, lineStyle: LineStyle.Dashed, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+              bl.setData(bars.map(b => ({ time: b.time, value: zoneBot })));
+              lineRefs.current.push(bl);
+            } catch {}
+          } else {
+            const col = (o.bias === "sell" || o.bias === "SELL") ? "rgba(239,68,68,0.35)" : "rgba(34,197,94,0.35)";
+            try {
+              const ls = chartRef.current.addLineSeries({ color: col, lineWidth: 1, lineStyle: LineStyle.Dotted, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+              ls.setData(bars.map(b => ({ time: b.time, value: o.target })));
+              lineRefs.current.push(ls);
+            } catch {}
+          }
           break;
         }
         default: break;
@@ -489,7 +520,7 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
   })() : 0;
 
   const sessionSteps = session?.steps || [];
-  const sessionSetup = session?.setup;
+  const sessionSetup = session?.setupByTf?.["15m"] || session?.setupByTf?.["1h"] || session?.setupByTf?.["4h"] || session?.setup || null;
   const sessionState = session?.state;
   const stateColor   = sessionState === "watching" ? "#7A9E86" : sessionState === "completed" ? "#9C947F" : GOLD;
 
