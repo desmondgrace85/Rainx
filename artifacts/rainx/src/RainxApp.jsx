@@ -1579,16 +1579,37 @@ function MainAppContent({ account, onLogout }) {
       }));
 
       // ── Update this symbol's session with real signal data from backend ──
-      if (result.bias !== "hold" && result.entry != null) {
+      if (result.bias === "hold" || result.entry != null) {
         setSessions(prev => {
           const sess = prev[inst.symbol];
           if (!sess || sess.state === "completed") return prev;
+          const tfKey  = tf.key;
+          const tfLbl  = tf.label; // e.g. "15 Minute" or "1 Hour"
+
+          // HOLD: write real confidence into setupByTf but skip overlay drawing
+          if (result.bias === "hold") {
+            const newSetup = {
+              bias:       "HOLD",
+              entry:      null,
+              entryLow:   null,
+              entryHigh:  null,
+              stopLoss:   null,
+              tp1:        null,
+              tp2:        null,
+              rr:         null,
+              confidence: result.confidence,
+              reason:     result.reason,
+            };
+            return { ...prev, [inst.symbol]: {
+              ...sess,
+              setupByTf: { ...sess.setupByTf, [tfKey]: newSetup },
+            } };
+          }
+
           const price  = result.entry;
           const slDist = result.stop_loss   ? Math.abs(price - result.stop_loss)   : inst.vol * 2.5;
           const tp1    = result.take_profit_1;
           const tp2    = result.take_profit_2;
-          const tfKey  = tf.key;
-          const tfLbl  = tf.label; // e.g. "15 Minute" or "1 Hour"
 
           // Keep structural (non-signal) overlays across timeframe updates
           const keepTypes = new Set(["trendline","channel","support_zone","resistance","liquidity","swing_high","swing_low","market_structure"]);
@@ -1609,9 +1630,9 @@ function MainAppContent({ account, onLogout }) {
             { type:"breakout", _tf: tfKey, priceLow: price + inst.vol*0.3, priceHigh: price + inst.vol*1.0 },
           ];
 
-          // Accumulate overlays per-TF — merging keeps both 15m and 1h zones on chart at once
+          // Accumulate overlays per-TF — keep all TFs stored; render only selected TF at chart site
           const overlaysByTf = { ...sess.overlaysByTf, [tfKey]: tfOverlays };
-          const allTfOverlays = Object.values(overlaysByTf).flat();
+          const allTfOverlays = overlaysByTf[tfKey];
 
           // One current_price overlay (live price line — no TF tag)
           const currentPriceOverlay = { type: "current_price", price };
@@ -1632,7 +1653,7 @@ function MainAppContent({ account, onLogout }) {
             tp2:       tp2 || price + slDist * 3.0,
             rr:        (slDist > 0 ? ((tp1 || price + slDist * 1.5) - price) / slDist : 1.5).toFixed(1),
             confidence: result.confidence,
-            reason:    result.reason,
+            reason:     result.reason,
           };
 
           return { ...prev, [inst.symbol]: {
@@ -2849,7 +2870,10 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
         <div style={{ height:270, flexShrink:0, minHeight:220 }}>
           <LightweightChart
             candles={chartCandles}
-            overlays={session?.overlays || []}
+            overlays={[
+              ...(session?.overlays || []).filter(o => !o._tf),
+              ...(session?.overlaysByTf?.[sigTf] || []),
+            ]}
             inst={inst}
             containerHeight={270}
             compact={false}
