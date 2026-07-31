@@ -270,7 +270,7 @@ export default function LightweightChart({
           break;
 
         case "sl_level":
-          addPriceLine(o.price, RED_LINE, "Stop Loss", LineStyle.Solid, 2, true);
+          addPriceLine(o.price, RED_LINE, o.label || "Stop Loss", LineStyle.Solid, 2, true);
           break;
 
         case "trendline": {
@@ -334,32 +334,38 @@ export default function LightweightChart({
 
         case "direction_arrow":
         case "projection":
-          // Shaded price zone from entry to target — uses BaselineSeries to fill between two price levels
+          // Shaded price zone (entry → target) — green for BUY, red for SELL
           if (o.target && o.from != null && bars.length) {
             const isBull   = !(o.bias === "sell" || o.bias === "SELL");
             const zoneTop  = Math.max(o.from, o.target);
             const zoneBot  = Math.min(o.from, o.target);
             const fillRgba = isBull ? "rgba(34,197,94,0.15)"  : "rgba(239,68,68,0.15)";
-            const edgeRgba = isBull ? "rgba(34,197,94,0.45)"  : "rgba(239,68,68,0.45)";
+            const edgeRgba = isBull ? "rgba(34,197,94,0.50)"  : "rgba(239,68,68,0.50)";
             try {
-              // BaselineSeries fills between baseline (zoneBot) and line value (zoneTop)
-              // topFill covers the buy/sell zone; bottomFill is transparent so nothing below
-              const bs = chartRef.current.addBaselineSeries({
-                baseValue:         { type: "price", price: zoneBot },
-                topLineColor:       edgeRgba,
-                topFillColor1:      fillRgba,
-                topFillColor2:      fillRgba,
-                bottomLineColor:    "transparent",
-                bottomFillColor1:   "transparent",
-                bottomFillColor2:   "transparent",
-                lineWidth:          1,
-                priceLineVisible:   false,
-                lastValueVisible:   false,
-                crosshairMarkerVisible: false,
-              });
-              bs.setData(bars.map(b => ({ time: b.time, value: zoneTop })));
-              lineRefs.current.push(bs);
-              // Bottom edge dashed line
+              if (typeof chartRef.current.addBaselineSeries === "function") {
+                // v4+ BaselineSeries: fills between baseline price (zoneBot) and data value (zoneTop)
+                const bs = chartRef.current.addBaselineSeries({
+                  baseValue:         { type: "price", price: zoneBot },
+                  topLineColor:       edgeRgba,
+                  topFillColor1:      fillRgba,
+                  topFillColor2:      fillRgba,
+                  bottomLineColor:    "transparent",
+                  bottomFillColor1:   "transparent",
+                  bottomFillColor2:   "transparent",
+                  lineWidth:          1,
+                  priceLineVisible:   false,
+                  lastValueVisible:   false,
+                  crosshairMarkerVisible: false,
+                });
+                bs.setData(bars.map(b => ({ time: b.time, value: zoneTop })));
+                lineRefs.current.push(bs);
+              } else {
+                // Fallback (older LW): top edge line only
+                const tl = chartRef.current.addLineSeries({ color: edgeRgba, lineWidth: 1.5, lineStyle: LineStyle.Dashed, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+                tl.setData(bars.map(b => ({ time: b.time, value: zoneTop })));
+                lineRefs.current.push(tl);
+              }
+              // Bottom edge dashed line (always rendered)
               const bl = chartRef.current.addLineSeries({ color: edgeRgba, lineWidth: 1, lineStyle: LineStyle.Dashed, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
               bl.setData(bars.map(b => ({ time: b.time, value: zoneBot })));
               lineRefs.current.push(bl);
@@ -397,10 +403,10 @@ export default function LightweightChart({
       onScale = startX >= rect.right - PRICE_SCALE_WIDTH;
     };
     const onMove = (e) => {
-      if (onScale) return; // allow vertical drag on price scale
-      const dx = Math.abs(e.touches[0].clientX - startX);
-      const dy = Math.abs(e.touches[0].clientY - startY);
-      if (dx > dy || dy < 8) e.preventDefault(); // block page scroll while panning chart
+      // Always prevent browser from consuming touch events.
+      // LW handles chart horizontal pan (horzTouchDrag) and price-scale vertical zoom
+      // (axisPressedMouseMove.price) internally once browser is out of the way.
+      e.preventDefault();
     };
 
     el.addEventListener("touchstart", onStart, { passive: true });
@@ -421,7 +427,7 @@ export default function LightweightChart({
       `}</style>
       <div
         ref={containerRef}
-        style={{ width: "100%", height: containerHeight, minHeight: containerHeight, overflow: "hidden", position: "relative", touchAction: "pan-y" }}
+        style={{ width: "100%", height: containerHeight, minHeight: containerHeight, overflow: "hidden", position: "relative", touchAction: "none" }}
       />
     </>
   );
