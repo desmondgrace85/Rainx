@@ -1587,19 +1587,41 @@ function MainAppContent({ account, onLogout }) {
           const slDist = result.stop_loss   ? Math.abs(price - result.stop_loss)   : inst.vol * 2.5;
           const tp1    = result.take_profit_1;
           const tp2    = result.take_profit_2;
+          const tfKey  = tf.key;
+          const tfLbl  = tf.label; // e.g. "15 Minute" or "1 Hour"
+
+          // Keep structural (non-signal) overlays across timeframe updates
           const keepTypes = new Set(["trendline","channel","support_zone","resistance","liquidity","swing_high","swing_low","market_structure"]);
-          const base = sess.overlays.filter(o => keepTypes.has(o.type));
-          const signalOverlays = [
-            { type:"current_price",   price },
-            { type:"entry_zone",      priceLow:  Array.isArray(signal.entry_zone) ? signal.entry_zone[0] : price-inst.vol*0.5,
-                                      priceHigh: Array.isArray(signal.entry_zone) ? signal.entry_zone[1] : price+inst.vol*0.5 },
-            { type:"sl_level",        price: result.stop_loss || price - slDist },
-            ...(tp1 != null ? [{ type:"tp_level", price: tp1, label:"TP 1" }] : []),
-            ...(tp2 != null ? [{ type:"tp_level", price: tp2, label:"TP 2" }] : []),
-            { type:"direction_arrow", from: price, target: tp1 || (result.bias === "sell" ? price - slDist * 1.5 : price + slDist * 1.5), bias: result.bias },
-            ...(tp2 != null ? [{ type:"projection", target: tp2, bias: result.bias }] : []),
-            { type:"breakout",        priceLow: price + inst.vol*0.3, priceHigh: price + inst.vol*1.0 },
+          const baseStructural = (sess.overlays || []).filter(o => keepTypes.has(o.type));
+
+          // Per-TF signal overlays — tagged with _tf so both 15m and 1h show on chart simultaneously
+          const tfOverlays = [
+            { type:"entry_zone", _tf: tfKey,
+              priceLow:  Array.isArray(signal.entry_zone) ? signal.entry_zone[0] : price-inst.vol*0.5,
+              priceHigh: Array.isArray(signal.entry_zone) ? signal.entry_zone[1] : price+inst.vol*0.5 },
+            { type:"sl_level",   _tf: tfKey, price: result.stop_loss || price - slDist, label: "SL (" + tfLbl + ")" },
+            ...(tp1 != null ? [{ type:"tp_level", _tf: tfKey, price: tp1, label: "TP1 (" + tfLbl + ")" }] : []),
+            ...(tp2 != null ? [{ type:"tp_level", _tf: tfKey, price: tp2, label: "TP2 (" + tfLbl + ")" }] : []),
+            { type:"direction_arrow", _tf: tfKey, from: price,
+              target: tp1 || (result.bias === "sell" ? price - slDist * 1.5 : price + slDist * 1.5),
+              bias: result.bias },
+            ...(tp2 != null ? [{ type:"projection", _tf: tfKey, target: tp2, bias: result.bias }] : []),
+            { type:"breakout", _tf: tfKey, priceLow: price + inst.vol*0.3, priceHigh: price + inst.vol*1.0 },
           ];
+
+          // Accumulate overlays per-TF — merging keeps both 15m and 1h zones on chart at once
+          const overlaysByTf = { ...sess.overlaysByTf, [tfKey]: tfOverlays };
+          const allTfOverlays = Object.values(overlaysByTf).flat();
+
+          // One current_price overlay (live price line — no TF tag)
+          const currentPriceOverlay = { type: "current_price", price };
+
+          const mergedOverlays = [
+            ...baseStructural,
+            currentPriceOverlay,
+            ...allTfOverlays,
+          ];
+
           const newSetup = {
             bias:      result.bias.toUpperCase(),
             entry:     price,
@@ -1612,7 +1634,13 @@ function MainAppContent({ account, onLogout }) {
             confidence: result.confidence,
             reason:    result.reason,
           };
-          return { ...prev, [inst.symbol]: { ...sess, overlays: [...base, ...signalOverlays], setupByTf: { ...sess.setupByTf, [tf.key]: newSetup } } };
+
+          return { ...prev, [inst.symbol]: {
+            ...sess,
+            overlays: mergedOverlays,
+            overlaysByTf,
+            setupByTf: { ...sess.setupByTf, [tfKey]: newSetup },
+          } };
         });
       }
 
@@ -2655,7 +2683,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
     let cancelled = false;
     const sym = session?.symbol || activeSymbol;
     if (!sym) return;
-    fetch(`${BASE_URL_H}/api/candles?symbol=${encodeURIComponent(sym)}&interval=${activeChartTf}&limit=120`)
+    fetch(`${BASE_URL_H}/api/candles?symbol=${encodeURIComponent(sym)}&interval=${activeChartTf}&limit=500`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (!cancelled && data) {
@@ -2678,7 +2706,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
     const sym = session?.symbol || activeSymbol;
     if (!sym) return;
     const id = setInterval(() => {
-      fetch(`${BASE_URL_H}/api/candles?symbol=${encodeURIComponent(sym)}&interval=${activeChartTf}&limit=120`)
+      fetch(`${BASE_URL_H}/api/candles?symbol=${encodeURIComponent(sym)}&interval=${activeChartTf}&limit=500`)
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if (!data) return;
