@@ -1586,7 +1586,7 @@ function MainAppContent({ account, onLogout }) {
           const tfKey  = tf.key;
           const tfLbl  = tf.label; // e.g. "15 Minute" or "1 Hour"
 
-          // HOLD: write real confidence into setupByTf but skip overlay drawing
+          // HOLD: write real confidence into setupByTf and clear this TF's overlays
           if (result.bias === "hold") {
             const newSetup = {
               bias:       "HOLD",
@@ -1600,8 +1600,18 @@ function MainAppContent({ account, onLogout }) {
               confidence: result.confidence,
               reason:     result.reason,
             };
+            // Clear this TF's signal overlays so the chart doesn't show stale entry/SL/TP lines
+            const overlaysByTf = { ...sess.overlaysByTf, [tfKey]: [] };
+            // Rebuild session.overlays: keep structural + current_price, drop this TF's old overlays
+            const keepTypes = new Set(["trendline","channel","support_zone","resistance","liquidity","swing_high","swing_low","market_structure","current_price"]);
+            const baseOverlays = (sess.overlays || []).filter(o => keepTypes.has(o.type) || (!o._tf));
+            const remainingTfOverlays = Object.entries(overlaysByTf)
+              .filter(([k]) => k !== tfKey)
+              .flatMap(([, v]) => v);
             return { ...prev, [inst.symbol]: {
               ...sess,
+              overlays: [...baseOverlays, ...remainingTfOverlays],
+              overlaysByTf,
               setupByTf: { ...sess.setupByTf, [tfKey]: newSetup },
             } };
           }
