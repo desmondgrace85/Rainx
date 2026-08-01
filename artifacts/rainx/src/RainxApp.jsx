@@ -12,6 +12,16 @@ import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as Communit
 import FullChartView from "./FullChartView";
 import LightweightChart from "./LightweightChart";
 
+import gamesMoonJet from "@assets/games-moonjet.jpg";
+import gamesTraderDuel from "@assets/games-trader-duel.jpg";
+import gamesBullBear from "@assets/games-bull-bear.jpg";
+import gamesGoldenVault from "@assets/games-golden-vault.jpg";
+import gamesHeroRocket from "@assets/games-hero-rocket.jpg";
+import gamesAvatar1 from "@assets/games-avatar-1.jpg";
+import gamesAvatar2 from "@assets/games-avatar-2.jpg";
+import gamesAvatar3 from "@assets/games-avatar-3.jpg";
+import gamesAvatar4 from "@assets/games-avatar-4.jpg";
+
 // ---------- Design tokens ----------
 const T = {
   ink: "#0F0E0B",
@@ -1148,9 +1158,11 @@ function MainAppContent({ account, onLogout }) {
   const [communityProfileOpen, setCommunityProfileOpen] = useState(false);
   // Lazy keep-alive: set to true on first visit, stays true so the tab never unmounts again
   const [communityMounted, setCommunityMounted] = useState(false);
+  const [gamesMounted, setGamesMounted] = useState(false);
   const [scalpingMounted,  setScalpingMounted]  = useState(false);
   useEffect(() => {
     if (tab === "community" && !communityMounted) setCommunityMounted(true);
+    if (tab === "games" && !gamesMounted) setGamesMounted(true);
     if (tab === "scalping"  && !scalpingMounted)  setScalpingMounted(true);
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1918,6 +1930,7 @@ function MainAppContent({ account, onLogout }) {
           <CommunityTab account={account} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />
         </div>
       )}
+      {gamesMounted && (<div style={{ display: tab === "games" ? "block" : "none", paddingBottom: 78 }}><GamesTab /></div>)}
       {/* Scalping — lazy keep-alive: mounts on first visit, never unmounts again */}
       {scalpingMounted && (
         <div style={{ display: tab === "scalping" ? "block" : "none", paddingBottom: 78 }}>
@@ -2135,11 +2148,11 @@ function MainAppContent({ account, onLogout }) {
             )},
             { key: "games", label: "Games", icon: (active) => (
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="6" width="20" height="12" rx="4"/>
-                <line x1="12" y1="10" x2="12" y2="14"/>
-                <line x1="10" y1="12" x2="14" y2="12"/>
-                <circle cx="17" cy="11" r="1"/>
-                <circle cx="19" cy="13" r="1"/>
+                <path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258A4 4 0 0 0 17.32 5z"/>
+                <line x1="6" y1="11" x2="10" y2="11"/>
+                <line x1="8" y1="9" x2="8" y2="13"/>
+                <circle cx="15" cy="12" r="0.8"/>
+                <circle cx="17" cy="10" r="0.8"/>
               </svg>
             )},
             { key: "more", label: "More", icon: (active) => (
@@ -2707,6 +2720,123 @@ function fmtTime(secs) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+function GamesTab() {
+  const [activeCategory, setActiveCategory] = React.useState("All Games");
+  const categories = ["All Games", "Trending", "Strategy", "Duel", "Quick Play"];
+  const games = [
+    { title: "MoonJet", subtitle: "Fly high. Aim higher.", category: "Trending", image: gamesMoonJet },
+    { title: "Trader Duel", subtitle: "Battle traders in real-time", category: "Duel", image: gamesTraderDuel },
+    { title: "Bull vs Bear", subtitle: "Who controls the market?", category: "Strategy", image: gamesBullBear },
+    { title: "Golden Vault", subtitle: "The richest vault in crypto", category: "Strategy", image: gamesGoldenVault },
+    { title: "Candle Clash", subtitle: "Read the move. Make the call.", category: "Quick Play", gradient: "linear-gradient(135deg, #6E4C1E, #C6A15B 48%, #1C1913)" },
+    { title: "Signal Hunt", subtitle: "Spot the signal before anyone else.", category: "Quick Play", gradient: "linear-gradient(135deg, #162F2D, #376F62 50%, #1C1913)" },
+  ];
+  const players = [
+    { name: "TradeMaster", avatar: gamesAvatar1, score: "214,500", trend: "+2.4%" },
+    { name: "KwameX", avatar: gamesAvatar2, score: "189,200", trend: "+1.8%" },
+    { name: "LunaPlay", avatar: gamesAvatar3, score: "145,800", trend: "-1.2%" },
+    { name: "Abena_G", avatar: gamesAvatar4, score: "112,400", trend: "+0.9%" },
+  ];
+  const visibleGames = activeCategory === "All Games"
+    ? games
+    : games.filter(game => game.category === activeCategory || (activeCategory === "Trending" && ["Trending", "Duel", "Strategy"].includes(game.category)));
+
+  return (
+    <div style={{ minHeight: "100dvh", background: T.ink, color: T.paper, fontFamily: FONT_BODY }}>
+      <div style={{ position: "relative", height: 330, overflow: "hidden", display: "flex", alignItems: "flex-end" }}>
+        <img src={gamesHeroRocket} alt="Gold rocket launching" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(15,14,11,0.12) 15%, rgba(15,14,11,0.22) 38%, rgba(15,14,11,0.98) 100%)" }} />
+        <div style={{ position: "relative", zIndex: 1, width: "100%", padding: "0 20px 24px", textAlign: "center" }}>
+          <div style={{ fontFamily: FONT_HEAD, fontSize: 34, lineHeight: 1.08, fontWeight: 800, color: T.paper, letterSpacing: -0.8 }}>
+            Play Smart.<br />Win More.
+          </div>
+          <div style={{ color: T.goldBright, fontSize: 12, margin: "10px auto 18px", fontWeight: 600 }}>
+            The premium gaming platform for serious players
+          </div>
+          <button
+            onClick={() => document.getElementById("games-trending")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            style={{ border: "none", borderRadius: 999, padding: "12px 28px", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, fontFamily: FONT_HEAD, fontSize: 12, fontWeight: 800, letterSpacing: 0.5, cursor: "pointer", boxShadow: `0 8px 24px ${T.gold}44` }}
+          >
+            Enter Games
+          </button>
+        </div>
+      </div>
+
+      <div className="hide-scroll" style={{ display: "flex", gap: 8, overflowX: "auto", padding: "18px 16px 8px" }}>
+        {categories.map(category => (
+          <button
+            key={category}
+            onClick={() => setActiveCategory(category)}
+            style={{ flex: "0 0 auto", border: `1px solid ${activeCategory === category ? T.gold : T.cardBorder}`, borderRadius: 999, padding: "9px 14px", background: activeCategory === category ? T.gold : T.card, color: activeCategory === category ? T.ink : T.muted, fontFamily: FONT_HEAD, fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}
+          >
+            {category}
+          </button>
+        ))}
+      </div>
+
+      <section style={{ padding: "18px 16px 4px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ fontFamily: FONT_HEAD, fontSize: 18, fontWeight: 800, color: T.paper }}>Featured</div>
+          <div style={{ color: T.goldBright, fontSize: 11, fontWeight: 700 }}>Spotlight</div>
+        </div>
+        <div style={{ position: "relative", minHeight: 200, overflow: "hidden", borderRadius: 16, border: `1px solid ${T.cardBorder}`, background: T.card }}>
+          <img src={gamesMoonJet} alt="MoonJet" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(15,14,11,0.94), rgba(15,14,11,0.14) 75%, rgba(15,14,11,0.2))" }} />
+          <div style={{ position: "relative", zIndex: 1, minHeight: 200, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "flex-start", padding: 18 }}>
+            <div style={{ fontFamily: FONT_HEAD, fontSize: 28, fontWeight: 800, color: "#fff" }}>MoonJet</div>
+            <div style={{ color: T.goldBright, fontSize: 12, margin: "4px 0 14px", fontWeight: 600 }}>Fly high. Aim higher.</div>
+            <button onClick={() => setActiveCategory("All Games")} style={{ border: "none", borderRadius: 999, padding: "9px 18px", background: T.gold, color: T.ink, fontFamily: FONT_HEAD, fontSize: 11, fontWeight: 800, cursor: "pointer" }}>Play Now</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="games-trending" style={{ padding: "22px 16px 4px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ fontFamily: FONT_HEAD, fontSize: 18, fontWeight: 800, color: T.paper }}>Trending Games</div>
+          <div style={{ color: T.muted, fontSize: 11 }}>{visibleGames.length} games</div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+          {visibleGames.map(game => (
+            <div key={game.title} style={{ position: "relative", gridColumn: game.gradient ? "span 2" : undefined, minHeight: game.gradient ? 132 : 164, overflow: "hidden", borderRadius: 14, border: `1px solid ${T.cardBorder}`, background: game.gradient || T.card }}>
+              {game.image && <img src={game.image} alt={game.title} loading="lazy" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
+              <div style={{ position: "absolute", inset: 0, background: game.image ? "linear-gradient(180deg, rgba(15,14,11,0.05), rgba(15,14,11,0.92))" : "linear-gradient(180deg, rgba(15,14,11,0.05), rgba(15,14,11,0.7))" }} />
+              <div style={{ position: "relative", zIndex: 1, height: "100%", minHeight: game.gradient ? 132 : 164, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 12 }}>
+                <div style={{ fontFamily: FONT_HEAD, fontSize: 13, fontWeight: 800, color: "#fff" }}>{game.title}</div>
+                <div style={{ color: T.goldBright, fontSize: 10, lineHeight: 1.35, marginTop: 3 }}>{game.subtitle}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section style={{ padding: "24px 16px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+          <div style={{ fontFamily: FONT_HEAD, fontSize: 18, fontWeight: 800, color: T.paper }}>Live Leaderboard</div>
+          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#E05252", boxShadow: "0 0 0 4px #E0525222" }} />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {players.map((player, index) => (
+            <div key={player.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 14, border: `1px solid ${index === 1 ? `${T.gold}66` : T.cardBorder}`, background: index === 1 ? `${T.gold}0D` : T.card }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", background: index === 0 ? T.gold : T.ink, color: index === 0 ? T.ink : T.muted, fontFamily: FONT_HEAD, fontSize: 11, fontWeight: 800 }}>{index + 1}</div>
+                <img src={player.avatar} alt={player.name} style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", border: `1px solid ${T.cardBorder}` }} />
+                <div>
+                  <div style={{ color: T.paper, fontFamily: FONT_HEAD, fontSize: 12, fontWeight: 700 }}>{player.name}</div>
+                  <div style={{ color: T.muted, fontSize: 10, marginTop: 3 }}>Level {25 - index * 2}</div>
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ color: T.goldBright, fontFamily: FONT_HEAD, fontSize: 12, fontWeight: 800 }}>GHS {player.score}</div>
+                <div style={{ color: player.trend[0] === "+" ? T.sage : T.rust, fontSize: 10, fontWeight: 700, marginTop: 3 }}>{player.trend}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 // Home Tab — main redesigned screen
 // ─────────────────────────────────────────────────────────────────────────────
 function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessions, sessionSecsLeft, startAnalysisSession, seriesMap, themeMode, activeMarkets = [], addActiveMarket, removeActiveMarket, maxActiveMarkets = 3 }) {
