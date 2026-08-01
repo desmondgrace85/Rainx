@@ -3465,6 +3465,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [benefits, setBenefits] = useState(DEFAULT_BENEFITS);
   const [verification, setVerification] = useState(null);
   const [showLegal, setShowLegal] = useState(false);
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
   // PWA install — deferred prompt + installed flag
   const [installPrompt, setInstallPrompt] = useState(null);
   const [appInstalled, setAppInstalled] = useState(() => window.matchMedia('(display-mode: standalone)').matches);
@@ -4570,14 +4571,12 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         />
         <MoreRowDivider />
         <MoreRow icon={Bell} title="Notifications" subtitle="Alerts, sounds, categories" onPress={() => setMorePage("notifications")} />
-        {(installPrompt || appInstalled) && <MoreRowDivider />}
+        <MoreRowDivider />
         {appInstalled
           ? <MoreRow icon={Smartphone} title="App Installed" subtitle="RainX is on your home screen" />
-          : installPrompt
-            ? <MoreRow icon={ArrowUpCircle} title="Install App" subtitle="Add RainX to your home screen" onPress={async () => { installPrompt.prompt(); const { outcome } = await installPrompt.userChoice; if (outcome === 'accepted') { setInstallPrompt(null); setAppInstalled(true); } }} />
-            : null}
+          : <MoreRow icon={ArrowUpCircle} title="Install App" subtitle="Add RainX to your home screen" onPress={async () => { if (installPrompt) { installPrompt.prompt(); const { outcome } = await installPrompt.userChoice; if (outcome === 'accepted') { setInstallPrompt(null); setAppInstalled(true); } } else { setShowInstallHelp(true); } }} />}
         <MoreRowDivider />
-        <MoreRow icon={RotateCcw} title="Refresh App" subtitle="Force reload to see latest updates" onPress={() => window.location.reload()} />
+        <MoreRow icon={RotateCcw} title="Restart App" subtitle="Force reload to see latest updates" onPress={() => { localStorage.setItem('rainx-features-seen', 'v2026-07'); window.location.reload(); }} />
       </MoreSection>
 
       <div style={{ textAlign: "center", marginTop: 4 }}>
@@ -4585,6 +4584,26 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <div style={{ fontSize: 10, color: T.muted, marginTop: 4, lineHeight: 1.6 }}>RainX is an analysis tool, not a broker.</div>
       </div>
 
+      {showInstallHelp && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}>
+          <div style={{ background: T.card, width: '100%', maxWidth: 480, margin: '0 auto', borderRadius: '16px 16px 0 0', padding: '22px 20px 36px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.goldBright, fontWeight: 800 }}>Install RainX</div>
+              <button onClick={() => setShowInstallHelp(false)} style={{ background: 'none', border: 'none', color: T.muted, cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+            <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.8, marginBottom: 20 }}>
+              <div style={{ color: T.paper, fontWeight: 700, marginBottom: 6 }}>📱 On iPhone / Safari:</div>
+              <div>1. Tap the <strong style={{ color: T.gold }}>Share</strong> button (box with arrow at bottom)</div>
+              <div>2. Scroll down and tap <strong style={{ color: T.gold }}>Add to Home Screen</strong></div>
+              <div>3. Tap <strong style={{ color: T.gold }}>Add</strong></div>
+              <div style={{ color: T.paper, fontWeight: 700, margin: '14px 0 6px' }}>🤖 On Android / Chrome:</div>
+              <div>1. Tap the <strong style={{ color: T.gold }}>⋮ menu</strong> (top right)</div>
+              <div>2. Tap <strong style={{ color: T.gold }}>Add to Home Screen</strong> or <strong style={{ color: T.gold }}>Install App</strong></div>
+            </div>
+            <button onClick={() => setShowInstallHelp(false)} style={{ width: '100%', background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: 'none', borderRadius: 12, padding: '13px 0', fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Got it</button>
+          </div>
+        </div>
+      )}
       {showLegal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 70, display: "flex", alignItems: "flex-end" }}>
           <div style={{ background: T.card, width: "100%", maxWidth: 480, margin: "0 auto", borderRadius: "16px 16px 0 0", padding: 22, maxHeight: "80vh", overflowY: "auto" }}>
