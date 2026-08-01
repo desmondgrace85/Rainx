@@ -6,6 +6,7 @@ import {
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
   CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet, Landmark, Gift, Trophy,
   Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle, Plus, RotateCcw,
+  BrainCircuit, Cpu,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, formatCount } from "./CommunityTab";
@@ -17,6 +18,7 @@ import gamesTraderDuel from "../../rainx-games/attached_assets/trader-duel.jpg";
 import gamesBullBear from "../../rainx-games/attached_assets/bull-bear.jpg";
 import gamesGoldenVault from "../../rainx-games/attached_assets/golden-vault.jpg";
 import gamesHeroRocket from "../../rainx-games/attached_assets/hero-rocket.jpg";
+import gamesRainaAI from "../../rainx-games/attached_assets/raina-ai.jpg";
 import gamesAvatar1 from "../../rainx-games/attached_assets/avatar-1.jpg";
 import gamesAvatar2 from "../../rainx-games/attached_assets/avatar-2.jpg";
 import gamesAvatar3 from "../../rainx-games/attached_assets/avatar-3.jpg";
@@ -2722,116 +2724,182 @@ function fmtTime(secs) {
 // ─────────────────────────────────────────────────────────────────────────────
 function GamesTab() {
   const [activeCategory, setActiveCategory] = React.useState("All Games");
+  const [activeRainaState, setActiveRainaState] = React.useState(0);
+  const [pageReady, setPageReady] = React.useState(false);
   const categories = ["All Games", "Trending", "Strategy", "Duel", "Quick Play"];
   const games = [
-    { title: "MoonJet", subtitle: "Fly high. Aim higher.", category: "Trending", image: gamesMoonJet },
-    { title: "Trader Duel", subtitle: "Battle traders in real-time", category: "Duel", image: gamesTraderDuel },
-    { title: "Bull vs Bear", subtitle: "Who controls the market?", category: "Strategy", image: gamesBullBear },
-    { title: "Golden Vault", subtitle: "The richest vault in crypto", category: "Strategy", image: gamesGoldenVault },
-    { title: "Candle Clash", subtitle: "Read the move. Make the call.", category: "Quick Play", gradient: "linear-gradient(135deg, #6E4C1E, #C6A15B 48%, #1C1913)" },
-    { title: "Signal Hunt", subtitle: "Spot the signal before anyone else.", category: "Quick Play", gradient: "linear-gradient(135deg, #162F2D, #376F62 50%, #1C1913)" },
+    { title: "MoonJet", subtitle: "Fly high. Aim higher.", image: gamesMoonJet },
+    { title: "Trader Duel", subtitle: "Battle traders in real-time", image: gamesTraderDuel },
+    { title: "Bull vs Bear", subtitle: "Who controls the market?", image: gamesBullBear },
+    { title: "Golden Vault", subtitle: "The richest vault in crypto", image: gamesGoldenVault },
+    { title: "Raina AI Challenge", subtitle: "Can you outsmart the AI?", image: gamesRainaAI, wide: true },
   ];
   const players = [
-    { name: "TradeMaster", avatar: gamesAvatar1, score: "214,500", trend: "+2.4%" },
-    { name: "KwameX", avatar: gamesAvatar2, score: "189,200", trend: "+1.8%" },
-    { name: "LunaPlay", avatar: gamesAvatar3, score: "145,800", trend: "-1.2%" },
-    { name: "Abena_G", avatar: gamesAvatar4, score: "112,400", trend: "+0.9%" },
+    { name: "TradeMaster", avatar: gamesAvatar1, score: "214,500", trend: "up" },
+    { name: "KwameX", avatar: gamesAvatar2, score: "189,200", trend: "up", isMe: true },
+    { name: "LunaPlay", avatar: gamesAvatar3, score: "145,800", trend: "down" },
+    { name: "Abena_G", avatar: gamesAvatar4, score: "112,400", trend: "up" },
   ];
-  const visibleGames = activeCategory === "All Games"
-    ? games
-    : games.filter(game => game.category === activeCategory || (activeCategory === "Trending" && ["Trending", "Duel", "Strategy"].includes(game.category)));
+  const rainaStates = ["Analyzing market...", "Calculating odds...", "Ready to play"];
+  const visibleGames = games;
+
+  React.useEffect(() => {
+    const readyTimer = setTimeout(() => setPageReady(true), 40);
+    const interval = setInterval(() => setActiveRainaState(prev => (prev + 1) % rainaStates.length), 2500);
+    return () => { clearTimeout(readyTimer); clearInterval(interval); };
+  }, []);
 
   return (
-    <div style={{ minHeight: "100dvh", background: T.ink, color: T.paper, fontFamily: FONT_BODY }}>
-      <div style={{ position: "relative", height: 330, overflow: "hidden", display: "flex", alignItems: "flex-end" }}>
-        <img src={gamesHeroRocket} alt="Gold rocket launching" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(15,14,11,0.12) 15%, rgba(15,14,11,0.22) 38%, rgba(15,14,11,0.98) 100%)" }} />
-        <div style={{ position: "relative", zIndex: 1, width: "100%", padding: "0 20px 24px", textAlign: "center" }}>
-          <div style={{ fontFamily: FONT_HEAD, fontSize: 34, lineHeight: 1.08, fontWeight: 800, color: T.paper, letterSpacing: -0.8 }}>
-            Play Smart.<br />Win More.
-          </div>
-          <div style={{ color: T.goldBright, fontSize: 12, margin: "10px auto 18px", fontWeight: 600 }}>
-            The premium gaming platform for serious players
-          </div>
-          <button
-            onClick={() => document.getElementById("games-trending")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-            style={{ border: "none", borderRadius: 999, padding: "12px 28px", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, fontFamily: FONT_HEAD, fontSize: 12, fontWeight: 800, letterSpacing: 0.5, cursor: "pointer", boxShadow: `0 8px 24px ${T.gold}44` }}
-          >
-            Enter Games
+    <div style={{ minHeight: "100dvh", background: "#050505", color: "#F2EDE0", fontFamily: FONT_BODY, overflow: "hidden" }}>
+      <style>{`
+        @keyframes games-fade-up { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes games-fade-in { from { opacity:0; } to { opacity:1; } }
+        @keyframes games-scale-in { from { opacity:0; transform:scale(.82); } to { opacity:1; transform:scale(1); } }
+        @keyframes games-pulse-ring {
+          0% { transform:scale(.95); box-shadow:0 0 0 0 rgba(201,168,76,.7); }
+          70% { transform:scale(1); box-shadow:0 0 0 10px rgba(201,168,76,0); }
+          100% { transform:scale(.95); box-shadow:0 0 0 0 rgba(201,168,76,0); }
+        }
+        @keyframes games-shimmer { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+        .games-reveal { opacity:0; animation:games-fade-up .6s ease-out forwards; }
+        .games-fade { opacity:0; animation:games-fade-in .7s ease-out forwards; }
+        .games-scroll-hide::-webkit-scrollbar { display:none; }
+        .games-scroll-hide { scrollbar-width:none; -ms-overflow-style:none; }
+      `}</style>
+
+      <header style={{ position: "sticky", top: 0, zIndex: 20, background: "rgba(5,5,5,.82)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(198,161,91,.2)", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ color: T.gold, fontSize: 20 }}>✦</span>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: "#F2EDE0" }}>RainX</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 999, background: "#1C1913", border: `1px solid ${T.cardBorder}`, boxShadow: `0 0 15px ${T.gold}33` }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#F2EDE0" }}>GHS 4,320.00</span>
+          <span style={{ width: 18, height: 18, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", background: `${T.gold}22`, color: T.goldBright, fontSize: 16, lineHeight: 1 }}>+</span>
+        </div>
+      </header>
+
+      <section style={{ position: "relative", height: 400, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 20px 30px", overflow: "hidden", borderRadius: "0 0 32px 32px" }}>
+        <div style={{ position: "absolute", inset: 0 }}>
+          <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(to top, #050505, rgba(5,5,5,.45) 58%, rgba(5,5,5,.3))" }} />
+          <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(to bottom, rgba(5,5,5,.45), transparent 35%)" }} />
+          <img src={gamesHeroRocket} alt="Gold rocket launching" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
+          <div style={{ position: "absolute", inset: 0, zIndex: 2, opacity: .25, background: "radial-gradient(circle at 50% 50%, rgba(201,168,76,.15), transparent 45%)", animation: "games-shimmer 15s linear infinite" }} />
+        </div>
+        <div className={pageReady ? "games-fade" : ""} style={{ position: "relative", zIndex: 3, textAlign: "center" }}>
+          <h1 style={{ fontFamily: FONT_HEAD, fontSize: 38, lineHeight: 1.05, fontWeight: 800, color: "#F2EDE0", margin: "0 0 8px", textShadow: `0 0 14px ${T.gold}66` }}>Play Smart.<br />Win More.</h1>
+          <p style={{ color: `${T.goldBright}CC`, fontSize: 13, fontWeight: 600, margin: "0 auto 22px", maxWidth: 280 }}>The premium gaming platform for serious players</p>
+          <button onClick={() => document.getElementById("games-trending")?.scrollIntoView({ behavior: "smooth", block: "start" })} style={{ border: "none", borderRadius: 999, padding: "14px 28px", background: `linear-gradient(90deg, ${T.gold}, ${T.goldBright})`, color: "#050505", fontFamily: FONT_HEAD, fontSize: 12, fontWeight: 800, letterSpacing: 1, cursor: "pointer", boxShadow: `0 0 24px ${T.gold}55` }}>
+            Enter Games <span style={{ marginLeft: 6 }}>▶</span>
           </button>
+        </div>
+      </section>
+
+      <div className="games-scroll-hide" style={{ width: "100%", padding: "20px 16px 8px", overflowX: "auto" }}>
+        <div style={{ display: "flex", gap: 8, minWidth: "max-content" }}>
+          {categories.map(category => {
+            const active = activeCategory === category;
+            return (
+              <button key={category} onClick={() => setActiveCategory(category)} style={{ position: "relative", border: active ? "none" : `1px solid ${T.cardBorder}`, borderRadius: 999, padding: "8px 16px", background: active ? T.gold : "#1C1913", color: active ? "#050505" : "#9C947F", fontFamily: FONT_HEAD, fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "all .25s", boxShadow: active ? `0 0 15px ${T.gold}55` : "none" }}>
+                {category}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="hide-scroll" style={{ display: "flex", gap: 8, overflowX: "auto", padding: "18px 16px 8px" }}>
-        {categories.map(category => (
-          <button
-            key={category}
-            onClick={() => setActiveCategory(category)}
-            style={{ flex: "0 0 auto", border: `1px solid ${activeCategory === category ? T.gold : T.cardBorder}`, borderRadius: 999, padding: "9px 14px", background: activeCategory === category ? T.gold : T.card, color: activeCategory === category ? T.ink : T.muted, fontFamily: FONT_HEAD, fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}
-          >
-            {category}
-          </button>
-        ))}
-      </div>
-
-      <section style={{ padding: "18px 16px 4px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontSize: 18, fontWeight: 800, color: T.paper }}>Featured</div>
-          <div style={{ color: T.goldBright, fontSize: 11, fontWeight: 700 }}>Spotlight</div>
-        </div>
-        <div style={{ position: "relative", minHeight: 200, overflow: "hidden", borderRadius: 16, border: `1px solid ${T.cardBorder}`, background: T.card }}>
-          <img src={gamesMoonJet} alt="MoonJet" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(15,14,11,0.94), rgba(15,14,11,0.14) 75%, rgba(15,14,11,0.2))" }} />
-          <div style={{ position: "relative", zIndex: 1, minHeight: 200, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "flex-start", padding: 18 }}>
-            <div style={{ fontFamily: FONT_HEAD, fontSize: 28, fontWeight: 800, color: "#fff" }}>MoonJet</div>
-            <div style={{ color: T.goldBright, fontSize: 12, margin: "4px 0 14px", fontWeight: 600 }}>Fly high. Aim higher.</div>
-            <button onClick={() => setActiveCategory("All Games")} style={{ border: "none", borderRadius: 999, padding: "9px 18px", background: T.gold, color: T.ink, fontFamily: FONT_HEAD, fontSize: 11, fontWeight: 800, cursor: "pointer" }}>Play Now</button>
+      <section className="games-reveal" style={{ animationDelay: ".15s", padding: "12px 16px 4px" }}>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: "#F2EDE0", marginBottom: 12 }}>Featured</div>
+        <div style={{ position: "relative", height: 200, borderRadius: 16, overflow: "hidden", border: `1px solid ${T.cardBorder}`, cursor: "pointer" }}>
+          <img src={gamesMoonJet} alt="MoonJet" style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform .7s" }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(5,5,5,.94), rgba(5,5,5,.25) 65%, transparent)" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "flex-start", padding: 18 }}>
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 28, color: "#fff" }}>MoonJet</div>
+            <div style={{ color: T.goldBright, fontSize: 12, fontWeight: 600, margin: "3px 0 14px" }}>Fly high. Aim higher.</div>
+            <button style={{ border: "none", borderRadius: 999, padding: "9px 18px", background: T.gold, color: "#050505", fontFamily: FONT_HEAD, fontSize: 11, fontWeight: 800, cursor: "pointer" }}>Play Now</button>
           </div>
         </div>
       </section>
 
-      <section id="games-trending" style={{ padding: "22px 16px 4px" }}>
+      <section id="games-trending" style={{ padding: "18px 16px 4px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontSize: 18, fontWeight: 800, color: T.paper }}>Trending Games</div>
-          <div style={{ color: T.muted, fontSize: 11 }}>{visibleGames.length} games</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: "#F2EDE0" }}>Trending Games</div>
+          <span style={{ color: T.muted, fontSize: 11 }}>{visibleGames.length} games</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-          {visibleGames.map(game => (
-            <div key={game.title} style={{ position: "relative", gridColumn: game.gradient ? "span 2" : undefined, minHeight: game.gradient ? 132 : 164, overflow: "hidden", borderRadius: 14, border: `1px solid ${T.cardBorder}`, background: game.gradient || T.card }}>
-              {game.image && <img src={game.image} alt={game.title} loading="lazy" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
-              <div style={{ position: "absolute", inset: 0, background: game.image ? "linear-gradient(180deg, rgba(15,14,11,0.05), rgba(15,14,11,0.92))" : "linear-gradient(180deg, rgba(15,14,11,0.05), rgba(15,14,11,0.7))" }} />
-              <div style={{ position: "relative", zIndex: 1, height: "100%", minHeight: game.gradient ? 132 : 164, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 12 }}>
-                <div style={{ fontFamily: FONT_HEAD, fontSize: 13, fontWeight: 800, color: "#fff" }}>{game.title}</div>
-                <div style={{ color: T.goldBright, fontSize: 10, lineHeight: 1.35, marginTop: 3 }}>{game.subtitle}</div>
+          {visibleGames.map((game, index) => (
+            <div key={game.title} className="games-reveal" style={{ animationDelay: `${.2 + index * .1}s`, position: "relative", gridColumn: game.wide ? "span 2" : undefined, aspectRatio: game.wide ? "2.5 / 1" : "4 / 5", borderRadius: 14, overflow: "hidden", border: `1px solid ${T.cardBorder}`, background: "#1C1913", cursor: "pointer", transition: "transform .25s, box-shadow .25s" }}>
+              <img src={game.image} alt={game.title} loading="lazy" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transition: "transform .7s" }} />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(5,5,5,.94), rgba(5,5,5,.1) 70%)" }} />
+              <div style={{ position: "absolute", left: 12, right: 12, bottom: 12 }}>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: game.wide ? 16 : 13, color: "#fff" }}>{game.title}</div>
+                <div style={{ color: `${T.goldBright}B3`, fontSize: 10, marginTop: 3 }}>{game.subtitle}</div>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      <section style={{ padding: "24px 16px 12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontSize: 18, fontWeight: 800, color: T.paper }}>Live Leaderboard</div>
-          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#E05252", boxShadow: "0 0 0 4px #E0525222" }} />
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {players.map((player, index) => (
-            <div key={player.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 14, border: `1px solid ${index === 1 ? `${T.gold}66` : T.cardBorder}`, background: index === 1 ? `${T.gold}0D` : T.card }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", background: index === 0 ? T.gold : T.ink, color: index === 0 ? T.ink : T.muted, fontFamily: FONT_HEAD, fontSize: 11, fontWeight: 800 }}>{index + 1}</div>
-                <img src={player.avatar} alt={player.name} style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", border: `1px solid ${T.cardBorder}` }} />
-                <div>
-                  <div style={{ color: T.paper, fontFamily: FONT_HEAD, fontSize: 12, fontWeight: 700 }}>{player.name}</div>
-                  <div style={{ color: T.muted, fontSize: 10, marginTop: 3 }}>Level {25 - index * 2}</div>
-                </div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ color: T.goldBright, fontFamily: FONT_HEAD, fontSize: 12, fontWeight: 800 }}>GHS {player.score}</div>
-                <div style={{ color: player.trend[0] === "+" ? T.sage : T.rust, fontSize: 10, fontWeight: 700, marginTop: 3 }}>{player.trend}</div>
-              </div>
+      <section style={{ position: "relative", marginTop: 24, padding: "48px 20px 42px", borderTop: `1px solid ${T.gold}22`, borderBottom: `1px solid ${T.gold}22`, overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: 0, backgroundColor: "#0A0A0A", opacity: .94 }} />
+        <div style={{ position: "absolute", inset: 0, opacity: .1, backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23C9A84C'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E)" }} />
+        <div style={{ position: "absolute", width: 260, height: 260, borderRadius: "50%", background: `${T.gold}18`, filter: "blur(80px)", top: "50%", left: "50%", transform: "translate(-50%,-50%)" }} />
+        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <div className="games-reveal" style={{ animationDelay: ".1s", textAlign: "center", marginBottom: 30 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 6 }}>
+              <BrainCircuit size={20} color={T.gold} />
+              <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 24, color: T.gold, textShadow: `0 0 10px ${T.gold}88` }}>Meet Raina AI</div>
             </div>
-          ))}
+            <div style={{ color: T.muted, fontSize: 13 }}>Your smartest opponent yet</div>
+          </div>
+          <div className="games-reveal" style={{ animationDelay: ".25s", position: "relative", marginBottom: 30 }}>
+            <div style={{ position: "absolute", inset: 0, borderRadius: "50%", animation: "games-pulse-ring 2s infinite" }} />
+            <div style={{ position: "absolute", inset: 0, borderRadius: "50%", animation: "games-pulse-ring 2s infinite", animationDelay: "1s" }} />
+            <div style={{ position: "relative", width: 132, height: 132, padding: 4, borderRadius: "50%", border: `2px solid ${T.gold}80`, background: "#0A0A0A", boxShadow: `0 0 30px ${T.gold}4D`, overflow: "hidden" }}>
+              <img src={gamesRainaAI} alt="Raina AI" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+            </div>
+            <div style={{ position: "absolute", bottom: -12, left: "50%", transform: "translateX(-50%)", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, background: "#1C1913", border: `1px solid ${T.gold}4D`, boxShadow: "0 4px 12px rgba(0,0,0,.5)" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.gold, animation: "pulse 1.5s infinite" }} />
+              <span style={{ color: "#F2EDE0", fontSize: 10, fontWeight: 600 }}>{rainaStates[activeRainaState]}</span>
+            </div>
+          </div>
+          <div className="games-reveal" style={{ animationDelay: ".4s", position: "relative", maxWidth: 280, marginBottom: 22, padding: 16, borderRadius: 18, background: "rgba(28,25,19,.82)", border: `1px solid ${T.cardBorder}`, backdropFilter: "blur(8px)" }}>
+            <div style={{ position: "absolute", top: -8, left: "50%", width: 16, height: 16, background: "#1C1913", borderTop: `1px solid ${T.cardBorder}`, borderLeft: `1px solid ${T.cardBorder}`, transform: "translateX(-50%) rotate(45deg)" }} />
+            <div style={{ position: "relative", color: "#F2EDE0", textAlign: "center", fontSize: 14, lineHeight: 1.45, fontWeight: 600, fontStyle: "italic" }}>"I've studied 2.4M trades. Your move, human."</div>
+          </div>
+          <div className="games-reveal" style={{ animationDelay: ".55s", width: "100%", maxWidth: 300, display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ padding: 12, borderRadius: 12, background: "rgba(15,14,11,.55)", border: `1px solid ${T.cardBorder}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, color: T.muted, fontSize: 12, fontWeight: 700 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Cpu size={13} /> Win Rate</span>
+                <span style={{ color: T.goldBright }}>68.4%</span>
+              </div>
+              <div style={{ height: 7, borderRadius: 999, overflow: "hidden", background: "#332C1F" }}><div style={{ height: "100%", width: pageReady ? "68.4%" : "0%", background: T.gold, transition: "width 1.5s .8s ease-out" }} /></div>
+            </div>
+            <button style={{ width: "100%", padding: "14px 20px", borderRadius: 12, background: "#1C1913", border: `1px solid ${T.gold}80`, color: T.goldBright, fontFamily: FONT_HEAD, fontSize: 15, fontWeight: 800, cursor: "pointer", boxShadow: `0 0 15px ${T.gold}26` }}>Challenge Raina</button>
+          </div>
         </div>
+      </section>
+
+      <section style={{ padding: "28px 16px 14px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 20, color: "#F2EDE0" }}>Live Leaderboard</div>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#E05252", animation: "pulse 1.5s infinite" }} />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+          {players.map((player, index) => {
+            const rank = index + 1;
+            return (
+              <div key={player.name} className="games-reveal" style={{ animationDelay: `${.1 + index * .1}s`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: 12, borderRadius: 16, border: `1px solid ${player.isMe ? `${T.gold}4D` : T.cardBorder}`, background: player.isMe ? `${T.gold}0D` : "#1C1913" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: rank === 1 ? T.gold : "#1C1913", border: rank > 1 ? `1px solid ${T.cardBorder}` : "none", color: rank === 1 ? "#050505" : T.muted, fontSize: 12, fontWeight: 800 }}>{rank}</div>
+                  <img src={player.avatar} alt={player.name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", border: `1px solid ${T.cardBorder}` }} />
+                  <div><div style={{ color: "#F2EDE0", fontSize: 13, fontWeight: 700 }}>{player.name}{player.isMe && <span style={{ marginLeft: 6, padding: "2px 5px", borderRadius: 4, background: T.gold, color: "#050505", fontSize: 8, fontWeight: 800 }}>YOU</span>}</div><div style={{ color: T.muted, fontSize: 10, marginTop: 3 }}>Level {25 - rank * 2}</div></div>
+                </div>
+                <div style={{ textAlign: "right" }}><div style={{ color: T.goldBright, fontFamily: "monospace", fontSize: 12, fontWeight: 800 }}><span style={{ color: T.muted, fontSize: 9, marginRight: 4 }}>GHS</span>{player.score}</div><div style={{ color: player.trend === "up" ? "#34D399" : "#F87171", fontSize: 10, marginTop: 4, fontWeight: 700 }}>{player.trend === "up" ? "↗ +2.4%" : "↘ -1.2%"}</div></div>
+              </div>
+            );
+          })}
+        </div>
+        <button style={{ width: "100%", marginTop: 16, padding: 12, border: "none", background: "none", color: T.gold, fontFamily: FONT_HEAD, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>View Full Rankings <ChevronRight size={15} style={{ verticalAlign: "middle" }} /></button>
       </section>
     </div>
   );
