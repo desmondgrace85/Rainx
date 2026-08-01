@@ -38,8 +38,13 @@ router.get("/price", async (req: Request, res: Response) => {
     );
     if (!r.ok) throw new Error(`Yahoo ${r.status}`);
     const json = await r.json() as any;
-    const meta = json?.chart?.result?.[0]?.meta;
-    const price = meta?.regularMarketPrice ?? meta?.previousClose ?? null;
+    const result = json?.chart?.result?.[0];
+    const meta = result?.meta;
+    const closes = result?.indicators?.quote?.[0]?.close || [];
+    // Use the same latest candle close consumed by /api/candles. Yahoo's
+    // regularMarketPrice may be delayed or come from a different venue.
+    const price = [...closes].reverse().find(v => v != null && isFinite(v))
+      ?? meta?.regularMarketPrice ?? meta?.previousClose ?? null;
     if (price == null) throw new Error("no price in response");
     return res.json({ price, symbol });
   } catch (err: any) {

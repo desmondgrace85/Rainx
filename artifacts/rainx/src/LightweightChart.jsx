@@ -3,7 +3,7 @@
  * Professional candlestick chart powered by TradingView's lightweight-charts.
  * Blue bullish candles · Black bearish candles · White background · Gold AI overlays
  */
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef } from "react";
 import { createChart, CrosshairMode, LineStyle } from "lightweight-charts";
 
 const BULL_COLOR   = "#1D6FE8";   // RainX blue
@@ -51,6 +51,7 @@ export default function LightweightChart({
   containerHeight = 220,
   compact = false,
   isDark = false,
+  onLoadMore = null,
 }) {
   const containerRef  = useRef(null);
   const chartRef      = useRef(null);
@@ -59,6 +60,10 @@ export default function LightweightChart({
   const priceLineMap  = useRef([]);   // { series, priceLine }
   const prevBarsRef   = useRef([]);   // last rendered bars — for smart update() vs setData()
   const ohlcRangeRef  = useRef(null); // { min, max } of visible candle data — keeps scale pinned to OHLC
+  const loadMoreRef   = useRef(onLoadMore);
+  const loadingMoreRef = useRef(false);
+
+  useEffect(() => { loadMoreRef.current = onLoadMore; }, [onLoadMore]);
 
   // ── Create chart once on mount ───────────────────────────────────────────
   useEffect(() => {
@@ -107,7 +112,7 @@ export default function LightweightChart({
       handleScroll:  compact ? false : { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
       handleScale:   compact ? false : { axisPressedMouseMove: { time: true, price: true }, mouseWheel: true, pinch: true, vertTouchDrag: true },
       width:  el.clientWidth  || 340,
-      height: Math.max(el.clientHeight || 0, containerHeight, window.innerHeight * 0.22, 160),
+      height: Math.max(el.clientHeight || 0, containerHeight, compact ? 60 : window.innerHeight * 0.22, compact ? 60 : 160),
     });
 
     const candleSeries = chart.addCandlestickSeries({
@@ -133,12 +138,23 @@ export default function LightweightChart({
     chartRef.current  = chart;
     candleRef.current = candleSeries;
 
+    // Keep history loading identical on every chart surface. The consumer
+    // owns the API cursor; this renderer only signals when the left edge is
+    // reached.
+    chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+      if (!range || range.from >= 18 || !loadMoreRef.current || loadingMoreRef.current) return;
+      loadingMoreRef.current = true;
+      Promise.resolve(loadMoreRef.current()).finally(() => {
+        setTimeout(() => { loadingMoreRef.current = false; }, 350);
+      });
+    });
+
     // ResizeObserver for responsive sizing
     const ro = new ResizeObserver(entries => {
       const e = entries[0];
       if (e && chartRef.current) {
         const w = e.contentRect.width || el.clientWidth || 340;
-        const h = Math.max(e.contentRect.height, containerHeight, 160);
+        const h = Math.max(e.contentRect.height, containerHeight, compact ? 60 : 160);
         chartRef.current.resize(w, h);
       }
     });
@@ -175,7 +191,17 @@ export default function LightweightChart({
         prev.length >= 2 && bars.length >= 2 &&
         prev[prev.length - 2]?.time === bars[bars.length - 2]?.time; // penultimate bar unchanged
 
-      if (isLiveUpdate) {
+        const previousFirst = prev[0]?.time;
+        const previousLast = prev[prev.length - 1]?.time;
+        const isPrepend = prev.length > 0 &&
+          bars.length > prev.length &&
+          bars[0]?.time < previousFirst &&
+          bars[bars.length - 1]?.time === previousLast;
+        const visibleRange = isPrepend && chartRef.current
+          ? chartRef.current.timeScale().getVisibleLogicalRange()
+          : null;
+
+        if (isLiveUpdate) {
         // Only the last candle changed — push a live tick without full redraw
         const last = bars[bars.length - 1];
         // Keep range updated for live ticks too
@@ -188,7 +214,13 @@ export default function LightweightChart({
         // New instrument or significant data change — full replace
         candleRef.current.setData(bars);
         if (chartRef.current) {
-          if (compact) {
+          if (isPrepend && visibleRange) {
+            const added = bars.length - prev.length;
+            chartRef.current.timeScale().setVisibleLogicalRange({
+              from: visibleRange.from + added,
+              to: visibleRange.to + added,
+            });
+          } else if (compact) {
             const last  = bars[bars.length - 1].time;
             const first = bars[Math.max(0, bars.length - 40)].time;
             chartRef.current.timeScale().setVisibleRange({ from: first, to: last });
@@ -430,7 +462,7 @@ export default function LightweightChart({
       `}</style>
       <div
         ref={containerRef}
-        style={{ width: "100%", height: containerHeight, minHeight: containerHeight, overflow: "hidden", position: "relative", touchAction: "pan-y" }}
+        style={{ width: "100%", height: containerHeight, minHeight: containerHeight, overflow: "hidden", position: "relative", touchAction: "none" }}
       />
     </>
   );

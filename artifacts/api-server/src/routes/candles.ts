@@ -60,14 +60,14 @@ function toYahooSymbol(raw: string): string {
 function getYFParams(interval: string, before?: number): Record<string, string> {
   const rangeMap: Record<string, string> = {
     "1m": "1d", "5m": "5d", "15m": "60d", "30m": "60d",
-    "1h": "730d", "4h": "730d", "1d": "max",
+    "1h": "730d", "2h": "730d", "4h": "730d", "1d": "max",
   };
 
   if (before) {
     // Load-more history: fetch a chunk ending just before `before`
     const chunkSecs: Record<string, number> = {
       "1m": 86400, "5m": 5 * 86400, "15m": 30 * 86400, "30m": 30 * 86400,
-      "1h": 365 * 86400, "4h": 365 * 86400, "1d": 10 * 365 * 86400,
+      "1h": 365 * 86400, "2h": 365 * 86400, "4h": 365 * 86400, "1d": 10 * 365 * 86400,
     };
     const chunk = chunkSecs[interval] ?? 30 * 86400;
     const period2 = before - 60;          // just before the oldest known bar
@@ -78,11 +78,11 @@ function getYFParams(interval: string, before?: number): Record<string, string> 
   return { interval, range: rangeMap[interval] ?? "1mo" };
 }
 
-// Resample 1h candles into 4h candles when Yahoo doesn't support 4h
-function resampleTo4h(bars: CandleBar[]): CandleBar[] {
+// Resample 1h candles into multi-hour candles when Yahoo doesn't support them.
+function resampleToHours(bars: CandleBar[], hours: number): CandleBar[] {
   const groups = new Map<number, CandleBar[]>();
   for (const b of bars) {
-    const slot = Math.floor(b.time / (4 * 3600)) * (4 * 3600);
+    const slot = Math.floor(b.time / (hours * 3600)) * (hours * 3600);
     if (!groups.has(slot)) groups.set(slot, []);
     groups.get(slot)!.push(b);
   }
@@ -102,7 +102,7 @@ function resampleTo4h(bars: CandleBar[]): CandleBar[] {
 interface CandleBar { time: number; open: number; high: number; low: number; close: number; }
 
 async function fetchFromYahoo(yahooSym: string, interval: string, before?: number): Promise<CandleBar[]> {
-  const yfInterval = interval === "4h" ? "1h" : interval;
+  const yfInterval = interval === "2h" || interval === "4h" ? "1h" : interval;
   const params = getYFParams(yfInterval, before);
   const qs = new URLSearchParams(params as Record<string, string>).toString();
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSym)}?${qs}&includePrePost=false&events=`;
@@ -136,7 +136,9 @@ async function fetchFromYahoo(yahooSym: string, interval: string, before?: numbe
     bars.push({ time: timestamps[i], open: o, high: h, low: l, close: c });
   }
 
-  return interval === "4h" ? resampleTo4h(bars) : bars;
+  return interval === "2h" ? resampleToHours(bars, 2)
+    : interval === "4h" ? resampleToHours(bars, 4)
+    : bars;
 }
 
 router.get("/", async (req: Request, res: Response) => {
@@ -149,7 +151,7 @@ router.get("/", async (req: Request, res: Response) => {
   const maxBars = Math.min(parseInt(limit, 10) || 300, 500);
   const beforeTs = before ? parseInt(before, 10) : undefined;
   const yahooSym = toYahooSymbol(symbol);
-  const iv = (["1m","5m","15m","30m","1h","4h","1d"].includes(interval) ? interval : "15m") as string;
+  const iv = (["1m","5m","15m","30m","1h","2h","4h","1d"].includes(interval) ? interval : "15m") as string;
 
   try {
     let bars = await fetchFromYahoo(yahooSym, iv, beforeTs);

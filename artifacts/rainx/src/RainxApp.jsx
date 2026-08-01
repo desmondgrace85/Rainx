@@ -2713,28 +2713,16 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
   // OHLCV candles from tick series (fallback while real candles load)
   const candles = React.useMemo(() => ticksToCandles(series || [], 70), [series]);
 
-  // Local live price with micro-jitter so the chart always animates even when API is slow
-  const [localLast, setLocalLast] = React.useState(last);
-  React.useEffect(() => { if (last) setLocalLast(last); }, [last]);
-  React.useEffect(() => {
-    const id = setInterval(() => {
-      setLocalLast(prev => {
-        if (!prev || !inst) return prev;
-        const jitter = (Math.random() - 0.5) * (inst.vol || 1) * 0.03;
-        return Number(Math.max((inst.base || 1) * 0.5, prev + jitter).toFixed(inst.digits ?? 2));
-      });
-    }, 400);
-    return () => clearInterval(id);
-  }, [inst]);
-
   // Real candles from Raina AI backend — keyed to selected timeframe
   const BASE_URL_H = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
+  const apiInterval = ({ "1H": "1h", "2H": "2h", "4H": "4h", "1D": "1d" }[activeChartTf] || activeChartTf);
   const [realCandles, setRealCandles] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   useEffect(() => {
     let cancelled = false;
     const sym = session?.symbol || activeSymbol;
     if (!sym) return;
-    fetch(`${BASE_URL_H}/api/candles?symbol=${encodeURIComponent(sym)}&interval=${activeChartTf}&limit=500`)
+    fetch(`${BASE_URL_H}/api/candles?symbol=${encodeURIComponent(sym)}&interval=${apiInterval}&limit=500`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (!cancelled && data) {
@@ -2750,14 +2738,36 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [activeSymbol, session?.symbol, activeChartTf]);
+  }, [activeSymbol, session?.symbol, apiInterval]);
+
+  // Load older candles when the shared chart reaches its left edge.
+  const loadMoreChartHistory = React.useCallback(async () => {
+    if (historyLoading || !realCandles.length) return;
+    const sym = session?.symbol || activeSymbol;
+    const oldest = realCandles[0]?.t;
+    if (!sym || !oldest) return;
+    setHistoryLoading(true);
+    try {
+      const before = Math.floor(oldest / 1000);
+      const res = await fetch(`${BASE_URL_H}/api/candles?symbol=${encodeURIComponent(sym)}&interval=${apiInterval}&limit=500&before=${before}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const older = (data.values || []).slice().reverse().map(c => ({
+        t: new Date(c.datetime || c.time || 0).getTime(),
+        open: +c.open, high: +c.high, low: +c.low, close: +c.close,
+      })).filter(c => c.t > 0 && isFinite(c.open));
+      const uniqueOlder = older.filter(c => c.t < oldest);
+      if (uniqueOlder.length) setRealCandles(prev => [...uniqueOlder, ...prev]);
+    } catch {}
+    finally { setHistoryLoading(false); }
+  }, [historyLoading, realCandles, session?.symbol, activeSymbol, apiInterval]);
 
   // Poll the candles API every 30 s so the chart keeps refreshing with new bars
   useEffect(() => {
     const sym = session?.symbol || activeSymbol;
     if (!sym) return;
     const id = setInterval(() => {
-      fetch(`${BASE_URL_H}/api/candles?symbol=${encodeURIComponent(sym)}&interval=${activeChartTf}&limit=500`)
+      fetch(`${BASE_URL_H}/api/candles?symbol=${encodeURIComponent(sym)}&interval=${apiInterval}&limit=500`)
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if (!data) return;
@@ -2770,18 +2780,13 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
         }).catch(() => {});
     }, 30000);
     return () => clearInterval(id);
-  }, [activeSymbol, session?.symbol, activeChartTf]);
+  }, [activeSymbol, session?.symbol, apiInterval]);
 
-  // Merge the live price into the last candle so the chart animates in real-time
+  // The chart uses only broker/API candles. Never replace a real close with a
+  // locally generated value; that was the source of price differences.
   const chartCandles = React.useMemo(() => {
-    const base = realCandles.length ? realCandles : candles;
-    const livePrice = localLast || last;
-    if (!base.length || !livePrice) return base;
-    const arr = base.slice();
-    const tail = { ...arr[arr.length - 1], close: livePrice, high: Math.max(arr[arr.length - 1].high, livePrice), low: Math.min(arr[arr.length - 1].low, livePrice) };
-    arr[arr.length - 1] = tail;
-    return arr;
-  }, [realCandles, candles, localLast, last]);
+    return realCandles;
+  }, [realCandles]);
 
   // State label
   const stateLabel = session ? {
@@ -2908,6 +2913,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
             containerHeight={270}
             compact={false}
             isDark={T.ink === "#0F0E0B"}
+            onLoadMore={loadMoreChartHistory}
           />
         </div>
 
@@ -3113,6 +3119,32 @@ function MiniSparkline({ data = [], width = 72, height = 30 }) {
 // ---------- Markets tab ----------
 function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }) {
   const [fullChartInst, setFullChartInst] = useState(null);
+  const [marketCandles, setMarketCandles] = useState({});
+
+  // Markets previews use the same broker candle feed as Home and Full Chart.
+  // Do not render the seeded tick series here: it can drift from the real OHLC.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(INSTRUMENTS.map(async (inst) => {
+      try {
+        const res = await fetch(`/api/candles?symbol=${encodeURIComponent(inst.symbol)}&interval=15m&limit=24`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        const values = (data.values || []).slice().reverse().map(c => ({
+          t: new Date(c.datetime || c.time || 0).getTime(),
+          open: +c.open, high: +c.high, low: +c.low, close: +c.close,
+        })).filter(c => c.t > 0 && isFinite(c.open));
+        return [inst.symbol, values];
+      } catch {
+        return null;
+      }
+    })).then(entries => {
+      if (cancelled) return;
+      setMarketCandles(Object.fromEntries(entries.filter(Boolean)));
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div style={{ padding: 16 }}>
       {/* Full-screen chart overlay for a specific instrument */}
@@ -3152,9 +3184,15 @@ function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }
                   })}
                 </div>
               </div>
-              {/* Center: mini sparkline */}
-              <div style={{ flexShrink: 0 }}>
-                <MiniSparkline data={arr.slice(-50)} width={72} height={30} />
+              {/* Center: same lightweight-charts renderer as Home */}
+              <div style={{ flexShrink: 0, width: 88, height: 42, overflow: "hidden", pointerEvents: "none" }}>
+                <LightweightChart
+                  candles={marketCandles[i.symbol] || []}
+                  inst={i}
+                  containerHeight={42}
+                  compact
+                  isDark={T.ink === "#0F0E0B"}
+                />
               </div>
               {/* Right: price, change, status, full chart button */}
               <div style={{ textAlign: "right", flexShrink: 0, minWidth: 80 }}>

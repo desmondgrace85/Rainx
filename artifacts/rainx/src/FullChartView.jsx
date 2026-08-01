@@ -141,6 +141,7 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
       const olderBars = toChartBars(older).filter(b => b.time < oldest.time);
       if (!olderBars.length) return;
       const combined = [...olderBars, ...barsCache.current];
+      const visibleRange = chartRef.current?.timeScale().getVisibleLogicalRange();
       barsCache.current = combined;
       if (candleRef.current) {
         candleRef.current.setData(combined);
@@ -150,6 +151,12 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
             value: Math.abs(b.high - b.low) * 1000,
             color: b.close >= b.open ? "rgba(29,111,232,0.25)" : "rgba(19,23,34,0.25)",
           })));
+        }
+        if (visibleRange && chartRef.current) {
+          chartRef.current.timeScale().setVisibleLogicalRange({
+            from: visibleRange.from + olderBars.length,
+            to: visibleRange.to + olderBars.length,
+          });
         }
       }
     } catch { /* ignore */ } finally {
@@ -270,6 +277,29 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
       priceLines.current = [];
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [themeMode]);
+
+  // On touch devices, vertical movement belongs to the price-scale strip.
+  // The candle area remains horizontally pannable and cannot vertically drag
+  // the page or distort the chart.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const PRICE_SCALE_WIDTH = 72;
+    let onScale = false;
+    const onStart = (e) => {
+      const touch = e.touches?.[0];
+      if (!touch) return;
+      const rect = el.getBoundingClientRect();
+      onScale = touch.clientX >= rect.right - PRICE_SCALE_WIDTH;
+    };
+    const onMove = (e) => { if (!onScale) e.preventDefault(); };
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+    };
   }, [themeMode]);
 
   // ── Load data into chart ──────────────────────────────────────────────────
