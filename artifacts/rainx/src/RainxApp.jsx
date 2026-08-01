@@ -184,7 +184,7 @@ function lsDelete(key) {
 }
 
 // ── URL-hash routing helpers — keeps current page alive across refresh ────────
-const _ROUTE_TABS = ["home","markets","community","more","history","scalping","subscribe"];
+const _ROUTE_TABS = ["home","markets","community","games","more","history","scalping","subscribe"];
 function routeRead() {
   try {
     const h = window.location.hash.slice(1);
@@ -1160,7 +1160,7 @@ function MainAppContent({ account, onLogout }) {
   const swipeRef   = useRef(null); // edge-swipe touch tracking
 
   const goTab = (key, forcedDir) => {
-    const ORDER = { home: 0, markets: 1, community: 2, more: 3, history: 3, scalping: 3, subscribe: 3 };
+    const ORDER = { home: 0, markets: 1, community: 2, games: 2.5, more: 3, history: 3, scalping: 3, subscribe: 3 };
     tabDirRef.current  = forcedDir ?? ((ORDER[key] ?? 0) >= (ORDER[prevTabRef.current] ?? 0) ? 1 : -1);
     prevTabRef.current = key;
     setTab(key);
@@ -2133,6 +2133,15 @@ function MainAppContent({ account, onLogout }) {
                 <path d="M21 21v-1.5a3 3 0 0 0-2.2-2.9"/>
               </svg>
             )},
+            { key: "games", label: "Games", icon: (active) => (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="6" width="20" height="12" rx="4"/>
+                <line x1="12" y1="10" x2="12" y2="14"/>
+                <line x1="10" y1="12" x2="14" y2="12"/>
+                <circle cx="17" cy="11" r="1"/>
+                <circle cx="19" cy="13" r="1"/>
+              </svg>
+            )},
             { key: "more", label: "More", icon: (active) => (
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="5" cy="12" r="1.4"/>
@@ -2143,9 +2152,9 @@ function MainAppContent({ account, onLogout }) {
           ].map(({ key, label, icon }) => {
             const active = !profileFromHeader && tab === key;
             return (
-              <button key={key} onClick={() => { if (key === "more") setMorePage(null); goTab(key); }} style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 64, padding: "6px 4px", transition: "color 0.15s" }}>
+              <button key={key} onClick={() => { if (key === "more") setMorePage(null); goTab(key); }} style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 52, padding: "4px 2px", transition: "color 0.15s" }}>
                 {icon(active)}
-                <span style={{ fontSize: 13, fontFamily: FONT_HEAD, fontWeight: active ? 700 : 500, letterSpacing: 0.1 }}>{label}</span>
+                <span style={{ fontSize: 11, fontFamily: FONT_HEAD, fontWeight: active ? 700 : 500, letterSpacing: 0.1 }}>{label}</span>
               </button>
             );
           })}
