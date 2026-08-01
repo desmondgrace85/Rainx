@@ -12,15 +12,15 @@ import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as Communit
 import FullChartView from "./FullChartView";
 import LightweightChart from "./LightweightChart";
 
-import gamesMoonJet from "@assets/games-moonjet.jpg";
-import gamesTraderDuel from "@assets/games-trader-duel.jpg";
-import gamesBullBear from "@assets/games-bull-bear.jpg";
-import gamesGoldenVault from "@assets/games-golden-vault.jpg";
-import gamesHeroRocket from "@assets/games-hero-rocket.jpg";
-import gamesAvatar1 from "@assets/games-avatar-1.jpg";
-import gamesAvatar2 from "@assets/games-avatar-2.jpg";
-import gamesAvatar3 from "@assets/games-avatar-3.jpg";
-import gamesAvatar4 from "@assets/games-avatar-4.jpg";
+import gamesMoonJet from "../../rainx-games/attached_assets/moonjet.jpg";
+import gamesTraderDuel from "../../rainx-games/attached_assets/trader-duel.jpg";
+import gamesBullBear from "../../rainx-games/attached_assets/bull-bear.jpg";
+import gamesGoldenVault from "../../rainx-games/attached_assets/golden-vault.jpg";
+import gamesHeroRocket from "../../rainx-games/attached_assets/hero-rocket.jpg";
+import gamesAvatar1 from "../../rainx-games/attached_assets/avatar-1.jpg";
+import gamesAvatar2 from "../../rainx-games/attached_assets/avatar-2.jpg";
+import gamesAvatar3 from "../../rainx-games/attached_assets/avatar-3.jpg";
+import gamesAvatar4 from "../../rainx-games/attached_assets/avatar-4.jpg";
 
 // ---------- Design tokens ----------
 const T = {
