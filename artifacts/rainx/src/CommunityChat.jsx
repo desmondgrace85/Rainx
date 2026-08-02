@@ -96,19 +96,19 @@ function Avatar({ name, avatarUrl, size }) {
 }
 
 // ── Ticks ──────────────────────────────────────────────────────────────────
-// sent=1 black tick, delivered=2 black ticks, read=2 white ticks
+// sent=1 grey tick, delivered=2 grey ticks (same color as sent), read=2 blue ticks
 function Ticks({ status }) {
   if (status === "read") {
-    // two white ticks
+    // two blue ticks — recipient has actually opened and read the message
     return (
-      <span style={{ display: "inline-flex", alignItems: "center", color: "#ffffff" }}>
+      <span style={{ display: "inline-flex", alignItems: "center", color: "#34B7F1" }}>
         <Check size={10} strokeWidth={3.5} />
         <Check size={10} strokeWidth={3.5} style={{ marginLeft: -6 }} />
       </span>
     );
   }
   if (status === "delivered") {
-    // two black ticks
+    // two grey ticks, same color as "sent" — recipient is online/has the app, but hasn't opened this chat yet
     return (
       <span style={{ display: "inline-flex", alignItems: "center", color: "#111111" }}>
         <Check size={10} strokeWidth={3.5} />
@@ -116,7 +116,7 @@ function Ticks({ status }) {
       </span>
     );
   }
-  // sent: one black tick
+  // sent: one grey tick — recipient offline / hasn't received it yet
   return <Check size={10} strokeWidth={3.5} color="#111111" />;
 }
 
