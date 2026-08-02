@@ -1832,9 +1832,6 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
     const { data } = await supabase.from("community_posts").select("*").order("created_at", { ascending: false }).limit(100);
     const rows = data || [];
 
-    // Show posts immediately — users see content without waiting for secondary data
-    setPosts(rows);
-    setPostsLoading(false);
     const initialLikeData = {};
     const initialRepostData = {};
     rows.forEach((post) => {
@@ -1850,7 +1847,11 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
     setLikeData(initialLikeData);
     setRepostData(initialRepostData);
 
-    if (!rows.length) return;
+    if (!rows.length) {
+      setPosts([]);
+      setPostsLoading(false);
+      return;
+    }
 
     const postIds = rows.map((r) => r.id);
     const userIds = [...new Set(rows.map((r) => r.user_id))];
@@ -1895,7 +1896,10 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
     // Update comment counts in existing posts
     const cCounts = {};
     (commentsResult?.data || []).forEach((c) => { cCounts[c.post_id] = (cCounts[c.post_id] || 0) + 1; });
-    setPosts((prev) => prev.map((r) => ({ ...r, comment_count: cCounts[r.id] ?? r.comment_count ?? 0 })));
+    const postsWithCounts = rows.map((r) => ({
+      ...r,
+      comment_count: cCounts[r.id] ?? r.comment_count ?? 0,
+    }));
 
     // Use the persisted total; only fetch this user's rows to determine likedByMe.
     const myLikedSet = new Set();
@@ -1915,6 +1919,8 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
     postIds.forEach((id) => { rd[id] = { count: 0, repostedByMe: false }; });
     (repostsResult?.data || []).forEach((r) => { if (rd[r.post_id]) { rd[r.post_id].count += 1; if (r.user_id === account.id) rd[r.post_id].repostedByMe = true; } });
     setRepostData(rd);
+    setPosts(postsWithCounts);
+    setPostsLoading(false);
   }, [account.id]);
 
   useEffect(() => {
