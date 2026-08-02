@@ -292,7 +292,6 @@ async function togglePostLike(postId, authorId, accountId, likeData, setLikeData
     setLikeData((d) => ({ ...d, [postId]: { count: newCount, likedByMe: false } }));
     const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", accountId);
     if (error) { setLikeData((d) => ({ ...d, [postId]: cur })); return; }
-    supabase.from("community_posts").update({ likes_count: newCount }).eq("id", postId).then(() => {}, () => {});
   } else {
     const newCount = cur.count + 1;
     setLikeData((d) => ({ ...d, [postId]: { count: newCount, likedByMe: true } }));
@@ -302,7 +301,6 @@ async function togglePostLike(postId, authorId, accountId, likeData, setLikeData
       setLikeData((d) => ({ ...d, [postId]: cur }));
       return;
     }
-    supabase.from("community_posts").update({ likes_count: newCount }).eq("id", postId).then(() => {}, () => {});
     notify(authorId, accountId, "like", postId);
   }
 }

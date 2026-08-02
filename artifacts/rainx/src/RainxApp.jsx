@@ -890,7 +890,7 @@ const SUB_PLANS = [
     key: "weekly",
     label: "Weekly",
     tag: "Best for short term",
-    price: "¢120.00",
+    price: "¢150.00",
     period: "/ week",
     billing: "Billed every week",
     features: [
@@ -906,7 +906,7 @@ const SUB_PLANS = [
     key: "monthly",
     label: "Monthly",
     tag: "Most popular",
-    price: "¢380.00",
+    price: "¢500.00",
     period: "/ month",
     billing: "Billed every month",
     features: [
@@ -922,7 +922,7 @@ const SUB_PLANS = [
     key: "yearly",
     label: "Yearly",
     tag: "Best value",
-    price: "¢680.00",
+    price: "¢6000.00",
     period: "/ year",
     billing: "Billed every year",
     features: [
@@ -947,10 +947,10 @@ function SubscribeScreen({ account, entitlement, onBack }) {
 
   useEffect(() => {
     supabase.from("payment_methods").select("*").eq("enabled", true).order("sort_order").then(({ data }) => setMethods(data || []));
-    supabase.from("plan_prices").select("plan, price_ghs").then(({ data }) => {
+    supabase.from("plan_prices").select("plan, price").then(({ data }) => {
       if (data) {
         const m = {};
-        data.forEach((r) => { m[r.plan] = r.price_ghs; });
+        data.forEach((r) => { m[r.plan] = r.price; });
         setPlanPrices(m);
       }
     }).catch(() => {});

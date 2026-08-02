@@ -594,13 +594,10 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
         .order("created_at", { ascending: true }).limit(200);
       if (err) { setError(err.message); return; }
       setMessages(data || []);
-      const s = getPerUserSettings(oid);
-      if (s.readReceipts) {
-        const unread = (data || []).filter(m => m.receiver_id === aid && !m.is_read);
-        if (unread.length) {
-          supabase.from("direct_messages").update({ is_read: true, read_at: new Date().toISOString() })
-            .eq("receiver_id", aid).eq("sender_id", oid).eq("is_read", false).then(() => {}, () => {});
-        }
+      const unread = (data || []).filter(m => m.receiver_id === aid && !m.is_read);
+      if (unread.length) {
+        supabase.from("direct_messages").update({ is_read: true, read_at: new Date().toISOString() })
+          .eq("receiver_id", aid).eq("sender_id", oid).eq("is_read", false).then(() => {}, () => {});
       }
     } catch (_) { setError("Messages not available yet."); }
     finally { setLoading(false); }
@@ -642,7 +639,6 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
       const { data, error: err } = await supabase.from("direct_messages").insert({ sender_id: aid, receiver_id: oid, content }).select().single();
       if (err) throw err;
       setMessages(p => p.map(m => m.id === optId ? data : m));
-      // Community messages previously sent no notification at all — send one now, same as likes/comments/follows.
       fetch(`${BASE_URL}/api/push/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
