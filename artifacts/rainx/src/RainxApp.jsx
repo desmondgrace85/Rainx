@@ -6331,7 +6331,10 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     <div style={{ padding: "8px 16px 28px" }}>
       {/* User account header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0 16px" }}>
-        <MoreAvatar avatarUrl={avatarUrl} fullName={fullName} username={username} />
+        {avatarUrl
+          ? <img src={avatarUrl} alt="" style={{ width:42, height:42, borderRadius:"50%", objectFit:"cover", flexShrink:0 }} />
+          : <div style={{ width:42, height:42, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>{(fullName||username||"?")[0].toUpperCase()}</div>
+        }
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {fullName || (profileLoaded ? "User" : "…")}
