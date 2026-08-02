@@ -1,5 +1,7 @@
 /* RainX Service Worker — Push Notifications + Offline Cache */
-const CACHE_NAME = "rainx-v2026-07-30";
+// IMPORTANT: bump this version string on every future deploy, or users may keep
+// seeing a stale cached version of the app for a while after you ship changes.
+const CACHE_NAME = "rainx-v2026-08-02";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
 
 // ── Install ────────────────────────────────────────────────────────────────
