@@ -31,14 +31,14 @@ self.addEventListener("fetch", (event) => {
 // ── Category → sound file mapping ─────────────────────────────────────────
 // Place matching .mp3 files in /sounds/ in the public folder.
 // Each category key matches the `category` field sent in the push payload.
+// Only trading-specific categories get custom sounds.
+// All other categories (community, payments, news, default, etc.) resolve to null,
+// which lets the phone OS play its native default notification sound instead.
 const CATEGORY_SOUNDS = {
   trading:    "/sounds/Trade%20Entry%20notification%20sound%20.mp3",
   tp:         "/sounds/take%20profit%20notification%20sound%20.mp3",
   sl:         "/sounds/Stop%20Loss%20notification%20sound%20.mp3",
-  community:  "/sounds/community%20notification.mp3",
-  news:       "/sounds/market%20news%20notification%20sound%20.mp3",
   risk:       "/sounds/money%20received%20notification.mp3",
-  default:    "/sounds/analysis%20complete%20notification%20.mp3",
 };
 
 // ── Push Notification Handler ──────────────────────────────────────────────
@@ -55,8 +55,8 @@ self.addEventListener("push", (event) => {
   const vibrate  = data.vibrate  || [200, 100, 200];
   const category = data.category || "default";
 
-  // Resolve the correct sound for this category
-  const soundSrc = CATEGORY_SOUNDS[category] || CATEGORY_SOUNDS.default;
+  // Resolve the sound for this category; null = let the OS play its default sound
+  const soundSrc = CATEGORY_SOUNDS[category] || null;
 
   // Category-specific options
   const options = {
@@ -71,9 +71,10 @@ self.addEventListener("push", (event) => {
     silent: false,
   };
 
-  // Show the notification, then play the category sound via all open clients
+  // Show the notification; only post PLAY_SOUND if a custom sound is mapped
   event.waitUntil(
     self.registration.showNotification(title, options).then(() => {
+      if (!soundSrc) return; // OS handles sound for this category
       return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
         clients.forEach((client) => {
           client.postMessage({ type: "PLAY_SOUND", soundSrc });

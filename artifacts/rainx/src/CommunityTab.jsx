@@ -170,6 +170,27 @@ function renderTextWithTags(text, onOpenProfile) {
 async function notify(userId, actorId, type, postId) {
   if (userId === actorId) return; // don't notify yourself
   try { await supabase.from("community_notifications").insert({ user_id: userId, actor_id: actorId, type, post_id: postId || null }); } catch {}
+  // Also send a push notification
+  const PUSH_TITLES = {
+    like: "New Like", comment: "New Comment", comment_reply: "New Comment",
+    comment_like: "New Like", follow: "New Follower", repost: "New Repost", mention: "New Mention",
+  };
+  const PUSH_BODIES = {
+    like: "Someone liked your post", comment: "Someone commented on your post",
+    comment_reply: "Someone replied to your comment", comment_like: "Someone liked your comment",
+    follow: "Someone started following you", repost: "Someone reposted your post",
+    mention: "Someone mentioned you",
+  };
+  const title = PUSH_TITLES[type];
+  const body  = PUSH_BODIES[type];
+  if (!title) return;
+  try {
+    fetch(`${BASE_URL}/api/push/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, title, body, data: { category: "default", url: "/" } }),
+    }).catch(() => {});
+  } catch {}
 }
 async function fetchProfilesMap(ids) {
   if (!ids.length) return {};
@@ -639,10 +660,14 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
         const ld = likeData[c.id] || { count: 0, likedByMe: false };
         return (
           <div key={c.id} style={{ display: "flex", gap: 8, marginBottom: 10, paddingLeft: 10, borderLeft: `2px solid ${T.cardBorder}` }}>
-            <Avatar name={p?.display_name} size={24} avatarUrl={p?.avatar_url} />
+            <button onClick={() => onOpenProfile(c.user_id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+              <Avatar name={p?.display_name} size={24} avatarUrl={p?.avatar_url} />
+            </button>
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: T.paper }}>{p?.display_name || p?.username || <span style={{ color: T.muted }}>…</span>}</span>
+                <button onClick={() => onOpenProfile(c.user_id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: T.paper }}>{p?.display_name || p?.username || <span style={{ color: T.muted }}>…</span>}</span>
+                </button>
                 <Badge isAdmin={p?.is_admin} badge={p?.badge} />
                 <span style={{ fontSize: 9.5, color: T.muted }}>· {timeAgo(c.created_at)}</span>
               </div>
@@ -1809,7 +1834,7 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
         const active = s.plan === "vip_lifetime" || (s.expires_at && new Date(s.expires_at) > new Date());
         if (!active) return;
         if (!extra[s.user_id].badge) {
-          extra[s.user_id].badge = s.plan === "biannual" ? "golden" : "blue";
+          extra[s.user_id].badge = s.plan === "yearly" ? "golden" : "blue";
         }
         extra[s.user_id].isPro = true;
       });
@@ -1876,7 +1901,7 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
       const active = s.plan === "vip_lifetime" || (s.expires_at && new Date(s.expires_at) > new Date());
       if (!active) return;
       if (!pMap[s.user_id].badge) {
-        pMap[s.user_id].badge = s.plan === "biannual" ? "golden" : "blue";
+        pMap[s.user_id].badge = s.plan === "yearly" ? "golden" : "blue";
       }
       pMap[s.user_id].isPro = true;
     });
@@ -1895,10 +1920,13 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
     });
     setLikeData(ld);
 
-    // Repost data
+    // Repost data — use persisted reposts_count from DB, only scan rows to determine repostedByMe
     const rd = {};
-    postIds.forEach((id) => { rd[id] = { count: 0, repostedByMe: false }; });
-    (repostsResult?.data || []).forEach((r) => { if (rd[r.post_id]) { rd[r.post_id].count += 1; if (r.user_id === account.id) rd[r.post_id].repostedByMe = true; } });
+    postIds.forEach((id) => {
+      const post = rows.find((item) => item.id === id);
+      rd[id] = { count: Number(post?.reposts_count ?? post?.repost_count) || 0, repostedByMe: false };
+    });
+    (repostsResult?.data || []).forEach((r) => { if (rd[r.post_id] && r.user_id === account.id) rd[r.post_id].repostedByMe = true; });
     setRepostData(rd);
     setPosts(rows);
     setPostsLoading(false);

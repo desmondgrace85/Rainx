@@ -656,6 +656,16 @@ function AuthScreen({ onAuthed }) {
           country: country.trim() || null,
         }).catch(() => {});
         recordActivity(data.user.id, "signup");
+        // Referral attribution — ?ref=CODE in the URL
+        try {
+          const refCode = new URLSearchParams(window.location.search).get("ref");
+          if (refCode) {
+            const { data: referrer } = await supabase.from("profiles").select("id").eq("referral_code", refCode).maybeSingle();
+            if (referrer?.id) {
+              await supabase.from("profiles").update({ referred_by: referrer.id }).eq("id", data.user.id).catch(() => {});
+            }
+          }
+        } catch {}
       }
       if (data.user && !data.session) {
         setNotice("Account created! Check your email to confirm, then sign in.");
@@ -820,12 +830,12 @@ function AuthScreen({ onAuthed }) {
 }
 
 // ---------- Subscription gate ----------
-const PLAN_LABELS = { weekly: "Weekly", monthly: "Monthly", biannual: "Biannual" };
-const PLAN_TIER_RANK = { none: 0, weekly: 1, monthly: 2, biannual: 3 };
+const PLAN_LABELS = { weekly: "Weekly", monthly: "Monthly", yearly: "Yearly" };
+const PLAN_TIER_RANK = { none: 0, weekly: 1, monthly: 2, yearly: 3 };
 const PLAN_FEATURES = {
   weekly: { price: 120, blurb: "Solid long-term signals (15M/1H). Trade history, notifications, and Community included. Scalping stays locked.", scalping: false },
   monthly: { price: 500, blurb: "Everything in Weekly, plus Scalping signals unlocked for fast, manual MT5 trades.", scalping: true },
-  biannual: { price: 1000, blurb: "Everything in Monthly, plus an automatic blue verified badge and priority 24/7 support.", scalping: true },
+  yearly: { price: 1000, blurb: "Everything in Monthly, plus an automatic golden verified badge and priority 24/7 support.", scalping: true },
 };
 
 // ---------- Entitlement (what the signed-in user is allowed to see) ----------
@@ -909,15 +919,15 @@ const SUB_PLANS = [
     ],
   },
   {
-    key: "biannual",
-    label: "Bi-Annually",
+    key: "yearly",
+    label: "Yearly",
     tag: "Best value",
     price: "¢680.00",
-    period: "/ 6 months",
-    billing: "Billed every 6 months",
+    period: "/ year",
+    billing: "Billed every year",
     features: [
       { text: "Everything in Monthly" },
-      { text: "Bi-Annual Premium Badge",         sub: "Highest verification tier on RainX" },
+      { text: "Yearly Premium Badge",            sub: "Highest verification tier on RainX" },
       { text: "VIP Community Access",            sub: "Exclusive trader lounge & signals group" },
       { text: "Personal AI Analysis Sessions",   sub: "Extended Raina AI session time" },
       { text: "Highest Rewards Multiplier",      sub: "2× points on all activity" },
@@ -933,12 +943,25 @@ function SubscribeScreen({ account, entitlement, onBack }) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [planPrices, setPlanPrices] = useState({});
 
   useEffect(() => {
     supabase.from("payment_methods").select("*").eq("enabled", true).order("sort_order").then(({ data }) => setMethods(data || []));
+    supabase.from("plan_prices").select("plan, price_ghs").then(({ data }) => {
+      if (data) {
+        const m = {};
+        data.forEach((r) => { m[r.plan] = r.price_ghs; });
+        setPlanPrices(m);
+      }
+    }).catch(() => {});
   }, []);
 
-  const plan = SUB_PLANS[activePlanIdx];
+  // Merge static plan definitions with live prices from DB
+  const plans = SUB_PLANS.map((p) => ({
+    ...p,
+    price: planPrices[p.key] != null ? `¢${Number(planPrices[p.key]).toFixed(2)}` : p.price,
+  }));
+  const plan = plans[activePlanIdx];
 
   const submitPayment = async () => {
     setBusy(true);
@@ -1015,7 +1038,7 @@ function SubscribeScreen({ account, entitlement, onBack }) {
 
       {/* Plan tabs */}
       <div style={{ margin: "0 16px 16px", background: T.card, borderRadius: 14, padding: 4, display: "flex", gap: 2 }}>
-        {SUB_PLANS.map((p, i) => (
+        {plans.map((p, i) => (
           <button
             key={p.key}
             onClick={() => setActivePlanIdx(i)}
@@ -4769,7 +4792,8 @@ function NotificationSettingsScreen({ account }) {
             // Fetch VAPID public key from backend
             let vapidKey;
             try {
-              const keyRes = await fetch("/api/push/keys");
+              const apiBase = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
+              const keyRes = await fetch(`${apiBase}/api/push/keys`);
               if (keyRes.ok) { const kd = await keyRes.json(); vapidKey = kd.publicKey; }
             } catch {}
             if (!vapidKey) { alert("Push server not configured yet. You will receive in-app alerts instead."); return; }
@@ -5299,6 +5323,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [followerCount, setFollowerCount] = useState(0);
   const [referralCount, setReferralCount] = useState(0);
   const [impressionCount, setImpressionCount] = useState(0);
+  const [referralCode, setReferralCode] = useState("");
+  const [walletBalance, setWalletBalance] = useState(null);
   useEffect(() => {
     if (!account?.id) return;
     supabase.from("follows").select("*",{count:"exact",head:true}).eq("followed_id",account.id)
@@ -5311,22 +5337,25 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
   // Map subscription tier → verification badge (single source of truth)
   const tierToVerif = (t) => {
-    if (t === "biannual") return "golden";
+    if (t === "yearly") return "golden";
     if (t === "monthly" || t === "weekly") return "blue";
     return null;
   };
 
   useEffect(() => {
     if (!account?.id) return;
-    supabase.from("profiles").select("username, full_name, bio, avatar_url").eq("id", account.id).single().then(({ data }) => {
+    supabase.from("profiles").select("username, full_name, bio, avatar_url, referral_code").eq("id", account.id).single().then(({ data }) => {
       if (data) {
         setUsername(data.username || "");
         setFullName(data.full_name || "");
         setBio(data.bio || "");
         setAvatarUrl(data.avatar_url || null);
+        setReferralCode(data.referral_code || "");
       }
       setProfileLoaded(true);
     }).catch(() => { setProfileLoaded(true); });
+    supabase.from("wallet_balances").select("balance").eq("user_id", account.id).single()
+      .then(({ data }) => { if (data) setWalletBalance(data.balance ?? 0); }).catch(() => {});
     supabase.from("site_content").select("value").eq("key", "more_benefits").single().then(({ data }) => {
       if (data?.value) { try { setBenefits(JSON.parse(data.value)); } catch { /* use defaults */ } }
     });
@@ -5441,7 +5470,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const rewardsPlan = entitlement.tier === "none" ? "Not enrolled" :
     entitlement.tier === "weekly"   ? "Weekly Rewards"    :
     entitlement.tier === "monthly"  ? "Monthly Rewards"   :
-    entitlement.tier === "biannual" ? "Bi-Annual Rewards" : "Loading…";
+    entitlement.tier === "yearly"   ? "Yearly Rewards"    : "Loading…";
 
   const verificationLabel =
     verification === "golden" ? "Golden Verified" :
@@ -6072,7 +6101,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     const tiers = [
       { key: "weekly",   label: "Weekly",    verif: "Blue Verified",   icon: "blue",   desc: "Subscribers on the Weekly plan receive a Blue Verified badge." },
       { key: "monthly",  label: "Monthly",   verif: "Blue Verified",   icon: "blue",   desc: "Subscribers on the Monthly plan receive a Blue Verified badge." },
-      { key: "biannual", label: "Bi-Annual", verif: "Golden Verified", icon: "golden", desc: "Premium Bi-Annual subscribers receive the exclusive Golden Verified badge." },
+      { key: "yearly", label: "Yearly", verif: "Golden Verified", icon: "golden", desc: "Premium Yearly subscribers receive the exclusive Golden Verified badge." },
     ];
 
     return (
@@ -6102,7 +6131,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             </div>
             {isVerif && (
               <div style={{ marginTop: 12, fontSize: 11.5, color: T.muted, lineHeight: 1.6 }}>
-                {isGolden ? "Premium Bi-Annual subscriber · highest trust level" : "Active subscriber · community trusted"}
+                {isGolden ? "Premium Yearly subscriber · highest trust level" : "Active subscriber · community trusted"}
               </div>
             )}
           </div>
@@ -6300,6 +6329,20 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   // ---- Main More Page ----
   return (
     <div style={{ padding: "8px 16px 28px" }}>
+      {/* User account header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0 16px" }}>
+        <MoreAvatar avatarUrl={avatarUrl} fullName={fullName} username={username} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {fullName || (profileLoaded ? "User" : "…")}
+          </div>
+          {username ? (
+            <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>@{username}</div>
+          ) : null}
+        </div>
+        <button onClick={() => setMorePage("profile-menu")} style={{ background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 10, padding: "6px 14px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, color: T.muted, cursor: "pointer", flexShrink: 0 }}>Edit</button>
+      </div>
+
       {/* Analytics preview card */}
       <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:16, padding:16, marginBottom:22 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
@@ -6368,6 +6411,29 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             );
           })}
           <div style={{ fontSize:11, color:T.muted, lineHeight:1.6, marginBottom:14 }}>A qualified referral is a user who signs up through your link and activates a subscription.</div>
+          {/* Referral link + wallet balance */}
+          <div style={{ background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px", marginBottom:14 }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.goldBright, marginBottom:8 }}>YOUR REFERRAL LINK</div>
+            <div style={{ fontSize:11, color:T.muted, lineHeight:1.6, marginBottom:10 }}>Earn 20% cash reward — sent to your wallet — every time someone signs up with your link and activates a subscription.</div>
+            {referralCode ? (
+              <div style={{ display:"flex", alignItems:"center", gap:8, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:10, padding:"10px 12px", marginBottom:12 }}>
+                <span style={{ flex:1, fontSize:11, color:T.paper, fontFamily:FONT_BODY, wordBreak:"break-all" }}>https://rainx.app/?ref={referralCode}</span>
+                <button
+                  onClick={() => { try { navigator.clipboard.writeText(`https://rainx.app/?ref=${referralCode}`).then(() => alert("Link copied!")).catch(() => {}); } catch {} }}
+                  style={{ background:T.gold, border:"none", borderRadius:8, padding:"6px 12px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:11, color:T.ink, cursor:"pointer", flexShrink:0 }}>
+                  Copy
+                </button>
+              </div>
+            ) : (
+              <div style={{ fontSize:11.5, color:T.muted, fontStyle:"italic", marginBottom:12 }}>Referral code not assigned — contact support to get yours.</div>
+            )}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <span style={{ fontSize:11.5, color:T.muted }}>Wallet balance</span>
+              <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.goldBright }}>
+                {walletBalance != null ? `GHS ${Number(walletBalance).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2})}` : "—"}
+              </span>
+            </div>
+          </div>
           <button
             disabled={!rewardEligible}
             onClick={rewardEligible ? () => setMorePage("rewards") : undefined}
