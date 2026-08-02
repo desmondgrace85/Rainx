@@ -2,6 +2,7 @@
 // Called by fetchProfilesMap() in CommunityTab.jsx to get real names/avatars for followers
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Cache-Control", "no-store");
   const raw = String(req.query.ids || "");
   const ids = raw.split(",").map(s => s.trim()).filter(Boolean).slice(0, 200);
   if (!ids.length) return res.status(200).json([]);

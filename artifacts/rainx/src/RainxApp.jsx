@@ -4781,7 +4781,8 @@ function NotificationSettingsScreen({ account }) {
               return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
             };
             const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidKey) });
-            await fetch("/api/push/subscribe", {
+            const apiBase = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
+            await fetch(`${apiBase}/api/push/subscribe`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ subscription: sub.toJSON(), userId: account?.id }),
@@ -5272,6 +5273,7 @@ function HeaderAvatar({ account, morePage, T }) {
 function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, onLogoutConfirm, setTab, entitlement, themeMode, setThemeMode, morePage, setMorePage, setProfileFromHeader }) {
   // morePage/setMorePage lifted to MainAppContent so sidebar can deep-link
   const [username, setUsername] = useState("");
+  const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [profileMsg, setProfileMsg] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -5316,9 +5318,10 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
   useEffect(() => {
     if (!account?.id) return;
-    supabase.from("profiles").select("username, bio, avatar_url").eq("id", account.id).single().then(({ data }) => {
+    supabase.from("profiles").select("username, full_name, bio, avatar_url").eq("id", account.id).single().then(({ data }) => {
       if (data) {
         setUsername(data.username || "");
+        setFullName(data.full_name || "");
         setBio(data.bio || "");
         setAvatarUrl(data.avatar_url || null);
       }
@@ -5470,7 +5473,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
   // ---- Sub-screens ----
   // Extended profile state (load on open)
-  const [fullName, setFullName] = useState("");
   const [location, setLocation] = useState("");
   const [dob, setDob] = useState("");
   const [profileFollowers, setProfileFollowers] = useState(0);
@@ -5603,7 +5605,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           : <div style={{ width:56, height:56, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
         }
         <div style={{ flex:1 }}>
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>{username || (profileLoaded ? account?.email?.split("@")[0] : null) || (profileLoaded ? "User" : "…")}</div>
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>{fullName || (profileLoaded ? "User" : "…")}</div>
           {username && <div style={{ fontSize:11.5, color:T.muted, marginTop:2 }}>@{username}</div>}
         </div>
       </div>

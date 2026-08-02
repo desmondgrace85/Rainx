@@ -140,7 +140,7 @@ function MentionTextarea({ value, onChange, placeholder, rows, style, textareaRe
   );
 }
 async function goToMention(handle, onOpenProfile) {
-  const { data } = await supabase.from("public_profiles").select("id").eq("display_name", handle).maybeSingle();
+  const { data } = await supabase.from("public_profiles").select("id").ilike("display_name", handle).maybeSingle();
   if (data) onOpenProfile(data.id);
 }
 function renderTextWithTags(text, onOpenProfile) {
@@ -399,7 +399,7 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
       (mentioned || []).forEach((m) => notify(m.id, account.id, "mention", post.id));
     }
     if (post && mentions.includes("rainaai")) {
-      fetch("/api/community-ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ post_id: post.id, post_text: trimmed, author_name: account.email, user_id: account.id }) }).catch(() => {});
+      fetch(`${BASE_URL}/api/community-ai`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ post_id: post.id, post_text: trimmed, author_name: account.email, user_id: account.id }) }).catch(() => {});
       setTimeout(() => onPosted(), 4000);
     }
     setText("");
@@ -612,7 +612,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
     if (mentions.includes("rainaai")) {
       // Fetch the original post text for context
       supabase.from("community_posts").select("text").eq("id", postId).single().then(({ data: postRow }) => {
-        fetch("/api/community-ai", {
+        fetch(`${BASE_URL}/api/community-ai`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
