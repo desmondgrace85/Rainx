@@ -1879,7 +1879,7 @@ function MainAppContent({ account, onLogout }) {
   const activeSignal = signalsMap[activeSymbol]?.[selectedTf] || null;
 
   return (
-    <div style={{ minHeight: "100dvh", background: T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative" }}>
+      <div style={{ minHeight: "100dvh", background: T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative", isolation: "isolate" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
@@ -2124,7 +2124,7 @@ function MainAppContent({ account, onLogout }) {
       )}
 
       {!communityProfileOpen && (
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: T.card, borderTop: `1px solid ${T.cardBorder}`, display: "flex", justifyContent: "space-around", padding: "6px 0 20px" }}>
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", zIndex: 100, background: T.card, opacity: 1, borderTop: `1px solid ${T.cardBorder}`, boxShadow: "0 -8px 24px rgba(0,0,0,0.12)", display: "flex", justifyContent: "space-around", padding: "6px 0 calc(20px + env(safe-area-inset-bottom))" }}>
           {[
             { key: "home", label: "Home", icon: (active) => (
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
