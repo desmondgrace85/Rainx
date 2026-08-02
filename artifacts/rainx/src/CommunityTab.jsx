@@ -172,12 +172,13 @@ async function notify(userId, actorId, type, postId) {
   try { await supabase.from("community_notifications").insert({ user_id: userId, actor_id: actorId, type, post_id: postId || null }); } catch {}
   // Also send a push notification
   const PUSH_TITLES = {
-    like: "New Like", comment: "New Comment", comment_reply: "New Comment",
+    like: "New Like", comment: "New Comment", comment_reply: "New Comment", reply: "New Reply",
     comment_like: "New Like", follow: "New Follower", repost: "New Repost", mention: "New Mention",
   };
   const PUSH_BODIES = {
     like: "Someone liked your post", comment: "Someone commented on your post",
-    comment_reply: "Someone replied to your comment", comment_like: "Someone liked your comment",
+    comment_reply: "Someone replied to your comment", reply: "Someone replied to your comment",
+    comment_like: "Someone liked your comment",
     follow: "Someone started following you", repost: "Someone reposted your post",
     mention: "Someone mentioned you",
   };

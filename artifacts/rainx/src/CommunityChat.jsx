@@ -11,6 +11,7 @@ import {
   Edit2, Trash2, Share, Copy, FileText, ChevronDown,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
+const BASE_URL = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
 
 const buildT = (tokens) => ({
   ink: "#0F0E0B", card: "#1C1913", cardBorder: "#332C1F",
@@ -641,6 +642,12 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
       const { data, error: err } = await supabase.from("direct_messages").insert({ sender_id: aid, receiver_id: oid, content }).select().single();
       if (err) throw err;
       setMessages(p => p.map(m => m.id === optId ? data : m));
+      // Community messages previously sent no notification at all — send one now, same as likes/comments/follows.
+      fetch(`${BASE_URL}/api/push/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: oid, title: "New Message", body: content.slice(0, 120), data: { category: "default", url: "/" } }),
+      }).catch(() => {});
     } catch (_) { setMessages(p => p.filter(m => m.id !== optId)); setText(content); }
     finally { setSending(false); if (inputRef.current) inputRef.current.focus(); }
   };

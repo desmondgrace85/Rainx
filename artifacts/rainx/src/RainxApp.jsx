@@ -5324,7 +5324,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [referralCount, setReferralCount] = useState(0);
   const [impressionCount, setImpressionCount] = useState(0);
   const [referralCode, setReferralCode] = useState("");
-  const [walletBalance, setWalletBalance] = useState(null);
   useEffect(() => {
     if (!account?.id) return;
     supabase.from("follows").select("*",{count:"exact",head:true}).eq("followed_id",account.id)
@@ -5354,8 +5353,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       }
       setProfileLoaded(true);
     }).catch(() => { setProfileLoaded(true); });
-    supabase.from("wallet_balances").select("balance").eq("user_id", account.id).single()
-      .then(({ data }) => { if (data) setWalletBalance(data.balance ?? 0); }).catch(() => {});
     supabase.from("site_content").select("value").eq("key", "more_benefits").single().then(({ data }) => {
       if (data?.value) { try { setBenefits(JSON.parse(data.value)); } catch { /* use defaults */ } }
     });
@@ -6430,12 +6427,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             ) : (
               <div style={{ fontSize:11.5, color:T.muted, fontStyle:"italic", marginBottom:12 }}>Referral code not assigned — contact support to get yours.</div>
             )}
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              <span style={{ fontSize:11.5, color:T.muted }}>Wallet balance</span>
-              <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.goldBright }}>
-                {walletBalance != null ? `GHS ${Number(walletBalance).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2})}` : "—"}
-              </span>
-            </div>
           </div>
           <button
             disabled={!rewardEligible}
