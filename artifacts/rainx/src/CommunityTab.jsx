@@ -879,7 +879,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           <Heart size={14} strokeWidth={1.5} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5 }}>{formatCount(ld.count)}</span>
         </button>
         <button onClick={() => setShowComments((v) => !v)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: showComments ? T.gold : T.muted }}>
-          <MessageCircle size={14} strokeWidth={1.5} /> <span style={{ fontSize: 11.5 }}>{formatCount(post.comment_count || 0)}</span>
+          <MessageCircle size={14} strokeWidth={1.5} /> <span style={{ fontSize: 11.5 }}>{formatCount(Number(post.comments_count) || 0)}</span>
         </button>
         <button onClick={() => onToggleRepost(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: rd.repostedByMe ? T.sage : T.muted }}>
           <Repeat2 size={14} strokeWidth={1.5} /> <span style={{ fontSize: 11.5 }}>{formatCount(rd.count)}</span>
@@ -1159,12 +1159,6 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
       }
       const { data: postRows } = await supabase.from("community_posts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
       let profilePosts = postRows || [];
-      if (profilePosts.length) {
-        const { data: allComments } = await supabase.from("post_comments").select("post_id").in("post_id", profilePosts.map(r => r.id));
-        const cCounts = {};
-        (allComments || []).forEach(c => { cCounts[c.post_id] = (cCounts[c.post_id] || 0) + 1; });
-        profilePosts = profilePosts.map(r => ({ ...r, comment_count: cCounts[r.id] || r.comment_count || 0 }));
-      }
       setPosts(profilePosts);
       const { count: followers } = await supabase.from("follows").select("*", { count: "exact", head: true }).eq("followed_id", userId);
       const { count: following } = await supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", userId);
@@ -1619,19 +1613,15 @@ function PostActivityScreen({ post, profile, account, likeData, repostData, T, o
 
   useEffect(() => {
     if (!post?.id) return;
-    // Fetch fresh like/comment/repost counts for this specific post
-    Promise.all([
-      supabase.from("post_likes").select("*", { count: "exact", head: true }).eq("post_id", post.id).then(r => r, () => ({ count: 0 })),
-      supabase.from("post_comments").select("*", { count: "exact", head: true }).eq("post_id", post.id).then(r => r, () => ({ count: 0 })),
-      supabase.from("post_reposts").select("*", { count: "exact", head: true }).eq("post_id", post.id).then(r => r, () => ({ count: 0 })),
-    ]).then(([likes, comments, reposts]) => {
+    // Read persisted like/comment totals from the post; only reposts need a separate count.
+    supabase.from("post_reposts").select("*", { count: "exact", head: true }).eq("post_id", post.id).then((reposts) => {
       setActivityData({
-        likes: likes.count || 0,
-        comments: comments.count || 0,
+        likes: Number(post.likes_count) || 0,
+        comments: Number(post.comments_count) || 0,
         reposts: reposts.count || 0,
       });
     }).catch(() => {
-      setActivityData({ likes: likeData?.[post.id]?.count || 0, comments: post.comment_count || 0, reposts: repostData?.[post.id]?.count || 0 });
+      setActivityData({ likes: Number(post?.likes_count) || 0, comments: Number(post?.comments_count) || 0, reposts: repostData?.[post.id]?.count || 0 });
     });
 
     // Build a simple daily views array from created_at to now
@@ -1644,7 +1634,7 @@ function PostActivityScreen({ post, profile, account, likeData, repostData, T, o
   }, [post?.id]);
 
   const likes = activityData?.likes ?? likeData?.[post?.id]?.count ?? 0;
-  const comments = activityData?.comments ?? post?.comment_count ?? 0;
+  const comments = activityData?.comments ?? (Number(post?.comments_count) || 0);
   const reposts = activityData?.reposts ?? repostData?.[post?.id]?.count ?? 0;
   const views = post?.views || 0;
   const engagements = likes + comments + reposts;
@@ -1870,9 +1860,8 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
       supabase.rpc("increment_post_views", { post_id: id }).then(() => {}, () => {});
     });
 
-    // Load ALL secondary data in parallel — posts are already showing above
-    const [commentsResult, pMap, myLikesResult, repostsResult, subResult] = await Promise.all([
-      supabase.from("post_comments").select("post_id").in("post_id", postIds),
+    // Load secondary data in parallel — persisted post counts are already available
+    const [pMap, myLikesResult, repostsResult, subResult] = await Promise.all([
       fetchProfilesMap(userIds),
       supabase.from("post_likes").select("post_id").in("post_id", postIds).eq("user_id", account.id),
       supabase.from("post_reposts").select("post_id, user_id").in("post_id", postIds),
@@ -1893,14 +1882,6 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
     });
     setProfilesMap((m) => ({ ...m, ...pMap }));
 
-    // Update comment counts in existing posts
-    const cCounts = {};
-    (commentsResult?.data || []).forEach((c) => { cCounts[c.post_id] = (cCounts[c.post_id] || 0) + 1; });
-    const postsWithCounts = rows.map((r) => ({
-      ...r,
-      comment_count: cCounts[r.id] ?? r.comment_count ?? 0,
-    }));
-
     // Use the persisted total; only fetch this user's rows to determine likedByMe.
     const myLikedSet = new Set();
     (myLikesResult?.data || []).forEach((r) => myLikedSet.add(r.post_id));
@@ -1919,7 +1900,7 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
     postIds.forEach((id) => { rd[id] = { count: 0, repostedByMe: false }; });
     (repostsResult?.data || []).forEach((r) => { if (rd[r.post_id]) { rd[r.post_id].count += 1; if (r.user_id === account.id) rd[r.post_id].repostedByMe = true; } });
     setRepostData(rd);
-    setPosts(postsWithCounts);
+    setPosts(rows);
     setPostsLoading(false);
   }, [account.id]);
 
