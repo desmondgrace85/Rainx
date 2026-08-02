@@ -1455,16 +1455,21 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
     if (!posts.length) return;
     const ids = posts.map(p => p.id);
     (async () => {
-      const { data: allLikeRows } = await supabase.from("post_likes").select("post_id, user_id").in("post_id", ids).limit(5000);
-      const likeCounts = {};
+      const { data: myLikeRows } = await supabase
+        .from("post_likes")
+        .select("post_id")
+        .in("post_id", ids)
+        .eq("user_id", account.id);
       const myLikedSet = new Set();
-      ids.forEach(id => { likeCounts[id] = 0; });
-      (allLikeRows || []).forEach(r => {
-        if (likeCounts.hasOwnProperty(r.post_id)) likeCounts[r.post_id]++;
-        if (r.user_id === account.id) myLikedSet.add(r.post_id);
-      });
+      (myLikeRows || []).forEach((r) => myLikedSet.add(r.post_id));
       const ld = {};
-      ids.forEach(id => { ld[id] = { count: likeCounts[id], likedByMe: myLikedSet.has(id) }; });
+      ids.forEach((id) => {
+        const post = posts.find((item) => item.id === id);
+        ld[id] = {
+          count: Number(post?.likes_count) || 0,
+          likedByMe: myLikedSet.has(id),
+        };
+      });
       setLikeData(ld);
 
       const { data: reposts } = await supabase.from("post_reposts").select("post_id, user_id").in("post_id", ids);
@@ -1837,10 +1842,10 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
     });
 
     // Load ALL secondary data in parallel — posts are already showing above
-    const [commentsResult, pMap, likesResult, repostsResult, subResult] = await Promise.all([
+    const [commentsResult, pMap, myLikesResult, repostsResult, subResult] = await Promise.all([
       supabase.from("post_comments").select("post_id").in("post_id", postIds),
       fetchProfilesMap(userIds),
-      supabase.from("post_likes").select("post_id, user_id").in("post_id", postIds).limit(5000),
+      supabase.from("post_likes").select("post_id").in("post_id", postIds).eq("user_id", account.id),
       supabase.from("post_reposts").select("post_id, user_id").in("post_id", postIds),
       userIds.length
         ? supabase.from("subscriptions").select("user_id, status, expires_at, plan").eq("status", "active").in("user_id", userIds)
@@ -1864,16 +1869,17 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
     (commentsResult?.data || []).forEach((c) => { cCounts[c.post_id] = (cCounts[c.post_id] || 0) + 1; });
     setPosts((prev) => prev.map((r) => ({ ...r, comment_count: cCounts[r.id] ?? r.comment_count ?? 0 })));
 
-    // Like data
-    const likeCounts = {};
+    // Use the persisted total; only fetch this user's rows to determine likedByMe.
     const myLikedSet = new Set();
-    postIds.forEach((id) => { likeCounts[id] = 0; });
-    (likesResult?.data || []).forEach((r) => {
-      if (likeCounts.hasOwnProperty(r.post_id)) likeCounts[r.post_id]++;
-      if (r.user_id === account.id) myLikedSet.add(r.post_id);
-    });
+    (myLikesResult?.data || []).forEach((r) => myLikedSet.add(r.post_id));
     const ld = {};
-    postIds.forEach((id) => { ld[id] = { count: likeCounts[id], likedByMe: myLikedSet.has(id) }; });
+    postIds.forEach((id) => {
+      const post = rows.find((item) => item.id === id);
+      ld[id] = {
+        count: Number(post?.likes_count) || 0,
+        likedByMe: myLikedSet.has(id),
+      };
+    });
     setLikeData(ld);
 
     // Repost data
