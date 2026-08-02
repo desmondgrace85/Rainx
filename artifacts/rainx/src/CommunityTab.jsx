@@ -262,11 +262,67 @@ async function compressToWebP(file) {
   });
 }
 
-// ---------- Full-screen Compose Modal ----------
-function ComposeModal({ account, onPosted, onClose }) {
+// ---------- Shared post-like toggle (used by CommunityTab and ProfileFeed) ----------
+async function togglePostLike(postId, authorId, accountId, likeData, setLikeData) {
+  const cur = likeData[postId] || { count: 0, likedByMe: false };
+  if (cur.likedByMe) {
+    const newCount = Math.max(0, cur.count - 1);
+    setLikeData((d) => ({ ...d, [postId]: { count: newCount, likedByMe: false } }));
+    const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", accountId);
+    if (error) { setLikeData((d) => ({ ...d, [postId]: cur })); return; }
+    supabase.from("community_posts").update({ likes_count: newCount }).eq("id", postId).then(() => {}, () => {});
+  } else {
+    const newCount = cur.count + 1;
+    setLikeData((d) => ({ ...d, [postId]: { count: newCount, likedByMe: true } }));
+    const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: accountId });
+    if (error) {
+      if (error.code === "23505") return; // duplicate — already liked
+      setLikeData((d) => ({ ...d, [postId]: cur }));
+      return;
+    }
+    supabase.from("community_posts").update({ likes_count: newCount }).eq("id", postId).then(() => {}, () => {});
+    notify(authorId, accountId, "like", postId);
+  }
+}
+
+// ---------- Shared comment-like toggle (used by CommentsSection) ----------
+async function toggleCommentLike(commentId, authorId, postId, accountId, likeData, setLikeData) {
+  const cur = likeData[commentId] || { count: 0, likedByMe: false };
+  if (cur.likedByMe) {
+    await supabase.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", accountId);
+    setLikeData((d) => ({ ...d, [commentId]: { count: Math.max(0, cur.count - 1), likedByMe: false } }));
+  } else {
+    await supabase.from("comment_likes").insert({ comment_id: commentId, user_id: accountId });
+    setLikeData((d) => ({ ...d, [commentId]: { count: cur.count + 1, likedByMe: true } }));
+    notify(authorId, accountId, "comment_like", postId);
+  }
+}
+
+// ---------- Shared post-repost toggle (used by CommunityTab and ProfileFeed) ----------
+async function togglePostRepost(postId, authorId, accountId, repostData, setRepostData) {
+  const cur = repostData[postId] || { count: 0, repostedByMe: false };
+  if (cur.repostedByMe) {
+    const { error } = await supabase.from("post_reposts").delete().eq("post_id", postId).eq("user_id", accountId);
+    if (error) { if (process.env.NODE_ENV !== "production") console.error("Unrepost failed:", error.message); return; }
+    setRepostData((d) => ({ ...d, [postId]: { count: Math.max(0, cur.count - 1), repostedByMe: false } }));
+  } else {
+    const { error } = await supabase.from("post_reposts").insert({ post_id: postId, user_id: accountId });
+    if (error) { if (process.env.NODE_ENV !== "production") console.error("Repost failed:", error.message); return; }
+    setRepostData((d) => ({ ...d, [postId]: { count: cur.count + 1, repostedByMe: true } }));
+    notify(authorId, accountId, "repost", postId);
+  }
+}
+
+// ---------- Composer — inline card (no onClose) or full-screen modal (with onClose) ----------
+// Replaces the former ComposeModal and compact Composer. All features: hashtag, mention,
+// photo (camera + gallery), poll, location.
+function Composer({ account, onPosted, onClose, compact, themeTokens }) {
+  if (themeTokens) Object.assign(T, themeTokens);
+  const asModal = !!onClose;
+
   const [text, setText] = useState("");
   const [posting, setPosting] = useState(false);
-  const [images, setImages] = useState([]); // { preview, file, uploading }
+  const [images, setImages] = useState([]); // { preview, file }
   const [showPoll, setShowPoll] = useState(false);
   const [pollOptions, setPollOptions] = useState(["", ""]);
   const [location, setLocation] = useState(null);
@@ -275,7 +331,9 @@ function ComposeModal({ account, onPosted, onClose }) {
   const photoRef = useRef(null);
   const cameraRef = useRef(null);
 
-  useEffect(() => { setTimeout(() => taRef.current?.focus(), 120); }, []);
+  useEffect(() => {
+    if (asModal) setTimeout(() => taRef.current?.focus(), 120);
+  }, [asModal]);
 
   const handleFiles = (files) => {
     const arr = Array.from(files).slice(0, 4 - images.length);
@@ -283,6 +341,12 @@ function ComposeModal({ account, onPosted, onClose }) {
   };
 
   const removeImage = (i) => setImages((p) => p.filter((_, idx) => idx !== i));
+
+  const insertAt = (symbol) => {
+    const newVal = text + (text.endsWith(" ") || text === "" ? "" : " ") + symbol;
+    setText(newVal.slice(0, 500));
+    taRef.current?.focus();
+  };
 
   const fetchLocation = () => {
     if (!navigator.geolocation) return;
@@ -338,201 +402,120 @@ function ComposeModal({ account, onPosted, onClose }) {
       fetch("/api/community-ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ post_id: post.id, post_text: trimmed, author_name: account.email, user_id: account.id }) }).catch(() => {});
       setTimeout(() => onPosted(), 4000);
     }
+    setText("");
+    setImages([]);
+    setShowPoll(false);
+    setPollOptions(["", ""]);
+    setLocation(null);
     setPosting(false);
     onPosted();
-    onClose();
+    if (onClose) onClose();
   };
 
   const canPost = (text.trim().length > 0 || images.length > 0) && !posting;
 
-  return (
-    <>
-      <style>{`${slideUp}`}</style>
-      <div style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,0.55)" }} onClick={onClose}>
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", height: "92dvh", background: T.ink, borderRadius: "20px 20px 0 0", display: "flex", flexDirection: "column", animation: "slideUpSheet 0.34s cubic-bezier(0.32,0.72,0,1)" }} onClick={(e) => e.stopPropagation()}>
+  // ── Poll builder (shared between both modes) ──
+  const pollBuilder = showPoll && (
+    <div style={{ marginTop: 14, border: `1px solid ${T.cardBorder}`, borderRadius: 14, overflow: "hidden" }}>
+      <div style={{ padding: "10px 14px", borderBottom: `1px solid ${T.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: T.paper }}>Poll</span>
+        <button onClick={() => setShowPoll(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 18, lineHeight: 1 }}>×</button>
+      </div>
+      {pollOptions.map((opt, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", borderBottom: i < pollOptions.length - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
+          <input value={opt} onChange={(e) => { const o = [...pollOptions]; o[i] = e.target.value.slice(0, 60); setPollOptions(o); }} placeholder={`Option ${i + 1}`} style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: T.paper, fontSize: 14, padding: "13px 14px", fontFamily: FONT_BODY }} />
+          {pollOptions.length > 2 && <button onClick={() => setPollOptions(pollOptions.filter((_, idx) => idx !== i))} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: "0 14px", fontSize: 18 }}>×</button>}
+        </div>
+      ))}
+      {pollOptions.length < 4 && (
+        <button onClick={() => setPollOptions([...pollOptions, ""])} style={{ width: "100%", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", color: T.gold, fontSize: 13, fontWeight: 600, textAlign: "left" }}>+ Add option</button>
+      )}
+    </div>
+  );
 
-          {/* drag handle */}
-          <div style={{ flexShrink: 0, display: "flex", justifyContent: "center", paddingTop: 10 }}>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: T.cardBorder }} />
-          </div>
+  // ── Location chip (shared between both modes) ──
+  const locationChip = location && (
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(198,161,91,0.12)", border: `1px solid ${T.gold}44`, borderRadius: 20, padding: "4px 11px", marginTop: 8, cursor: "pointer" }} onClick={() => setLocation(null)}>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill={T.gold}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      <span style={{ fontSize: 12, color: T.gold, fontWeight: 600 }}>{location.label}</span>
+      <span style={{ fontSize: 13, color: T.muted, marginLeft: 2 }}>×</span>
+    </div>
+  );
 
-          {/* header */}
-          <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px 12px", borderBottom: `1px solid ${T.cardBorder}` }}>
-            <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 6, color: T.paper }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-            <button onClick={submit} disabled={!canPost} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 20, padding: "9px 24px", fontWeight: 800, fontSize: 14, cursor: canPost ? "pointer" : "default", opacity: canPost ? 1 : 0.4, transition: "opacity 0.15s", fontFamily: FONT_HEAD }}>
-              {posting ? "Posting…" : "Post"}
-            </button>
-          </div>
-
-          {/* body */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 0" }}>
-            <div style={{ display: "flex", gap: 12 }}>
-              <Avatar name={account.email} size={42} />
-              <div style={{ flex: 1 }}>
-                <MentionTextarea
-                  textareaRef={taRef}
-                  value={text}
-                  onChange={setText}
-                  placeholder="What's happening?"
-                  rows={7}
-                  maxLength={500}
-                  style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: T.paper, fontFamily: FONT_BODY, fontSize: 18, fontWeight: 500, resize: "none", lineHeight: 1.6, padding: 0 }}
-                />
-
-                {/* location chip */}
-                {location && (
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(198,161,91,0.12)", border: `1px solid ${T.gold}44`, borderRadius: 20, padding: "4px 11px", marginTop: 8, cursor: "pointer" }} onClick={() => setLocation(null)}>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill={T.gold}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                    <span style={{ fontSize: 12, color: T.gold, fontWeight: 600 }}>{location.label}</span>
-                    <span style={{ fontSize: 13, color: T.muted, marginLeft: 2 }}>×</span>
-                  </div>
-                )}
-
-                {/* image grid */}
-                {images.length > 0 && (
-                  <div style={{ marginTop: 12, display: "grid", gap: 3, borderRadius: 14, overflow: "hidden", gridTemplateColumns: images.length === 1 ? "1fr" : "1fr 1fr" }}>
-                    {images.map((img, i) => (
-                      <div key={i} style={{ position: "relative", gridColumn: images.length === 3 && i === 0 ? "1 / span 2" : "auto" }}>
-                        <img src={img.preview} alt="" style={{ width: "100%", height: images.length === 1 ? 220 : 140, objectFit: "cover", display: "block" }} />
-                        <button onClick={() => removeImage(i)} style={{ position: "absolute", top: 6, right: 6, width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,0.72)", border: "1.5px solid rgba(255,255,255,0.25)", color: "#fff", fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* poll builder */}
-                {showPoll && (
-                  <div style={{ marginTop: 14, border: `1px solid ${T.cardBorder}`, borderRadius: 14, overflow: "hidden" }}>
-                    <div style={{ padding: "10px 14px", borderBottom: `1px solid ${T.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: T.paper }}>Poll</span>
-                      <button onClick={() => setShowPoll(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 18, lineHeight: 1 }}>×</button>
+  if (asModal) {
+    return (
+      <>
+        <style>{`${slideUp}`}</style>
+        <div style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,0.55)" }} onClick={onClose}>
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", height: "92dvh", background: T.ink, borderRadius: "20px 20px 0 0", display: "flex", flexDirection: "column", animation: "slideUpSheet 0.34s cubic-bezier(0.32,0.72,0,1)" }} onClick={(e) => e.stopPropagation()}>
+            {/* drag handle */}
+            <div style={{ flexShrink: 0, display: "flex", justifyContent: "center", paddingTop: 10 }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: T.cardBorder }} />
+            </div>
+            {/* header */}
+            <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px 12px", borderBottom: `1px solid ${T.cardBorder}` }}>
+              <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 6, color: T.paper }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+              <button onClick={submit} disabled={!canPost} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 20, padding: "9px 24px", fontWeight: 800, fontSize: 14, cursor: canPost ? "pointer" : "default", opacity: canPost ? 1 : 0.4, transition: "opacity 0.15s", fontFamily: FONT_HEAD }}>
+                {posting ? "Posting…" : "Post"}
+              </button>
+            </div>
+            {/* body */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 0" }}>
+              <div style={{ display: "flex", gap: 12 }}>
+                <Avatar name={account.email} size={42} />
+                <div style={{ flex: 1 }}>
+                  <MentionTextarea
+                    textareaRef={taRef}
+                    value={text}
+                    onChange={setText}
+                    placeholder="What's happening?"
+                    rows={7}
+                    maxLength={500}
+                    style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: T.paper, fontFamily: FONT_BODY, fontSize: 18, fontWeight: 500, resize: "none", lineHeight: 1.6, padding: 0 }}
+                  />
+                  {locationChip}
+                  {images.length > 0 && (
+                    <div style={{ marginTop: 12, display: "grid", gap: 3, borderRadius: 14, overflow: "hidden", gridTemplateColumns: images.length === 1 ? "1fr" : "1fr 1fr" }}>
+                      {images.map((img, i) => (
+                        <div key={i} style={{ position: "relative", gridColumn: images.length === 3 && i === 0 ? "1 / span 2" : "auto" }}>
+                          <img src={img.preview} alt="" style={{ width: "100%", height: images.length === 1 ? 220 : 140, objectFit: "cover", display: "block" }} />
+                          <button onClick={() => removeImage(i)} style={{ position: "absolute", top: 6, right: 6, width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,0.72)", border: "1.5px solid rgba(255,255,255,0.25)", color: "#fff", fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                        </div>
+                      ))}
                     </div>
-                    {pollOptions.map((opt, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", borderBottom: i < pollOptions.length - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
-                        <input value={opt} onChange={(e) => { const o = [...pollOptions]; o[i] = e.target.value.slice(0, 60); setPollOptions(o); }} placeholder={`Option ${i + 1}`} style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: T.paper, fontSize: 14, padding: "13px 14px", fontFamily: FONT_BODY }} />
-                        {pollOptions.length > 2 && <button onClick={() => setPollOptions(pollOptions.filter((_, idx) => idx !== i))} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: "0 14px", fontSize: 18 }}>×</button>}
-                      </div>
-                    ))}
-                    {pollOptions.length < 4 && (
-                      <button onClick={() => setPollOptions([...pollOptions, ""])} style={{ width: "100%", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", color: T.gold, fontSize: 13, fontWeight: 600, textAlign: "left" }}>+ Add option</button>
-                    )}
-                  </div>
-                )}
+                  )}
+                  {pollBuilder}
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* bottom toolbar */}
-          <div style={{ flexShrink: 0, borderTop: `1px solid ${T.cardBorder}`, padding: "12px 20px 28px", display: "flex", alignItems: "center", gap: 4 }}>
-            <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
-            <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
-
-            {/* Camera */}
-            <button onClick={() => cameraRef.current?.click()} disabled={images.length >= 4} title="Camera" style={{ background: "none", border: "none", cursor: images.length >= 4 ? "default" : "pointer", padding: 10, opacity: images.length >= 4 ? 0.3 : 1, color: T.paper }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.2A3.2 3.2 0 1 1 12 8.8a3.2 3.2 0 0 1 0 6.4zm7-11.2h-2.28l-1.44-1.6H8.72L7.28 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/></svg>
-            </button>
-            {/* Photo */}
-            <button onClick={() => photoRef.current?.click()} disabled={images.length >= 4} title="Photo" style={{ background: "none", border: "none", cursor: images.length >= 4 ? "default" : "pointer", padding: 10, opacity: images.length >= 4 ? 0.3 : 1, color: T.paper }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-            </button>
-            {/* Poll */}
-            <button onClick={() => { setShowPoll((v) => !v); if (showPoll) setPollOptions(["", ""]); }} title="Poll" style={{ background: "none", border: "none", cursor: "pointer", padding: 10, color: showPoll ? T.gold : T.paper }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h4v18H3V3zm7 6h4v12h-4V9zm7 4h4v8h-4v-8z"/></svg>
-            </button>
-            {/* Location */}
-            <button onClick={locLoading ? undefined : location ? () => setLocation(null) : fetchLocation} title="Location" style={{ background: "none", border: "none", cursor: "pointer", padding: 10, color: location ? T.gold : T.paper, opacity: locLoading ? 0.5 : 1 }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-            </button>
-
-            <div style={{ flex: 1 }} />
-            <span style={{ fontSize: 11, color: T.muted }}>{text.length}/500</span>
+            {/* bottom toolbar */}
+            <div style={{ flexShrink: 0, borderTop: `1px solid ${T.cardBorder}`, padding: "12px 20px 28px", display: "flex", alignItems: "center", gap: 4 }}>
+              <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
+              <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
+              <button onClick={() => cameraRef.current?.click()} disabled={images.length >= 4} title="Camera" style={{ background: "none", border: "none", cursor: images.length >= 4 ? "default" : "pointer", padding: 10, opacity: images.length >= 4 ? 0.3 : 1, color: T.paper }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.2A3.2 3.2 0 1 1 12 8.8a3.2 3.2 0 0 1 0 6.4zm7-11.2h-2.28l-1.44-1.6H8.72L7.28 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/></svg>
+              </button>
+              <button onClick={() => photoRef.current?.click()} disabled={images.length >= 4} title="Photo" style={{ background: "none", border: "none", cursor: images.length >= 4 ? "default" : "pointer", padding: 10, opacity: images.length >= 4 ? 0.3 : 1, color: T.paper }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+              </button>
+              <button onClick={() => { setShowPoll((v) => !v); if (showPoll) setPollOptions(["", ""]); }} title="Poll" style={{ background: "none", border: "none", cursor: "pointer", padding: 10, color: showPoll ? T.gold : T.paper }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h4v18H3V3zm7 6h4v12h-4V9zm7 4h4v8h-4v-8z"/></svg>
+              </button>
+              <button onClick={locLoading ? undefined : location ? () => setLocation(null) : fetchLocation} title="Location" style={{ background: "none", border: "none", cursor: "pointer", padding: 10, color: location ? T.gold : T.paper, opacity: locLoading ? 0.5 : 1 }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+              </button>
+              <div style={{ flex: 1 }} />
+              <span style={{ fontSize: 11, color: T.muted }}>{text.length}/500</span>
+            </div>
           </div>
         </div>
-      </div>
-    </>
-  );
-}
+      </>
+    );
+  }
 
-// ---------- Composer (used on profile page) ----------
-function Composer({ account, onPosted, compact, themeTokens }) {
-  if (themeTokens) Object.assign(T, themeTokens);
-  const [text, setText] = useState("");
-  const [posting, setPosting] = useState(false);
-  const [images, setImages] = useState([]); // array of { url, uploading }
-  const taRef = useRef(null);
-  const fileRef = useRef(null);
-
-  const insertAt = (symbol) => {
-    const newVal = text + (text.endsWith(" ") || text === "" ? "" : " ") + symbol;
-    setText(newVal.slice(0, 500));
-    taRef.current?.focus();
-  };
-
-  const handlePhotoChange = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    const remaining = 4 - images.length;
-    const toUpload = files.slice(0, remaining);
-    // Add placeholders
-    const placeholders = toUpload.map((f) => ({ url: URL.createObjectURL(f), uploading: true, localUrl: URL.createObjectURL(f) }));
-    setImages((prev) => [...prev, ...placeholders]);
-    // Upload each
-    const uploaded = await Promise.all(toUpload.map(async (file, i) => {
-      try {
-        // Compress to WebP before upload — same path as the full composer
-        const blob = await compressToWebP(file);
-        const path = `posts/${account.id}/${Date.now()}_${i}.webp`;
-        const { error } = await supabase.storage.from("post-images").upload(path, blob, { contentType: "image/webp", upsert: true });
-        if (error) return null;
-        const { data: { publicUrl } } = supabase.storage.from("post-images").getPublicUrl(path);
-        return publicUrl;
-      } catch { return null; }
-    }));
-    setImages((prev) => {
-      const updated = [...prev];
-      let ui = 0;
-      for (let i = 0; i < updated.length; i++) {
-        if (updated[i].uploading) {
-          updated[i] = uploaded[ui] ? { url: uploaded[ui], uploading: false } : null;
-          ui++;
-        }
-      }
-      return updated.filter(Boolean);
-    });
-    e.target.value = "";
-  };
-
-  const removeImage = (idx) => setImages((prev) => prev.filter((_, i) => i !== idx));
-
-  const submit = async () => {
-    if ((!text.trim() && images.length === 0) || posting) return;
-    setPosting(true);
-    const trimmed = text.trim();
-    const readyUrls = images.filter((img) => !img.uploading).map((img) => img.url);
-    const insertData = { user_id: account.id, text: trimmed };
-    if (readyUrls.length) insertData.images = readyUrls;
-    const { data: post } = await supabase.from("community_posts").insert(insertData).select("id").single();
-    const mentions = extractMentions(trimmed);
-    if (mentions.length && post) {
-      const { data: mentioned } = await supabase.from("public_profiles").select("id, display_name").in("display_name", mentions);
-      (mentioned || []).forEach((m) => notify(m.id, account.id, "mention", post.id));
-    }
-    if (post && mentions.includes("rainaai")) {
-      fetch("/api/community-ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ post_id: post.id, post_text: trimmed, author_name: account.email, user_id: account.id }),
-      }).catch(() => {});
-      setTimeout(() => onPosted(), 4000);
-    }
-    setText("");
-    setImages([]);
-    setPosting(false);
-    onPosted();
-  };
-
+  // ── Inline card mode ──
   return (
     <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 14, marginBottom: compact ? 0 : 16 }}>
       <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
@@ -548,30 +531,36 @@ function Composer({ account, onPosted, compact, themeTokens }) {
             maxLength={500}
             style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 10, color: T.paper, padding: 10, fontFamily: FONT_BODY, fontSize: 13, resize: "none" }}
           />
-          {/* Image previews */}
+          {locationChip}
           {images.length > 0 && (
             <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
               {images.map((img, i) => (
                 <div key={i} style={{ position: "relative", width: 72, height: 72 }}>
-                  <img src={img.url} alt="" style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 10, display: "block", opacity: img.uploading ? 0.5 : 1 }} />
-                  {img.uploading && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: T.paper }}>…</div>}
+                  <img src={img.preview} alt="" style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 10, display: "block" }} />
                   <button onClick={() => removeImage(i)} style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: T.rust, border: "none", color: "#fff", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>×</button>
                 </div>
               ))}
             </div>
           )}
+          {pollBuilder}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-            <div style={{ display: "flex", gap: 6 }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <button onClick={() => insertAt("#")} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 7, padding: "5px 8px", color: T.muted, fontSize: 10.5, cursor: "pointer" }}><Hash size={11} /> Hashtag</button>
               <button onClick={() => insertAt("@")} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 7, padding: "5px 8px", color: T.muted, fontSize: 10.5, cursor: "pointer" }}><AtSign size={11} /> Mention</button>
               {images.length < 4 && (
                 <>
-                  <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handlePhotoChange} />
-                  <button onClick={() => fileRef.current?.click()} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 7, padding: "5px 8px", color: T.muted, fontSize: 10.5, cursor: "pointer" }}>
+                  <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
+                  <button onClick={() => photoRef.current?.click()} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 7, padding: "5px 8px", color: T.muted, fontSize: 10.5, cursor: "pointer" }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Photo
                   </button>
                 </>
               )}
+              <button onClick={() => { setShowPoll((v) => !v); if (showPoll) setPollOptions(["", ""]); }} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${showPoll ? T.gold : T.cardBorder}`, borderRadius: 7, padding: "5px 8px", color: showPoll ? T.gold : T.muted, fontSize: 10.5, cursor: "pointer" }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h4v18H3V3zm7 6h4v12h-4V9zm7 4h4v8h-4v-8z"/></svg> Poll
+              </button>
+              <button onClick={locLoading ? undefined : location ? () => setLocation(null) : fetchLocation} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${location ? T.gold : T.cardBorder}`, borderRadius: 7, padding: "5px 8px", color: location ? T.gold : T.muted, fontSize: 10.5, cursor: "pointer", opacity: locLoading ? 0.5 : 1 }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg> Location
+              </button>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 10, color: T.muted }}>{text.length}/500</span>
@@ -585,6 +574,7 @@ function Composer({ account, onPosted, compact, themeTokens }) {
     </div>
   );
 }
+
 // ---------- Comments (single level) ----------
 function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfilesNeeded, onOpenProfile }) {
   const [comments, setComments] = useState(null);
@@ -640,18 +630,6 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
     load();
   };
 
-  const toggleCommentLike = async (commentId, authorId) => {
-    const cur = likeData[commentId] || { count: 0, likedByMe: false };
-    if (cur.likedByMe) {
-      await supabase.from("comment_likes").delete().eq("comment_id", commentId).eq("user_id", account.id);
-      setLikeData((d) => ({ ...d, [commentId]: { count: Math.max(0, cur.count - 1), likedByMe: false } }));
-    } else {
-      await supabase.from("comment_likes").insert({ comment_id: commentId, user_id: account.id });
-      setLikeData((d) => ({ ...d, [commentId]: { count: cur.count + 1, likedByMe: true } }));
-      notify(authorId, account.id, "comment_like", postId);
-    }
-  };
-
   if (comments === null) return <div style={{ fontSize: 11, color: T.muted, padding: "8px 0" }}>Loading comments…</div>;
 
   return (
@@ -669,7 +647,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
                 <span style={{ fontSize: 9.5, color: T.muted }}>· {timeAgo(c.created_at)}</span>
               </div>
               <div style={{ fontSize: 12, color: T.paper, marginTop: 2, lineHeight: 1.5 }}>{renderTextWithTags(c.text, onOpenProfile)}</div>
-              <button onClick={() => toggleCommentLike(c.id, c.user_id)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : T.muted, marginTop: 4 }}>
+              <button onClick={() => toggleCommentLike(c.id, c.user_id, postId, account.id, likeData, setLikeData)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : T.muted, marginTop: 4 }}>
                 <Heart size={11} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 10.5 }}>{ld.count}</span>
               </button>
             </div>
@@ -692,7 +670,6 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
     </div>
   );
 }
-
 // ---------- Post three-dot bottom sheet ----------
 function PostMenuSheet({ isOwn, username, onClose, onEdit, onDelete, onReport }) {
   const ownItems = [
@@ -1478,7 +1455,6 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
     if (!posts.length) return;
     const ids = posts.map(p => p.id);
     (async () => {
-      // Fetch all likes for these posts (post_id+user_id) to get real counts and likedByMe together.
       const { data: allLikeRows } = await supabase.from("post_likes").select("post_id, user_id").in("post_id", ids).limit(5000);
       const likeCounts = {};
       const myLikedSet = new Set();
@@ -1499,36 +1475,6 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
     })();
   }, [posts, account.id]);
 
-  const toggleLike = async (postId, authorId) => {
-    const cur = likeData[postId] || { count: 0, likedByMe: false };
-    if (cur.likedByMe) {
-      const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", account.id);
-      if (error) { if (process.env.NODE_ENV !== "production") console.error("Unlike failed:", error.message); return; }
-      const newCount = Math.max(0, cur.count - 1);
-      setLikeData(d => ({ ...d, [postId]: { count: newCount, likedByMe: false } }));
-      supabase.from("community_posts").update({ likes_count: newCount }).eq("id", postId).then(() => {}, () => {});
-    } else {
-      const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: account.id });
-      if (error) { if (process.env.NODE_ENV !== "production") console.error("Like failed:", error.message); return; }
-      const newCount = cur.count + 1;
-      setLikeData(d => ({ ...d, [postId]: { count: newCount, likedByMe: true } }));
-      supabase.from("community_posts").update({ likes_count: newCount }).eq("id", postId).then(() => {}, () => {});
-    }
-  };
-
-  const toggleRepost = async (postId, authorId) => {
-    const cur = repostData[postId] || { count: 0, repostedByMe: false };
-    if (cur.repostedByMe) {
-      const { error } = await supabase.from("post_reposts").delete().eq("post_id", postId).eq("user_id", account.id);
-      if (error) { if (process.env.NODE_ENV !== "production") console.error("Unrepost failed:", error.message); return; }
-      setRepostData(d => ({ ...d, [postId]: { count: Math.max(0, cur.count - 1), repostedByMe: false } }));
-    } else {
-      const { error } = await supabase.from("post_reposts").insert({ post_id: postId, user_id: account.id });
-      if (error) { if (process.env.NODE_ENV !== "production") console.error("Repost failed:", error.message); return; }
-      setRepostData(d => ({ ...d, [postId]: { count: cur.count + 1, repostedByMe: true } }));
-    }
-  };
-
   return (
     <div>
       {posts.map(p => (
@@ -1540,9 +1486,9 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
           profilesMap={profilesMap}
           onProfilesNeeded={() => {}}
           likeData={likeData}
-          onToggleLike={toggleLike}
+          onToggleLike={(postId, authorId) => togglePostLike(postId, authorId, account.id, likeData, setLikeData)}
           repostData={repostData}
-          onToggleRepost={toggleRepost}
+          onToggleRepost={(postId, authorId) => togglePostRepost(postId, authorId, account.id, repostData, setRepostData)}
           onOpenProfile={onOpenProfile}
           onDelete={onDelete || (() => {})}
           onEdit={onRefresh || (() => {})}
@@ -1553,7 +1499,6 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
     </div>
   );
 }
-
 // ---------- Community notification bell + panel ----------
 const NOTIF_LABELS = {
   like: "liked your post.",
@@ -1746,9 +1691,6 @@ function PostActivityScreen({ post, profile, account, likeData, repostData, T, o
         )}
       </div>
     </div>
-  );
-}
-
 // ---------- Main feed ----------
 export default function CommunityTab({ account, themeTokens, onViewingProfileChange }) {
   // Sync theme tokens from parent so T reflects the active theme
@@ -1957,45 +1899,9 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
     return () => clearInterval(id);
   }, [account.id]);
 
-  const toggleLike = async (postId, authorId) => {
-    const cur = likeData[postId] || { count: 0, likedByMe: false };
-    if (cur.likedByMe) {
-      // Optimistic: remove like immediately so UI responds at once
-      const newCount = Math.max(0, cur.count - 1);
-      setLikeData((d) => ({ ...d, [postId]: { count: newCount, likedByMe: false } }));
-      const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", account.id);
-      if (error) {
-        setLikeData((d) => ({ ...d, [postId]: cur })); // roll back on failure
-        return;
-      }
-      supabase.from("community_posts").update({ likes_count: newCount }).eq("id", postId).then(() => {}, () => {});
-    } else {
-      // Optimistic: add like immediately so UI responds at once
-      const newCount = cur.count + 1;
-      setLikeData((d) => ({ ...d, [postId]: { count: newCount, likedByMe: true } }));
-      const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: account.id });
-      if (error) {
-        if (error.code === "23505") return; // duplicate — already liked, optimistic state is correct
-        setLikeData((d) => ({ ...d, [postId]: cur })); // roll back on other errors
-        return;
-      }
-      supabase.from("community_posts").update({ likes_count: newCount }).eq("id", postId).then(() => {}, () => {});
-      notify(authorId, account.id, "like", postId);
-    }
-  };
-  const toggleRepost = async (postId, authorId) => {
-    const cur = repostData[postId] || { count: 0, repostedByMe: false };
-    if (cur.repostedByMe) {
-      const { error } = await supabase.from("post_reposts").delete().eq("post_id", postId).eq("user_id", account.id);
-      if (error) { if (process.env.NODE_ENV !== "production") console.error("Unrepost failed:", error.message); return; }
-      setRepostData((d) => ({ ...d, [postId]: { count: Math.max(0, cur.count - 1), repostedByMe: false } }));
-    } else {
-      const { error } = await supabase.from("post_reposts").insert({ post_id: postId, user_id: account.id });
-      if (error) { if (process.env.NODE_ENV !== "production") console.error("Repost failed:", error.message); return; }
-      setRepostData((d) => ({ ...d, [postId]: { count: cur.count + 1, repostedByMe: true } }));
-      notify(authorId, account.id, "repost", postId);
-    }
-  };
+
+  const toggleLike = (postId, authorId) => togglePostLike(postId, authorId, account.id, likeData, setLikeData);
+  const toggleRepost = (postId, authorId) => togglePostRepost(postId, authorId, account.id, repostData, setRepostData);
   const deletePost = async (id) => { await supabase.from("community_posts").delete().eq("id", id); loadPosts(); };
   const reportPost = async (id) => { await supabase.from("post_reports").insert({ post_id: id, reported_by: account.id }); alert("Reported. Thanks for flagging this."); };
 
@@ -2114,11 +2020,18 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
       </button>
 
+
+      <button onClick={() => setShowFabModal(true)} style={{ position: "fixed", bottom: 90, right: 20, width: 52, height: 52, borderRadius: "50%", background: T.gold, border: "none", color: T.ink, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 16px rgba(0,0,0,0.4)", cursor: "pointer", opacity: fabVisible ? 1 : 0, transform: fabVisible ? "scale(1)" : "scale(0.8)", transition: "opacity 0.25s, transform 0.25s", pointerEvents: fabVisible ? "auto" : "none" }}
+        onMouseDown={(e) => { if (fabVisible) e.currentTarget.style.transform = "scale(0.9)"; }}
+        onMouseUp={(e) => { if (fabVisible) e.currentTarget.style.transform = "scale(1)"; }}
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+      </button>
+
       {showFabModal && (
-        <ComposeModal account={account} onPosted={() => { loadPosts(); }} onClose={() => setShowFabModal(false)} />
+        <Composer account={account} onPosted={() => { loadPosts(); }} onClose={() => setShowFabModal(false)} />
       )}
     </div>
   );
 }
-
 export { PostCard, ProfileFeed, Composer, FollowListModal, formatCount };
