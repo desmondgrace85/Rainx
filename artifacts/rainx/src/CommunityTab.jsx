@@ -1691,6 +1691,9 @@ function PostActivityScreen({ post, profile, account, likeData, repostData, T, o
         )}
       </div>
     </div>
+  );
+}
+
 // ---------- Main feed ----------
 export default function CommunityTab({ account, themeTokens, onViewingProfileChange }) {
   // Sync theme tokens from parent so T reflects the active theme
