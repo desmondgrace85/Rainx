@@ -1454,6 +1454,20 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
   useEffect(() => {
     if (!posts.length) return;
     const ids = posts.map(p => p.id);
+    const initialLikeData = {};
+    const initialRepostData = {};
+    posts.forEach((post) => {
+      initialLikeData[post.id] = {
+        count: Number(post.likes_count) || 0,
+        likedByMe: false,
+      };
+      initialRepostData[post.id] = {
+        count: Number(post.reposts_count ?? post.repost_count) || 0,
+        repostedByMe: false,
+      };
+    });
+    setLikeData(initialLikeData);
+    setRepostData(initialRepostData);
     (async () => {
       const { data: myLikeRows } = await supabase
         .from("post_likes")
@@ -1821,6 +1835,20 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
     // Show posts immediately — users see content without waiting for secondary data
     setPosts(rows);
     setPostsLoading(false);
+    const initialLikeData = {};
+    const initialRepostData = {};
+    rows.forEach((post) => {
+      initialLikeData[post.id] = {
+        count: Number(post.likes_count) || 0,
+        likedByMe: false,
+      };
+      initialRepostData[post.id] = {
+        count: Number(post.reposts_count ?? post.repost_count) || 0,
+        repostedByMe: false,
+      };
+    });
+    setLikeData(initialLikeData);
+    setRepostData(initialRepostData);
 
     if (!rows.length) return;
 
