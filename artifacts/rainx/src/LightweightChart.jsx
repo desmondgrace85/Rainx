@@ -429,26 +429,31 @@ export default function LightweightChart({
     const el = containerRef.current;
     if (!el) return;
     const PRICE_SCALE_WIDTH = 65;
-    let startX = 0, startY = 0, onScale = false;
+    let onScale = false;
 
     const onStart = (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
+      const touch = e.touches?.[0];
+      if (!touch) return;
       const rect = el.getBoundingClientRect();
-      onScale = startX >= rect.right - PRICE_SCALE_WIDTH;
+      onScale = touch.clientX >= rect.right - PRICE_SCALE_WIDTH;
     };
     const onMove = (e) => {
-      // Allow vertical drag on the price scale; block everything else so LW
-      // can handle horizontal pan and price-scale pinch-zoom internally.
-      if (onScale) return;
-      e.preventDefault();
+      // Price-axis touches must remain untouched so lightweight-charts can
+      // apply its native vertical price-scale zoom. Only candle-area touches
+      // are prevented from vertically moving the page/chart.
+      if (!onScale) e.preventDefault();
     };
+    const onEnd = () => { onScale = false; };
 
     el.addEventListener("touchstart", onStart, { passive: true });
     el.addEventListener("touchmove",  onMove,  { passive: false });
+    el.addEventListener("touchend",   onEnd,   { passive: true });
+    el.addEventListener("touchcancel", onEnd,  { passive: true });
     return () => {
       el.removeEventListener("touchstart", onStart);
       el.removeEventListener("touchmove",  onMove);
+      el.removeEventListener("touchend",   onEnd);
+      el.removeEventListener("touchcancel", onEnd);
     };
   // re-attach if compact/isDark changes (chart remounts)
   }, [compact, isDark]);

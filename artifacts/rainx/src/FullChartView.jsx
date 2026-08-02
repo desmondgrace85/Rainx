@@ -86,7 +86,6 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
   const containerRef = useRef(null);
   const chartRef     = useRef(null);
   const candleRef    = useRef(null);
-  const volRef       = useRef(null);
   const lineRefs     = useRef([]);
   const priceLines   = useRef([]);
   const pollTimer    = useRef(null);
@@ -145,13 +144,6 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
       barsCache.current = combined;
       if (candleRef.current) {
         candleRef.current.setData(combined);
-        if (volRef.current) {
-          volRef.current.setData(combined.map(b => ({
-            time:  b.time,
-            value: Math.abs(b.high - b.low) * 1000,
-            color: b.close >= b.open ? "rgba(29,111,232,0.25)" : "rgba(19,23,34,0.25)",
-          })));
-        }
         if (visibleRange && chartRef.current) {
           chartRef.current.timeScale().setVisibleLogicalRange({
             from: visibleRange.from + olderBars.length,
@@ -226,19 +218,8 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
       wickDownColor:   WICK_BEAR,
     });
 
-    // Volume histogram (below candles)
-    const volSeries = chart.addHistogramSeries({
-      color: "rgba(29,111,232,0.2)",
-      priceFormat: { type: "volume" },
-      priceScaleId: "vol",
-    });
-    chart.priceScale("vol").applyOptions({
-      scaleMargins: { top: 0.82, bottom: 0 },
-    });
-
     chartRef.current  = chart;
     candleRef.current = candleSeries;
-    volRef.current    = volSeries;
 
     // Crosshair OHLC display
     chart.subscribeCrosshairMove(param => {
@@ -272,7 +253,6 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
       chart.remove();
       chartRef.current  = null;
       candleRef.current = null;
-      volRef.current    = null;
       lineRefs.current  = [];
       priceLines.current = [];
     };
@@ -313,14 +293,6 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
 
     try {
       candleRef.current.setData(bars);
-      // Volume bars (use close > open for colour)
-      if (volRef.current) {
-        volRef.current.setData(bars.map(b => ({
-          time:  b.time,
-          value: Math.abs(b.high - b.low) * 1000, // pseudo volume
-          color: b.close >= b.open ? "rgba(29,111,232,0.25)" : "rgba(19,23,34,0.25)",
-        })));
-      }
       chartRef.current.timeScale().fitContent();
       // Small delay then scroll to realtime so latest candle is visible at the right edge
       setTimeout(() => {
