@@ -1201,7 +1201,6 @@ function MainAppContent({ account, onLogout }) {
     tabDirRef.current  = forcedDir ?? ((ORDER[key] ?? 0) >= (ORDER[prevTabRef.current] ?? 0) ? 1 : -1);
     prevTabRef.current = key;
     setTab(key);
-    setProfileFromHeader(false);
     routeWrite(key, null, null);
   };
   const [activeSymbol, setActiveSymbol] = useState(() => {
@@ -2190,7 +2189,7 @@ function MainAppContent({ account, onLogout }) {
           ].map(({ key, label, icon }) => {
             const active = !profileFromHeader && tab === key;
             return (
-              <button key={key} onClick={() => { if (key === "more") setMorePage(null); goTab(key); }} style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 52, padding: "4px 2px", transition: "color 0.15s" }}>
+              <button key={key} onClick={() => { if (key === "more") setMorePage(null); setProfileFromHeader(false); goTab(key); }} style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 52, padding: "4px 2px", transition: "color 0.15s" }}>
                 {icon(active)}
                 <span style={{ fontSize: 11, fontFamily: FONT_HEAD, fontWeight: active ? 700 : 500, letterSpacing: 0.1 }}>{label}</span>
               </button>

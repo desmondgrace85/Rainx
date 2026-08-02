@@ -998,14 +998,37 @@ function SuggestedAccounts({ account, onOpenProfile }) {
 
 // ---------- Gift Modal ----------
 function GiftModal({ profile, onClose, senderAccount }) {
-  const [method, setMethod] = useState(null); // "mobile" | "crypto" | "card"
   const [amount, setAmount] = useState("5");
   const [note, setNote] = useState("");
   const [sent, setSent] = useState(false);
+  const [balance, setBalance] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSend = () => {
-    setSent(true);
-    setTimeout(onClose, 2200);
+  useEffect(() => {
+    if (!senderAccount?.id) return;
+    supabase.from("wallet_balances").select("balance").eq("user_id", senderAccount.id).single()
+      .then(({ data }) => setBalance(data?.balance ?? 0)).catch(() => setBalance(0));
+  }, [senderAccount?.id]);
+
+  const insufficient = balance != null && Number(amount) > balance;
+
+  const handleSend = async () => {
+    if (!senderAccount?.id || !profile?.id || busy || insufficient) return;
+    setBusy(true); setError("");
+    try {
+      const { data, error: err } = await supabase.rpc("send_gift", {
+        sender: senderAccount.id, recipient: profile.id, gift_amount: Number(amount), gift_note: note || null,
+      });
+      if (err || !data?.ok) {
+        if (data?.error === "insufficient_balance") { setError("Not enough balance — top up your wallet first."); }
+        else { setError("Couldn't send gift. Try again."); }
+        setBusy(false);
+        return;
+      }
+      setSent(true);
+      setTimeout(onClose, 2200);
+    } catch { setError("Couldn't send gift. Try again."); setBusy(false); }
   };
 
   return (
@@ -1023,55 +1046,41 @@ function GiftModal({ profile, onClose, senderAccount }) {
               <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.paper }}>Gift {profile?.display_name}</div>
               <button onClick={onClose} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><X size={20} /></button>
             </div>
-            {/* Payment method selection */}
-            {!method ? (
-              <>
-                <div style={{ fontSize:12, color:T.muted, marginBottom:12 }}>Choose a payment method:</div>
-                {[
-                  { id:"mobile", label:"Mobile Money", desc:"MTN, Vodafone, AirtelTigo", emoji:"📱" },
-                  { id:"crypto", label:"Cryptocurrency", desc:"BTC, ETH, USDT", emoji:"₿" },
-                  { id:"card", label:"Debit / Credit Card", desc:"Visa, Mastercard", emoji:"💳" },
-                ].map(opt => (
-                  <button key={opt.id} onClick={() => setMethod(opt.id)}
-                    style={{ width:"100%", display:"flex", alignItems:"center", gap:14, background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px", cursor:"pointer", marginBottom:10, textAlign:"left" }}>
-                    <div style={{ fontSize:24, flexShrink:0 }}>{opt.emoji}</div>
-                    <div>
-                      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper }}>{opt.label}</div>
-                      <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>{opt.desc}</div>
-                    </div>
-                    <ChevronRight size={16} color={T.muted} style={{ marginLeft:"auto" }} />
-                  </button>
-                ))}
-              </>
-            ) : (
-              <>
-                <button onClick={() => setMethod(null)} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:T.muted, cursor:"pointer", marginBottom:14, fontSize:12 }}>
-                  <ArrowLeft size={14} /> Back
-                </button>
-                <div style={{ marginBottom:12 }}>
-                  <label style={{ fontSize:11, color:T.muted, display:"block", marginBottom:6 }}>Amount (USD)</label>
-                  <div style={{ display:"flex", gap:8, marginBottom:10 }}>
-                    {["1","5","10","20","50"].map(v => (
-                      <button key={v} onClick={() => setAmount(v)}
-                        style={{ flex:1, padding:"8px 0", borderRadius:10, border:`1px solid ${amount===v?T.gold:T.cardBorder}`, background:amount===v?"rgba(198,161,91,0.15)":"none", color:amount===v?T.gold:T.paper, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, cursor:"pointer" }}>
-                        ${v}
-                      </button>
-                    ))}
-                  </div>
-                  <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} min="1"
-                    style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:10, color:T.paper, padding:"10px 12px", fontFamily:FONT_BODY, fontSize:13 }} />
+            <div style={{ fontSize:11.5, color:T.muted, marginBottom:14 }}>
+              Wallet balance: <strong style={{color:T.goldBright}}>{balance == null ? "…" : `GHS ${Number(balance).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2})}`}</strong>
+            </div>
+            <>
+              <div style={{ marginBottom:12 }}>
+                <label style={{ fontSize:11, color:T.muted, display:"block", marginBottom:6 }}>Amount (GHS)</label>
+                <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+                  {["1","5","10","20","50"].map(v => (
+                    <button key={v} onClick={() => setAmount(v)}
+                      style={{ flex:1, padding:"8px 0", borderRadius:10, border:`1px solid ${amount===v?T.gold:T.cardBorder}`, background:amount===v?"rgba(198,161,91,0.15)":"none", color:amount===v?T.gold:T.paper, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, cursor:"pointer" }}>
+                      ${v}
+                    </button>
+                  ))}
                 </div>
-                <div style={{ marginBottom:16 }}>
-                  <label style={{ fontSize:11, color:T.muted, display:"block", marginBottom:6 }}>Note (optional)</label>
-                  <textarea value={note} onChange={e=>setNote(e.target.value)} rows={2} placeholder="Add a message…"
-                    style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:10, color:T.paper, padding:"10px 12px", fontFamily:FONT_BODY, fontSize:13, resize:"none" }} />
-                </div>
-                <button onClick={handleSend}
-                  style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:"pointer" }}>
-                  Send ${amount} Gift 🎁
+                <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} min="1"
+                  style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:10, color:T.paper, padding:"10px 12px", fontFamily:FONT_BODY, fontSize:13 }} />
+              </div>
+              <div style={{ marginBottom:16 }}>
+                <label style={{ fontSize:11, color:T.muted, display:"block", marginBottom:6 }}>Note (optional)</label>
+                <textarea value={note} onChange={e=>setNote(e.target.value)} rows={2} placeholder="Add a message…"
+                  style={{ width:"100%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:10, color:T.paper, padding:"10px 12px", fontFamily:FONT_BODY, fontSize:13, resize:"none" }} />
+              </div>
+              {error ? <div style={{ fontSize:11.5, color:T.rust || "#c66", marginBottom:10 }}>{error}</div> : null}
+              {insufficient ? (
+                <button onClick={onClose}
+                  style={{ width:"100%", background:"none", border:`1px solid ${T.gold}`, color:T.gold, borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:"pointer" }}>
+                  Top Up Wallet First
                 </button>
-              </>
-            )}
+              ) : (
+                <button onClick={handleSend} disabled={busy}
+                  style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:busy?"default":"pointer", opacity:busy?0.7:1 }}>
+                  {busy ? "Sending…" : `Send GHS ${amount} Gift 🎁`}
+                </button>
+              )}
+            </>
           </>
         )}
       </div>
