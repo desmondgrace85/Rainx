@@ -233,6 +233,23 @@ function GoldenBadge({ size = 17 }) {
     </svg>
   );
 }
+function OfficialBadge({ size = 17 }) {
+  // RainX's official-account seal — scalloped border with the RainX mark, used only for
+  // is_official accounts (RainX, Raina AI, and future official accounts set from the admin panel)
+  return (
+    <svg width={size} height={size} viewBox="0 0 1254 1254" style={{ flexShrink: 0 }} title="Official RainX Account">
+      <defs>
+        <linearGradient id="officialGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#ffd66b" />
+          <stop offset="50%" stopColor="#e8a733" />
+          <stop offset="100%" stopColor="#b9791e" />
+        </linearGradient>
+      </defs>
+      <path d="M 626.0,38.0 L 595.0,50.0 L 521.0,111.0 L 430.0,92.0 L 397.0,95.0 L 372.0,118.0 L 327.0,205.0 L 236.0,225.0 L 210.0,240.0 L 196.0,269.0 L 189.0,368.0 L 109.0,425.0 L 92.0,452.0 L 93.0,482.0 L 124.0,572.0 L 73.0,655.0 L 69.0,687.0 L 86.0,718.0 L 145.0,776.0 L 149.0,802.0 L 136.0,872.0 L 145.0,907.0 L 163.0,923.0 L 254.0,962.0 L 281.0,1050.0 L 300.0,1076.0 L 321.0,1085.0 L 423.0,1082.0 L 491.0,1158.0 L 514.0,1169.0 L 545.0,1166.0 L 626.0,1127.0 L 711.0,1165.0 L 745.0,1169.0 L 767.0,1158.0 L 836.0,1082.0 L 937.0,1085.0 L 960.0,1075.0 L 977.0,1051.0 L 1006.0,960.0 L 1111.0,910.0 L 1122.0,885.0 L 1111.0,783.0 L 1178.0,711.0 L 1190.0,672.0 L 1135.0,574.0 L 1137.0,548.0 L 1165.0,483.0 L 1166.0,450.0 L 1146.0,422.0 L 1068.0,366.0 L 1063.0,275.0 L 1051.0,243.0 L 1023.0,225.0 L 930.0,204.0 L 887.0,119.0 L 861.0,95.0 L 829.0,92.0 L 742.0,112.0 L 719.0,102.0 L 659.0,47.0 Z" fill="#000000" />
+      <path d="M 338.0,338.0 L 329.0,358.0 L 328.0,424.0 L 329.0,487.0 L 338.0,506.0 L 365.0,521.0 L 506.0,523.0 L 531.0,541.0 L 542.0,567.0 L 542.0,665.0 L 523.0,697.0 L 498.0,708.0 L 363.0,708.0 L 335.0,727.0 L 329.0,867.0 L 340.0,889.0 L 377.0,902.0 L 510.0,902.0 L 535.0,894.0 L 551.0,868.0 L 553.0,745.0 L 572.0,717.0 L 591.0,708.0 L 667.0,708.0 L 697.0,728.0 L 706.0,748.0 L 706.0,864.0 L 726.0,896.0 L 901.0,900.0 L 920.0,888.0 L 932.0,863.0 L 932.0,745.0 L 923.0,724.0 L 896.0,708.0 L 753.0,707.0 L 726.0,689.0 L 715.0,666.0 L 715.0,563.0 L 738.0,529.0 L 760.0,521.0 L 894.0,521.0 L 926.0,500.0 L 932.0,357.0 L 920.0,335.0 L 893.0,323.0 L 745.0,323.0 L 724.0,330.0 L 706.0,360.0 L 704.0,491.0 L 687.0,514.0 L 664.0,525.0 L 595.0,525.0 L 562.0,503.0 L 553.0,474.0 L 553.0,355.0 L 534.0,329.0 L 371.0,323.0 Z" fill="url(#officialGoldGrad)" />
+    </svg>
+  );
+}
 function AnalyticsBarIcon({ size = 14, color }) {
   const c = color || "rgba(160,160,160,0.85)";
   return (
@@ -245,6 +262,7 @@ function AnalyticsBarIcon({ size = 14, color }) {
 }
 
 function Badge({ isAdmin, badge, isPro }) {
+  if (badge === "official") return <OfficialBadge />;
   if (isAdmin) return <GoldBadge />;
   if (badge === "golden") return <GoldenBadge />;
   if (badge === "blue")   return <BlueBadge />;

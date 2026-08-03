@@ -5362,9 +5362,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     if (!account?.id || entitlement.tier === "loading") return;
     supabase.from("profiles").select("is_official").eq("id", account.id).single().then(({ data: prof }) => {
       if (prof?.is_official) {
-        // Official accounts (RainX, Raina AI, etc.) always stay golden — never derived from subscription status
-        setVerification("golden");
-        supabase.from("profiles").update({ badge: "golden" }).eq("id", account.id).then(() => {});
+        // Official accounts (RainX, Raina AI, etc.) always stay official-badged — never derived from subscription status
+        setVerification("official");
+        supabase.from("profiles").update({ badge: "official" }).eq("id", account.id).then(() => {});
         return;
       }
       const expected = tierToVerif(entitlement.tier);
