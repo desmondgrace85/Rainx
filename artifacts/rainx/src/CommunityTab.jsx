@@ -484,7 +484,7 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
     return (
       <>
         <style>{`${slideUp}`}</style>
-        <div style={{ position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,0.55)" }} onClick={onClose}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,0,0,0.55)" }} onClick={onClose}>
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", height: "92dvh", background: T.ink, borderRadius: "20px 20px 0 0", display: "flex", flexDirection: "column", animation: "slideUpSheet 0.34s cubic-bezier(0.32,0.72,0,1)" }} onClick={(e) => e.stopPropagation()}>
             {/* drag handle */}
             <div style={{ flexShrink: 0, display: "flex", justifyContent: "center", paddingTop: 10 }}>
@@ -736,9 +736,9 @@ function PostMenuSheet({ isOwn, username, onClose, onEdit, onDelete, onReport })
   ];
   const items = isOwn ? ownItems : otherItems;
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 200 }} onClick={onClose}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 500 }} onClick={onClose}>
       <style>{"@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}"}</style>
-      <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: T.card, borderRadius: "20px 20px 0 0", paddingBottom: 32, animation: "sheetUp 0.28s cubic-bezier(.16,1,.3,1)" }}>
+      <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: T.card, borderRadius: "20px 20px 0 0", paddingBottom: 32, maxHeight: "80vh", overflowY: "auto", animation: "sheetUp 0.28s cubic-bezier(.16,1,.3,1)" }}>
         <div style={{ width: 36, height: 4, background: T.cardBorder, borderRadius: 2, margin: "12px auto 16px" }} />
         {items.map((item, i) => (
           <React.Fragment key={item.label}>
@@ -1617,7 +1617,7 @@ function CommunityNotifBell({ account, onOpenProfile }) {
         {unreadCount > 0 && <span style={{ position: "absolute", top: -5, right: -7, width: 9, height: 9, borderRadius: "50%", background: T.gold, border: `1px solid ${T.ink}` }} />}
       </button>
       {open && (
-        <div style={{ position: "fixed", inset: 0, background: T.ink, zIndex: 70, display: "flex", flexDirection: "column", animation: "slideInPanel 0.25s ease-out" }}>
+        <div style={{ position: "fixed", inset: 0, background: T.ink, zIndex: 500, display: "flex", flexDirection: "column", animation: "slideInPanel 0.25s ease-out" }}>
           <style>{'.hide-scroll::-webkit-scrollbar{display:none}'}</style>
           {/* Sticky header */}
           <div style={{ flexShrink: 0, padding: "16px 18px 0", borderBottom: `1px solid ${T.cardBorder}` }}>
@@ -2088,6 +2088,14 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
       ))}
 
       </div>{/* end feed wrapper */}
+      <button onClick={() => setShowFabModal(true)} style={{ position: "fixed", bottom: 90, right: 20, width: 52, height: 52, borderRadius: "50%", background: T.gold, border: "none", color: T.ink, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 16px rgba(0,0,0,0.4)", cursor: "pointer", opacity: fabVisible ? 1 : 0, transform: fabVisible ? "scale(1)" : "scale(0.8)", transition: "opacity 0.25s, transform 0.25s", pointerEvents: fabVisible ? "auto" : "none" }}
+        onMouseDown={(e) => { if (fabVisible) e.currentTarget.style.transform = "scale(0.9)"; }}
+        onMouseUp={(e) => { if (fabVisible) e.currentTarget.style.transform = "scale(1)"; }}
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+      </button>
+
+
       <button onClick={() => setShowFabModal(true)} style={{ position: "fixed", bottom: 90, right: 20, width: 52, height: 52, borderRadius: "50%", background: T.gold, border: "none", color: T.ink, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 16px rgba(0,0,0,0.4)", cursor: "pointer", opacity: fabVisible ? 1 : 0, transform: fabVisible ? "scale(1)" : "scale(0.8)", transition: "opacity 0.25s, transform 0.25s", pointerEvents: fabVisible ? "auto" : "none" }}
         onMouseDown={(e) => { if (fabVisible) e.currentTarget.style.transform = "scale(0.9)"; }}
         onMouseUp={(e) => { if (fabVisible) e.currentTarget.style.transform = "scale(1)"; }}

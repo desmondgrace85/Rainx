@@ -1995,7 +1995,7 @@ function MainAppContent({ account, onLogout }) {
 
       {/* ── Profile overlay — opens over any tab when accessed from header/sidebar ── */}
       {profileFromHeader && morePage && tab !== "more" && (
-        <div style={{ position:"fixed", inset:0, zIndex:65, background:T.ink, overflowY:"auto" }}>
+        <div style={{ position:"fixed", inset:0, zIndex:500, background:T.ink, overflowY:"auto" }}>
           <MoreTabErrorBoundary>
             <MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} />
           </MoreTabErrorBoundary>
@@ -2004,7 +2004,7 @@ function MainAppContent({ account, onLogout }) {
 
       {/* ── Sidebar drawer (hamburger menu) ──────────────────────────────── */}
       {showSidebar && (
-        <div style={{ position:"fixed", inset:0, zIndex:80, display:"flex" }}>
+        <div style={{ position:"fixed", inset:0, zIndex:500, display:"flex" }}>
           {/* Backdrop */}
           <div onClick={() => setShowSidebar(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.45)", backdropFilter:"blur(2px)" }} />
           {/* Panel */}
@@ -2061,7 +2061,7 @@ function MainAppContent({ account, onLogout }) {
       )}
 
       {showNotifPanel && (
-        <div style={{ position: "fixed", inset: 0, background: T.ink, zIndex: 60, display: "flex", flexDirection: "column" }}>
+        <div style={{ position: "fixed", inset: 0, background: T.ink, zIndex: 500, display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
             {/* Header */}
             <div style={{ padding: "16px 18px 10px", borderBottom: `1px solid ${T.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
@@ -2126,7 +2126,7 @@ function MainAppContent({ account, onLogout }) {
 
       {/* ── Logout confirmation modal ── */}
       {showLogoutConfirm && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:90, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px" }}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px" }}>
           <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:24, maxWidth:360, width:"100%" }}>
             <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:10 }}>Log Out of RainX?</div>
             <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.8, marginBottom:20 }}>
@@ -2513,7 +2513,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
   // ── Manage already-active market: Replace or Delete ─────────────────────
   if (mode === "manage" && managedAsset) {
     return (
-      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
+      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:500, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
         <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
           <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
           <div style={{ padding:"0 20px 20px" }}>
@@ -2543,7 +2543,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
     const backMode = mode;
     if (!category) {
       return (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:500, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
           <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
             <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
             <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:10 }}>
@@ -2569,7 +2569,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
       );
     }
     return (
-      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
+      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:500, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
         <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
           <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
           <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:12 }}>
@@ -2617,7 +2617,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
   // ── Pick which active market to evict (when 3 are full and user wants a 4th) ─
   if (mode === "pick_who_to_replace" && managedAsset) {
     return (
-      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
+      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:500, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
         <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
           <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
           <div style={{ padding:"0 20px 20px" }}>
@@ -2649,7 +2649,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
 
   // ── Default: category grid + asset list ─────────────────────────────────
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:500, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
         <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}>
           <div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} />
@@ -3304,7 +3304,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
 
       {/* ── Modals ───────────────────────────────────────────────────────── */}
       {showSubLock && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:90, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
           <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:18, padding:28, width:"100%", maxWidth:340, textAlign:"center" }}>
             <div style={{ fontSize:38, marginBottom:12 }}>🔒</div>
             <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:8 }}>Subscription Required</div>
@@ -6487,7 +6487,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         </div>
       )}
       {showLegal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 70, display: "flex", alignItems: "flex-end" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 500, display: "flex", alignItems: "flex-end" }}>
           <div style={{ background: T.card, width: "100%", maxWidth: 480, margin: "0 auto", borderRadius: "16px 16px 0 0", padding: 22, maxHeight: "80vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.goldBright, fontWeight: 800 }}>Terms & Risk Disclosure</div>
