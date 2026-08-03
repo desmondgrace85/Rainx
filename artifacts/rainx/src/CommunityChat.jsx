@@ -13,6 +13,24 @@ import {
 import { supabase } from "./supabaseClient";
 const BASE_URL = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
 
+// Short WhatsApp-style "sent" tick sound, synthesized (no audio file needed)
+function playSendTick() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1400, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.12);
+    osc.onended = () => ctx.close();
+  } catch {}
+}
+
 const buildT = (tokens) => ({
   ink: "#0F0E0B", card: "#1C1913", cardBorder: "#332C1F",
   gold: "#C6A15B", goldBright: "#E3C077", paper: "#F2EDE0", muted: "#9C947F",
@@ -96,19 +114,19 @@ function Avatar({ name, avatarUrl, size }) {
 }
 
 // ── Ticks ──────────────────────────────────────────────────────────────────
-// sent=1 grey tick, delivered=2 grey ticks (same color as sent), read=2 blue ticks
+// sent=1 black tick, delivered=2 black ticks (same color as sent), read=2 white ticks
 function Ticks({ status }) {
   if (status === "read") {
-    // two blue ticks — recipient has actually opened and read the message
+    // two white ticks — recipient has actually opened and read the message
     return (
-      <span style={{ display: "inline-flex", alignItems: "center", color: "#34B7F1" }}>
+      <span style={{ display: "inline-flex", alignItems: "center", color: "#ffffff" }}>
         <Check size={10} strokeWidth={3.5} />
         <Check size={10} strokeWidth={3.5} style={{ marginLeft: -6 }} />
       </span>
     );
   }
   if (status === "delivered") {
-    // two grey ticks, same color as "sent" — recipient is online/has the app, but hasn't opened this chat yet
+    // two black ticks, same color as "sent" — recipient is online/has the app, but hasn't opened this chat yet
     return (
       <span style={{ display: "inline-flex", alignItems: "center", color: "#111111" }}>
         <Check size={10} strokeWidth={3.5} />
@@ -116,7 +134,7 @@ function Ticks({ status }) {
       </span>
     );
   }
-  // sent: one grey tick — recipient offline / hasn't received it yet
+  // sent: one black tick — recipient offline / hasn't received it yet
   return <Check size={10} strokeWidth={3.5} color="#111111" />;
 }
 
@@ -639,6 +657,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
       const { data, error: err } = await supabase.from("direct_messages").insert({ sender_id: aid, receiver_id: oid, content }).select().single();
       if (err) throw err;
       setMessages(p => p.map(m => m.id === optId ? data : m));
+      playSendTick();
       fetch(`${BASE_URL}/api/push/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

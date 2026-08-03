@@ -5877,17 +5877,15 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           <Plus size={24} />
         </button>
         {showProfileFabModal && (
-          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={() => setShowProfileFabModal(false)}>
-            <div style={{ background:T.ink, width:"100%", maxWidth:480, margin:"0 auto", borderRadius:"16px 16px 0 0", padding:16 }} onClick={e => e.stopPropagation()}>
-              <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:8 }}>
-                <button onClick={() => setShowProfileFabModal(false)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><X size={20} /></button>
-              </div>
-              <CommunityComposer account={account} compact themeTokens={T} onPosted={() => {
-                setShowProfileFabModal(false);
-                supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false}).then(({data})=>setProfilePosts(data||[]));
-              }} />
-            </div>
-          </div>
+          <CommunityComposer
+            account={account}
+            themeTokens={T}
+            onClose={() => setShowProfileFabModal(false)}
+            onPosted={() => {
+              setShowProfileFabModal(false);
+              supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false}).then(({data})=>setProfilePosts(data||[]));
+            }}
+          />
         )}
 
         {/* ── Profile posts feed ── */}

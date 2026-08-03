@@ -514,6 +514,12 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
             <div style={{ flexShrink: 0, borderTop: `1px solid ${T.cardBorder}`, padding: "12px 20px 28px", display: "flex", alignItems: "center", gap: 4 }}>
               <input ref={cameraRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
               <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
+              <button onClick={() => insertAt("#")} title="Hashtag" style={{ background: "none", border: "none", cursor: "pointer", padding: 10, color: T.paper }}>
+                <Hash size={22} />
+              </button>
+              <button onClick={() => insertAt("@")} title="Mention" style={{ background: "none", border: "none", cursor: "pointer", padding: 10, color: T.paper }}>
+                <AtSign size={22} />
+              </button>
               <button onClick={() => cameraRef.current?.click()} disabled={images.length >= 4} title="Camera" style={{ background: "none", border: "none", cursor: images.length >= 4 ? "default" : "pointer", padding: 10, opacity: images.length >= 4 ? 0.3 : 1, color: T.paper }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.2A3.2 3.2 0 1 1 12 8.8a3.2 3.2 0 0 1 0 6.4zm7-11.2h-2.28l-1.44-1.6H8.72L7.28 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/></svg>
               </button>
