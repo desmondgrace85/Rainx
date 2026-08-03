@@ -833,9 +833,9 @@ function AuthScreen({ onAuthed }) {
 const PLAN_LABELS = { weekly: "Weekly", monthly: "Monthly", yearly: "Yearly" };
 const PLAN_TIER_RANK = { none: 0, weekly: 1, monthly: 2, yearly: 3 };
 const PLAN_FEATURES = {
-  weekly: { price: 120, blurb: "Solid long-term signals (15M/1H). Trade history, notifications, and Community included. Scalping stays locked.", scalping: false },
-  monthly: { price: 500, blurb: "Everything in Weekly, plus Scalping signals unlocked for fast, manual MT5 trades.", scalping: true },
-  yearly: { price: 1000, blurb: "Everything in Monthly, plus an automatic golden verified badge and priority 24/7 support.", scalping: true },
+  weekly: { price: 150, blurb: "Long-term signals (15M/1H), Scalping, trade history, notifications, and Community all included.", scalping: true },
+  monthly: { price: 500, blurb: "Everything in Weekly, with extended trade history and priority support.", scalping: true },
+  yearly: { price: 6000, blurb: "Everything in Monthly, plus an automatic golden verified badge and priority 24/7 support.", scalping: true },
 };
 
 // ---------- Entitlement (what the signed-in user is allowed to see) ----------
@@ -1951,7 +1951,7 @@ function MainAppContent({ account, onLogout }) {
       {/* Community — lazy keep-alive: mounts on first visit, never unmounts again */}
       {communityMounted && (
         <div style={{ display: tab === "community" ? "block" : "none", paddingBottom: 78 }}>
-          <CommunityTab account={account} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />
+          <CommunityTab account={account} entitlement={entitlement} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />
         </div>
       )}
       {gamesMounted && (<div style={{ display: tab === "games" ? "block" : "none", paddingBottom: 78 }}><GamesTab /></div>)}
@@ -3601,7 +3601,7 @@ const SCALP_SYMBOLS = [
   { group: "Commodities", symbols: ["USOIL","SILVER","COPPER"] },
 ];
     function ScalpingTab({ account, entitlement, onSubscribe }) {
-      const unlocked = hasAccess(entitlement.tier, "monthly");
+      const unlocked = hasAccess(entitlement.tier, "weekly");
 
       const [mt5, setMt5] = useState(null);
       const [rSettings, setRSettings] = useState(null);
@@ -4527,7 +4527,7 @@ const SCALP_SYMBOLS = [
 
           {/* ── Content ── */}
           <div style={{ padding: "0 14px" }}>
-            <BlurGate unlocked={unlocked} requiredLabel="Monthly" onSubscribe={onSubscribe} minHeight={440}>
+            <BlurGate unlocked={unlocked} requiredLabel="Weekly" onSubscribe={onSubscribe} minHeight={440}>
               {phase === "loading"
                 ? (
                   <div>
@@ -5360,10 +5360,17 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   // Derive verification from live entitlement and keep DB in sync
   useEffect(() => {
     if (!account?.id || entitlement.tier === "loading") return;
-    const expected = tierToVerif(entitlement.tier);
-    setVerification(expected);
-    // Sync the DB so community profile / other places stay consistent
-    supabase.from("profiles").update({ verification_status: expected }).eq("id", account.id).then(() => {});
+    supabase.from("profiles").select("is_official").eq("id", account.id).single().then(({ data: prof }) => {
+      if (prof?.is_official) {
+        // Official accounts (RainX, Raina AI, etc.) always stay golden — never derived from subscription status
+        setVerification("golden");
+        supabase.from("profiles").update({ badge: "golden" }).eq("id", account.id).then(() => {});
+        return;
+      }
+      const expected = tierToVerif(entitlement.tier);
+      setVerification(expected);
+      supabase.from("profiles").update({ badge: expected || "none" }).eq("id", account.id).then(() => {});
+    });
   }, [account?.id, entitlement.tier]);
 
   const compressImage = (file, maxDim = 400, quality = 0.82) => new Promise((resolve, reject) => {
@@ -6440,8 +6447,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <MoreRow
           icon={Zap}
           title="Scalping"
-          badge={hasAccess(entitlement.tier, "monthly") ? "Unlocked" : "Locked"}
-          badgeColor={hasAccess(entitlement.tier, "monthly") ? T.sage : T.muted}
+          badge={hasAccess(entitlement.tier, "weekly") ? "Unlocked" : "Locked"}
+          badgeColor={hasAccess(entitlement.tier, "weekly") ? T.sage : T.muted}
           onPress={() => setMorePage("scalping")}
         />
         <MoreRowDivider />

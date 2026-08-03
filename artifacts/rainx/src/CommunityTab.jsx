@@ -1743,7 +1743,7 @@ function PostActivityScreen({ post, profile, account, likeData, repostData, T, o
 }
 
 // ---------- Main feed ----------
-export default function CommunityTab({ account, themeTokens, onViewingProfileChange }) {
+export default function CommunityTab({ account, entitlement, themeTokens, onViewingProfileChange }) {
   // Sync theme tokens from parent so T reflects the active theme
   if (themeTokens) Object.assign(T, themeTokens);
   const [posts, setPosts] = useState([]);
@@ -1764,7 +1764,8 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
   const [chatInitUser, setChatInitUser] = useState(null);
   const [postActivity, setPostActivity] = useState(null); // { post, profile }
   const [followingIds, setFollowingIds] = useState(new Set());
-  const [isAccountPro, setIsAccountPro] = useState(false);
+  const _TIER_RANK = { none: 0, weekly: 1, monthly: 2, yearly: 3 };
+  const isAccountPro = (_TIER_RANK[entitlement?.tier] || 0) >= 1; // any paid subscriber unlocks chat settings
   const [unreadDmCount, setUnreadDmCount] = useState(0);
   const [fabVisible, setFabVisible] = useState(true);
   const fabScrollRef = useRef(0);
@@ -1777,17 +1778,7 @@ export default function CommunityTab({ account, themeTokens, onViewingProfileCha
       .catch(()=>{});
   }, [account?.id]);
 
-  // Check current account's own subscription
-  useEffect(() => {
-    if (!account?.id) return;
-    supabase.from("subscriptions").select("status, expires_at, plan")
-      .eq("user_id", account.id).eq("status", "active").maybeSingle()
-      .then(({ data }) => {
-        if (!data) return;
-        const active = data.plan === "vip_lifetime" || (data.expires_at && new Date(data.expires_at) > new Date());
-        setIsAccountPro(active);
-      }).catch(() => {});
-  }, [account?.id]);
+  // (account pro status now computed directly from entitlement prop above)
 
   // Unread DM count for the message icon badge
   useEffect(() => {
