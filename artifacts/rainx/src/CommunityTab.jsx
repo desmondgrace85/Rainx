@@ -633,7 +633,7 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
               <button onClick={() => { setShowPoll((v) => !v); if (showPoll) setPollOptions(["", ""]); }} title="Poll" style={{ background: "none", border: "none", cursor: "pointer", padding: 10, color: showPoll ? T.gold : T.paper }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h4v18H3V3zm7 6h4v12h-4V9zm7 4h4v8h-4v-8z"/></svg>
               </button>
-              <button onClick={() => setShowLocationPicker(true)} title="Location" style={{ background: "none", border: "none", cursor: "pointer", padding: 10, color: location ? T.gold : T.paper, opacity: locLoading ? 0.5 : 1 }}>
+              <button onClick={() => setShowLocationPicker(true)} title="Location" style={{ background: "none", border: "none", cursor: "pointer", padding: 10, color: location ? T.gold : T.paper, opacity: 1 }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
               </button>
               <div style={{ flex: 1 }} />
@@ -696,7 +696,7 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
               <button onClick={() => { setShowPoll((v) => !v); if (showPoll) setPollOptions(["", ""]); }} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${showPoll ? T.gold : T.cardBorder}`, borderRadius: 7, padding: "5px 8px", color: showPoll ? T.gold : T.muted, fontSize: 10.5, cursor: "pointer" }}>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h4v18H3V3zm7 6h4v12h-4V9zm7 4h4v8h-4v-8z"/></svg> Poll
               </button>
-              <button onClick={() => setShowLocationPicker(true)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${location ? T.gold : T.cardBorder}`, borderRadius: 7, padding: "5px 8px", color: location ? T.gold : T.muted, fontSize: 10.5, cursor: "pointer", opacity: locLoading ? 0.5 : 1 }}>
+              <button onClick={() => setShowLocationPicker(true)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${location ? T.gold : T.cardBorder}`, borderRadius: 7, padding: "5px 8px", color: location ? T.gold : T.muted, fontSize: 10.5, cursor: "pointer", opacity: 1 }}>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg> Location
               </button>
             </div>
@@ -1020,7 +1020,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           </div>
         </div>
       ) : (
-        <div style={{ fontSize: 13, fontWeight: 400, color: T.paper, marginTop: 6, lineHeight: 1.65, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
+        <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 6, lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
       )}
 
       {post.images && post.images.length > 0 && (
