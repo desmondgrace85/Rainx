@@ -4,7 +4,7 @@ import CommunityChat from "./CommunityChat";
 const BASE_URL = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
 import {
   Send, Trash2, Edit3, X, BadgeCheck, Heart, Eye, MessageCircle, Repeat2, MessageSquareDashed,
-  UserPlus, UserCheck, ArrowLeft, Bell, MoreHorizontal, Plus, Hash, AtSign, Flag, ChevronRight, MessageSquare,
+  UserPlus, UserCheck, ArrowLeft, Bell, MoreHorizontal, Plus, Hash, AtSign, Flag, ChevronRight, MessageSquare, Search,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 
@@ -354,6 +354,92 @@ async function togglePostRepost(postId, authorId, accountId, repostData, setRepo
 // ---------- Composer — inline card (no onClose) or full-screen modal (with onClose) ----------
 // Replaces the former ComposeModal and compact Composer. All features: hashtag, mention,
 // photo (camera + gallery), poll, location.
+function LocationPicker({ onClose, onSelect, currentLabel }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [currentSuggestion, setCurrentSuggestion] = useState(null);
+  const [detecting, setDetecting] = useState(true);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    if (!navigator.geolocation) { setDetecting(false); return; }
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`);
+        const d = await r.json();
+        const city = d.address?.city || d.address?.town || d.address?.village || d.address?.county || "Current location";
+        const cc = d.address?.country_code?.toUpperCase();
+        setCurrentSuggestion({ label: cc ? `${city}, ${d.address?.country || cc}` : city, isCurrent: true });
+      } catch {}
+      setDetecting(false);
+    }, () => setDetecting(false), { timeout: 8000 });
+  }, []);
+
+  useEffect(() => {
+    if (!query.trim() || query.trim().length < 2) { setResults([]); return; }
+    setSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=10`);
+        const d = await r.json();
+        setResults((d || []).map(item => ({
+          label: item.display_name.split(",").slice(0, 2).join(",").trim(),
+        })));
+      } catch { setResults([]); }
+      setSearching(false);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: T.card, zIndex: 500, display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 16px 10px" }}>
+        {currentLabel
+          ? <button onClick={() => { onSelect(null); onClose(); }} style={{ background: "none", border: "none", color: T.rust, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Remove</button>
+          : <span />}
+        <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.paper }}>Tag location</span>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: T.gold, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Done</button>
+      </div>
+      <div style={{ padding: "0 16px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 20, padding: "9px 14px" }}>
+          <Search size={16} color={T.muted} />
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search locations"
+            style={{ flex: 1, background: "none", border: "none", outline: "none", color: T.paper, fontFamily: FONT_BODY, fontSize: 14 }} />
+        </div>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 16px" }}>
+        {!query.trim() && (
+          <>
+            {detecting && <div style={{ padding: "14px 0", fontSize: 13, color: T.muted }}>Detecting your location…</div>}
+            {currentSuggestion && (
+              <button onClick={() => { onSelect(currentSuggestion); onClose(); }}
+                style={{ width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: `1px solid ${T.cardBorder}`, padding: "14px 0", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill={T.gold}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                <div>
+                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>{currentSuggestion.label}</div>
+                  <div style={{ fontSize: 11, color: T.muted, marginTop: 1 }}>Current location</div>
+                </div>
+              </button>
+            )}
+          </>
+        )}
+        {query.trim() && (
+          <>
+            {searching && <div style={{ padding: "14px 0", fontSize: 13, color: T.muted }}>Searching…</div>}
+            {!searching && results.length === 0 && <div style={{ padding: "14px 0", fontSize: 13, color: T.muted }}>No locations found</div>}
+            {results.map((r, i) => (
+              <button key={i} onClick={() => { onSelect(r); onClose(); }}
+                style={{ width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: `1px solid ${T.cardBorder}`, padding: "14px 0", cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>
+                {r.label}
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Composer({ account, onPosted, onClose, compact, themeTokens }) {
   if (themeTokens) Object.assign(T, themeTokens);
   const asModal = !!onClose;
@@ -364,7 +450,7 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
   const [showPoll, setShowPoll] = useState(false);
   const [pollOptions, setPollOptions] = useState(["", ""]);
   const [location, setLocation] = useState(null);
-  const [locLoading, setLocLoading] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
   const taRef = useRef(null);
   const photoRef = useRef(null);
   const cameraRef = useRef(null);
@@ -547,7 +633,7 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
               <button onClick={() => { setShowPoll((v) => !v); if (showPoll) setPollOptions(["", ""]); }} title="Poll" style={{ background: "none", border: "none", cursor: "pointer", padding: 10, color: showPoll ? T.gold : T.paper }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h4v18H3V3zm7 6h4v12h-4V9zm7 4h4v8h-4v-8z"/></svg>
               </button>
-              <button onClick={locLoading ? undefined : location ? () => setLocation(null) : fetchLocation} title="Location" style={{ background: "none", border: "none", cursor: "pointer", padding: 10, color: location ? T.gold : T.paper, opacity: locLoading ? 0.5 : 1 }}>
+              <button onClick={() => setShowLocationPicker(true)} title="Location" style={{ background: "none", border: "none", cursor: "pointer", padding: 10, color: location ? T.gold : T.paper, opacity: locLoading ? 0.5 : 1 }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
               </button>
               <div style={{ flex: 1 }} />
@@ -555,12 +641,20 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
             </div>
           </div>
         </div>
+        {showLocationPicker && (
+          <LocationPicker
+            currentLabel={location?.label}
+            onClose={() => setShowLocationPicker(false)}
+            onSelect={(loc) => setLocation(loc)}
+          />
+        )}
       </>
     );
   }
 
   // ── Inline card mode ──
   return (
+    <>
     <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 14, marginBottom: compact ? 0 : 16 }}>
       <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
         <Avatar name={account.email} />
@@ -602,7 +696,7 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
               <button onClick={() => { setShowPoll((v) => !v); if (showPoll) setPollOptions(["", ""]); }} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${showPoll ? T.gold : T.cardBorder}`, borderRadius: 7, padding: "5px 8px", color: showPoll ? T.gold : T.muted, fontSize: 10.5, cursor: "pointer" }}>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h4v18H3V3zm7 6h4v12h-4V9zm7 4h4v8h-4v-8z"/></svg> Poll
               </button>
-              <button onClick={locLoading ? undefined : location ? () => setLocation(null) : fetchLocation} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${location ? T.gold : T.cardBorder}`, borderRadius: 7, padding: "5px 8px", color: location ? T.gold : T.muted, fontSize: 10.5, cursor: "pointer", opacity: locLoading ? 0.5 : 1 }}>
+              <button onClick={() => setShowLocationPicker(true)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: `1px solid ${location ? T.gold : T.cardBorder}`, borderRadius: 7, padding: "5px 8px", color: location ? T.gold : T.muted, fontSize: 10.5, cursor: "pointer", opacity: locLoading ? 0.5 : 1 }}>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg> Location
               </button>
             </div>
@@ -616,6 +710,14 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
         </div>
       </div>
     </div>
+    {showLocationPicker && (
+      <LocationPicker
+        currentLabel={location?.label}
+        onClose={() => setShowLocationPicker(false)}
+        onSelect={(loc) => setLocation(loc)}
+      />
+    )}
+    </>
   );
 }
 
