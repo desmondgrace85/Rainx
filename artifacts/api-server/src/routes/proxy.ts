@@ -19,8 +19,33 @@ router.get("/price", async (req: Request, res: Response) => {
   const { symbol } = req.query as Record<string, string>;
   if (!symbol) return res.status(400).json({ error: "symbol required" });
 
-  // Reuse the same symbol mapping logic (inline to avoid circular dep)
-  let yfSym = symbol.toUpperCase();
+  const upperSym = symbol.toUpperCase();
+
+  // ── Real spot metals (free, keyless) ─────────────────────────────────────
+  // Yahoo's GC=F / SI=F are COMEX FUTURES contracts, not spot — futures trade
+  // at a premium/discount to spot (contango/backwardation), which is why the
+  // homescreen price was showing noticeably higher than a broker's spot XAUUSD
+  // quote. xaus.com is a free, no-key spot XAU/XAG feed — use it for metals.
+  if (upperSym === "XAUUSD" || upperSym === "XAGUSD" || upperSym === "SILVER") {
+    try {
+      const r = await fetch("https://xaus.com/api/v1/spot?compact=1", {
+        signal: AbortSignal.timeout(8_000),
+      });
+      if (!r.ok) throw new Error(`xaus.com ${r.status}`);
+      const json = await r.json() as any;
+      const price = upperSym === "XAUUSD" ? json?.spot_usd_oz : json?.silver_usd_oz;
+      if (price == null) throw new Error("no spot price in xaus.com response");
+      return res.json({ price, symbol, source: "xaus.com-spot" });
+    } catch (err: any) {
+      console.warn(`[price] xaus.com spot fetch failed for ${upperSym}, falling back to Yahoo futures: ${err.message}`);
+      // fall through to the Yahoo path below as a safety net so the price
+      // never just disappears if xaus.com has a hiccup
+    }
+  }
+
+  // ── Live price (everything else, or metals fallback) ─────────────────────
+  // Simple proxy: latest close from Yahoo Finance 1m chart
+  let yfSym = upperSym;
   if (yfSym === "BTCUSD") yfSym = "BTC-USD";
   else if (yfSym === "ETHUSD") yfSym = "ETH-USD";
   else if (yfSym === "SOLUSD") yfSym = "SOL-USD";
