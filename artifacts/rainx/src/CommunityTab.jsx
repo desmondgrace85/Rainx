@@ -804,7 +804,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
           </div>
         );
       })}
-      <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "flex-end" }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "flex-end", position: "sticky", bottom: 0, background: T.card, padding: "10px 0", marginTop: 8, borderTop: `1px solid ${T.cardBorder}` }}>
         <div style={{ flex: 1 }}>
           <MentionTextarea
             value={text}
