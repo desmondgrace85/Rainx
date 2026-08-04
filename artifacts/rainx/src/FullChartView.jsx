@@ -540,7 +540,7 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
 
   return (
     <div style={{
-      position: "fixed", inset: 0, zIndex: 100, display: "flex", flexDirection: "column",
+      position: "fixed", inset: 0, zIndex: 500, display: "flex", flexDirection: "column",
       background: TK.bg, fontFamily: FONT,
       // Prevent body scroll
       overflow: "hidden",
