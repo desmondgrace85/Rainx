@@ -581,6 +581,18 @@ const TIMEFRAMES = [
   { key: "4h", td: "4h", label: "4 Hour" },
 ];
 
+// How long a signal for each timeframe should stay put before we let the
+// bot recompute it. This used to be a flat 4 minutes for every timeframe,
+// which meant a "1 Hour" signal could get silently replaced after only a
+// few minutes. Now each timeframe holds for (roughly) its own candle length.
+const TF_STABILITY_MS = {
+  "15m": 15 * 60 * 1000,
+  "1h":  60 * 60 * 1000,
+  "4h":  4 * 60 * 60 * 1000,
+  "1d":  24 * 60 * 60 * 1000,
+};
+const stabilityWindowFor = (tfKey) => TF_STABILITY_MS[tfKey] || 60 * 60 * 1000;
+
 async function saveTradeHistory(account, inst, tf, sig, result, points) {
   if (!account?.id) return;
   try {
@@ -1594,8 +1606,10 @@ function MainAppContent({ account, onLogout }) {
     if (!isMarketOpen(inst.cls)) return;
     const key = `${inst.symbol}_${tf.key}`;
     const now = Date.now();
-    // Throttle: skip if we already got a signal for this combo in the last 4 min
-    if (lastCandleTimeRef.current[key] && now - lastCandleTimeRef.current[key] < 4 * 60 * 1000) return;
+    // Throttle: skip until this timeframe's own candle window has actually
+    // elapsed (15m holds ~15 min, 1h holds ~1h, 4h holds ~4h, etc.) instead
+    // of a flat 4 minutes for every timeframe.
+    if (lastCandleTimeRef.current[key] && now - lastCandleTimeRef.current[key] < stabilityWindowFor(tf.key)) return;
     try {
       const wasFirstLoad = !lastCandleTimeRef.current[key];
       setLoadingKey(key);
@@ -1783,7 +1797,12 @@ function MainAppContent({ account, onLogout }) {
               timeframeLabel: TIMEFRAMES.find((t) => t.key === row.timeframe)?.label || row.timeframe,
               generatedAt: new Date(row.generated_at).getTime(), status: row.status || "active", milestones: row.milestones || [],
             };
-            lastCandleTimeRef.current[`${row.symbol}_${row.timeframe}`] = row.candle_time;
+            // row.candle_time comes back from Supabase as an ISO string. The
+            // throttle check does plain number subtraction (now - lastCandleTimeRef),
+            // and `Date.now() - "2026-..."` evaluates to NaN in JS, which silently
+            // disabled the stability window on every reload. Store it as epoch ms.
+            const parsedCandleTime = row.candle_time ? new Date(row.candle_time).getTime() : Date.now();
+            lastCandleTimeRef.current[`${row.symbol}_${row.timeframe}`] = Number.isFinite(parsedCandleTime) ? parsedCandleTime : Date.now();
           });
           setSignalsMap(map);
         }
