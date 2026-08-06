@@ -67,7 +67,7 @@ function toChartBars(values) {
 
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 
-export default function FullChartView({ inst, session, themeMode = "light", onClose, livePrice = null }) {
+export default function FullChartView({ inst, session, signalsMap = {}, themeMode = "light", onClose, livePrice = null }) {
   const TK = THEME[themeMode] || THEME.light;
   const isDark = themeMode === "dark";
 
@@ -525,7 +525,22 @@ export default function FullChartView({ inst, session, themeMode = "light", onCl
   })() : 0;
 
   const sessionSteps = session?.steps || [];
-  const sessionSetup = session?.setupByTf?.["15m"] || session?.setupByTf?.["1h"] || session?.setupByTf?.["4h"] || session?.setup || null;
+  const symSignals = signalsMap[inst?.symbol] || {};
+  const tfKeyMap = { "1m": "15m", "5m": "15m", "15m": "15m", "30m": "15m", "1h": "1h", "4h": "4h", "1d": "4h" };
+  const preferredKey = tfKeyMap[activeTf] || "15m";
+  const rawSignal = symSignals[preferredKey] || symSignals["15m"] || symSignals["1h"] || symSignals["4h"] || null;
+  const sessionSetup = rawSignal && rawSignal.bias && rawSignal.bias !== "HOLD" ? {
+    bias: rawSignal.bias,
+    entry: rawSignal.entry,
+    stopLoss: rawSignal.stop_loss,
+    tp1: rawSignal.take_profit_1,
+    tp2: rawSignal.take_profit_2,
+    rr: rawSignal.entry && rawSignal.stop_loss && rawSignal.take_profit_1
+      ? Math.abs((rawSignal.take_profit_1 - rawSignal.entry) / (rawSignal.entry - rawSignal.stop_loss)).toFixed(1)
+      : "—",
+    confidence: rawSignal.confidence,
+    reason: rawSignal.reason,
+  } : null;
   const sessionState = session?.state;
   const stateColor   = sessionState === "watching" ? "#7A9E86" : sessionState === "completed" ? "#9C947F" : GOLD;
 

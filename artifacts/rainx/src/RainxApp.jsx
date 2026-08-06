@@ -3184,6 +3184,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
         <FullChartView
           inst={inst}
           session={session}
+          signalsMap={signalsMap}
           themeMode={themeMode}
           onClose={() => setShowFullChart(false)}
           livePrice={last}
@@ -3404,6 +3405,7 @@ function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }
         <FullChartView
           inst={fullChartInst}
           session={null}
+          signalsMap={signalsMap}
           themeMode={themeMode || "dark"}
           onClose={() => setFullChartInst(null)}
         />
