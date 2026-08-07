@@ -1540,7 +1540,7 @@ function MainAppContent({ account, onLogout }) {
           fetch(`${apiBase}/api/push/subscribe`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ subscription: existing.toJSON(), userId: account.id }),
+            body: JSON.stringify({ subscription: existing.toJSON(), userId: account.id, activeMarkets }),
           }).catch(() => {});
           return;
         }
@@ -1568,7 +1568,7 @@ function MainAppContent({ account, onLogout }) {
         fetch(`${apiBase}/api/push/subscribe`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subscription: subscription.toJSON(), userId: account.id }),
+          body: JSON.stringify({ subscription: subscription.toJSON(), userId: account.id, activeMarkets }),
         }).catch(() => {});
       } catch { /* push not supported in this environment */ }
     })();
@@ -2008,7 +2008,7 @@ function MainAppContent({ account, onLogout }) {
         {tab === "markets" && <MarketsTab seriesMap={seriesMap} signalsMap={signalsMap} activeSymbol={activeSymbol} onSelect={(s) => { setActiveSymbol(s); goTab("home", -1); }} themeMode={themeMode} />}
         {tab === "history" && <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />}
         {tab === "subscribe" && <SubscribeScreen account={account} entitlement={entitlement} onBack={() => goTab("more", -1)} />}
-        {tab === "more" && <MoreTabErrorBoundary><MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} /></MoreTabErrorBoundary>}
+        {tab === "more" && <MoreTabErrorBoundary><MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} activeMarkets={activeMarkets} /></MoreTabErrorBoundary>}
       </div>
       )}
 
@@ -2016,7 +2016,7 @@ function MainAppContent({ account, onLogout }) {
       {profileFromHeader && morePage && tab !== "more" && (
         <div style={{ position:"fixed", inset:0, zIndex:500, background:T.ink, overflowY:"auto" }}>
           <MoreTabErrorBoundary>
-            <MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} />
+            <MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} activeMarkets={activeMarkets} />
           </MoreTabErrorBoundary>
         </div>
       )}
@@ -4752,7 +4752,7 @@ function SecuritySection({ icon: Icon, title, desc, onPress, label, comingSoon }
   { key: "money",     label: "Money & Rewards",      desc: "Transfers, rewards, wallet updates" },
   { key: "system",    label: "System",               desc: "Security, account, announcements" },
 ];
-function NotificationSettingsScreen({ account }) {
+function NotificationSettingsScreen({ account, activeMarkets = [] }) {
   const [prefs, setPrefs] = useState(() => {
     try { return JSON.parse(lsGet("rainx-notif-prefs") || "{}"); } catch { return {}; }
   });
@@ -4833,7 +4833,7 @@ function NotificationSettingsScreen({ account }) {
             await fetch(`${apiBase}/api/push/subscribe`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ subscription: sub.toJSON(), userId: account?.id }),
+              body: JSON.stringify({ subscription: sub.toJSON(), userId: account?.id, activeMarkets }),
             });
             alert("Push notifications enabled! You will now receive trading signals even when RainX is closed.");
           } catch (e) { alert("Could not enable push notifications: " + e.message); }
@@ -5318,7 +5318,7 @@ function HeaderAvatar({ account, morePage, T }) {
     : <div style={{ width:34, height:34, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.ink }}>{initial}</div>;
 }
 
-function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, onLogoutConfirm, setTab, entitlement, themeMode, setThemeMode, morePage, setMorePage, setProfileFromHeader }) {
+function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, onLogoutConfirm, setTab, entitlement, themeMode, setThemeMode, morePage, setMorePage, setProfileFromHeader, activeMarkets = [] }) {
   // morePage/setMorePage lifted to MainAppContent so sidebar can deep-link
   const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
@@ -6290,7 +6290,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
   if (morePage === "notifications") return (
     <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Notifications" subtitle="Alert preferences &amp; push settings">
-      <NotificationSettingsScreen account={account} />
+      <NotificationSettingsScreen account={account} activeMarkets={activeMarkets} />
     </MoreSubScreen>
   );
 

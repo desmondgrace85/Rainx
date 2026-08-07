@@ -358,7 +358,12 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
     });
     lineRefs.current = [];
 
-    const overlays = session?.overlays || [];
+    const overlays = sessionSetup ? [
+      { type: "entry_zone", priceHigh: Number(sessionSetup.entry) * 1.0006, priceLow: Number(sessionSetup.entry) * 0.9994 },
+      { type: "sl_level", price: Number(sessionSetup.stopLoss), label: "Stop Loss" },
+      { type: "tp_level", price: Number(sessionSetup.tp1), label: "TP1" },
+      ...(sessionSetup.tp2 ? [{ type: "tp_level", price: Number(sessionSetup.tp2), label: "TP2" }] : []),
+    ] : [];
     const bars = barsCache.current;
     if (!bars.length || !overlays.length) return;
 
@@ -478,7 +483,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
         default: break;
       }
     });
-  }, [session?.overlays, candles, activeTf]);
+  }, [sessionSetup, candles, activeTf]);
 
   // ── Live price engine → update forming candle in real-time ────────────────
   useEffect(() => {
