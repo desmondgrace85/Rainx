@@ -660,7 +660,11 @@ input, textarea, [contenteditable] {
   .rx-center-nav-aura,
   .rx-center-nav-core,
   .rx-center-nav-orbit,
-  .rx-center-nav-particle {
+  .rx-center-nav-particle,
+  .rx-center-nav-control.is-energized .rx-center-nav-stage,
+  .rx-center-nav-control.is-energized .rx-center-nav-core,
+  .rx-center-nav-control.is-energized .rx-center-nav-aura,
+  .rx-center-nav-control.is-energized .rx-center-nav-ripple {
     animation: none;
   }
 }
