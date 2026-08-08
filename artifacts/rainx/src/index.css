@@ -465,9 +465,9 @@ input, textarea, [contenteditable] {
 .rx-center-nav-stage {
   position: absolute;
   left: 50%;
-  bottom: 13px;
-  width: 54px;
-  height: 54px;
+  bottom: 11px;
+  width: 66px;
+  height: 66px;
   display: block;
   transform: translateX(-50%);
   isolation: isolate;
@@ -495,7 +495,7 @@ input, textarea, [contenteditable] {
 }
 
 .rx-center-nav-core {
-  inset: 9px;
+  inset: 10px;
   z-index: 4;
   overflow: hidden;
   border: 1px solid rgba(151, 163, 255, 0.52);
@@ -519,7 +519,7 @@ input, textarea, [contenteditable] {
 }
 
 .rx-center-nav-orbit {
-  inset: 3px;
+  inset: 2px;
   z-index: 2;
   border: 1px solid rgba(100, 131, 255, 0.58);
   border-radius: 50%;
@@ -540,7 +540,7 @@ input, textarea, [contenteditable] {
 }
 
 .rx-center-nav-orbit-two {
-  inset: 0;
+  inset: -1px;
   border-color: rgba(154, 86, 255, 0.34);
   transform: rotate(67deg) scale(0.78, 1);
   animation-name: rx-center-orbit-two;
