@@ -12,6 +12,7 @@ import { supabase } from "./supabaseClient";
 import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, formatCount } from "./CommunityTab";
 import FullChartView from "./FullChartView";
 import LightweightChart from "./LightweightChart";
+import SpaceTab from "./components/space/SpaceExperience";
 
 import gamesMoonJet from "./assets/games/moonjet.jpg";
 import gamesTraderDuel from "./assets/games/trader-duel.jpg";
@@ -1973,7 +1974,7 @@ function MainAppContent({ account, onLogout }) {
           <CommunityTab account={account} entitlement={entitlement} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />
         </div>
       )}
-      {gamesMounted && (<div style={{ display: tab === "games" ? "block" : "none", paddingBottom: 78 }}><GamesTab /></div>)}
+      {gamesMounted && (<div style={{ display: tab === "games" ? "block" : "none", paddingBottom: 78 }}><SpaceTab account={account} T={T} /></div>)}
       {/* Scalping — lazy keep-alive: mounts on first visit, never unmounts again */}
       {scalpingMounted && (
         <div style={{ display: tab === "scalping" ? "block" : "none", paddingBottom: 78 }}>
@@ -2189,13 +2190,11 @@ function MainAppContent({ account, onLogout }) {
                 <path d="M21 21v-1.5a3 3 0 0 0-2.2-2.9"/>
               </svg>
             )},
-            { key: "games", label: "Games", icon: (active) => (
+            { key: "games", label: "Space", icon: (active) => (
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258A4 4 0 0 0 17.32 5z"/>
-                <line x1="6" y1="11" x2="10" y2="11"/>
-                <line x1="8" y1="9" x2="8" y2="13"/>
-                <circle cx="15" cy="12" r="0.8"/>
-                <circle cx="17" cy="10" r="0.8"/>
+                <circle cx="12" cy="12" r="3.5"/>
+                <ellipse cx="12" cy="12" rx="9" ry="4.5" transform="rotate(-24 12 12)"/>
+                <circle cx="19.2" cy="8.1" r="1.2" fill="currentColor" stroke="none"/>
               </svg>
             )},
             { key: "more", label: "More", icon: (active) => (
