@@ -446,3 +446,221 @@ input, textarea, [contenteditable] {
   user-select: text;
   -webkit-user-select: text;
 }
+
+/* RainX centerpiece navigation control */
+.rx-center-nav-control {
+  position: relative;
+  width: 52px;
+  min-width: 52px;
+  height: 49px;
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.rx-center-nav-stage {
+  position: absolute;
+  left: 50%;
+  bottom: 13px;
+  width: 54px;
+  height: 54px;
+  display: block;
+  transform: translateX(-50%);
+  isolation: isolate;
+  animation: rx-center-float 4.8s ease-in-out infinite;
+}
+
+.rx-center-nav-aura,
+.rx-center-nav-orbit,
+.rx-center-nav-ripple,
+.rx-center-nav-particle,
+.rx-center-nav-core {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.rx-center-nav-aura {
+  inset: 2px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(98, 112, 255, 0.22) 0%, rgba(67, 89, 235, 0.12) 38%, rgba(132, 76, 255, 0.08) 58%, transparent 74%);
+  filter: blur(4px);
+  opacity: 0.84;
+  animation: rx-center-aura 3.4s ease-in-out infinite;
+}
+
+.rx-center-nav-core {
+  inset: 9px;
+  z-index: 4;
+  overflow: hidden;
+  border: 1px solid rgba(151, 163, 255, 0.52);
+  border-radius: 50%;
+  background: radial-gradient(circle at 42% 35%, #202752 0%, #0d1229 52%, #080b18 100%);
+  box-shadow:
+    0 0 0 3px rgba(87, 104, 255, 0.12),
+    0 0 14px rgba(77, 100, 255, 0.52),
+    0 0 28px rgba(145, 73, 255, 0.22),
+    inset 0 0 14px rgba(135, 151, 255, 0.2);
+  animation: rx-center-core 4.8s ease-in-out infinite;
+}
+
+.rx-center-nav-core img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  transform: scale(1.02);
+  filter: saturate(1.08) contrast(1.05) drop-shadow(0 0 5px rgba(255, 196, 55, 0.3));
+}
+
+.rx-center-nav-orbit {
+  inset: 3px;
+  z-index: 2;
+  border: 1px solid rgba(100, 131, 255, 0.58);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(88, 111, 255, 0.46);
+  animation: rx-center-orbit 9s linear infinite;
+}
+
+.rx-center-nav-orbit::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #aab7ff;
+  box-shadow: 0 0 7px 2px rgba(115, 128, 255, 0.96);
+}
+
+.rx-center-nav-orbit-two {
+  inset: 0;
+  border-color: rgba(154, 86, 255, 0.34);
+  transform: rotate(67deg) scale(0.78, 1);
+  animation-duration: 7s;
+  animation-direction: reverse;
+}
+
+.rx-center-nav-orbit-two::after {
+  top: 50%;
+  left: -2px;
+  background: #b58bff;
+  box-shadow: 0 0 7px 2px rgba(164, 100, 255, 0.9);
+}
+
+.rx-center-nav-particle {
+  z-index: 3;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #93a7ff;
+  box-shadow: 0 0 6px 2px rgba(92, 125, 255, 0.8);
+  animation: rx-center-particle 3.2s ease-in-out infinite;
+}
+
+.rx-center-nav-particle-one { top: 7px; left: 14px; animation-delay: -0.4s; }
+.rx-center-nav-particle-two { top: 16px; right: 5px; animation-delay: -1.5s; background: #c196ff; }
+.rx-center-nav-particle-three { bottom: 7px; right: 14px; animation-delay: -2.3s; }
+.rx-center-nav-particle-four { bottom: 16px; left: 5px; animation-delay: -2.9s; background: #c196ff; }
+
+.rx-center-nav-ripple {
+  inset: 7px;
+  z-index: 1;
+  border: 1px solid rgba(99, 126, 255, 0);
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.72);
+}
+
+.rx-center-nav-ripple-two {
+  inset: 2px;
+}
+
+.rx-center-nav-control.is-energized .rx-center-nav-stage {
+  animation: rx-center-activate-stage 920ms cubic-bezier(0.22, 0.8, 0.2, 1);
+}
+
+.rx-center-nav-control.is-energized .rx-center-nav-core {
+  animation: rx-center-activate-core 920ms cubic-bezier(0.22, 0.8, 0.2, 1);
+}
+
+.rx-center-nav-control.is-energized .rx-center-nav-orbit {
+  animation-duration: 1.1s;
+}
+
+.rx-center-nav-control.is-energized .rx-center-nav-aura {
+  animation: rx-center-activate-aura 920ms ease-out;
+}
+
+.rx-center-nav-control.is-energized .rx-center-nav-ripple {
+  animation: rx-center-ripple 920ms cubic-bezier(0.16, 0.8, 0.24, 1);
+}
+
+.rx-center-nav-control.is-energized .rx-center-nav-ripple-two {
+  animation-delay: 90ms;
+}
+
+@keyframes rx-center-float {
+  0%, 100% { transform: translate3d(-50%, 0, 0); }
+  50% { transform: translate3d(-50%, -3px, 0); }
+}
+
+@keyframes rx-center-aura {
+  0%, 100% { opacity: 0.68; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes rx-center-core {
+  0%, 100% { transform: scale(0.98); }
+  50% { transform: scale(1.03); }
+}
+
+@keyframes rx-center-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes rx-center-particle {
+  0%, 100% { opacity: 0.25; transform: scale(0.7) translate3d(0, 0, 0); }
+  50% { opacity: 1; transform: scale(1.35) translate3d(2px, -2px, 0); }
+}
+
+@keyframes rx-center-activate-stage {
+  0% { transform: translate3d(-50%, 0, 0) rotate(0deg) scale(1); }
+  20% { transform: translate3d(-50%, -2px, 0) rotate(-8deg) scale(1.08); }
+  45% { transform: translate3d(-50%, -1px, 0) rotate(12deg) scale(1.14); }
+  100% { transform: translate3d(-50%, 0, 0) rotate(0deg) scale(1); }
+}
+
+@keyframes rx-center-activate-core {
+  0% { transform: scale(0.98) rotate(0deg); filter: brightness(1); }
+  25% { transform: scale(1.08) rotate(-7deg); filter: brightness(1.35); }
+  52% { transform: scale(1.12) rotate(9deg); filter: brightness(1.55); }
+  100% { transform: scale(0.98) rotate(0deg); filter: brightness(1); }
+}
+
+@keyframes rx-center-activate-aura {
+  0% { opacity: 0.8; transform: scale(0.92); }
+  35% { opacity: 1; transform: scale(1.48); }
+  100% { opacity: 0; transform: scale(1.9); }
+}
+
+@keyframes rx-center-ripple {
+  0% { opacity: 0.8; transform: scale(0.72); border-color: rgba(115, 139, 255, 0.9); box-shadow: 0 0 10px rgba(91, 119, 255, 0.8); }
+  100% { opacity: 0; transform: scale(1.75); border-color: rgba(176, 106, 255, 0); box-shadow: 0 0 25px rgba(146, 87, 255, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rx-center-nav-stage,
+  .rx-center-nav-aura,
+  .rx-center-nav-core,
+  .rx-center-nav-orbit,
+  .rx-center-nav-particle {
+    animation: none;
+  }
+}

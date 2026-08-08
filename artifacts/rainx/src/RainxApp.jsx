@@ -23,6 +23,7 @@ import gamesAvatar1 from "./assets/games/avatar-1.jpg";
 import gamesAvatar2 from "./assets/games/avatar-2.jpg";
 import gamesAvatar3 from "./assets/games/avatar-3.jpg";
 import gamesAvatar4 from "./assets/games/avatar-4.jpg";
+import rainxLogo from "./assets/rainx-logo.png";
 
 // ---------- Design tokens ----------
 const T = {
@@ -1170,6 +1171,46 @@ class MoreTabErrorBoundary extends React.Component {
   }
 }
 
+function CenterNavLogo({ active, onActivate }) {
+  const [energized, setEnergized] = useState(false);
+  const pulseTimeoutRef = useRef(null);
+
+  useEffect(() => () => {
+    if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
+  }, []);
+
+  const handleActivate = () => {
+    setEnergized(true);
+    if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
+    pulseTimeoutRef.current = setTimeout(() => setEnergized(false), 920);
+    onActivate();
+  };
+
+  return (
+    <button
+      type="button"
+      aria-label="Open RainX centerpiece"
+      onClick={handleActivate}
+      className={`rx-center-nav-control${active ? " is-active" : ""}${energized ? " is-energized" : ""}`}
+    >
+      <span className="rx-center-nav-stage" aria-hidden="true">
+        <span className="rx-center-nav-aura" />
+        <span className="rx-center-nav-orbit rx-center-nav-orbit-one" />
+        <span className="rx-center-nav-orbit rx-center-nav-orbit-two" />
+        <span className="rx-center-nav-particle rx-center-nav-particle-one" />
+        <span className="rx-center-nav-particle rx-center-nav-particle-two" />
+        <span className="rx-center-nav-particle rx-center-nav-particle-three" />
+        <span className="rx-center-nav-particle rx-center-nav-particle-four" />
+        <span className="rx-center-nav-core">
+          <img src={rainxLogo} alt="" />
+        </span>
+        <span className="rx-center-nav-ripple rx-center-nav-ripple-one" />
+        <span className="rx-center-nav-ripple rx-center-nav-ripple-two" />
+      </span>
+    </button>
+  );
+}
+
 function MainAppContent({ account, onLogout }) {
   const seriesMap = useMultiPriceSeries();
   const seriesMapRef = useRef(seriesMap);
@@ -1209,7 +1250,7 @@ function MainAppContent({ account, onLogout }) {
   const swipeRef   = useRef(null); // edge-swipe touch tracking
 
   const goTab = (key, forcedDir) => {
-    const ORDER = { home: 0, markets: 1, community: 2, games: 2.5, more: 3, history: 3, scalping: 3, subscribe: 3 };
+    const ORDER = { home: 0, markets: 1, games: 2, community: 3, more: 4, history: 4, scalping: 4, subscribe: 4 };
     tabDirRef.current  = forcedDir ?? ((ORDER[key] ?? 0) >= (ORDER[prevTabRef.current] ?? 0) ? 1 : -1);
     prevTabRef.current = key;
     setTab(key);
@@ -1998,7 +2039,7 @@ function MainAppContent({ account, onLogout }) {
           const dy = Math.abs(e.changedTouches[0].clientY - swipeRef.current.y);
           swipeRef.current = null;
           if (Math.abs(dx) < 45 || dy > 100) return;
-          const tabs = ["home", "markets", "community", "more"];
+          const tabs = ["home", "markets", "games", "community", "more"];
           const ci = tabs.indexOf(tab);
           if (dx < 0 && ci < tabs.length - 1) goTab(tabs[ci + 1]);
           else if (dx > 0 && ci > 0)          goTab(tabs[ci - 1]);
@@ -2181,19 +2222,13 @@ function MainAppContent({ account, onLogout }) {
                 <polyline points="5.5 10 10 6.5 14 9.5 19 5"/>
               </svg>
             )},
+            { key: "games", center: true },
             { key: "community", label: "Community", icon: (active) => (
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="9" cy="7" r="3"/>
                 <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
                 <circle cx="18" cy="8" r="2.2"/>
                 <path d="M21 21v-1.5a3 3 0 0 0-2.2-2.9"/>
-              </svg>
-            )},
-            { key: "games", label: "Games", icon: (active) => (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3.5"/>
-                <ellipse cx="12" cy="12" rx="9" ry="4.5" transform="rotate(-24 12 12)"/>
-                <circle cx="19.2" cy="8.1" r="1.2" fill="currentColor" stroke="none"/>
               </svg>
             )},
             { key: "more", label: "More", icon: (active) => (
@@ -2203,13 +2238,21 @@ function MainAppContent({ account, onLogout }) {
                 <circle cx="19" cy="12" r="1.4"/>
               </svg>
             )},
-          ].map(({ key, label, icon }) => {
+          ].map(({ key, label, icon, center }) => {
             const active = !profileFromHeader && tab === key;
             return (
-              <button key={key} onClick={() => { if (key === "more") setMorePage(null); setProfileFromHeader(false); goTab(key); }} style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 52, padding: "4px 2px", transition: "color 0.15s" }}>
-                {icon(active)}
-                <span style={{ fontSize: 11, fontFamily: FONT_HEAD, fontWeight: active ? 700 : 500, letterSpacing: 0.1 }}>{label}</span>
-              </button>
+              center ? (
+                <CenterNavLogo
+                  key={key}
+                  active={active}
+                  onActivate={() => { setProfileFromHeader(false); goTab(key); }}
+                />
+              ) : (
+                <button key={key} onClick={() => { if (key === "more") setMorePage(null); setProfileFromHeader(false); goTab(key); }} style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 52, padding: "4px 2px", transition: "color 0.15s" }}>
+                  {icon(active)}
+                  <span style={{ fontSize: 11, fontFamily: FONT_HEAD, fontWeight: active ? 700 : 500, letterSpacing: 0.1 }}>{label}</span>
+                </button>
+              )
             );
           })}
         </div>
