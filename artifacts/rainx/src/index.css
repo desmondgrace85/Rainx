@@ -543,6 +543,7 @@ input, textarea, [contenteditable] {
   inset: 0;
   border-color: rgba(154, 86, 255, 0.34);
   transform: rotate(67deg) scale(0.78, 1);
+  animation-name: rx-center-orbit-two;
   animation-duration: 7s;
   animation-direction: reverse;
 }
@@ -623,6 +624,10 @@ input, textarea, [contenteditable] {
 
 @keyframes rx-center-orbit {
   to { transform: rotate(360deg); }
+}
+
+@keyframes rx-center-orbit-two {
+  to { transform: rotate(427deg) scale(0.78, 1); }
 }
 
 @keyframes rx-center-particle {
