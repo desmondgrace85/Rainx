@@ -23,7 +23,7 @@ import gamesAvatar1 from "./assets/games/avatar-1.jpg";
 import gamesAvatar2 from "./assets/games/avatar-2.jpg";
 import gamesAvatar3 from "./assets/games/avatar-3.jpg";
 import gamesAvatar4 from "./assets/games/avatar-4.jpg";
-import rainxLogo from "./assets/rainx-logo.png";
+import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
 
 // ---------- Design tokens ----------
 const T = {
@@ -1202,7 +1202,7 @@ function CenterNavLogo({ active, onActivate }) {
         <span className="rx-center-nav-particle rx-center-nav-particle-three" />
         <span className="rx-center-nav-particle rx-center-nav-particle-four" />
         <span className="rx-center-nav-core">
-          <img src={rainxLogo} alt="" />
+          <img src={rainxLogoTransparent} alt="" />
         </span>
         <span className="rx-center-nav-ripple rx-center-nav-ripple-one" />
         <span className="rx-center-nav-ripple rx-center-nav-ripple-two" />
@@ -2206,7 +2206,7 @@ function MainAppContent({ account, onLogout }) {
       )}
 
       {!communityProfileOpen && (
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", zIndex: 100, background: T.card, opacity: 1, borderTop: `1px solid ${T.cardBorder}`, boxShadow: "0 -8px 24px rgba(0,0,0,0.12)", display: "flex", justifyContent: "space-around", padding: "6px 0 calc(20px + env(safe-area-inset-bottom))" }}>
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", zIndex: 100, background: T.card, opacity: 1, borderTop: `1px solid ${T.cardBorder}`, boxShadow: "0 -8px 24px rgba(0,0,0,0.12)", display: "flex", justifyContent: "space-around", padding: "6px 0 calc(20px + env(safe-area-inset-bottom))", "--rx-logo-bg": isDark ? "#000" : "#fff" }}>
           {[
             { key: "home", label: "Home", icon: (active) => (
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
