@@ -12,7 +12,6 @@ import { supabase } from "./supabaseClient";
 import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, formatCount } from "./CommunityTab";
 import FullChartView from "./FullChartView";
 import LightweightChart from "./LightweightChart";
-import SpaceTab from "./components/space/SpaceExperience";
 
 import gamesMoonJet from "./assets/games/moonjet.jpg";
 import gamesTraderDuel from "./assets/games/trader-duel.jpg";
@@ -1974,7 +1973,7 @@ function MainAppContent({ account, onLogout }) {
           <CommunityTab account={account} entitlement={entitlement} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />
         </div>
       )}
-      {gamesMounted && (<div style={{ display: tab === "games" ? "block" : "none", paddingBottom: 78 }}><SpaceTab account={account} T={T} /></div>)}
+      {gamesMounted && (<div style={{ display: tab === "games" ? "block" : "none", paddingBottom: 78 }}><GamesTab /></div>)}
       {/* Scalping — lazy keep-alive: mounts on first visit, never unmounts again */}
       {scalpingMounted && (
         <div style={{ display: tab === "scalping" ? "block" : "none", paddingBottom: 78 }}>
@@ -2190,7 +2189,7 @@ function MainAppContent({ account, onLogout }) {
                 <path d="M21 21v-1.5a3 3 0 0 0-2.2-2.9"/>
               </svg>
             )},
-            { key: "games", label: "Space", icon: (active) => (
+            { key: "games", label: "Games", icon: (active) => (
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3.5"/>
                 <ellipse cx="12" cy="12" rx="9" ry="4.5" transform="rotate(-24 12 12)"/>
