@@ -466,8 +466,8 @@ input, textarea, [contenteditable] {
   position: absolute;
   left: 50%;
   bottom: 0;
-  width: 77px;
-  height: 77px;
+  width: 84px;
+  height: 84px;
   display: block;
   transform: translateX(-50%);
   isolation: isolate;
