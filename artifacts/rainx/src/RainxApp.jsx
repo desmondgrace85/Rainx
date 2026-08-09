@@ -579,8 +579,8 @@ function Toast({ toast, onDone, onOpen }) {
       aria-live="polite"
       style={{
         position: "fixed", top: 10, left: 10, right: 10, maxWidth: 460, margin: "0 auto", zIndex: 1000,
-        background: T.card, border: `1px solid ${colorMap[toast.type] || T.gold}`, borderRadius: 18,
-        padding: "11px 13px", boxShadow: "0 8px 28px rgba(0,0,0,0.28)", cursor: "pointer",
+        background: "#ffffff", borderRadius: 16,
+        padding: "12px 14px", boxShadow: "0 10px 32px rgba(0,0,0,0.22)", cursor: "pointer",
         transform: `translateX(${dragX}px)`, opacity: Math.max(0, 1 - Math.abs(dragX) / 200),
         transition: dragging.current ? "none" : "transform 0.2s, opacity 0.2s",
         animation: dragX === 0 ? "slideDown 0.25s ease-out" : "none",
@@ -590,21 +590,28 @@ function Toast({ toast, onDone, onOpen }) {
         <img
           src={`${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/")}icons/icon-192.png`}
           alt=""
-          style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0 }}
+          style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0 }}
         />
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
-            <div style={{ fontFamily: FONT_HEAD, fontSize: 11, fontWeight: 800, color: T.muted, flexShrink: 0 }}>RainX</div>
-            <div style={{ fontSize: 9.5, color: T.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Just now</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
+              <div style={{ fontFamily: FONT_HEAD, fontSize: 12.5, fontWeight: 800, color: "#111", flexShrink: 0 }}>RainX</div>
+              <div style={{ fontSize: 10.5, color: "#8a8a8a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Just now</div>
+            </div>
+            {toast.count > 1 && (
+              <div style={{ background: "#e6e6e6", color: "#333", fontSize: 11, fontWeight: 700, borderRadius: 999, minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 6px", flexShrink: 0 }}>
+                {toast.count}
+              </div>
+            )}
           </div>
-          <div style={{ fontFamily: FONT_HEAD, fontSize: 13, fontWeight: 800, color: colorMap[toast.type] || T.gold, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{toast.title}</div>
-          <div style={{ fontFamily: FONT_BODY, fontSize: 12.5, color: T.paper, marginTop: 3, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{toast.body}</div>
+          <div style={{ fontFamily: FONT_HEAD, fontSize: 13.5, fontWeight: 800, color: "#111", marginTop: 3 }}>{toast.title}</div>
+          <div style={{ fontFamily: FONT_BODY, fontSize: 12.5, color: "#444", marginTop: 3, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{toast.body}</div>
         </div>
         <button
           type="button"
           aria-label="Dismiss notification"
           onClick={(event) => { event.stopPropagation(); onDoneRef.current(); }}
-          style={{ background: "none", border: "none", color: T.muted, padding: 2, display: "flex", flexShrink: 0, cursor: "pointer" }}
+          style={{ background: "none", border: "none", color: "#999", padding: 2, display: "flex", flexShrink: 0, cursor: "pointer" }}
         >
           <X size={16} />
         </button>
@@ -1439,7 +1446,15 @@ function MainAppContent({ account, onLogout }) {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [toastQueue, setToastQueue] = useState([]);
   const [activeToast, setActiveToast] = useState(null);
-  const seenNotificationIdsRef = useRef(new Set());
+  const seenNotificationIdsRef = useRef((() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("rainx-seen-notif-ids") || "[]");
+      return new Set(stored);
+    } catch { return new Set(); }
+  })());
+  const persistSeenNotificationIds = () => {
+    try { localStorage.setItem("rainx-seen-notif-ids", JSON.stringify([...seenNotificationIdsRef.current].slice(-300))); } catch {}
+  };
   const [autoScan, setAutoScan] = useState(true);
   const lastCandleTimeRef = useRef({}); // `${symbol}_${tfKey}` -> datetime string of the last candle we saw
   const notifiedKeysRef = useRef(new Set()); // tracks which symbol+timeframe combos have had their first real check this session — separate from lastCandleTimeRef, which gets pre-populated from the DB on load and was wrongly reused for this, causing old signals to instantly notify on every app open/refresh
@@ -1710,6 +1725,7 @@ function MainAppContent({ account, onLogout }) {
       : String(entry.id);
     if (seenNotificationIdsRef.current.has(key)) return false;
     seenNotificationIdsRef.current.add(key);
+    persistSeenNotificationIds();
     if (seenNotificationIdsRef.current.size > 300) {
       const oldest = seenNotificationIdsRef.current.values().next().value;
       if (oldest) seenNotificationIdsRef.current.delete(oldest);
@@ -1953,7 +1969,7 @@ function MainAppContent({ account, onLogout }) {
 
   useEffect(() => {
     if (!activeToast && toastQueue.length > 0) {
-      setActiveToast(toastQueue[0]);
+      setActiveToast({ ...toastQueue[0], count: toastQueue.length });
       setToastQueue((q) => q.slice(1));
     }
   }, [toastQueue, activeToast]);
@@ -1969,6 +1985,7 @@ function MainAppContent({ account, onLogout }) {
             id: row.id, title: row.title, body: row.body, type: row.type, section: row.section, read: row.read, time: new Date(row.created_at).toLocaleTimeString(),
           }));
           loaded.forEach((row) => seenNotificationIdsRef.current.add(String(row.id)));
+          persistSeenNotificationIds();
           setNotifications(loaded);
         }
       } catch { /* keep starting empty if this fails */ }
