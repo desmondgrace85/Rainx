@@ -30,7 +30,7 @@ router.get("/push/keys", (_req: Request, res: Response) => {
   if (!VAPID_PUBLIC_KEY) {
     return res.status(503).json({ error: "Push notifications not configured" });
   }
-  res.json({ publicKey: VAPID_PUBLIC_KEY });
+  return res.json({ publicKey: VAPID_PUBLIC_KEY });
 });
 
 // POST /api/push/subscribe → save subscription to DB
@@ -53,7 +53,7 @@ router.post("/push/subscribe", async (req: Request, res: Response) => {
       )
       .then(() => {}, () => {});
   }
-  res.json({ ok: true });
+  return res.json({ ok: true });
 });
 
 // POST /api/push/send → send notification (called by backend workers / admin)
@@ -99,7 +99,7 @@ router.post("/push/send", async (req: Request, res: Response) => {
     await db.from("push_subscriptions").delete().in("endpoint", stale).then(() => {}, () => {});
   }
 
-  res.json({ sent, stale: stale.length });
+  return res.json({ sent, stale: stale.length });
 });
 
 export default router;

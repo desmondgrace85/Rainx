@@ -24,7 +24,7 @@ router.get("/public-profile/:id", async (req: Request, res: Response) => {
     .eq("id", id)
     .single();
   if (error || !data) return res.status(404).json({ error: "Not found" });
-  res.json(data);
+  return res.json(data);
 });
 
 // GET /api/public-profiles?ids=id1,id2,... — batch lookup bypassing RLS so names/avatars show for any viewer
@@ -38,7 +38,7 @@ router.get("/public-profiles", async (req: Request, res: Response) => {
     .select("id, full_name, username, display_name, avatar_url, bio, is_admin, badge, cover_url, location")
     .in("id", ids);
   if (error) return res.status(500).json({ error: error.message });
-  res.json(data || []);
+  return res.json(data || []);
 });
 
 export default router;
