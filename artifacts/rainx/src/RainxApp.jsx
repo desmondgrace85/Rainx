@@ -224,6 +224,28 @@ function routeReplace(tab, sub, flag) {
     if (window.location.hash !== next) history.replaceState(null, "", next);
   } catch {}
 }
+function buildRainxNotificationUrl(target = {}) {
+  const params = new URLSearchParams();
+  if (target.kind) params.set("rainxTarget", target.kind);
+  Object.entries(target).forEach(([key, value]) => {
+    if (key !== "kind" && value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value));
+    }
+  });
+  return `/?${params.toString()}`;
+}
+function readRainxNotificationTarget() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const kind = params.get("rainxTarget");
+    if (!kind) return null;
+    const target = { kind };
+    params.forEach((value, key) => { if (key !== "rainxTarget") target[key] = value; });
+    return target;
+  } catch {
+    return null;
+  }
+}
 async function storageGet(key, shared) {
   if (typeof window !== "undefined" && window.storage && typeof window.storage.get === "function") {
     try { return await window.storage.get(key, shared); } catch { /* fall through */ }
@@ -524,7 +546,7 @@ function playNotifSound() {
     osc.start(); osc.stop(ctx.currentTime + 0.35);
   } catch {}
 }
-function Toast({ toast, onDone }) {
+function Toast({ toast, onDone, onOpen }) {
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
   const [dragX, setDragX] = useState(0);
@@ -550,9 +572,9 @@ function Toast({ toast, onDone }) {
   };
 
   return (
-    <div
+      <div
       onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
-      onClick={() => onDoneRef.current()}
+        onClick={() => { onOpen?.(toast); onDoneRef.current(); }}
       role="status"
       aria-live="polite"
       style={{
@@ -578,7 +600,14 @@ function Toast({ toast, onDone }) {
           <div style={{ fontFamily: FONT_HEAD, fontSize: 13, fontWeight: 800, color: colorMap[toast.type] || T.gold, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{toast.title}</div>
           <div style={{ fontFamily: FONT_BODY, fontSize: 12.5, color: T.paper, marginTop: 3, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{toast.body}</div>
         </div>
-        <X size={16} color={T.muted} style={{ flexShrink: 0, marginTop: 2 }} />
+        <button
+          type="button"
+          aria-label="Dismiss notification"
+          onClick={(event) => { event.stopPropagation(); onDoneRef.current(); }}
+          style={{ background: "none", border: "none", color: T.muted, padding: 2, display: "flex", flexShrink: 0, cursor: "pointer" }}
+        >
+          <X size={16} />
+        </button>
       </div>
     </div>
   );
@@ -1690,6 +1719,38 @@ function MainAppContent({ account, onLogout }) {
     return true;
   }, []);
 
+  const openNotificationTarget = useCallback((entry) => {
+    const data = entry?.data || {};
+    const target = data.targetKind ? data : entry;
+    if (!target?.targetKind) return;
+    const url = buildRainxNotificationUrl({
+      kind: target.targetKind,
+      userId: target.userId || target.senderId,
+      conversationId: target.conversationId,
+      postId: target.postId,
+      symbol: target.symbol,
+      timeframe: target.timeframe,
+      notificationAction: "open",
+    });
+    window.history.replaceState(null, "", url);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    if (target.targetKind === "signal") {
+      const nextSymbol = target.symbol;
+      if (nextSymbol) {
+        lsSet("rainx-active-symbol", nextSymbol);
+        _activeSymbolRef.current = nextSymbol;
+        setActiveSymbol(nextSymbol);
+      }
+      setTab("home");
+      return;
+    }
+    setTab(target.targetKind === "chat" || target.targetKind === "post" ? "community" : "home");
+    lsSet("rainx-pending-notification", JSON.stringify({
+      ...target,
+      expiresAt: Date.now() + 60_000,
+    }));
+  }, []);
+
   const pushNotification = useCallback(async (n) => {
     // Subscribers do NOT receive trading signal / economic news push notifications
     // (signals are shown in-app on the chart; push notifications are sent for confirmed signals)
@@ -1702,33 +1763,64 @@ function MainAppContent({ account, onLogout }) {
       const { data } = await supabase.from("user_notifications").insert({ user_id: account.id, title: n.title, body: n.body }).select("id").single().then((r) => r, () => ({ data: null }));
       if (data?.id) id = data.id;
     }
-    const entry = { id, read: false, time: new Date().toLocaleTimeString(), ...n };
+    const targetKind = n.targetKind || (n.type === "signal" || n.type === "update" || n.type === "warning" ? "signal" : undefined);
+    const target = {
+      targetKind,
+      symbol: n.symbol,
+      timeframe: n.timeframe,
+      postId: n.postId,
+      conversationId: n.conversationId,
+      senderId: n.senderId,
+    };
+    const entry = { id, read: false, time: new Date().toLocaleTimeString(), ...n, data: target };
     enqueueInAppNotification(entry);
+    const apiBase = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
+    fetch(`${apiBase}/api/push/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: account.id,
+        title: n.title,
+        body: n.body,
+        data: {
+          ...target,
+          kind: n.type === "signal" || n.type === "update" || n.type === "warning" ? "signal" : (n.type || "default"),
+          category: n.type === "warning" ? "sl" : (n.type === "update" ? "tp" : (n.type || "default")),
+          notificationId: String(id),
+          tag: `rainx-${n.type || "notification"}-${id}`,
+          group: "rainx",
+          url: targetKind ? buildRainxNotificationUrl(target) : "/",
+        },
+      }),
+    }).catch(() => {});
   }, [account, entitlement?.tier, enqueueInAppNotification]);
 
-  // ─── Listen for PLAY_SOUND messages from the service worker ────────────────
+  // ─── One account-scoped notification bridge for every RainX surface ────────
   useEffect(() => {
-    if (!("serviceWorker" in navigator)) return;
+    if (!account?.id) return undefined;
+    const isForeground = () => document.visibilityState === "visible";
+    const receive = (entry) => {
+      if (!isForeground()) return;
+      enqueueInAppNotification(entry);
+    };
     const handleMsg = (event) => {
       if (event.data?.type === "RAINX_PUSH_RECEIVED") {
         const payload = event.data.payload || {};
         const data = payload.data || {};
-        let presence = null;
-        try { presence = JSON.parse(localStorage.getItem("rainx_presence") || "null"); } catch {}
-        if (
-          data.kind === "chat" &&
-          presence?.visible === true &&
-          presence.accountId === account?.id &&
-          presence.activeChatUserId === data.senderId
-        ) return;
-        enqueueInAppNotification({
+        receive({
           id: data.notificationId || data.messageId || (Date.now() + Math.random()),
           title: payload.title || "RainX",
           body: payload.body || "",
           type: data.kind === "chat" ? "community" : (data.kind || "update"),
           read: false,
           time: new Date().toLocaleTimeString(),
+          data,
         });
+        return;
+      }
+      if (event.data?.type === "RAINX_NOTIFICATION_ACTION") {
+        const data = event.data.payload || {};
+        if (data.url) window.location.assign(data.url);
         return;
       }
       if (event.data?.type !== "PLAY_SOUND" || !event.data.soundSrc) return;
@@ -1738,12 +1830,14 @@ function MainAppContent({ account, onLogout }) {
         audio.play().catch(() => {}); // silently ignore autoplay policy rejections
       } catch {}
     };
-    navigator.serviceWorker.addEventListener("message", handleMsg);
-    return () => navigator.serviceWorker.removeEventListener("message", handleMsg);
+    if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", handleMsg);
+    return () => {
+      if ("serviceWorker" in navigator) navigator.serviceWorker.removeEventListener("message", handleMsg);
+    };
   }, [account?.id, enqueueInAppNotification]);
 
-  // Push is the background delivery path. Realtime is the foreground
-  // fallback, so the heads-up banner still works when push is unavailable.
+  // Push is the background delivery path. These realtime channels are the
+  // foreground fallback and deliberately do not suppress an open chat.
   useEffect(() => {
     if (!account?.id) return undefined;
     const communityCopy = {
@@ -1763,33 +1857,47 @@ function MainAppContent({ account, onLogout }) {
       }, ({ new: row }) => {
         const [title, body] = communityCopy[row.type] || ["RainX Notification", "You have a new notification"];
         setCommunityUnreadCount((count) => count + 1);
-        enqueueInAppNotification({
+        receive({
           id: row.id,
           title,
           body,
           type: "community",
           read: false,
           time: new Date().toLocaleTimeString(),
+          data: { targetKind: "post", postId: row.post_id },
         });
       })
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "direct_messages",
         filter: `receiver_id=eq.${account.id}`,
       }, ({ new: message }) => {
-        let presence = null;
-        try { presence = JSON.parse(localStorage.getItem("rainx_presence") || "null"); } catch {}
-        if (
-          presence?.visible === true &&
-          presence.accountId === account.id &&
-          presence.activeChatUserId === message.sender_id
-        ) return;
-        enqueueInAppNotification({
+        receive({
           id: message.id,
           title: "New Message",
           body: message.content || "",
           type: "community",
           read: false,
           time: new Date().toLocaleTimeString(),
+          data: {
+            targetKind: "chat",
+            userId: message.sender_id,
+            senderId: message.sender_id,
+            conversationId: [account.id, message.sender_id].sort().join("_"),
+          },
+        });
+      })
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "user_notifications",
+        filter: `user_id=eq.${account.id}`,
+      }, ({ new: row }) => {
+        receive({
+          id: row.id,
+          title: row.title || "RainX",
+          body: row.body || "",
+          type: row.type || "update",
+          read: !!row.read,
+          time: new Date().toLocaleTimeString(),
+          data: row.data || {},
         });
       })
       .subscribe();
@@ -2223,7 +2331,11 @@ function MainAppContent({ account, onLogout }) {
         .scroll-hint.scrolling::after { opacity:1; }
       `}</style>
 
-      <Toast toast={activeToast} onDone={() => setActiveToast(null)} />
+      <Toast
+        toast={activeToast}
+        onDone={() => setActiveToast(null)}
+        onOpen={openNotificationTarget}
+      />
 
       {(tab === "home" || tab === "markets") && <div style={{ background: T.card, borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
         {/* ── Profile avatar trigger ── */}

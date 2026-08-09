@@ -1,7 +1,7 @@
 /* RainX Service Worker — Push Notifications + Offline Cache */
 // IMPORTANT: bump this version string on every future deploy, or users may keep
 // seeing a stale cached version of the app for a while after you ship changes.
-const CACHE_NAME = "rainx-v2026-08-09-notifications";
+const CACHE_NAME = "rainx-v2026-08-09-notifications-2";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
 const presenceByClient = new Map();
 const recentPushIds = new Set();
@@ -15,6 +15,7 @@ self.addEventListener("message", (event) => {
     accountId: event.data.accountId || null,
     visible: event.data.visible === true,
     activeChatUserId: event.data.activeChatUserId || null,
+    updatedAt: Date.now(),
   });
 });
 
@@ -88,6 +89,12 @@ self.addEventListener("push", (event) => {
   const soundSrc = CATEGORY_SOUNDS[category] || null;
 
   // Category-specific options
+  const chatActions = kind === "chat"
+    ? [
+        { action: "reply", title: "Reply" },
+        { action: "mark-read", title: "Mark read" },
+      ]
+    : [];
   const options = {
     body,
     icon,
@@ -96,7 +103,7 @@ self.addEventListener("push", (event) => {
     vibrate,
     data: { url, soundSrc, ...notificationData },
     requireInteraction: category === "trading" || category === "risk",
-    actions: notificationData.actions || [],
+    actions: notificationData.actions || chatActions,
     renotify: true,
     silent: false,
   };
@@ -105,16 +112,18 @@ self.addEventListener("push", (event) => {
     .then((clients) => {
       const visibleClients = clients.filter((client) => {
         const presence = presenceByClient.get(client.id);
-        return presence?.visible === true;
+        const hasFreshPresence = presence && Date.now() - presence.updatedAt < 20_000;
+        const isVisibleWindow = client.visibilityState ? client.visibilityState === "visible" : true;
+        return hasFreshPresence && presence.visible === true && isVisibleWindow && (
+          !notificationData.accountId || presence.accountId === notificationData.accountId
+        );
       });
-       // Any visible RainX window gets the heads-up banner in the app. When
-       // RainX is hidden or closed, the OS notification below is used instead.
-       if (!visibleClients.length) return false;
-      visibleClients.forEach((client) => {
-        client.postMessage({
-          type: "RAINX_PUSH_RECEIVED",
-          payload: { title, body, data: notificationData },
-        });
+      // One visible RainX window owns the in-app banner. Posting to every
+      // window would duplicate the same event across tabs.
+      if (!visibleClients.length) return false;
+      visibleClients[0].postMessage({
+        type: "RAINX_PUSH_RECEIVED",
+        payload: { title, body, data: notificationData },
       });
       return true;
     });
@@ -142,21 +151,32 @@ self.addEventListener("push", (event) => {
 // app was fully closed when the notification arrived.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || "/";
+  const data = event.notification.data || {};
+  const action = event.action || "open";
+  const targetUrl = data.url || "/";
+  const actionUrl = `${targetUrl}${targetUrl.includes("?") ? "&" : "?"}notificationAction=${encodeURIComponent(action)}`;
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (clients) => {
+      if (action === "mark-read") {
+        const client = clients.find((item) => item.url.includes(self.location.origin));
+        if (client) {
+          client.focus();
+          client.postMessage({ type: "RAINX_NOTIFICATION_ACTION", payload: { ...data, action } });
+          return;
+        }
+      }
       // Focus existing RainX tab if open
       for (const client of clients) {
         if (client.url.includes(self.location.origin) && "focus" in client) {
           client.focus();
-          if (targetUrl !== "/") client.navigate(targetUrl);
+          if (actionUrl !== "/") client.navigate(actionUrl);
           return;
         }
       }
       // Open new tab — sound will play via the PLAY_SOUND message listener once
       // the app hydrates and registers its service-worker message handler.
       if (self.clients.openWindow) {
-        await self.clients.openWindow(targetUrl);
+        await self.clients.openWindow(actionUrl);
       }
     })
   );

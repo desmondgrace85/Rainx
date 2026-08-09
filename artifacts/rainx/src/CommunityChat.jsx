@@ -853,8 +853,10 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
             conversationId: convId,
             senderId: aid,
             messageId: data.id,
-            tag: `rainx-chat-${convId || oid}`,
-            url: "/",
+            targetKind: "chat",
+            tag: `rainx-chat-${data.id}`,
+            group: `rainx-chat-${convId || oid}`,
+            url: `/?rainxTarget=chat&userId=${encodeURIComponent(aid)}&conversationId=${encodeURIComponent(convId || "")}`,
           },
         }),
       }).catch(() => {});
