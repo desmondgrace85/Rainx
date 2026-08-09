@@ -626,7 +626,11 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
     finally { setLoading(false); }
   }, [aid, oid]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    const refreshTimer = setInterval(load, 2500);
+    return () => clearInterval(refreshTimer);
+  }, [load]);
   useEffect(() => {
     if (!bottomRef.current || loading) return;
     if (!initialScrollDone.current) {
@@ -705,9 +709,23 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
       if (!payload || payload.sender_id !== oid || payload.receiver_id !== aid) return;
       setOtherTyping(!!payload.is_typing);
     };
+    const handleMessage = ({ payload }) => {
+      const msg = payload && payload.message;
+      if (!msg || msg.sender_id !== oid || msg.receiver_id !== aid) return;
+      setMessages(p => [...p.filter(m => m.id !== msg.id), msg]
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at)));
+      const s = getPerUserSettings(oid);
+      if (s.readReceipts) {
+        supabase.from("direct_messages")
+          .update({ is_read: true, read_at: new Date().toISOString() })
+          .eq("id", msg.id)
+          .then(() => {}, () => {});
+      }
+    };
     const subscribe = () => {
       receiveChannel = supabase.channel("typing_" + aid)
         .on("broadcast", { event: "typing" }, handleTyping)
+        .on("broadcast", { event: "message" }, handleMessage)
         .subscribe(status => {
           if ((status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") && !disposed && !reconnectTimer) {
             reconnectTimer = setTimeout(() => {
@@ -774,6 +792,11 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
       const { data, error: err } = await supabase.from("direct_messages").insert({ sender_id: aid, receiver_id: oid, content }).select().single();
       if (err) throw err;
       setMessages(p => p.map(m => m.id === optId ? data : m));
+      typingSendChannel.current?.send({
+        type: "broadcast",
+        event: "message",
+        payload: { message: data },
+      }).catch(() => {});
       playSendTick();
       fetch(`${BASE_URL}/api/push/send`, {
         method: "POST",
@@ -1129,6 +1152,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
   const [showGeneralSettings, setShowGeneralSettings] = useState(false);
   const [pinnedChats, setPinnedChatsState] = useState(() => getPinnedChats());
   const [typingUsers, setTypingUsers]     = useState({});
+  const conversationsLoadRef              = useRef(null);
   const aid = account && account.id;
 
   const refreshPins = () => setPinnedChatsState(getPinnedChats());
@@ -1166,11 +1190,17 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
         setConvos(all);
       } catch (_) { setConvos([]); }
     };
+    conversationsLoadRef.current = load;
     load();
+    const refreshTimer = setInterval(load, 2500);
     ch = supabase.channel("dml_" + aid)
       .on("postgres_changes", { event: "*", schema: "public", table: "direct_messages" }, () => load())
       .subscribe();
-    return () => { if (ch) supabase.removeChannel(ch); };
+    return () => {
+      clearInterval(refreshTimer);
+      conversationsLoadRef.current = null;
+      if (ch) supabase.removeChannel(ch);
+    };
   }, [aid]);
 
   useEffect(() => {
@@ -1203,9 +1233,37 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
       if (previousTimer) clearTimeout(previousTimer);
       typingTimers.set(senderId, setTimeout(() => clearTyping(senderId), 2200));
     };
+    const handleMessage = ({ payload }) => {
+      const msg = payload && payload.message;
+      if (!msg || (msg.sender_id !== aid && msg.receiver_id !== aid)) return;
+      const pid = msg.sender_id === aid ? msg.receiver_id : msg.sender_id;
+      setConvos(prev => {
+        if (!prev) return prev;
+        const existing = prev.find(row => row.profile && row.profile.id === pid);
+        if (!existing) return prev;
+        const next = prev.map(row => {
+          if (!row.profile || row.profile.id !== pid) return row;
+          return {
+            ...row,
+            lastMsg: msg,
+            unread: msg.receiver_id === aid ? row.unread + 1 : row.unread,
+          };
+        });
+        const pinned = getPinnedChats();
+        return next.sort((a, b) => {
+          const ap = pinned.includes(a.profile && a.profile.id);
+          const bp = pinned.includes(b.profile && b.profile.id);
+          if (ap && !bp) return -1;
+          if (!ap && bp) return 1;
+          return new Date(b.lastMsg.created_at) - new Date(a.lastMsg.created_at);
+        });
+      });
+      conversationsLoadRef.current?.();
+    };
     const subscribe = () => {
       ch = supabase.channel("typing_" + aid)
         .on("broadcast", { event: "typing" }, handleTyping)
+        .on("broadcast", { event: "message" }, handleMessage)
         .subscribe(status => {
           if ((status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") && !disposed && !reconnectTimer) {
             reconnectTimer = setTimeout(() => {
