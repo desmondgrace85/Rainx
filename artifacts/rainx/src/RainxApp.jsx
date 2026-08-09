@@ -540,7 +540,7 @@ function Toast({ toast, onDone }) {
   }, [toast]);
 
   if (!toast) return null;
-  const colorMap = { signal: T.gold, update: T.sage, warning: T.rust, news: T.gold };
+  const colorMap = { signal: T.gold, update: T.sage, warning: T.rust, news: T.gold, community: T.gold };
 
   const onTouchStart = (e) => { dragging.current = true; startX.current = e.touches[0].clientX; };
   const onTouchMove = (e) => { if (dragging.current) setDragX(e.touches[0].clientX - startX.current); };
@@ -553,18 +553,33 @@ function Toast({ toast, onDone }) {
     <div
       onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
       onClick={() => onDoneRef.current()}
+      role="status"
+      aria-live="polite"
       style={{
-        position: "fixed", top: 10, left: 10, right: 10, maxWidth: 460, margin: "0 auto", zIndex: 100,
-        background: T.card, border: `1px solid ${colorMap[toast.type] || T.gold}`, borderRadius: 12,
-        padding: "12px 14px", boxShadow: "0 8px 24px rgba(0,0,0,0.5)", cursor: "pointer",
+        position: "fixed", top: 10, left: 10, right: 10, maxWidth: 460, margin: "0 auto", zIndex: 1000,
+        background: T.card, border: `1px solid ${colorMap[toast.type] || T.gold}`, borderRadius: 18,
+        padding: "11px 13px", boxShadow: "0 8px 28px rgba(0,0,0,0.28)", cursor: "pointer",
         transform: `translateX(${dragX}px)`, opacity: Math.max(0, 1 - Math.abs(dragX) / 200),
         transition: dragging.current ? "none" : "transform 0.2s, opacity 0.2s",
         animation: dragX === 0 ? "slideDown 0.25s ease-out" : "none",
       }}
     >
-      <div style={{ fontFamily: FONT_HEAD, fontSize: 12.5, fontWeight: 700, color: colorMap[toast.type] || T.gold }}>{toast.title}</div>
-      <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: T.paper, marginTop: 3, fontWeight: 500 }}>{toast.body}</div>
-      <div style={{ fontSize: 9.5, color: T.muted, marginTop: 4 }}>Swipe or tap to dismiss</div>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <img
+          src={`${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/")}icons/icon-192.png`}
+          alt=""
+          style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0 }}
+        />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
+            <div style={{ fontFamily: FONT_HEAD, fontSize: 11, fontWeight: 800, color: T.muted, flexShrink: 0 }}>RainX</div>
+            <div style={{ fontSize: 9.5, color: T.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Just now</div>
+          </div>
+          <div style={{ fontFamily: FONT_HEAD, fontSize: 13, fontWeight: 800, color: colorMap[toast.type] || T.gold, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{toast.title}</div>
+          <div style={{ fontFamily: FONT_BODY, fontSize: 12.5, color: T.paper, marginTop: 3, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{toast.body}</div>
+        </div>
+        <X size={16} color={T.muted} style={{ flexShrink: 0, marginTop: 2 }} />
+      </div>
     </div>
   );
 }
@@ -1395,6 +1410,7 @@ function MainAppContent({ account, onLogout }) {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [toastQueue, setToastQueue] = useState([]);
   const [activeToast, setActiveToast] = useState(null);
+  const seenNotificationIdsRef = useRef(new Set());
   const [autoScan, setAutoScan] = useState(true);
   const lastCandleTimeRef = useRef({}); // `${symbol}_${tfKey}` -> datetime string of the last candle we saw
   const notifiedKeysRef = useRef(new Set()); // tracks which symbol+timeframe combos have had their first real check this session — separate from lastCandleTimeRef, which gets pre-populated from the DB on load and was wrongly reused for this, causing old signals to instantly notify on every app open/refresh
@@ -1659,6 +1675,21 @@ function MainAppContent({ account, onLogout }) {
     };
   }, [announceRainxPresence]);
 
+  const enqueueInAppNotification = useCallback((entry) => {
+    const key = entry?.id == null
+      ? `${entry?.type || "notification"}:${entry?.title || ""}:${entry?.body || ""}`
+      : String(entry.id);
+    if (seenNotificationIdsRef.current.has(key)) return false;
+    seenNotificationIdsRef.current.add(key);
+    if (seenNotificationIdsRef.current.size > 300) {
+      const oldest = seenNotificationIdsRef.current.values().next().value;
+      if (oldest) seenNotificationIdsRef.current.delete(oldest);
+    }
+    setNotifications((list) => [entry, ...list.filter((n) => String(n.id) !== key)].slice(0, 50));
+    setToastQueue((q) => q.some((item) => String(item.id) === key) ? q : [...q, entry]);
+    return true;
+  }, []);
+
   const pushNotification = useCallback(async (n) => {
     // Subscribers do NOT receive trading signal / economic news push notifications
     // (signals are shown in-app on the chart; push notifications are sent for confirmed signals)
@@ -1672,9 +1703,8 @@ function MainAppContent({ account, onLogout }) {
       if (data?.id) id = data.id;
     }
     const entry = { id, read: false, time: new Date().toLocaleTimeString(), ...n };
-    setNotifications((list) => [entry, ...list].slice(0, 50));
-    setToastQueue((q) => [...q, entry]);
-  }, [account, entitlement?.tier]);
+    enqueueInAppNotification(entry);
+  }, [account, entitlement?.tier, enqueueInAppNotification]);
 
   // ─── Listen for PLAY_SOUND messages from the service worker ────────────────
   useEffect(() => {
@@ -1691,16 +1721,14 @@ function MainAppContent({ account, onLogout }) {
           presence.accountId === account?.id &&
           presence.activeChatUserId === data.senderId
         ) return;
-        const entry = {
+        enqueueInAppNotification({
           id: data.notificationId || data.messageId || (Date.now() + Math.random()),
           title: payload.title || "RainX",
           body: payload.body || "",
           type: data.kind === "chat" ? "community" : (data.kind || "update"),
           read: false,
           time: new Date().toLocaleTimeString(),
-        };
-        setNotifications((list) => [entry, ...list.filter(n => n.id !== entry.id)].slice(0, 50));
-        setToastQueue((q) => q.some(item => item.id === entry.id) ? q : [...q, entry]);
+        });
         return;
       }
       if (event.data?.type !== "PLAY_SOUND" || !event.data.soundSrc) return;
@@ -1712,7 +1740,61 @@ function MainAppContent({ account, onLogout }) {
     };
     navigator.serviceWorker.addEventListener("message", handleMsg);
     return () => navigator.serviceWorker.removeEventListener("message", handleMsg);
-  }, []);
+  }, [account?.id, enqueueInAppNotification]);
+
+  // Push is the background delivery path. Realtime is the foreground
+  // fallback, so the heads-up banner still works when push is unavailable.
+  useEffect(() => {
+    if (!account?.id) return undefined;
+    const communityCopy = {
+      like: ["New Like", "Someone liked your post"],
+      comment: ["New Comment", "Someone commented on your post"],
+      comment_reply: ["New Comment", "Someone replied to your comment"],
+      reply: ["New Reply", "Someone replied to your comment"],
+      comment_like: ["New Like", "Someone liked your comment"],
+      follow: ["New Follower", "Someone started following you"],
+      repost: ["New Repost", "Someone reposted your post"],
+      mention: ["New Mention", "Someone mentioned you"],
+    };
+    const channel = supabase.channel("rainx-in-app-notifications-" + account.id)
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "community_notifications",
+        filter: `user_id=eq.${account.id}`,
+      }, ({ new: row }) => {
+        const [title, body] = communityCopy[row.type] || ["RainX Notification", "You have a new notification"];
+        setCommunityUnreadCount((count) => count + 1);
+        enqueueInAppNotification({
+          id: row.id,
+          title,
+          body,
+          type: "community",
+          read: false,
+          time: new Date().toLocaleTimeString(),
+        });
+      })
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "direct_messages",
+        filter: `receiver_id=eq.${account.id}`,
+      }, ({ new: message }) => {
+        let presence = null;
+        try { presence = JSON.parse(localStorage.getItem("rainx_presence") || "null"); } catch {}
+        if (
+          presence?.visible === true &&
+          presence.accountId === account.id &&
+          presence.activeChatUserId === message.sender_id
+        ) return;
+        enqueueInAppNotification({
+          id: message.id,
+          title: "New Message",
+          body: message.content || "",
+          type: "community",
+          read: false,
+          time: new Date().toLocaleTimeString(),
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [account?.id, enqueueInAppNotification]);
 
   // ─── Register service worker push subscription ──────────────────────────
   useEffect(() => {
@@ -1775,9 +1857,11 @@ function MainAppContent({ account, onLogout }) {
       try {
         const { data } = await supabase.from("user_notifications").select("*").eq("user_id", account.id).order("created_at", { ascending: false }).limit(50);
         if (data) {
-          setNotifications(data.map((row) => ({
+          const loaded = data.map((row) => ({
             id: row.id, title: row.title, body: row.body, type: row.type, section: row.section, read: row.read, time: new Date(row.created_at).toLocaleTimeString(),
-          })));
+          }));
+          loaded.forEach((row) => seenNotificationIdsRef.current.add(String(row.id)));
+          setNotifications(loaded);
         }
       } catch { /* keep starting empty if this fails */ }
     })();
@@ -1964,11 +2048,6 @@ function MainAppContent({ account, onLogout }) {
           title: `${result.bias === "buy" ? "🟢" : "🔴"} ${verb} ${inst.name} — ${tf.label} signal`,
           body: `${result.confidence}% confidence · ${result.reason}`,
         });
-        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-          new Notification(`${verb} ${inst.name} (${tf.label})`, {
-            body: `${result.confidence}% confidence · Entry ${result.entry?.toFixed(inst.digits) ?? "N/A"}`,
-          });
-        }
       }
     } catch { /* keep the existing signal if the fetch fails */ }
   }, [pushNotification]);

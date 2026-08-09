@@ -69,19 +69,20 @@ self.addEventListener("push", (event) => {
   const body     = notificationData.body     || "";
   const icon     = notificationData.icon     || "/icons/icon-192.png";
   const badge    = notificationData.badge    || "/icons/icon-192.png";
-  const tag      = notificationData.tag      || "rainx-default";
   const url      = notificationData.url      || "/";
   const vibrate  = notificationData.vibrate  || [200, 100, 200];
   const category = notificationData.category || "default";
   const kind     = notificationData.kind || "default";
   const pushId   = notificationData.messageId || notificationData.notificationId || notificationData.id;
+  const tag      = notificationData.tag
+    || (kind === "chat"
+      ? `rainx-chat-${notificationData.conversationId || notificationData.senderId || pushId || "default"}`
+      : `rainx-${category}-${pushId || "default"}`);
 
   // A retried push must not ring or create another notification.
   if (pushId && recentPushIds.has(pushId)) return;
   if (pushId) recentPushIds.add(pushId);
   if (recentPushIds.size > 200) recentPushIds.delete(recentPushIds.values().next().value);
-
-  const isSignal = kind === "signal" || ["trading", "tp", "sl", "risk", "news"].includes(category);
 
   // Resolve the sound for this category; null = let the OS play its default sound
   const soundSrc = CATEGORY_SOUNDS[category] || null;
@@ -96,6 +97,7 @@ self.addEventListener("push", (event) => {
     data: { url, soundSrc, ...notificationData },
     requireInteraction: category === "trading" || category === "risk",
     actions: notificationData.actions || [],
+    renotify: true,
     silent: false,
   };
 
@@ -105,7 +107,9 @@ self.addEventListener("push", (event) => {
         const presence = presenceByClient.get(client.id);
         return presence?.visible === true;
       });
-      if (!visibleClients.length || isSignal) return false;
+       // Any visible RainX window gets the heads-up banner in the app. When
+       // RainX is hidden or closed, the OS notification below is used instead.
+       if (!visibleClients.length) return false;
       visibleClients.forEach((client) => {
         client.postMessage({
           type: "RAINX_PUSH_RECEIVED",

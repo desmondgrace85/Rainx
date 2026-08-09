@@ -169,7 +169,15 @@ function renderTextWithTags(text, onOpenProfile) {
 }
 async function notify(userId, actorId, type, postId) {
   if (userId === actorId) return; // don't notify yourself
-  try { await supabase.from("community_notifications").insert({ user_id: userId, actor_id: actorId, type, post_id: postId || null }); } catch {}
+  let notificationId = null;
+  try {
+    const { data } = await supabase
+      .from("community_notifications")
+      .insert({ user_id: userId, actor_id: actorId, type, post_id: postId || null })
+      .select("id")
+      .single();
+    notificationId = data?.id || null;
+  } catch {}
   // Also send a push notification
   const PUSH_TITLES = {
     like: "New Like", comment: "New Comment", comment_reply: "New Comment", reply: "New Reply",
@@ -193,7 +201,13 @@ async function notify(userId, actorId, type, postId) {
         userId,
         title,
         body,
-        data: { kind: "community", category: "community", notificationId: `${type}:${postId || "none"}:${Date.now()}`, url: "/" },
+        data: {
+          kind: "community",
+          category: "community",
+          notificationId: notificationId || `${type}:${postId || "none"}:${actorId}`,
+          tag: `rainx-community-${notificationId || `${type}-${postId || "none"}-${actorId}`}`,
+          url: "/",
+        },
       }),
     }).catch(() => {});
   } catch {}

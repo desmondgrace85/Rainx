@@ -853,7 +853,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
             conversationId: convId,
             senderId: aid,
             messageId: data.id,
-            tag: "rainx-chat",
+            tag: `rainx-chat-${convId || oid}`,
             url: "/",
           },
         }),
