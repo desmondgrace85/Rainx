@@ -1397,6 +1397,7 @@ function MainAppContent({ account, onLogout }) {
   const [activeToast, setActiveToast] = useState(null);
   const [autoScan, setAutoScan] = useState(true);
   const lastCandleTimeRef = useRef({}); // `${symbol}_${tfKey}` -> datetime string of the last candle we saw
+  const notifiedKeysRef = useRef(new Set()); // tracks which symbol+timeframe combos have had their first real check this session — separate from lastCandleTimeRef, which gets pre-populated from the DB on load and was wrongly reused for this, causing old signals to instantly notify on every app open/refresh
 
   
   // ─── Active markets (max 3 the user explicitly monitors) ────────────────────
@@ -1760,7 +1761,8 @@ function MainAppContent({ account, onLogout }) {
     // of a flat 4 minutes for every timeframe.
     if (lastCandleTimeRef.current[key] && now - lastCandleTimeRef.current[key] < stabilityWindowFor(tf.key)) return;
     try {
-      const wasFirstLoad = !lastCandleTimeRef.current[key];
+      const wasFirstLoad = !notifiedKeysRef.current.has(key);
+      notifiedKeysRef.current.add(key);
       setLoadingKey(key);
       const res = await fetch(`/api/signals/long-term/${encodeURIComponent(inst.symbol)}?timeframe=${tf.key}`);
       setLoadingKey((k) => (k === key ? null : k));
