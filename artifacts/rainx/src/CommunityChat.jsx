@@ -12,6 +12,23 @@ import {
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 const BASE_URL = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
+const PRESENCE_EVENT = "RAINX_PRESENCE";
+
+function postRainxPresence(presence) {
+  try {
+    localStorage.setItem("rainx_presence", JSON.stringify({ ...presence, updatedAt: Date.now() }));
+  } catch {}
+  try {
+    if ("serviceWorker" in navigator) {
+      const message = { type: PRESENCE_EVENT, ...presence };
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage(message);
+      } else {
+        navigator.serviceWorker.ready.then(reg => reg.active?.postMessage(message)).catch(() => {});
+      }
+    }
+  } catch {}
+}
 
 // Short WhatsApp-style "sent" tick sound, synthesized (no audio file needed)
 function playSendTick() {
@@ -560,7 +577,7 @@ function EditBar({ editText, setEditText, onSave, onCancel, T }) {
 }
 
 // ── DMScreen ───────────────────────────────────────────────────────────────
-function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
+function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleared, isPro }) {
   const [messages, setMessages]             = useState([]);
   const [text, setText]                     = useState("");
   const [loading, setLoading]               = useState(true);
@@ -593,6 +610,29 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
   const oid    = otherUser && otherUser.id;
   const convId = aid && oid ? [aid, oid].sort().join("_") : null;
 
+  // Keep the active conversation visible to the service worker so a message
+  // being read on this screen never also becomes a phone alert.
+  useEffect(() => {
+    if (!aid || !oid) return undefined;
+    const announce = () => postRainxPresence({
+      accountId: aid,
+      visible: document.visibilityState === "visible",
+      activeChatUserId: oid,
+    });
+    announce();
+    document.addEventListener("visibilitychange", announce);
+    window.addEventListener("pageshow", announce);
+    return () => {
+      document.removeEventListener("visibilitychange", announce);
+      window.removeEventListener("pageshow", announce);
+      postRainxPresence({
+        accountId: aid,
+        visible: document.visibilityState === "visible",
+        activeChatUserId: null,
+      });
+    };
+  }, [aid, oid]);
+
   // Load pinned messages
   useEffect(() => { if (convId) setPinnedMsgs(getPinnedMessages(convId)); }, [convId]);
 
@@ -619,6 +659,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
       setMessages(data || []);
       const unread = (data || []).filter(m => m.receiver_id === aid && !m.is_read);
       if (unread.length) {
+        onUnreadCleared?.(unread.length);
         supabase.from("direct_messages").update({ is_read: true, read_at: new Date().toISOString() })
           .eq("receiver_id", aid).eq("sender_id", oid).eq("is_read", false).then(() => {}, () => {});
       }
@@ -672,6 +713,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
           if (!mine && !theirs) return;
           setMessages(p => [...p.filter(m => m.id !== msg.id), msg].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)));
           if (theirs) {
+            if (!msg.is_read) onUnreadCleared?.(1);
             const s = getPerUserSettings(oid);
             if (s.readReceipts) supabase.from("direct_messages").update({ is_read: true, read_at: new Date().toISOString() }).eq("id", msg.id).then(() => {}, () => {});
           }
@@ -801,7 +843,20 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
       fetch(`${BASE_URL}/api/push/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: oid, title: "New Message", body: content.slice(0, 120), data: { category: "default", url: "/" } }),
+        body: JSON.stringify({
+          userId: oid,
+          title: "New Message",
+          body: content.slice(0, 120),
+          data: {
+            kind: "chat",
+            category: "chat",
+            conversationId: convId,
+            senderId: aid,
+            messageId: data.id,
+            tag: "rainx-chat",
+            url: "/",
+          },
+        }),
       }).catch(() => {});
     } catch (_) { setMessages(p => p.filter(m => m.id !== optId)); setText(content); }
     finally { setSending(false); if (inputRef.current) inputRef.current.focus(); }
@@ -1306,7 +1361,15 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
           const lastContent = lastMsg && lastMsg.content;
           const lastDisplay = isDeleted(lastContent) ? "This message was deleted" : (lastContent || "");
           return (
-            <button key={pid || lastMsg.id} onClick={() => { refreshPins(); onOpenDM(profile); }}
+            <button key={pid || lastMsg.id} onClick={() => {
+              // Clear this conversation's badge immediately; don't wait for
+              // the next poll or a page refresh.
+              setConvos(prev => (prev || []).map(row =>
+                row.profile?.id === pid ? { ...row, unread: 0 } : row
+              ));
+              refreshPins();
+              onOpenDM(profile);
+            }}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: isPinned ? "rgba(198,161,91,0.06)" : "none", border: "none", cursor: "pointer", borderBottom: "1px solid " + T.cardBorder }}>
               <div style={{ position: "relative", flexShrink: 0 }}>
                 <Avatar name={profile && profile.display_name} avatarUrl={profile && profile.avatar_url} size={46} />
@@ -1356,7 +1419,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
 }
 
 // ── Main export ────────────────────────────────────────────────────────────
-export default function CommunityChat({ account, themeTokens, onClose, onViewProfile, initialUser, isPro }) {
+export default function CommunityChat({ account, themeTokens, onClose, onViewProfile, onUnreadCleared, initialUser, isPro }) {
   initialUser = initialUser || null;
   const T = buildT(themeTokens);
   const [screen, setScreen] = useState(initialUser ? "dm" : "list");
@@ -1366,6 +1429,7 @@ export default function CommunityChat({ account, themeTokens, onClose, onViewPro
     return (
       <DMScreen
         account={account} otherUser={dmUser} T={T} isPro={isPro || false}
+        onUnreadCleared={onUnreadCleared}
         onBack={() => { if (initialUser) { onClose(); } else { setScreen("list"); } }}
         onViewProfile={uid => { onClose(); onViewProfile(uid); }}
       />

@@ -1629,6 +1629,36 @@ function MainAppContent({ account, onLogout }) {
   };
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const announceRainxPresence = useCallback((activeChatUserId = null) => {
+    const presence = {
+      type: "RAINX_PRESENCE",
+      accountId: account?.id || null,
+      visible: document.visibilityState === "visible",
+      activeChatUserId,
+      updatedAt: Date.now(),
+    };
+    try { localStorage.setItem("rainx_presence", JSON.stringify(presence)); } catch {}
+    try {
+      if ("serviceWorker" in navigator) {
+        if (navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage(presence);
+        else navigator.serviceWorker.ready.then(reg => reg.active?.postMessage(presence)).catch(() => {});
+      }
+    } catch {}
+  }, [account?.id]);
+
+  // Announce that RainX is open. DMScreen overrides activeChatUserId while a
+  // conversation is open.
+  useEffect(() => {
+    announceRainxPresence();
+    const onVisibilityChange = () => announceRainxPresence();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pageshow", onVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pageshow", onVisibilityChange);
+    };
+  }, [announceRainxPresence]);
+
   const pushNotification = useCallback(async (n) => {
     // Subscribers do NOT receive trading signal / economic news push notifications
     // (signals are shown in-app on the chart; push notifications are sent for confirmed signals)
@@ -1650,6 +1680,29 @@ function MainAppContent({ account, onLogout }) {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
     const handleMsg = (event) => {
+      if (event.data?.type === "RAINX_PUSH_RECEIVED") {
+        const payload = event.data.payload || {};
+        const data = payload.data || {};
+        let presence = null;
+        try { presence = JSON.parse(localStorage.getItem("rainx_presence") || "null"); } catch {}
+        if (
+          data.kind === "chat" &&
+          presence?.visible === true &&
+          presence.accountId === account?.id &&
+          presence.activeChatUserId === data.senderId
+        ) return;
+        const entry = {
+          id: data.notificationId || data.messageId || (Date.now() + Math.random()),
+          title: payload.title || "RainX",
+          body: payload.body || "",
+          type: data.kind === "chat" ? "community" : (data.kind || "update"),
+          read: false,
+          time: new Date().toLocaleTimeString(),
+        };
+        setNotifications((list) => [entry, ...list.filter(n => n.id !== entry.id)].slice(0, 50));
+        setToastQueue((q) => q.some(item => item.id === entry.id) ? q : [...q, entry]);
+        return;
+      }
       if (event.data?.type !== "PLAY_SOUND" || !event.data.soundSrc) return;
       try {
         const audio = new Audio(event.data.soundSrc);

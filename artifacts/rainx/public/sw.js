@@ -1,8 +1,22 @@
 /* RainX Service Worker — Push Notifications + Offline Cache */
 // IMPORTANT: bump this version string on every future deploy, or users may keep
 // seeing a stale cached version of the app for a while after you ship changes.
-const CACHE_NAME = "rainx-v2026-08-02";
+const CACHE_NAME = "rainx-v2026-08-09-notifications";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
+const presenceByClient = new Map();
+const recentPushIds = new Set();
+
+// The page tells the worker whether RainX is visible and which conversation is
+// open. This lets foreground messages stay inside the app instead of also
+// becoming a phone notification.
+self.addEventListener("message", (event) => {
+  if (event.data?.type !== "RAINX_PRESENCE" || !event.source?.id) return;
+  presenceByClient.set(event.source.id, {
+    accountId: event.data.accountId || null,
+    visible: event.data.visible === true,
+    activeChatUserId: event.data.activeChatUserId || null,
+  });
+});
 
 // ── Install ────────────────────────────────────────────────────────────────
 self.addEventListener("install", (event) => {
@@ -48,14 +62,26 @@ self.addEventListener("push", (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = { title: "RainX", body: event.data?.text() || "" }; }
 
-  const title    = data.title    || "RainX";
-  const body     = data.body     || "";
-  const icon     = data.icon     || "/icons/icon-192.png";
-  const badge    = data.badge    || "/icons/icon-192.png";
-  const tag      = data.tag      || "rainx-default";
-  const url      = data.url      || "/";
-  const vibrate  = data.vibrate  || [200, 100, 200];
-  const category = data.category || "default";
+  // Pushes are sent as { title, body, data: { ...notificationData } }.
+  // Accept flat payloads too so older senders continue to work.
+  const notificationData = { ...(data.data || {}), ...data };
+  const title    = notificationData.title    || "RainX";
+  const body     = notificationData.body     || "";
+  const icon     = notificationData.icon     || "/icons/icon-192.png";
+  const badge    = notificationData.badge    || "/icons/icon-192.png";
+  const tag      = notificationData.tag      || "rainx-default";
+  const url      = notificationData.url      || "/";
+  const vibrate  = notificationData.vibrate  || [200, 100, 200];
+  const category = notificationData.category || "default";
+  const kind     = notificationData.kind || "default";
+  const pushId   = notificationData.messageId || notificationData.notificationId || notificationData.id;
+
+  // A retried push must not ring or create another notification.
+  if (pushId && recentPushIds.has(pushId)) return;
+  if (pushId) recentPushIds.add(pushId);
+  if (recentPushIds.size > 200) recentPushIds.delete(recentPushIds.values().next().value);
+
+  const isSignal = kind === "signal" || ["trading", "tp", "sl", "risk", "news"].includes(category);
 
   // Resolve the sound for this category; null = let the OS play its default sound
   const soundSrc = CATEGORY_SOUNDS[category] || null;
@@ -67,15 +93,35 @@ self.addEventListener("push", (event) => {
     badge,
     tag,
     vibrate,
-    data: { url, soundSrc },
+    data: { url, soundSrc, ...notificationData },
     requireInteraction: category === "trading" || category === "risk",
-    actions: data.actions || [],
+    actions: notificationData.actions || [],
     silent: false,
   };
 
+  const showInApp = self.clients.matchAll({ type: "window", includeUncontrolled: true })
+    .then((clients) => {
+      const visibleClients = clients.filter((client) => {
+        const presence = presenceByClient.get(client.id);
+        return presence?.visible === true;
+      });
+      if (!visibleClients.length || isSignal) return false;
+      visibleClients.forEach((client) => {
+        client.postMessage({
+          type: "RAINX_PUSH_RECEIVED",
+          payload: { title, body, data: notificationData },
+        });
+      });
+      return true;
+    });
+
   // Show the notification; only post PLAY_SOUND if a custom sound is mapped
   event.waitUntil(
-    self.registration.showNotification(title, options).then(() => {
+    showInApp.then((handledInApp) => {
+      if (handledInApp) return;
+      return self.registration.showNotification(title, options);
+    }).then((shown) => {
+      if (!shown) return;
       if (!soundSrc) return; // OS handles sound for this category
       return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
         clients.forEach((client) => {
@@ -93,15 +139,12 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const targetUrl = event.notification.data?.url || "/";
-  const soundSrc  = event.notification.data?.soundSrc;
-
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (clients) => {
       // Focus existing RainX tab if open
       for (const client of clients) {
         if (client.url.includes(self.location.origin) && "focus" in client) {
           client.focus();
-          if (soundSrc) client.postMessage({ type: "PLAY_SOUND", soundSrc });
           if (targetUrl !== "/") client.navigate(targetUrl);
           return;
         }
@@ -109,12 +152,7 @@ self.addEventListener("notificationclick", (event) => {
       // Open new tab — sound will play via the PLAY_SOUND message listener once
       // the app hydrates and registers its service-worker message handler.
       if (self.clients.openWindow) {
-        const newClient = await self.clients.openWindow(targetUrl);
-        // Give the app ~1.5 s to register its message listener then play sound
-        if (newClient && soundSrc) {
-          await new Promise((r) => setTimeout(r, 1500));
-          newClient.postMessage({ type: "PLAY_SOUND", soundSrc });
-        }
+        await self.clients.openWindow(targetUrl);
       }
     })
   );

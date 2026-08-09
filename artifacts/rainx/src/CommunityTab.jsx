@@ -189,7 +189,12 @@ async function notify(userId, actorId, type, postId) {
     fetch(`${BASE_URL}/api/push/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, title, body, data: { category: "default", url: "/" } }),
+      body: JSON.stringify({
+        userId,
+        title,
+        body,
+        data: { kind: "community", category: "community", notificationId: `${type}:${postId || "none"}:${Date.now()}`, url: "/" },
+      }),
     }).catch(() => {});
   } catch {}
 }
@@ -2161,6 +2166,7 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
           themeTokens={T}
           initialUser={chatInitUser}
           isPro={isAccountPro}
+          onUnreadCleared={(count) => setUnreadDmCount((current) => Math.max(0, current - count))}
           onClose={() => { setChatOpen(false); setChatInitUser(null); }}
           onViewProfile={(userId) => { setChatOpen(false); setChatInitUser(null); setViewingUserId(userId); }}
         />
