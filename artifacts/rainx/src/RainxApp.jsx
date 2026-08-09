@@ -1234,7 +1234,7 @@ function PullToRefresh({ children }) {
   const [distance, setDistance] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const touch = useRef(null);
-  const threshold = 32;
+  const threshold = 28;
 
   const getScrollParent = (target) => {
     let node = target;
@@ -1259,7 +1259,7 @@ function PullToRefresh({ children }) {
     const dx = event.touches[0].clientX - active.x;
     const dy = event.touches[0].clientY - active.y;
     if (!active.vertical) {
-      if (dy <= 0 || Math.abs(dx) > Math.abs(dy) || dy < 6) {
+      if (dy <= 0 || Math.abs(dx) > Math.abs(dy) || dy < 2) {
         if (dy < 0 || Math.abs(dx) > 10) touch.current = null;
         return;
       }
@@ -1267,7 +1267,7 @@ function PullToRefresh({ children }) {
     }
     if (active.parent.scrollTop > 0) { touch.current = null; setDistance(0); return; }
     event.preventDefault();
-    setDistance(Math.min(88, Math.pow(dy, 0.82)));
+    setDistance(Math.min(88, dy * 0.9));
   };
   const onTouchEnd = () => {
     const active = touch.current;
@@ -1284,7 +1284,7 @@ function PullToRefresh({ children }) {
 
   return (
     <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
-      <div className={`rx-pull-refresh-indicator${refreshing ? " is-refreshing" : ""}`} style={{ opacity: Math.min(1, distance / threshold), transform: `translate(-50%, ${Math.max(-52, distance - 58)}px) scale(${Math.min(1, 0.65 + distance / (threshold * 3))})` }} aria-hidden="true">
+      <div className={`rx-pull-refresh-indicator${refreshing ? " is-refreshing" : ""}`} style={{ opacity: Math.min(1, distance / threshold), transform: `translate(-50%, ${Math.max(-52, distance - 58)}px) scale(${Math.min(1, 0.65 + distance / (threshold * 3))})`, transition: distance > 0 && !refreshing ? "none" : undefined }} aria-hidden="true">
         <img src={rainxLogoTransparent} alt="" />
       </div>
       {children}
