@@ -583,6 +583,11 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
   const inputRef      = useRef(null);
   const longPressTimer = useRef(null);
   const edgeStart     = useRef(null);
+  const initialScrollDone = useRef(false);
+  const previousMessageCount = useRef(0);
+  const typingSendChannel = useRef(null);
+  const typingStopTimer = useRef(null);
+  const [otherTyping, setOtherTyping] = useState(false);
 
   const aid    = account && account.id;
   const oid    = otherUser && otherUser.id;
@@ -622,29 +627,141 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
   }, [aid, oid]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => {
+    if (!bottomRef.current || loading) return;
+    if (!initialScrollDone.current) {
+      bottomRef.current.scrollIntoView({ behavior: "auto" });
+      previousMessageCount.current = messages.length;
+      initialScrollDone.current = true;
+      return;
+    }
+    if (messages.length > previousMessageCount.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+    previousMessageCount.current = messages.length;
+  }, [messages, loading]);
 
   // Real-time
   useEffect(() => {
     if (!aid || !oid) return;
     const cid = [aid, oid].sort().join("_");
-    const ch = supabase.channel("dm_" + cid)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "direct_messages" }, ({ new: msg }) => {
-        const mine   = msg.sender_id === aid && msg.receiver_id === oid;
-        const theirs = msg.sender_id === oid && msg.receiver_id === aid;
-        if (!mine && !theirs) return;
-        setMessages(p => [...p.filter(m => m.id !== msg.id), msg]);
-        if (theirs) {
-          const s = getPerUserSettings(oid);
-          if (s.readReceipts) supabase.from("direct_messages").update({ is_read: true, read_at: new Date().toISOString() }).eq("id", msg.id).then(() => {}, () => {});
+    let disposed = false;
+    let reconnectTimer = null;
+    let ch = null;
+
+    const scheduleReconnect = () => {
+      if (disposed || reconnectTimer) return;
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        if (!disposed) {
+          if (ch) supabase.removeChannel(ch);
+          subscribe();
         }
-      })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "direct_messages" }, ({ new: msg }) => {
-        setMessages(p => p.map(m => m.id === msg.id ? msg : m));
-      })
-      .subscribe();
-    return () => supabase.removeChannel(ch);
+      }, 1500);
+    };
+
+    const subscribe = () => {
+      ch = supabase.channel("dm_" + cid)
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "direct_messages" }, ({ new: msg }) => {
+          const mine   = msg.sender_id === aid && msg.receiver_id === oid;
+          const theirs = msg.sender_id === oid && msg.receiver_id === aid;
+          if (!mine && !theirs) return;
+          setMessages(p => [...p.filter(m => m.id !== msg.id), msg].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)));
+          if (theirs) {
+            const s = getPerUserSettings(oid);
+            if (s.readReceipts) supabase.from("direct_messages").update({ is_read: true, read_at: new Date().toISOString() }).eq("id", msg.id).then(() => {}, () => {});
+          }
+        })
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "direct_messages" }, ({ new: msg }) => {
+          const mine = msg.sender_id === aid && msg.receiver_id === oid;
+          const theirs = msg.sender_id === oid && msg.receiver_id === aid;
+          if (!mine && !theirs) return;
+          setMessages(p => p.map(m => m.id === msg.id ? msg : m));
+        })
+        .subscribe(status => {
+          if (status === "SUBSCRIBED") load();
+          else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") scheduleReconnect();
+        });
+    };
+
+    subscribe();
+    return () => {
+      disposed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ch) supabase.removeChannel(ch);
+    };
   }, [aid, oid]);
+
+  // Typing is broadcast to the recipient's user channel so their open chat and
+  // general messages list can show it without requiring a chat-specific channel.
+  useEffect(() => {
+    if (!aid || !oid) return;
+    let disposed = false;
+    let receiveChannel = null;
+    let sendChannel = null;
+    let reconnectTimer = null;
+
+    const handleTyping = ({ payload }) => {
+      if (!payload || payload.sender_id !== oid || payload.receiver_id !== aid) return;
+      setOtherTyping(!!payload.is_typing);
+    };
+    const subscribe = () => {
+      receiveChannel = supabase.channel("typing_" + aid)
+        .on("broadcast", { event: "typing" }, handleTyping)
+        .subscribe(status => {
+          if ((status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") && !disposed && !reconnectTimer) {
+            reconnectTimer = setTimeout(() => {
+              reconnectTimer = null;
+              if (!disposed) {
+                if (receiveChannel) supabase.removeChannel(receiveChannel);
+                subscribe();
+              }
+            }, 1500);
+          }
+        });
+      sendChannel = supabase.channel("typing_" + oid).subscribe();
+      typingSendChannel.current = sendChannel;
+    };
+    subscribe();
+    return () => {
+      disposed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (typingStopTimer.current) clearTimeout(typingStopTimer.current);
+      if (typingSendChannel.current) {
+        typingSendChannel.current.send({
+          type: "broadcast",
+          event: "typing",
+          payload: { sender_id: aid, receiver_id: oid, is_typing: false },
+        }).catch(() => {});
+      }
+      typingSendChannel.current = null;
+      if (receiveChannel) supabase.removeChannel(receiveChannel);
+      if (sendChannel) supabase.removeChannel(sendChannel);
+    };
+  }, [aid, oid]);
+
+  useEffect(() => {
+    if (!typingSendChannel.current || !aid || !oid) return;
+    const isTyping = !!text.trim();
+    typingSendChannel.current.send({
+      type: "broadcast",
+      event: "typing",
+      payload: { sender_id: aid, receiver_id: oid, is_typing: isTyping },
+    }).catch(() => {});
+    if (typingStopTimer.current) clearTimeout(typingStopTimer.current);
+    if (isTyping) {
+      typingStopTimer.current = setTimeout(() => {
+        typingSendChannel.current?.send({
+          type: "broadcast",
+          event: "typing",
+          payload: { sender_id: aid, receiver_id: oid, is_typing: false },
+        }).catch(() => {});
+      }, 2000);
+    }
+    return () => {
+      if (typingStopTimer.current) clearTimeout(typingStopTimer.current);
+    };
+  }, [text, aid, oid]);
 
   // Send
   const send = async () => {
@@ -815,7 +932,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, isPro }) {
           </div>
           <div style={{ textAlign: "left" }}>
             <div style={{ fontWeight: 800, fontSize: 15, color: T.paper }}>{(otherProfile && (otherProfile.display_name || otherProfile.username)) || "User"}</div>
-            {headerSub && <div style={{ fontSize: 11, color: otherOnline ? "#4CAF50" : T.gold }}>{headerSub}</div>}
+            {(otherTyping || headerSub) && <div style={{ fontSize: 11, color: otherTyping ? T.goldBright : (otherOnline ? "#4CAF50" : T.gold) }}>{otherTyping ? "typing…" : headerSub}</div>}
           </div>
         </button>
         <button onClick={() => setShowMenu(true)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: 4 }}><MoreVertical size={20} /></button>
@@ -1011,6 +1128,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
   const [convos, setConvos]               = useState(null);
   const [showGeneralSettings, setShowGeneralSettings] = useState(false);
   const [pinnedChats, setPinnedChatsState] = useState(() => getPinnedChats());
+  const [typingUsers, setTypingUsers]     = useState({});
   const aid = account && account.id;
 
   const refreshPins = () => setPinnedChatsState(getPinnedChats());
@@ -1055,6 +1173,60 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
     return () => { if (ch) supabase.removeChannel(ch); };
   }, [aid]);
 
+  useEffect(() => {
+    if (!aid) return;
+    let disposed = false;
+    let ch = null;
+    let reconnectTimer = null;
+    const typingTimers = new Map();
+
+    const clearTyping = (senderId) => {
+      setTypingUsers(prev => {
+        if (!prev[senderId]) return prev;
+        const next = { ...prev };
+        delete next[senderId];
+        return next;
+      });
+      const timer = typingTimers.get(senderId);
+      if (timer) clearTimeout(timer);
+      typingTimers.delete(senderId);
+    };
+    const handleTyping = ({ payload }) => {
+      if (!payload || payload.receiver_id !== aid || !payload.sender_id) return;
+      const senderId = payload.sender_id;
+      if (!payload.is_typing) {
+        clearTyping(senderId);
+        return;
+      }
+      setTypingUsers(prev => ({ ...prev, [senderId]: true }));
+      const previousTimer = typingTimers.get(senderId);
+      if (previousTimer) clearTimeout(previousTimer);
+      typingTimers.set(senderId, setTimeout(() => clearTyping(senderId), 2200));
+    };
+    const subscribe = () => {
+      ch = supabase.channel("typing_" + aid)
+        .on("broadcast", { event: "typing" }, handleTyping)
+        .subscribe(status => {
+          if ((status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") && !disposed && !reconnectTimer) {
+            reconnectTimer = setTimeout(() => {
+              reconnectTimer = null;
+              if (!disposed) {
+                if (ch) supabase.removeChannel(ch);
+                subscribe();
+              }
+            }, 1500);
+          }
+        });
+    };
+    subscribe();
+    return () => {
+      disposed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      typingTimers.forEach(timer => clearTimeout(timer));
+      if (ch) supabase.removeChannel(ch);
+    };
+  }, [aid]);
+
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 150, display: "flex", flexDirection: "column", background: T.ink, fontFamily: "-apple-system,BlinkMacSystemFont,'Inter',sans-serif" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: "1px solid " + T.cardBorder, background: T.card }}>
@@ -1093,6 +1265,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
                     <span style={{ fontWeight: 700, fontSize: 15, color: T.paper, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>
                       {(profile && profile.display_name) || "Unknown"}
                     </span>
+                      {typingUsers[pid] && <span style={{ fontSize: 11, color: T.goldBright, fontWeight: 600 }}>typing…</span>}
                     {isPinned && <Pin size={11} color={T.gold} />}
                   </div>
                   <div style={{ fontSize: 11, color: unread > 0 ? "#C6A15B" : T.muted, flexShrink: 0, marginLeft: 8 }}>{timeAgo(lastMsg.created_at)}</div>
