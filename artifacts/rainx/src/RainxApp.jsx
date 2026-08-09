@@ -2095,9 +2095,11 @@ function MainAppContent({ account, onLogout }) {
 
       {(tab === "home" || tab === "markets") && <div style={{ background: T.card, borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
         {/* ── Profile avatar trigger ── */}
-        <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); routeWrite(tab, "profile-menu", "h"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
-          <HeaderAvatar account={account} morePage={morePage} T={T} />
-        </button>
+        {tab === "home"
+          ? <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); routeWrite(tab, "profile-menu", "h"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
+              <HeaderAvatar account={account} morePage={morePage} T={T} />
+            </button>
+          : <div style={{ width: 38 }} />}
         <div style={{ textAlign: "center" }}>
           <div style={{ fontFamily: FONT_HEAD, fontSize: 19, fontWeight: 800, color: T.goldBright, letterSpacing: -0.3 }}>RainX</div>
           <div style={{ fontSize: 9.5, color: T.muted, fontWeight: 600, marginTop: -2 }}>Powered by Raina AI</div>
@@ -6511,10 +6513,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     <div style={{ padding: "8px 16px 28px" }}>
       {/* User account header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0 16px" }}>
-        {avatarUrl
-          ? <img src={avatarUrl} alt="" style={{ width:42, height:42, borderRadius:"50%", objectFit:"cover", flexShrink:0 }} />
-          : <div style={{ width:42, height:42, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>{(fullName||username||"?")[0].toUpperCase()}</div>
-        }
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {fullName || (profileLoaded ? "User" : "…")}
@@ -6523,7 +6521,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>@{username}</div>
           ) : null}
         </div>
-        <button onClick={() => setMorePage("profile-menu")} style={{ background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 10, padding: "6px 14px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, color: T.muted, cursor: "pointer", flexShrink: 0 }}>Edit</button>
       </div>
 
       {/* Analytics preview card */}
