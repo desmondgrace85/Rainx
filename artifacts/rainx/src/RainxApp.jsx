@@ -5,7 +5,7 @@ import {
   TrendingUp, TrendingDown, Minus, Activity, Send, Calendar as CalendarIcon,
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
   CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet, Landmark, Gift, Trophy,
-  Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle, Plus, RotateCcw,
+  Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle, Plus,
   BrainCircuit, Cpu,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
@@ -1211,6 +1211,87 @@ function CenterNavLogo({ active, onActivate }) {
   );
 }
 
+function formatNotificationCount(count) {
+  if (!count) return null;
+  return count > 99 ? "99+" : String(count);
+}
+
+function classifyNotification(notification) {
+  const section = String(notification?.section || "").toLowerCase();
+  const type = String(notification?.type || "").toLowerCase();
+  const text = `${notification?.title || ""} ${notification?.body || ""}`.toLowerCase();
+  const markets = ["signal", "market", "trade", "update", "warning", "news", "stop loss", "take profit", "entry", "cpi", "nfp", "fomc", "forex", "crypto", "gold", "trading alert"];
+  const community = ["like", "likes", "comment", "comments", "reply", "replies", "mention", "mentions", "follow", "follows", "repost", "reposts", "community", "social"];
+  const more = ["reward", "wallet", "monetiz", "subscription", "referral", "verif", "creator", "connection", "payout"];
+  if (["home", "markets", "market", "community", "more"].includes(section)) return section === "market" ? "markets" : section;
+  if (["signal", "market", "trade", "update", "warning", "news"].includes(type) || markets.some((word) => text.includes(word))) return "markets";
+  if (["community", "social", "like", "comment", "reply", "mention", "follow", "repost"].includes(type) || community.some((word) => text.includes(word))) return "community";
+  if (["reward", "wallet", "monetization", "subscription", "referral", "verification", "creator", "connection", "payout", "risk"].includes(type) || more.some((word) => text.includes(word))) return "more";
+  return "home";
+}
+
+function PullToRefresh({ children }) {
+  const [distance, setDistance] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const touch = useRef(null);
+  const threshold = 72;
+
+  const getScrollParent = (target) => {
+    let node = target;
+    while (node && node !== document.body) {
+      if (node instanceof HTMLElement) {
+        const style = window.getComputedStyle(node);
+        if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight) return node;
+      }
+      node = node.parentElement;
+    }
+    return document.scrollingElement || document.documentElement;
+  };
+  const excluded = (target) => target?.closest?.("button, input, textarea, select, [contenteditable='true'], canvas, svg, video, a");
+  const onTouchStart = (event) => {
+    if (refreshing || excluded(event.target)) return;
+    const parent = getScrollParent(event.target);
+    if (parent.scrollTop === 0) touch.current = { x: event.touches[0].clientX, y: event.touches[0].clientY, parent, vertical: false };
+  };
+  const onTouchMove = (event) => {
+    const active = touch.current;
+    if (!active || refreshing) return;
+    const dx = event.touches[0].clientX - active.x;
+    const dy = event.touches[0].clientY - active.y;
+    if (!active.vertical) {
+      if (dy <= 0 || Math.abs(dx) > Math.abs(dy) || dy < 6) {
+        if (dy < 0 || Math.abs(dx) > 10) touch.current = null;
+        return;
+      }
+      active.vertical = true;
+    }
+    if (active.parent.scrollTop > 0) { touch.current = null; setDistance(0); return; }
+    event.preventDefault();
+    setDistance(Math.min(112, Math.pow(dy, 0.72)));
+  };
+  const onTouchEnd = () => {
+    const active = touch.current;
+    touch.current = null;
+    if (!active?.vertical) { setDistance(0); return; }
+    if (distance >= threshold && !sessionStorage.getItem("rainx-pull-refreshing")) {
+      sessionStorage.setItem("rainx-pull-refreshing", "1");
+      setRefreshing(true);
+      setDistance(threshold);
+      window.setTimeout(() => window.location.reload(), 220);
+    } else setDistance(0);
+  };
+  useEffect(() => { sessionStorage.removeItem("rainx-pull-refreshing"); }, []);
+
+  return (
+    <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
+      <div className={`rx-pull-refresh-indicator${refreshing ? " is-refreshing" : ""}`} style={{ opacity: Math.min(1, distance / threshold), transform: `translate(-50%, ${Math.max(-52, distance - 58)}px) scale(${Math.min(1, 0.65 + distance / (threshold * 3))})` }} aria-hidden="true">
+        <img src={rainxLogoTransparent} alt="" />
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function MainAppContent({ account, onLogout }) {
   const seriesMap = useMultiPriceSeries();
   const seriesMapRef = useRef(seriesMap);
@@ -1310,6 +1391,7 @@ function MainAppContent({ account, onLogout }) {
   const [loadingKey, setLoadingKey] = useState(null); // `${symbol}_${tfKey}` currently being analyzed
   const [selectedTf, setSelectedTf] = useState("15m");
   const [notifications, setNotifications] = useState([]);
+  const [communityUnreadCount, setCommunityUnreadCount] = useState(0);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [toastQueue, setToastQueue] = useState([]);
   const [activeToast, setActiveToast] = useState(null);
@@ -1534,6 +1616,16 @@ function MainAppContent({ account, onLogout }) {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
+  const unreadSections = notifications.reduce((counts, notification) => {
+    if (!notification.read) counts[classifyNotification(notification)] += 1;
+    return counts;
+  }, { home: 0, markets: 0, community: 0, more: 0 });
+  const navBadges = {
+    home: formatNotificationCount(unreadSections.home),
+    markets: formatNotificationCount(unreadSections.markets),
+    community: formatNotificationCount(unreadSections.community + communityUnreadCount),
+    more: formatNotificationCount(unreadSections.more),
+  };
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const pushNotification = useCallback(async (n) => {
@@ -1630,11 +1722,27 @@ function MainAppContent({ account, onLogout }) {
         const { data } = await supabase.from("user_notifications").select("*").eq("user_id", account.id).order("created_at", { ascending: false }).limit(50);
         if (data) {
           setNotifications(data.map((row) => ({
-            id: row.id, title: row.title, body: row.body, read: row.read, time: new Date(row.created_at).toLocaleTimeString(),
+            id: row.id, title: row.title, body: row.body, type: row.type, section: row.section, read: row.read, time: new Date(row.created_at).toLocaleTimeString(),
           })));
         }
       } catch { /* keep starting empty if this fails */ }
     })();
+  }, [account?.id]);
+
+  useEffect(() => {
+    if (!account?.id) return;
+    let cancelled = false;
+    const loadCommunityUnreadCount = async () => {
+      const { count } = await supabase
+        .from("community_notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", account.id)
+        .eq("read", false);
+      if (!cancelled) setCommunityUnreadCount(count || 0);
+    };
+    loadCommunityUnreadCount();
+    const interval = window.setInterval(loadCommunityUnreadCount, 30000);
+    return () => { cancelled = true; window.clearInterval(interval); };
   }, [account?.id]);
 
   // Checks one (instrument, timeframe) combo's latest candle. If it's the
@@ -1961,6 +2069,7 @@ function MainAppContent({ account, onLogout }) {
   const activeSignal = signalsMap[activeSymbol]?.[selectedTf] || null;
 
   return (
+    <PullToRefresh>
       <div style={{ minHeight: "100dvh", background: T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative", isolation: "isolate" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
@@ -2248,8 +2357,9 @@ function MainAppContent({ account, onLogout }) {
                   onActivate={() => { setProfileFromHeader(false); goTab(key); }}
                 />
               ) : (
-                <button key={key} onClick={() => { if (key === "more") setMorePage(null); setProfileFromHeader(false); goTab(key); }} style={{ background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 52, padding: "4px 2px", transition: "color 0.15s" }}>
+                <button key={key} onClick={() => { if (key === "more") setMorePage(null); setProfileFromHeader(false); goTab(key); }} style={{ position: "relative", background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 52, padding: "4px 2px", transition: "color 0.15s" }}>
                   {icon(active)}
+                  {navBadges[key] && <span className="rx-nav-badge">{navBadges[key]}</span>}
                   <span style={{ fontSize: 11, fontFamily: FONT_HEAD, fontWeight: active ? 700 : 500, letterSpacing: 0.1 }}>{label}</span>
                 </button>
               )
@@ -2257,7 +2367,8 @@ function MainAppContent({ account, onLogout }) {
           })}
         </div>
       )}
-    </div>
+      </div>
+    </PullToRefresh>
   );
 }
 
@@ -6523,8 +6634,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         {appInstalled
           ? <MoreRow icon={Smartphone} title="App Installed" subtitle="RainX is on your home screen" />
           : <MoreRow icon={ArrowUpCircle} title="Install App" subtitle="Add RainX to your home screen" onPress={async () => { if (installPrompt) { installPrompt.prompt(); const { outcome } = await installPrompt.userChoice; if (outcome === 'accepted') { setInstallPrompt(null); setAppInstalled(true); } } else { setShowInstallHelp(true); } }} />}
-        <MoreRowDivider />
-        <MoreRow icon={RotateCcw} title="Restart App" subtitle="Force reload to see latest updates" onPress={() => { localStorage.setItem('rainx-features-seen', 'v2026-07'); window.location.reload(); }} />
       </MoreSection>
 
       <div style={{ textAlign: "center", marginTop: 4 }}>
