@@ -1234,7 +1234,7 @@ function PullToRefresh({ children }) {
   const [distance, setDistance] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const touch = useRef(null);
-  const threshold = 72;
+  const threshold = 32;
 
   const getScrollParent = (target) => {
     let node = target;
@@ -1267,7 +1267,7 @@ function PullToRefresh({ children }) {
     }
     if (active.parent.scrollTop > 0) { touch.current = null; setDistance(0); return; }
     event.preventDefault();
-    setDistance(Math.min(112, Math.pow(dy, 0.72)));
+    setDistance(Math.min(88, Math.pow(dy, 0.82)));
   };
   const onTouchEnd = () => {
     const active = touch.current;
