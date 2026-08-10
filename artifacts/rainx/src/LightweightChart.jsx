@@ -60,6 +60,7 @@ export default function LightweightChart({
   const priceLineMap  = useRef([]);   // { series, priceLine }
   const prevBarsRef   = useRef([]);   // last rendered bars — for smart update() vs setData()
   const ohlcRangeRef  = useRef(null); // { min, max } of visible candle data — keeps scale pinned to OHLC
+  const priceZoomRef  = useRef(1);    // 1 = fit-to-data; <1 = zoomed in; >1 = zoomed out (touch price-axis drag)
   const loadMoreRef   = useRef(onLoadMore);
   const loadingMoreRef = useRef(false);
 
@@ -110,7 +111,7 @@ export default function LightweightChart({
         lockVisibleTimeRangeOnResize: true,
       },
       handleScroll:  compact ? false : { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
-      handleScale:   compact ? false : { axisPressedMouseMove: { time: true, price: true }, mouseWheel: true, pinch: true, vertTouchDrag: true },
+      handleScale:   compact ? false : { axisPressedMouseMove: { time: true, price: true }, mouseWheel: true, pinch: true },
       width:  el.clientWidth  || 340,
       height: Math.max(el.clientHeight || 0, containerHeight, compact ? 60 : window.innerHeight * 0.22, compact ? 60 : 160),
     });
@@ -127,9 +128,12 @@ export default function LightweightChart({
       autoscaleInfoProvider: () => {
         const r = ohlcRangeRef.current;
         if (!r) return null;
-        const pad = (r.max - r.min) * 0.06 || r.max * 0.01;
+        const zoom = priceZoomRef.current || 1;
+        const center = (r.max + r.min) / 2;
+        const halfSpan = ((r.max - r.min) / 2 || r.max * 0.005) * zoom;
+        const pad = halfSpan * 0.12;
         return {
-          priceRange: { minValue: r.min - pad, maxValue: r.max + pad },
+          priceRange: { minValue: center - halfSpan - pad, maxValue: center + halfSpan + pad },
           margins: { above: 0.08, below: 0.08 },
         };
       },
@@ -461,21 +465,36 @@ export default function LightweightChart({
   // Uses native (non-passive) listeners so preventDefault() actually works.
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el || compact) return; // mini thumbnails aren't interactive
     const PRICE_SCALE_WIDTH = 65;
     let onScale = false;
+    let startY = 0;
+    let startZoom = 1;
 
     const onStart = (e) => {
       const touch = e.touches?.[0];
       if (!touch) return;
       const rect = el.getBoundingClientRect();
-      onScale = touch.clientX >= rect.right - PRICE_SCALE_WIDTH;
+      let scaleWidth = PRICE_SCALE_WIDTH;
+      try {
+        const measured = chartRef.current?.priceScale("right")?.width();
+        if (measured) scaleWidth = measured;
+      } catch {}
+      onScale = touch.clientX >= rect.right - scaleWidth;
+      startY = touch.clientY;
+      startZoom = priceZoomRef.current;
     };
     const onMove = (e) => {
-      // Price-axis touches must remain untouched so lightweight-charts can
-      // apply its native vertical price-scale zoom. Only candle-area touches
-      // are prevented from vertically moving the page/chart.
-      if (!onScale) e.preventDefault();
+      if (!onScale) { e.preventDefault(); return; }
+      const touch = e.touches?.[0];
+      if (!touch) return;
+      e.preventDefault();
+      const deltaY = touch.clientY - startY;
+      // Drag down = zoom in (bigger candles), drag up = zoom out — matches
+      // the MT5 / TradingView price-axis drag convention.
+      const factor = Math.exp(-deltaY / 150);
+      priceZoomRef.current = Math.min(4, Math.max(0.15, startZoom * factor));
+      try { chartRef.current?.applyOptions({}); } catch {}
     };
     const onEnd = () => { onScale = false; };
 
