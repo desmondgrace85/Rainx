@@ -135,6 +135,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
   const lineRefs     = useRef([]);
   const priceLines   = useRef([]);
   const ohlcRangeRef = useRef(null); // { min, max } of candle data only — keeps scale pinned to OHLC, not SL/TP lines
+  const priceZoomRef = useRef(1); // 1 = fit-to-data; <1 = zoomed in (bigger candles); >1 = zoomed out
   const pollTimer    = useRef(null);
   const latestCandle = useRef(null);
   const barsCache    = useRef([]);
@@ -254,7 +255,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
       width:  containerRef.current.clientWidth  || 400,
       height: containerRef.current.clientHeight || 500,
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
-      handleScale:  { axisPressedMouseMove: { time: true, price: true }, mouseWheel: true, pinch: true, vertTouchDrag: true },
+      handleScale:  { axisPressedMouseMove: { time: true, price: true }, mouseWheel: true, pinch: true },
     });
 
     // Candlestick series
@@ -271,9 +272,12 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
       autoscaleInfoProvider: () => {
         const r = ohlcRangeRef.current;
         if (!r) return null;
-        const pad = (r.max - r.min) * 0.06 || r.max * 0.01;
+        const zoom = priceZoomRef.current || 1;
+        const center = (r.max + r.min) / 2;
+        const halfSpan = ((r.max - r.min) / 2 || r.max * 0.005) * zoom;
+        const pad = halfSpan * 0.12;
         return {
-          priceRange: { minValue: r.min - pad, maxValue: r.max + pad },
+          priceRange: { minValue: center - halfSpan - pad, maxValue: center + halfSpan + pad },
           margins: { above: 0.08, below: 0.08 },
         };
       },
@@ -335,6 +339,8 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
     if (!el) return;
     const FALLBACK_PRICE_SCALE_WIDTH = 72;
     let onScale = false;
+    let startY = 0;
+    let startZoom = 1;
     const onStart = (e) => {
       const touch = e.touches?.[0];
       if (!touch) return;
@@ -348,13 +354,35 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
         if (measured) scaleWidth = measured;
       } catch {}
       onScale = touch.clientX >= rect.right - scaleWidth;
+      startY = touch.clientY;
+      startZoom = priceZoomRef.current;
     };
-    const onMove = (e) => { if (!onScale) e.preventDefault(); };
+    const onMove = (e) => {
+      if (!onScale) { e.preventDefault(); return; }
+      const touch = e.touches?.[0];
+      if (!touch) return;
+      e.preventDefault(); // only the price-axis strip consumes vertical movement
+      const deltaY = touch.clientY - startY;
+      // Dragging down = zoom in (smaller price range, bigger candles).
+      // Dragging up = zoom out (wider price range, smaller candles).
+      // Matches the convention used by MT5 / TradingView's price-axis drag.
+      const factor = Math.exp(-deltaY / 150);
+      const nextZoom = Math.min(4, Math.max(0.15, startZoom * factor));
+      priceZoomRef.current = nextZoom;
+      // Nudging chart options forces it to re-invoke autoscaleInfoProvider
+      // with the new zoom factor — a plain ref change alone won't repaint.
+      try { chartRef.current?.applyOptions({}); } catch {}
+    };
+    const onEnd = () => { onScale = false; };
     el.addEventListener("touchstart", onStart, { passive: true });
     el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd, { passive: true });
+    el.addEventListener("touchcancel", onEnd, { passive: true });
     return () => {
       el.removeEventListener("touchstart", onStart);
       el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
     };
   }, [themeMode]);
 
