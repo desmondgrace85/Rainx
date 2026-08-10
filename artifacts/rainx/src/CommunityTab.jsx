@@ -168,16 +168,24 @@ function renderTextWithTags(text, onOpenProfile) {
   });
 }
 async function notify(userId, actorId, type, postId) {
-  if (userId === actorId) return; // don't notify yourself
+  const recipientId = typeof userId === "string" ? userId.trim() : "";
+  const senderId = typeof actorId === "string" ? actorId.trim() : "";
+  if (!recipientId || !senderId) {
+    console.error("[CommunityTab] notification skipped: invalid user ID", { userId, actorId, type, postId });
+    return false;
+  }
+  if (recipientId === senderId) return false; // don't notify yourself
   let notificationId = null;
   try {
     const { data } = await supabase
       .from("community_notifications")
-      .insert({ user_id: userId, actor_id: actorId, type, post_id: postId || null })
+      .insert({ user_id: recipientId, actor_id: senderId, type, post_id: postId || null })
       .select("id")
       .single();
     notificationId = data?.id || null;
-  } catch {}
+  } catch (error) {
+    console.error("[CommunityTab] notification record failed", { recipientId, senderId, type, postId, error });
+  }
   // Also send a push notification
   const PUSH_TITLES = {
     like: "New Like", comment: "New Comment", comment_reply: "New Comment", reply: "New Reply",
@@ -192,29 +200,46 @@ async function notify(userId, actorId, type, postId) {
   };
   const title = PUSH_TITLES[type];
   const body  = PUSH_BODIES[type];
-  if (!title) return;
+  if (!title) {
+    console.error("[CommunityTab] notification skipped: unsupported type", { type, recipientId, senderId, postId });
+    return false;
+  }
   try {
-    fetch(`${BASE_URL}/api/push/send`, {
+    const pushResponse = await fetch(`${BASE_URL}/api/push/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userId,
+        userId: recipientId,
         title,
         body,
         data: {
           kind: "community",
           category: "community",
-          notificationId: notificationId || `${type}:${postId || "none"}:${actorId}`,
+          notificationId: notificationId || `${type}:${postId || "none"}:${senderId}`,
           targetKind: "post",
           postId: postId || undefined,
-          actorId,
-          tag: `rainx-community-${notificationId || `${type}-${postId || "none"}-${actorId}`}-${Date.now()}`,
+          actorId: senderId,
+          tag: "rainx-community",
           group: "rainx-community",
           url: `/?rainxTarget=post&postId=${encodeURIComponent(postId || "")}`,
         },
       }),
-    }).catch(() => {});
-  } catch {}
+    });
+    if (!pushResponse.ok) {
+      const detail = await pushResponse.text().catch(() => "");
+      throw new Error(`Push request failed (${pushResponse.status})${detail ? `: ${detail}` : ""}`);
+    }
+    return true;
+  } catch (error) {
+    console.error("[CommunityTab] community push failed", {
+      recipientId,
+      senderId,
+      type,
+      postId,
+      error,
+    });
+    return false;
+  }
 }
 async function fetchProfilesMap(ids) {
   if (!ids.length) return {};

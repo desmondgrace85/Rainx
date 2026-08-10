@@ -1786,14 +1786,31 @@ function MainAppContent({ account, onLogout }) {
     // pushes, whether the app is open or not. One consistent look, for free.
     if ("serviceWorker" in navigator && Notification.permission === "granted") {
       navigator.serviceWorker.ready.then((reg) => {
+        const entryData = entry.data || {};
+        const isMessage = entryData.kind === "chat"
+          || entryData.targetKind === "chat"
+          || entry.type === "message";
+        const isSignal = entryData.kind === "signal"
+          || entryData.targetKind === "signal"
+          || ["signal", "update", "warning"].includes(entry.type);
+        const isCommunity = entryData.kind === "community"
+          || entryData.targetKind === "post"
+          || entry.type === "community";
+        const tag = isMessage
+          ? "rainx-message"
+          : isSignal
+            ? "rainx-signal"
+            : isCommunity
+              ? "rainx-community"
+              : `rainx-${entry.type || "default"}`;
         reg.showNotification(entry.title || "RainX", {
           body: entry.body || "",
           icon: `${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/")}icons/icon-192.png`,
           badge: `${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/")}icons/icon-192.png`,
-          tag: `rainx-${entry.type || "default"}`,
+          tag,
           renotify: true,
           vibrate: [200, 100, 200],
-          data: { category: entry.type || "default", ...(entry.data || {}) },
+          data: { category: entry.type || "default", ...entryData },
         });
       }).catch(() => {});
     }
@@ -1868,8 +1885,12 @@ function MainAppContent({ account, onLogout }) {
           kind: n.type === "signal" || n.type === "update" || n.type === "warning" ? "signal" : (n.type || "default"),
           category: n.type === "warning" ? "sl" : (n.type === "update" ? "tp" : (n.type || "default")),
           notificationId: String(id),
-          tag: `rainx-${n.type || "notification"}-${id}`,
-          group: "rainx",
+          tag: n.type === "signal" || n.type === "update" || n.type === "warning"
+            ? "rainx-signal"
+            : `rainx-${n.type || "notification"}`,
+          group: n.type === "signal" || n.type === "update" || n.type === "warning"
+            ? "rainx-signals"
+            : "rainx",
           url: targetKind ? buildRainxNotificationUrl(target) : "/",
         },
       }),

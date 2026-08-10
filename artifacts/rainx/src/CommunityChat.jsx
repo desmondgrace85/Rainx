@@ -840,26 +840,52 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
         payload: { message: data },
       }).catch(() => {});
       playSendTick();
-      fetch(`${BASE_URL}/api/push/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: oid,
-          title: "New Message",
-          body: content.slice(0, 120),
-          data: {
-            kind: "chat",
-            category: "chat",
-            conversationId: convId,
-            senderId: aid,
-            messageId: data.id,
-            targetKind: "chat",
-            tag: `rainx-chat-${data.id}`,
-            group: `rainx-chat-${convId || oid}`,
-            url: `/?rainxTarget=chat&userId=${encodeURIComponent(aid)}&conversationId=${encodeURIComponent(convId || "")}`,
-          },
-        }),
-      }).catch(() => {});
+      // Send one push for every successfully persisted message. Use the
+      // receiver_id returned by Supabase so the push cannot drift from the
+      // actual recipient if the conversation state changes.
+      const receiverId = data?.receiver_id || oid;
+      if (data?.receiver_id && data.receiver_id !== oid) {
+        console.error("[CommunityChat] message receiver mismatch", {
+          expectedReceiverId: oid,
+          actualReceiverId: data.receiver_id,
+          messageId: data.id,
+        });
+        return;
+      }
+      try {
+        const pushResponse = await fetch(`${BASE_URL}/api/push/send`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: receiverId,
+            title: "New Message",
+            body: content.slice(0, 120),
+            data: {
+              kind: "chat",
+              category: "chat",
+              conversationId: convId,
+              senderId: aid,
+              messageId: data.id,
+              targetKind: "chat",
+              tag: "rainx-message",
+              group: "rainx-messages",
+              url: `/?rainxTarget=chat&userId=${encodeURIComponent(aid)}&conversationId=${encodeURIComponent(convId || "")}`,
+            },
+          }),
+        });
+        if (!pushResponse.ok) {
+          const detail = await pushResponse.text().catch(() => "");
+          throw new Error(`Push request failed (${pushResponse.status})${detail ? `: ${detail}` : ""}`);
+        }
+      } catch (pushError) {
+        // The message is already saved; report push failures instead of
+        // silently hiding them or pretending the message was not sent.
+        console.error("[CommunityChat] message push failed", {
+          receiverId,
+          messageId: data.id,
+          error: pushError,
+        });
+      }
     } catch (_) { setMessages(p => p.filter(m => m.id !== optId)); setText(content); }
     finally { setSending(false); if (inputRef.current) inputRef.current.focus(); }
   };

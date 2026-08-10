@@ -1,7 +1,7 @@
 /* RainX Service Worker — Push Notifications + Offline Cache */
 // IMPORTANT: bump this version string on every future deploy, or users may keep
 // seeing a stale cached version of the app for a while after you ship changes.
-const CACHE_NAME = "rainx-v2026-08-09-notifications-2";
+const CACHE_NAME = "rainx-v2026-08-10-notifications-3";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
 const presenceByClient = new Map();
 const recentPushIds = new Set();
@@ -77,8 +77,12 @@ self.addEventListener("push", (event) => {
   const pushId   = notificationData.messageId || notificationData.notificationId || notificationData.id;
   const tag      = notificationData.tag
     || (kind === "chat"
-      ? `rainx-chat-${notificationData.conversationId || notificationData.senderId || pushId || "default"}`
-      : `rainx-${category}-${pushId || "default"}`);
+      ? "rainx-message"
+      : kind === "signal" || ["trading", "tp", "sl"].includes(category)
+        ? "rainx-signal"
+        : kind === "community" || category === "community"
+          ? "rainx-community"
+          : `rainx-${category || "default"}`);
 
   // A retried push must not ring or create another notification.
   if (pushId && recentPushIds.has(pushId)) return;
