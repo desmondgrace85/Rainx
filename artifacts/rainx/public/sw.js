@@ -1,10 +1,71 @@
 /* RainX Service Worker — Push Notifications + Offline Cache */
 // IMPORTANT: bump this version string on every future deploy, or users may keep
 // seeing a stale cached version of the app for a while after you ship changes.
-const CACHE_NAME = "rainx-v2026-08-10-notifications-3";
+const CACHE_NAME = "rainx-v2026-08-10-notifications-4";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
 const presenceByClient = new Map();
 const recentPushIds = new Set();
+const PUSH_DB_NAME = "rainx-notification-state";
+const PUSH_STORE_NAME = "delivered-pushes";
+
+function openPushStateDb() {
+  return new Promise((resolve, reject) => {
+    if (!("indexedDB" in self)) {
+      reject(new Error("IndexedDB is unavailable"));
+      return;
+    }
+    const request = indexedDB.open(PUSH_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(PUSH_STORE_NAME, { keyPath: "id" });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("Could not open push state"));
+  });
+}
+
+function idbRequest(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("IndexedDB request failed"));
+  });
+}
+
+async function claimPushId(pushId) {
+  if (!pushId) return true;
+  if (recentPushIds.has(pushId)) return false;
+  try {
+    const db = await openPushStateDb();
+    const transaction = db.transaction(PUSH_STORE_NAME, "readwrite");
+    transaction.objectStore(PUSH_STORE_NAME).add({ id: String(pushId), claimedAt: Date.now() });
+    await new Promise((resolve, reject) => {
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error || new Error("Could not claim push"));
+      transaction.onabort = () => reject(transaction.error || new Error("Push claim aborted"));
+    });
+
+    // Keep the persistent dedupe set bounded while retaining enough history to
+    // cover refreshes and service-worker restarts.
+    const all = await idbRequest(db.transaction(PUSH_STORE_NAME, "readonly")
+      .objectStore(PUSH_STORE_NAME)
+      .getAll());
+    if (all.length > 500) {
+      const staleIds = all
+        .sort((a, b) => a.claimedAt - b.claimedAt)
+        .slice(0, all.length - 500)
+        .map((item) => item.id);
+      const cleanup = db.transaction(PUSH_STORE_NAME, "readwrite");
+      staleIds.forEach((id) => cleanup.objectStore(PUSH_STORE_NAME).delete(id));
+    }
+    recentPushIds.add(pushId);
+    return true;
+  } catch (error) {
+    if (error?.name === "ConstraintError") return false;
+    // The in-memory set still prevents duplicate delivery during this worker's
+    // lifetime if IndexedDB is unavailable.
+    recentPushIds.add(pushId);
+    return true;
+  }
+}
 
 // The page tells the worker whether RainX is visible and which conversation is
 // open. This lets foreground messages stay inside the app instead of also
@@ -84,11 +145,6 @@ self.addEventListener("push", (event) => {
           ? "rainx-community"
           : `rainx-${category || "default"}`);
 
-  // A retried push must not ring or create another notification.
-  if (pushId && recentPushIds.has(pushId)) return;
-  if (pushId) recentPushIds.add(pushId);
-  if (recentPushIds.size > 200) recentPushIds.delete(recentPushIds.values().next().value);
-
   // Resolve the sound for this category; null = let the OS play its default sound
   const soundSrc = CATEGORY_SOUNDS[category] || null;
 
@@ -132,9 +188,14 @@ self.addEventListener("push", (event) => {
       return true;
     });
 
-  // Show the notification; only post PLAY_SOUND if a custom sound is mapped
+  // Claim before routing so the same push cannot be delivered again after a
+  // service-worker restart, whether it was handled in-app or in the OS.
   event.waitUntil(
-    showInApp.then((handledInApp) => {
+    claimPushId(pushId).then((claimed) => {
+      if (!claimed) return false;
+      return showInApp;
+    }).then((handledInApp) => {
+      if (handledInApp === false) return false;
       if (handledInApp) return;
       return self.registration.showNotification(title, options);
     }).then((shown) => {
