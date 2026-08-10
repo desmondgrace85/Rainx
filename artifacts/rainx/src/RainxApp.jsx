@@ -5,7 +5,7 @@ import {
   TrendingUp, TrendingDown, Minus, Activity, Send, Calendar as CalendarIcon,
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
   CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet, Landmark, Gift, Trophy,
-  Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle, Plus,
+  Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle, Plus, ChevronDown,
   BrainCircuit, Cpu,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
@@ -546,25 +546,29 @@ function playNotifSound() {
     osc.start(); osc.stop(ctx.currentTime + 0.35);
   } catch {}
 }
-function Toast({ toast, onDone, onOpen }) {
+function Toast({ toast, items = [], onDone, onDismissOne, onOpen }) {
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
   const [dragX, setDragX] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const dragging = useRef(false);
   const startX = useRef(0);
 
   useEffect(() => {
     if (!toast) return;
     setDragX(0);
+    setExpanded(false);
     playNotifSound();
+    if (expanded) return; // don't auto-hide while the user is looking at the expanded list
     const id = setTimeout(() => onDoneRef.current(), 3000);
     return () => clearTimeout(id);
   }, [toast]);
 
   if (!toast) return null;
   const colorMap = { signal: T.gold, update: T.sage, warning: T.rust, news: T.gold, community: T.gold };
+  const count = items.length > 1 ? items.length : (toast.count || 1);
 
-  const onTouchStart = (e) => { dragging.current = true; startX.current = e.touches[0].clientX; };
+  const onTouchStart = (e) => { if (expanded) return; dragging.current = true; startX.current = e.touches[0].clientX; };
   const onTouchMove = (e) => { if (dragging.current) setDragX(e.touches[0].clientX - startX.current); };
   const onTouchEnd = () => {
     dragging.current = false;
@@ -574,16 +578,17 @@ function Toast({ toast, onDone, onOpen }) {
   return (
       <div
       onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
-        onClick={() => { onOpen?.(toast); onDoneRef.current(); }}
+        onClick={() => { if (!expanded) { onOpen?.(toast); onDoneRef.current(); } }}
       role="status"
       aria-live="polite"
       style={{
         position: "fixed", top: 10, left: 10, right: 10, maxWidth: 460, margin: "0 auto", zIndex: 1000,
         background: "#ffffff", borderRadius: 16,
-        padding: "12px 14px", boxShadow: "0 10px 32px rgba(0,0,0,0.22)", cursor: "pointer",
+        padding: "12px 14px", boxShadow: "0 10px 32px rgba(0,0,0,0.22)", cursor: expanded ? "default" : "pointer",
         transform: `translateX(${dragX}px)`, opacity: Math.max(0, 1 - Math.abs(dragX) / 200),
         transition: dragging.current ? "none" : "transform 0.2s, opacity 0.2s",
         animation: dragX === 0 ? "slideDown 0.25s ease-out" : "none",
+        maxHeight: expanded ? "70vh" : "none", overflowY: expanded ? "auto" : "visible",
       }}
     >
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
@@ -596,26 +601,70 @@ function Toast({ toast, onDone, onOpen }) {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
               <div style={{ fontFamily: FONT_HEAD, fontSize: 12.5, fontWeight: 800, color: "#111", flexShrink: 0 }}>RainX</div>
-              <div style={{ fontSize: 10.5, color: "#8a8a8a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Just now</div>
-            </div>
-            {toast.count > 1 && (
-              <div style={{ background: "#e6e6e6", color: "#333", fontSize: 11, fontWeight: 700, borderRadius: 999, minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 6px", flexShrink: 0 }}>
-                {toast.count}
+              <div style={{ fontSize: 10.5, color: "#8a8a8a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {count > 1 ? `${count} messages` : "Just now"}
               </div>
+            </div>
+            {count > 1 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
+                style={{ background: "#e6e6e6", border: "none", color: "#333", fontSize: 11, fontWeight: 700, borderRadius: 999, minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 7px", flexShrink: 0, cursor: "pointer", gap: 3 }}
+              >
+                {count}
+                <ChevronDown size={11} style={{ transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
+              </button>
             )}
           </div>
-          <div style={{ fontFamily: FONT_HEAD, fontSize: 13.5, fontWeight: 800, color: "#111", marginTop: 3 }}>{toast.title}</div>
-          <div style={{ fontFamily: FONT_BODY, fontSize: 12.5, color: "#444", marginTop: 3, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{toast.body}</div>
+
+          {!expanded && (
+            <>
+              <div style={{ fontFamily: FONT_HEAD, fontSize: 13.5, fontWeight: 800, color: "#111", marginTop: 3 }}>{toast.title}</div>
+              <div style={{ fontFamily: FONT_BODY, fontSize: 12.5, color: "#444", marginTop: 3, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{toast.body}</div>
+            </>
+          )}
         </div>
-        <button
-          type="button"
-          aria-label="Dismiss notification"
-          onClick={(event) => { event.stopPropagation(); onDoneRef.current(); }}
-          style={{ background: "none", border: "none", color: "#999", padding: 2, display: "flex", flexShrink: 0, cursor: "pointer" }}
-        >
-          <X size={16} />
-        </button>
+        {!expanded && (
+          <button
+            type="button"
+            aria-label="Dismiss notification"
+            onClick={(event) => { event.stopPropagation(); onDoneRef.current(); }}
+            style={{ background: "none", border: "none", color: "#999", padding: 2, display: "flex", flexShrink: 0, cursor: "pointer" }}
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
+
+      {/* Expanded list — each queued item shown individually, WhatsApp-style */}
+      {expanded && (
+        <div style={{ marginTop: 8 }}>
+          {items.map((item, i) => (
+            <div
+              key={item.id ?? i}
+              onClick={(e) => { e.stopPropagation(); onOpen?.(item); onDismissOne?.(item); }}
+              style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, padding: "8px 0", borderTop: i > 0 ? "1px solid #eee" : "none", cursor: "pointer" }}
+            >
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontFamily: FONT_HEAD, fontSize: 12.5, fontWeight: 700, color: colorMap[item.type] || "#111" }}>{item.title}</div>
+                <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: "#555", marginTop: 2 }}>{item.body}</div>
+              </div>
+              <button
+                aria-label="Dismiss"
+                onClick={(e) => { e.stopPropagation(); onDismissOne?.(item); }}
+                style={{ background: "none", border: "none", color: "#bbb", padding: 2, flexShrink: 0, cursor: "pointer" }}
+              >
+                <X size={13} />
+              </button>
+            </div>
+          ))}
+          <button
+            onClick={(e) => { e.stopPropagation(); onDoneRef.current(); }}
+            style={{ width: "100%", marginTop: 6, background: "none", border: "none", color: T.gold, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, padding: "8px 0", cursor: "pointer" }}
+          >
+            Dismiss all
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1446,6 +1495,7 @@ function MainAppContent({ account, onLogout }) {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [toastQueue, setToastQueue] = useState([]);
   const [activeToast, setActiveToast] = useState(null);
+  const [activeToastItems, setActiveToastItems] = useState([]);
   const seenNotificationIdsRef = useRef((() => {
     try {
       const stored = JSON.parse(localStorage.getItem("rainx-seen-notif-ids") || "[]");
@@ -1731,7 +1781,22 @@ function MainAppContent({ account, onLogout }) {
       if (oldest) seenNotificationIdsRef.current.delete(oldest);
     }
     setNotifications((list) => [entry, ...list.filter((n) => String(n.id) !== key)].slice(0, 50));
-    setToastQueue((q) => q.some((item) => String(item.id) === key) ? q : [...q, entry]);
+    // Removed the custom in-app card — every notification now shows using the
+    // same native OS notification style Android already renders for closed-app
+    // pushes, whether the app is open or not. One consistent look, for free.
+    if ("serviceWorker" in navigator && Notification.permission === "granted") {
+      navigator.serviceWorker.ready.then((reg) => {
+        reg.showNotification(entry.title || "RainX", {
+          body: entry.body || "",
+          icon: `${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/")}icons/icon-192.png`,
+          badge: `${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/")}icons/icon-192.png`,
+          tag: `rainx-${entry.type || "default"}`,
+          renotify: true,
+          vibrate: [200, 100, 200],
+          data: { category: entry.type || "default", ...(entry.data || {}) },
+        });
+      }).catch(() => {});
+    }
     return true;
   }, []);
 
@@ -1970,7 +2035,8 @@ function MainAppContent({ account, onLogout }) {
   useEffect(() => {
     if (!activeToast && toastQueue.length > 0) {
       setActiveToast({ ...toastQueue[0], count: toastQueue.length });
-      setToastQueue((q) => q.slice(1));
+      setActiveToastItems(toastQueue);
+      setToastQueue([]);
     }
   }, [toastQueue, activeToast]);
 
