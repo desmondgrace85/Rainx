@@ -65,6 +65,29 @@ function toChartBars(values) {
     .sort((a, b) => a.time - b.time);
 }
 
+// Compute OHLC min/max from only the bars actually visible on screen right
+// now — NOT the whole loaded history. `bars` can hold up to 500 candles of
+// history, and older data almost always has a wider price range than what's
+// currently on screen (e.g. gold dipped much lower weeks ago). Scaling to
+// the full 500 bars stretches the y-axis far beyond the visible candles,
+// which is what made candles look tiny/"floating" in a huge empty area.
+function visibleOhlcRange(bars, chart) {
+  if (!bars.length) return null;
+  let slice = bars;
+  try {
+    const range = chart?.timeScale().getVisibleLogicalRange();
+    if (range && isFinite(range.from) && isFinite(range.to)) {
+      const from = Math.max(0, Math.floor(range.from));
+      const to = Math.min(bars.length - 1, Math.ceil(range.to));
+      if (to > from) slice = bars.slice(from, to + 1);
+    }
+  } catch {}
+  if (!slice.length) slice = bars.slice(-80);
+  const lows = slice.map(b => b.low);
+  const highs = slice.map(b => b.high);
+  return { min: Math.min(...lows), max: Math.max(...highs) };
+}
+
 const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 
 export default function FullChartView({ inst, session, signalsMap = {}, themeMode = "light", onClose, livePrice = null }) {
@@ -166,9 +189,8 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
       const combined = [...olderBars, ...barsCache.current];
       const visibleRange = chartRef.current?.timeScale().getVisibleLogicalRange();
       barsCache.current = combined;
-      const lows  = combined.map(b => b.low);
-      const highs = combined.map(b => b.high);
-      ohlcRangeRef.current = { min: Math.min(...lows), max: Math.max(...highs) };
+      const range = visibleOhlcRange(combined, chartRef.current);
+      if (range) ohlcRangeRef.current = range;
       if (candleRef.current) {
         candleRef.current.setData(combined);
         if (visibleRange && chartRef.current) {
@@ -267,13 +289,20 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
       if (bar) setOhlc(bar);
     });
 
-    // Detect user manually scrolling into history; load more when near left edge
+    // Detect user manually scrolling into history; load more when near left edge.
+    // Also keep the y-axis pinned to whatever candles are ACTUALLY visible —
+    // without this, the scale stays fixed to whatever range was true at
+    // load time even after the user scrolls to a totally different price area.
     chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
       if (progScrollRef.current) return; // we caused this scroll — ignore
       isUserScrolledRef.current = true;
       // When the visible range starts fewer than 15 bars from the left edge, load more history
       if (range && typeof range.from === "number" && range.from < 15 && loadMoreHistoryRef.current) {
         loadMoreHistoryRef.current();
+      }
+      if (barsCache.current.length) {
+        const r = visibleOhlcRange(barsCache.current, chartRef.current);
+        if (r) ohlcRangeRef.current = r;
       }
     });
 
@@ -338,8 +367,13 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
     barsCache.current = bars;
     latestCandle.current = bars[bars.length - 1];
 
-    const lows  = bars.map(b => b.low);
-    const highs = bars.map(b => b.high);
+    // Initial paint always lands on the most recent candles (scrollToRealTime
+    // below), so seed the range from the tail of the data, not the full
+    // history — the visible-range listener refines this further once the
+    // chart settles / as the user scrolls.
+    const seedSlice = bars.slice(-80);
+    const lows  = seedSlice.map(b => b.low);
+    const highs = seedSlice.map(b => b.high);
     ohlcRangeRef.current = { min: Math.min(...lows), max: Math.max(...highs) };
 
     try {

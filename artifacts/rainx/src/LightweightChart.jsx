@@ -149,6 +149,26 @@ export default function LightweightChart({
       });
     });
 
+    // Re-pin the price scale to whatever candles are actually on screen as
+    // the user scrolls/zooms — otherwise the scale stays stuck to whatever
+    // range was true when the chart first loaded.
+    chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+      if (!prevBarsRef.current.length || compact) return;
+      try {
+        if (range && isFinite(range.from) && isFinite(range.to)) {
+          const bars = prevBarsRef.current;
+          const from = Math.max(0, Math.floor(range.from));
+          const to = Math.min(bars.length - 1, Math.ceil(range.to));
+          if (to > from) {
+            const slice = bars.slice(from, to + 1);
+            const lows = slice.map(b => b.low);
+            const highs = slice.map(b => b.high);
+            ohlcRangeRef.current = { min: Math.min(...lows), max: Math.max(...highs) };
+          }
+        }
+      } catch {}
+    });
+
     // ResizeObserver for responsive sizing
     const ro = new ResizeObserver(entries => {
       const e = entries[0];
@@ -178,8 +198,22 @@ export default function LightweightChart({
     const bars = toChartBars(candles);
     if (!bars.length) return;
     try {
-      // Compute OHLC range from the bars that will be visible (last 50 for compact, all for full)
-      const visible = compact ? bars.slice(-50) : bars;
+      // Compute OHLC range from bars actually visible on screen, NOT the
+      // whole loaded history. The old code used ALL loaded bars for the
+      // non-compact chart, so a wider price range earlier in history (e.g.
+      // gold dipping much lower weeks ago) stretched the y-axis far beyond
+      // the current candles — making them look tiny/floating in empty space.
+      let visible = compact ? bars.slice(-50) : bars.slice(-80);
+      try {
+        if (!compact && chartRef.current) {
+          const range = chartRef.current.timeScale().getVisibleLogicalRange();
+          if (range && isFinite(range.from) && isFinite(range.to)) {
+            const from = Math.max(0, Math.floor(range.from));
+            const to = Math.min(bars.length - 1, Math.ceil(range.to));
+            if (to > from) visible = bars.slice(from, to + 1);
+          }
+        }
+      } catch {}
       const lows    = visible.map(b => b.low);
       const highs   = visible.map(b => b.high);
       ohlcRangeRef.current = { min: Math.min(...lows), max: Math.max(...highs) };
