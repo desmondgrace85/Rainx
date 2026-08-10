@@ -1295,6 +1295,23 @@ class MoreTabErrorBoundary extends React.Component {
   }
 }
 
+class FullChartErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: String(e && e.message || e) }; }
+  componentDidCatch(e, info) { console.error("FullChartView crash:", e, info); }
+  render() {
+    if (this.state.error) return (
+      <div style={{ position: "fixed", inset: 0, zIndex: 500, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#fff8f8", padding: 24 }}>
+        <div style={{ color: "#C0392B", fontSize: 13, fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all", border: "2px solid #C0392B", padding: 16, borderRadius: 8, maxWidth: 320, textAlign: "center" }}>
+          <strong>Full Chart crashed — screenshot this:</strong>{"\n"}{this.state.error}
+        </div>
+        <button onClick={this.props.onClose} style={{ marginTop: 16, background: "#C0392B", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontWeight: 700, cursor: "pointer" }}>Close</button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
 function CenterNavLogo({ active, onActivate }) {
   const [energized, setEnergized] = useState(false);
   const pulseTimeoutRef = useRef(null);
@@ -3524,7 +3541,9 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
     finally { setHistoryLoading(false); }
   }, [historyLoading, realCandles, session?.symbol, activeSymbol, apiInterval]);
 
-  // Poll the candles API every 30 s so the chart keeps refreshing with new bars
+  // Poll the candles API every 5s — matches FullChartView's cadence so the
+  // Home preview shows the same live movement instead of looking frozen
+  // next to it (was 30s, which made the last candle look static).
   useEffect(() => {
     const sym = session?.symbol || activeSymbol;
     if (!sym) return;
@@ -3540,7 +3559,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
           })).filter(c => c.t > 0 && isFinite(c.open));
           if (converted.length) setRealCandles(converted);
         }).catch(() => {});
-    }, 30000);
+    }, 5000);
     return () => clearInterval(id);
   }, [activeSymbol, session?.symbol, apiInterval]);
 
@@ -3695,14 +3714,16 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
 
       {/* Full-screen chart overlay */}
       {showFullChart && (
-        <FullChartView
-          inst={inst}
-          session={session}
-          signalsMap={signalsMap}
-          themeMode={themeMode}
-          onClose={() => setShowFullChart(false)}
-          livePrice={last}
-        />
+        <FullChartErrorBoundary onClose={() => setShowFullChart(false)}>
+          <FullChartView
+            inst={inst}
+            session={session}
+            signalsMap={signalsMap}
+            themeMode={themeMode}
+            onClose={() => setShowFullChart(false)}
+            livePrice={last}
+          />
+        </FullChartErrorBoundary>
       )}
 
       {/* ── Timeframe selector (chart candle timeframe — M15 = 15-min candles, not AI analysis duration) ── */}
@@ -3890,39 +3911,47 @@ function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }
 
   // Markets previews use the same broker candle feed as Home and Full Chart.
   // Do not render the seeded tick series here: it can drift from the real OHLC.
+  // Poll every 10s — was fetching once on mount only ([] deps), so these
+  // mini charts never updated after first load and looked permanently static.
   useEffect(() => {
     let cancelled = false;
-    Promise.all(INSTRUMENTS.map(async (inst) => {
-      try {
-        const res = await fetch(`/api/candles?symbol=${encodeURIComponent(inst.symbol)}&interval=15m&limit=24`);
-        if (!res.ok) return null;
-        const data = await res.json();
-        const values = (data.values || []).slice().reverse().map(c => ({
-          t: new Date(c.datetime || c.time || 0).getTime(),
-          open: +c.open, high: +c.high, low: +c.low, close: +c.close,
-        })).filter(c => c.t > 0 && isFinite(c.open));
-        return [inst.symbol, values];
-      } catch {
-        return null;
-      }
-    })).then(entries => {
-      if (cancelled) return;
-      setMarketCandles(Object.fromEntries(entries.filter(Boolean)));
-    });
-    return () => { cancelled = true; };
+    const loadAll = () => {
+      Promise.all(INSTRUMENTS.map(async (inst) => {
+        try {
+          const res = await fetch(`/api/candles?symbol=${encodeURIComponent(inst.symbol)}&interval=15m&limit=24`);
+          if (!res.ok) return null;
+          const data = await res.json();
+          const values = (data.values || []).slice().reverse().map(c => ({
+            t: new Date(c.datetime || c.time || 0).getTime(),
+            open: +c.open, high: +c.high, low: +c.low, close: +c.close,
+          })).filter(c => c.t > 0 && isFinite(c.open));
+          return [inst.symbol, values];
+        } catch {
+          return null;
+        }
+      })).then(entries => {
+        if (cancelled) return;
+        setMarketCandles(Object.fromEntries(entries.filter(Boolean)));
+      });
+    };
+    loadAll();
+    const id = setInterval(loadAll, 10000);
+    return () => { cancelled = true; clearInterval(id); };
   }, []);
 
   return (
     <div style={{ padding: 16 }}>
       {/* Full-screen chart overlay for a specific instrument */}
       {fullChartInst && (
-        <FullChartView
-          inst={fullChartInst}
-          session={null}
-          signalsMap={signalsMap}
-          themeMode={themeMode || "dark"}
-          onClose={() => setFullChartInst(null)}
-        />
+        <FullChartErrorBoundary onClose={() => setFullChartInst(null)}>
+          <FullChartView
+            inst={fullChartInst}
+            session={null}
+            signalsMap={signalsMap}
+            themeMode={themeMode || "dark"}
+            onClose={() => setFullChartInst(null)}
+          />
+        </FullChartErrorBoundary>
       )}
       <div style={{ fontFamily: FONT_HEAD, fontSize: 18, color: T.goldBright, fontWeight: 800, marginBottom: 12 }}>All markets</div>
       {INSTRUMENTS.map((i) => {
@@ -3953,7 +3982,7 @@ function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }
                 </div>
               </div>
               {/* Center: same lightweight-charts renderer as Home */}
-              <div style={{ flexShrink: 0, width: 88, height: 42, overflow: "hidden", pointerEvents: "none" }}>
+              <div style={{ flexShrink: 0, width: 88, height: 42, overflow: "hidden", pointerEvents: "none", borderRadius: 6, background: T.card }}>
                 <LightweightChart
                   candles={marketCandles[i.symbol] || []}
                   inst={i}

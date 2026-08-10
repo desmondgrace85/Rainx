@@ -88,6 +88,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
   const candleRef    = useRef(null);
   const lineRefs     = useRef([]);
   const priceLines   = useRef([]);
+  const ohlcRangeRef = useRef(null); // { min, max } of candle data only — keeps scale pinned to OHLC, not SL/TP lines
   const pollTimer    = useRef(null);
   const latestCandle = useRef(null);
   const barsCache    = useRef([]);
@@ -142,6 +143,9 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
       const combined = [...olderBars, ...barsCache.current];
       const visibleRange = chartRef.current?.timeScale().getVisibleLogicalRange();
       barsCache.current = combined;
+      const lows  = combined.map(b => b.low);
+      const highs = combined.map(b => b.high);
+      ohlcRangeRef.current = { min: Math.min(...lows), max: Math.max(...highs) };
       if (candleRef.current) {
         candleRef.current.setData(combined);
         if (visibleRange && chartRef.current) {
@@ -216,6 +220,18 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
       borderDownColor: BEAR,
       wickUpColor:     BULL,
       wickDownColor:   WICK_BEAR,
+      // Pin auto-scale to candle OHLC range only — prevents SL/TP/Entry price
+      // lines from forcing the y-axis to stretch, which was shrinking the
+      // candles into a small strip and making them look "floating".
+      autoscaleInfoProvider: () => {
+        const r = ohlcRangeRef.current;
+        if (!r) return null;
+        const pad = (r.max - r.min) * 0.06 || r.max * 0.01;
+        return {
+          priceRange: { minValue: r.min - pad, maxValue: r.max + pad },
+          margins: { above: 0.08, below: 0.08 },
+        };
+      },
     });
 
     chartRef.current  = chart;
@@ -265,13 +281,21 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const PRICE_SCALE_WIDTH = 72;
+    const FALLBACK_PRICE_SCALE_WIDTH = 72;
     let onScale = false;
     const onStart = (e) => {
       const touch = e.touches?.[0];
       if (!touch) return;
       const rect = el.getBoundingClientRect();
-      onScale = touch.clientX >= rect.right - PRICE_SCALE_WIDTH;
+      // Use the chart's actual rendered price-scale width when available —
+      // a hardcoded guess didn't match the real axis width on most screens,
+      // which is why dragging the price axis to zoom silently did nothing.
+      let scaleWidth = FALLBACK_PRICE_SCALE_WIDTH;
+      try {
+        const measured = chartRef.current?.priceScale("right")?.width();
+        if (measured) scaleWidth = measured;
+      } catch {}
+      onScale = touch.clientX >= rect.right - scaleWidth;
     };
     const onMove = (e) => { if (!onScale) e.preventDefault(); };
     el.addEventListener("touchstart", onStart, { passive: true });
@@ -290,6 +314,10 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
     if (!bars.length) return;
     barsCache.current = bars;
     latestCandle.current = bars[bars.length - 1];
+
+    const lows  = bars.map(b => b.low);
+    const highs = bars.map(b => b.high);
+    ohlcRangeRef.current = { min: Math.min(...lows), max: Math.max(...highs) };
 
     try {
       candleRef.current.setData(bars);
@@ -326,6 +354,12 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
         if (isNaN(bar.open) || isNaN(bar.close)) return;
         // Wait for initial data to be loaded before live-updating
         if (!barsCache.current.length) return;
+        if (ohlcRangeRef.current) {
+          ohlcRangeRef.current = {
+            min: Math.min(ohlcRangeRef.current.min, bar.low),
+            max: Math.max(ohlcRangeRef.current.max, bar.high),
+          };
+        }
         candleRef.current.update(bar);
         latestCandle.current = bar;
         setPrice(bar.close);
