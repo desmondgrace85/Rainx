@@ -47,6 +47,30 @@ const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold
 const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#C6A15B", goldBright:"#9E7B35", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
 const FONT_HEAD = "'Montserrat', sans-serif";
 const FONT_BODY = "'Montserrat', sans-serif";
+const PUSH_STATE_DB_NAME = "rainx-notification-state";
+const PUSH_STATE_STORE_NAME = "delivered-pushes";
+
+function readDeliveredPushIds() {
+  return new Promise((resolve) => {
+    if (!("indexedDB" in window)) {
+      resolve([]);
+      return;
+    }
+    const request = indexedDB.open(PUSH_STATE_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(PUSH_STATE_STORE_NAME, { keyPath: "id" });
+    };
+    request.onsuccess = () => {
+      const db = request.result;
+      const getAllRequest = db.transaction(PUSH_STATE_STORE_NAME, "readonly")
+        .objectStore(PUSH_STATE_STORE_NAME)
+        .getAll();
+      getAllRequest.onsuccess = () => resolve(getAllRequest.result.map((item) => String(item.id)));
+      getAllRequest.onerror = () => resolve([]);
+    };
+    request.onerror = () => resolve([]);
+  });
+}
 const COUNTRIES = ["Afghanistan","Albania","Algeria","Angola","Argentina","Armenia","Australia","Austria","Azerbaijan","Bahrain","Bangladesh","Belarus","Belgium","Bolivia","Bosnia and Herzegovina","Botswana","Brazil","Bulgaria","Cameroon","Canada","Chile","China","Colombia","Costa Rica","Croatia","Cuba","Czech Republic","Denmark","Ecuador","Egypt","Ethiopia","Finland","France","Georgia","Germany","Ghana","Greece","Guatemala","Hungary","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kuwait","Lebanon","Libya","Malaysia","Mexico","Morocco","Mozambique","Myanmar","Nepal","Netherlands","New Zealand","Nicaragua","Nigeria","Norway","Oman","Pakistan","Panama","Peru","Philippines","Poland","Portugal","Qatar","Romania","Russia","Rwanda","Saudi Arabia","Senegal","Serbia","Singapore","Somalia","South Africa","South Korea","Spain","Sudan","Sweden","Switzerland","Taiwan","Tanzania","Thailand","Tunisia","Turkey","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States","Uruguay","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"];
 
 
@@ -1496,14 +1520,22 @@ function MainAppContent({ account, onLogout }) {
   const [toastQueue, setToastQueue] = useState([]);
   const [activeToast, setActiveToast] = useState(null);
   const [activeToastItems, setActiveToastItems] = useState([]);
+  const notificationSeenStorageKey = `rainx-seen-notif-ids:${account?.id || "anonymous"}`;
+  const notificationsHydratedRef = useRef(false);
+  const pendingNotificationEntriesRef = useRef([]);
   const seenNotificationIdsRef = useRef((() => {
     try {
-      const stored = JSON.parse(localStorage.getItem("rainx-seen-notif-ids") || "[]");
+      const stored = JSON.parse(localStorage.getItem(notificationSeenStorageKey) || "[]");
       return new Set(stored);
     } catch { return new Set(); }
   })());
   const persistSeenNotificationIds = () => {
-    try { localStorage.setItem("rainx-seen-notif-ids", JSON.stringify([...seenNotificationIdsRef.current].slice(-300))); } catch {}
+    try {
+      localStorage.setItem(
+        notificationSeenStorageKey,
+        JSON.stringify([...seenNotificationIdsRef.current].slice(-300)),
+      );
+    } catch {}
   };
   const [autoScan, setAutoScan] = useState(true);
   const lastCandleTimeRef = useRef({}); // `${symbol}_${tfKey}` -> datetime string of the last candle we saw
@@ -1770,6 +1802,13 @@ function MainAppContent({ account, onLogout }) {
   }, [announceRainxPresence]);
 
   const enqueueInAppNotification = useCallback((entry) => {
+    // Realtime can deliver the same row before the initial notification history
+    // has finished loading. Hold it until hydration has claimed all persisted IDs
+    // so an off-app push is not replayed as an in-app banner after launch.
+    if (!notificationsHydratedRef.current) {
+      pendingNotificationEntriesRef.current.push(entry);
+      return false;
+    }
     const key = entry?.id == null
       ? `${entry?.type || "notification"}:${entry?.title || ""}:${entry?.body || ""}`
       : String(entry.id);
@@ -1781,41 +1820,11 @@ function MainAppContent({ account, onLogout }) {
       if (oldest) seenNotificationIdsRef.current.delete(oldest);
     }
     setNotifications((list) => [entry, ...list.filter((n) => String(n.id) !== key)].slice(0, 50));
-    // Removed the custom in-app card — every notification now shows using the
-    // same native OS notification style Android already renders for closed-app
-    // pushes, whether the app is open or not. One consistent look, for free.
-    if ("serviceWorker" in navigator && Notification.permission === "granted") {
-      navigator.serviceWorker.ready.then((reg) => {
-        const entryData = entry.data || {};
-        const isMessage = entryData.kind === "chat"
-          || entryData.targetKind === "chat"
-          || entry.type === "message";
-        const isSignal = entryData.kind === "signal"
-          || entryData.targetKind === "signal"
-          || ["signal", "update", "warning"].includes(entry.type);
-        const isCommunity = entryData.kind === "community"
-          || entryData.targetKind === "post"
-          || entry.type === "community";
-        const tag = isMessage
-          ? "rainx-message"
-          : isSignal
-            ? "rainx-signal"
-            : isCommunity
-              ? "rainx-community"
-              : `rainx-${entry.type || "default"}`;
-        reg.showNotification(entry.title || "RainX", {
-          body: entry.body || "",
-          icon: `${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/")}icons/icon-192.png`,
-          badge: `${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/")}icons/icon-192.png`,
-          tag,
-          renotify: true,
-          vibrate: [200, 100, 200],
-          data: { category: entry.type || "default", ...entryData },
-        });
-      }).catch(() => {});
-    }
+    // The service worker owns OS notifications when the app is not visible.
+    // When RainX is open, this queue owns the single in-app banner instead.
+    setToastQueue((queue) => [...queue, entry]);
     return true;
-  }, []);
+  }, [notificationSeenStorageKey]);
 
   const openNotificationTarget = useCallback((entry) => {
     const data = entry?.data || {};
@@ -1900,16 +1909,11 @@ function MainAppContent({ account, onLogout }) {
   // ─── One account-scoped notification bridge for every RainX surface ────────
   useEffect(() => {
     if (!account?.id) return undefined;
-    const isForeground = () => document.visibilityState === "visible";
-    const receive = (entry) => {
-      if (!isForeground()) return;
-      enqueueInAppNotification(entry);
-    };
     const handleMsg = (event) => {
       if (event.data?.type === "RAINX_PUSH_RECEIVED") {
         const payload = event.data.payload || {};
         const data = payload.data || {};
-        receive({
+        if (document.visibilityState === "visible") enqueueInAppNotification({
           id: data.notificationId || data.messageId || (Date.now() + Math.random()),
           title: payload.title || "RainX",
           body: payload.body || "",
@@ -1959,7 +1963,7 @@ function MainAppContent({ account, onLogout }) {
       }, ({ new: row }) => {
         const [title, body] = communityCopy[row.type] || ["RainX Notification", "You have a new notification"];
         setCommunityUnreadCount((count) => count + 1);
-        receive({
+        if (document.visibilityState === "visible") enqueueInAppNotification({
           id: row.id,
           title,
           body,
@@ -1973,7 +1977,7 @@ function MainAppContent({ account, onLogout }) {
         event: "INSERT", schema: "public", table: "direct_messages",
         filter: `receiver_id=eq.${account.id}`,
       }, ({ new: message }) => {
-        receive({
+        if (document.visibilityState === "visible") enqueueInAppNotification({
           id: message.id,
           title: "New Message",
           body: message.content || "",
@@ -1992,7 +1996,7 @@ function MainAppContent({ account, onLogout }) {
         event: "INSERT", schema: "public", table: "user_notifications",
         filter: `user_id=eq.${account.id}`,
       }, ({ new: row }) => {
-        receive({
+        if (document.visibilityState === "visible") enqueueInAppNotification({
           id: row.id,
           title: row.title || "RainX",
           body: row.body || "",
@@ -2066,18 +2070,24 @@ function MainAppContent({ account, onLogout }) {
     if (!account?.id) return;
     (async () => {
       try {
+        const deliveredPushIds = await readDeliveredPushIds();
+        deliveredPushIds.forEach((id) => seenNotificationIdsRef.current.add(id));
         const { data } = await supabase.from("user_notifications").select("*").eq("user_id", account.id).order("created_at", { ascending: false }).limit(50);
-        if (data) {
-          const loaded = data.map((row) => ({
+        const loaded = (data || []).map((row) => ({
             id: row.id, title: row.title, body: row.body, type: row.type, section: row.section, read: row.read, time: new Date(row.created_at).toLocaleTimeString(),
-          }));
-          loaded.forEach((row) => seenNotificationIdsRef.current.add(String(row.id)));
-          persistSeenNotificationIds();
-          setNotifications(loaded);
-        }
+        }));
+        loaded.forEach((row) => seenNotificationIdsRef.current.add(String(row.id)));
+        persistSeenNotificationIds();
+        setNotifications(loaded);
       } catch { /* keep starting empty if this fails */ }
+      finally {
+        notificationsHydratedRef.current = true;
+        const pending = pendingNotificationEntriesRef.current;
+        pendingNotificationEntriesRef.current = [];
+        pending.forEach((entry) => enqueueInAppNotification(entry));
+      }
     })();
-  }, [account?.id]);
+  }, [account?.id, enqueueInAppNotification, notificationSeenStorageKey]);
 
   useEffect(() => {
     if (!account?.id) return;
