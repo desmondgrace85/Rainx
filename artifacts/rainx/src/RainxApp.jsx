@@ -12,17 +12,9 @@ import { supabase } from "./supabaseClient";
 import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, formatCount } from "./CommunityTab";
 import FullChartView from "./FullChartView";
 import LightweightChart from "./LightweightChart";
+import SpaceCoinsIntro from "./SpaceCoinsIntro";
+import SpaceCoinsDashboard from "./SpaceCoinsDashboard";
 
-import gamesMoonJet from "./assets/games/moonjet.jpg";
-import gamesTraderDuel from "./assets/games/trader-duel.jpg";
-import gamesBullBear from "./assets/games/bull-bear.jpg";
-import gamesGoldenVault from "./assets/games/golden-vault.jpg";
-import gamesHeroRocket from "./assets/games/hero-rocket.jpg";
-import gamesRainaAI from "./assets/games/raina-ai.jpg";
-import gamesAvatar1 from "./assets/games/avatar-1.jpg";
-import gamesAvatar2 from "./assets/games/avatar-2.jpg";
-import gamesAvatar3 from "./assets/games/avatar-3.jpg";
-import gamesAvatar4 from "./assets/games/avatar-4.jpg";
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
 
 // ---------- Design tokens ----------
@@ -221,7 +213,7 @@ function lsDelete(key) {
 }
 
 // ── URL-hash routing helpers — keeps current page alive across refresh ────────
-const _ROUTE_TABS = ["home","markets","community","games","more","history","scalping","subscribe"];
+const _ROUTE_TABS = ["home","markets","community","more","history","scalping","subscribe"];
 function routeRead() {
   try {
     const h = window.location.hash.slice(1);
@@ -1458,11 +1450,10 @@ function MainAppContent({ account, onLogout }) {
   const [communityProfileOpen, setCommunityProfileOpen] = useState(false);
   // Lazy keep-alive: set to true on first visit, stays true so the tab never unmounts again
   const [communityMounted, setCommunityMounted] = useState(false);
-  const [gamesMounted, setGamesMounted] = useState(false);
+  const [spaceCoinsScreen, setSpaceCoinsScreen] = useState(null);
   const [scalpingMounted,  setScalpingMounted]  = useState(false);
   useEffect(() => {
     if (tab === "community" && !communityMounted) setCommunityMounted(true);
-    if (tab === "games" && !gamesMounted) setGamesMounted(true);
     if (tab === "scalping"  && !scalpingMounted)  setScalpingMounted(true);
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1472,7 +1463,7 @@ function MainAppContent({ account, onLogout }) {
   const swipeRef   = useRef(null); // edge-swipe touch tracking
 
   const goTab = (key, forcedDir) => {
-    const ORDER = { home: 0, markets: 1, games: 2, community: 3, more: 4, history: 4, scalping: 4, subscribe: 4 };
+    const ORDER = { home: 0, markets: 1, community: 2, more: 3, history: 3, scalping: 3, subscribe: 3 };
     tabDirRef.current  = forcedDir ?? ((ORDER[key] ?? 0) >= (ORDER[prevTabRef.current] ?? 0) ? 1 : -1);
     prevTabRef.current = key;
     setTab(key);
@@ -2502,7 +2493,6 @@ function MainAppContent({ account, onLogout }) {
           <CommunityTab account={account} entitlement={entitlement} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />
         </div>
       )}
-      {gamesMounted && (<div style={{ display: tab === "games" ? "block" : "none", paddingBottom: 78 }}><GamesTab /></div>)}
       {/* Scalping — lazy keep-alive: mounts on first visit, never unmounts again */}
       {scalpingMounted && (
         <div style={{ display: tab === "scalping" ? "block" : "none", paddingBottom: 78 }}>
@@ -2693,7 +2683,7 @@ function MainAppContent({ account, onLogout }) {
         </div>
       )}
 
-      {!communityProfileOpen && (
+      {!communityProfileOpen && !spaceCoinsScreen && (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", zIndex: 100, background: T.card, opacity: 1, borderTop: `1px solid ${T.cardBorder}`, boxShadow: "0 -8px 24px rgba(0,0,0,0.12)", display: "flex", justifyContent: "space-around", padding: "6px 0 calc(20px + env(safe-area-inset-bottom))", "--rx-logo-bg": isDark ? "#000" : "#fff" }}>
           {[
             { key: "home", label: "Home", icon: (active) => (
@@ -2710,7 +2700,7 @@ function MainAppContent({ account, onLogout }) {
                 <polyline points="5.5 10 10 6.5 14 9.5 19 5"/>
               </svg>
             )},
-            { key: "games", center: true },
+            { key: "space-coins", center: true },
             { key: "community", label: "Community", icon: (active) => (
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="9" cy="7" r="3"/>
@@ -2733,7 +2723,7 @@ function MainAppContent({ account, onLogout }) {
                 <CenterNavLogo
                   key={key}
                   active={active}
-                  onActivate={() => { setProfileFromHeader(false); goTab(key); }}
+                  onActivate={() => { setProfileFromHeader(false); setSpaceCoinsScreen("intro"); }}
                 />
               ) : (
                 <button key={key} onClick={() => { if (key === "more") setMorePage(null); setProfileFromHeader(false); goTab(key); }} style={{ position: "relative", background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 52, padding: "4px 2px", transition: "color 0.15s" }}>
@@ -2745,6 +2735,16 @@ function MainAppContent({ account, onLogout }) {
             );
           })}
         </div>
+      )}
+      {spaceCoinsScreen === "intro" && (
+        <SpaceCoinsIntro
+          T={T}
+          onExplore={() => setSpaceCoinsScreen("dashboard")}
+          onBack={() => setSpaceCoinsScreen(null)}
+        />
+      )}
+      {spaceCoinsScreen === "dashboard" && (
+        <SpaceCoinsDashboard T={T} onBack={() => setSpaceCoinsScreen("intro")} />
       )}
       </div>
     </PullToRefresh>
@@ -3295,6 +3295,8 @@ function fmtTime(secs) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 function GamesTab() {
+  return null;
+  /*
   const [activeCategory, setActiveCategory] = React.useState("All Games");
   const [activeRainaState, setActiveRainaState] = React.useState(0);
   const [pageReady, setPageReady] = React.useState(false);
@@ -3479,6 +3481,8 @@ function GamesTab() {
 
 // Home Tab — main redesigned screen
 // ─────────────────────────────────────────────────────────────────────────────
+  */
+}
 function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessions, sessionSecsLeft, startAnalysisSession, seriesMap, signalsMap, themeMode, activeMarkets = [], addActiveMarket, removeActiveMarket, maxActiveMarkets = 3 }) {
   const [showAddMarket, setShowAddMarket] = useState(false);
   const [showActivity, setShowActivity] = useState(false);
