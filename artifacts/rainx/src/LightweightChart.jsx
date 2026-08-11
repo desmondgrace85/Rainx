@@ -52,6 +52,7 @@ export default function LightweightChart({
   compact = false,
   isDark = false,
   onLoadMore = null,
+  bgColor: bgColorProp = null, // override the chart canvas background to match its surrounding card
 }) {
   const containerRef  = useRef(null);
   const chartRef      = useRef(null);
@@ -71,7 +72,10 @@ export default function LightweightChart({
     if (!containerRef.current) return;
     const el = containerRef.current;
 
-    const bgColor   = isDark ? "#111" : "#ffffff";
+    // Chart canvas background was hardcoded to pure #fff/near-black, which
+    // didn't match the app's actual cream-toned card background — that
+    // mismatch is what showed up as a "white rectangle" behind the chart.
+    const bgColor   = bgColorProp || (isDark ? "#111" : "#ffffff");
     const textColor = isDark ? "rgba(220,225,235,0.55)" : "rgba(18,18,42,0.5)";
     const gridColor = isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)";
     const borderCol = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
@@ -194,7 +198,7 @@ export default function LightweightChart({
       prevBarsRef.current  = []; // reset so next mount does full setData
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [compact, isDark]);
+  }, [compact, isDark, bgColorProp]);
 
   // ── Update candle data — smart: use update() for live ticks, setData() for full reloads
   useEffect(() => {
@@ -490,9 +494,9 @@ export default function LightweightChart({
       if (!touch) return;
       e.preventDefault();
       const deltaY = touch.clientY - startY;
-      // Drag down = zoom in (bigger candles), drag up = zoom out — matches
+      // Drag up = zoom in (bigger candles), drag down = zoom out — matches
       // the MT5 / TradingView price-axis drag convention.
-      const factor = Math.exp(-deltaY / 150);
+      const factor = Math.exp(deltaY / 150);
       priceZoomRef.current = Math.min(4, Math.max(0.15, startZoom * factor));
       try { chartRef.current?.applyOptions({}); } catch {}
     };

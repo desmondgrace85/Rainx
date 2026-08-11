@@ -3989,6 +3989,7 @@ function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }
                   containerHeight={42}
                   compact
                   isDark={T.ink === "#0F0E0B"}
+                  bgColor={T.card}
                 />
               </div>
               {/* Right: price, change, status, full chart button */}

@@ -363,10 +363,10 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
       if (!touch) return;
       e.preventDefault(); // only the price-axis strip consumes vertical movement
       const deltaY = touch.clientY - startY;
-      // Dragging down = zoom in (smaller price range, bigger candles).
-      // Dragging up = zoom out (wider price range, smaller candles).
+      // Dragging up = zoom in (smaller price range, bigger candles).
+      // Dragging down = zoom out (wider price range, smaller candles).
       // Matches the convention used by MT5 / TradingView's price-axis drag.
-      const factor = Math.exp(-deltaY / 150);
+      const factor = Math.exp(deltaY / 150);
       const nextZoom = Math.min(4, Math.max(0.15, startZoom * factor));
       priceZoomRef.current = nextZoom;
       // Nudging chart options forces it to re-invoke autoscaleInfoProvider
