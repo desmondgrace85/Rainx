@@ -101,6 +101,61 @@ function resampleToHours(bars: CandleBar[], hours: number): CandleBar[] {
 
 interface CandleBar { time: number; open: number; high: number; low: number; close: number; }
 
+// ── Gold spot price patch ────────────────────────────────────────────────
+// Yahoo Finance has no real spot XAU/USD ticker — XAUUSD is mapped to GC=F
+// (COMEX futures), which trades at a premium/discount to spot and can be
+// well off broker/MT5-style pricing. goldprice.dev's anonymous endpoint is
+// free forever, needs no signup/API key/card (100 req/IP/hour), and gives a
+// real spot price. We use it ONLY to correct the price LEVEL — every bar in
+// the Yahoo candle series is shifted by the same offset so shapes/movement
+// stay identical, just repositioned to sit at the real current price.
+let goldSpotCache: { price: number; fetchedAt: number } | null = null;
+const GOLD_SPOT_TTL_MS = 45_000; // cache 45s — plenty inside the 100/hour anonymous limit
+
+async function getGoldSpotPrice(): Promise<number | null> {
+  if (goldSpotCache && Date.now() - goldSpotCache.fetchedAt < GOLD_SPOT_TTL_MS) {
+    return goldSpotCache.price;
+  }
+  try {
+    const res = await fetch("https://api.goldprice.dev/v1/prices?symbol=XAU-USD-SPOT", {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!res.ok) throw new Error(`goldprice.dev ${res.status}`);
+    const json = await res.json() as any;
+    // Response shape isn't fully pinned down from docs alone — check the
+    // plausible spots defensively rather than assume one exact structure.
+    const candidate =
+      json?.price ??
+      json?.data?.price ??
+      json?.prices?.[0]?.price ??
+      (Array.isArray(json) ? json[0]?.price : undefined);
+    const price = Number(candidate);
+    if (!isFinite(price) || price <= 0) throw new Error("unparseable price in goldprice.dev response");
+    goldSpotCache = { price, fetchedAt: Date.now() };
+    return price;
+  } catch (err: any) {
+    // Fail quietly — fall back to unpatched Yahoo futures price rather than
+    // breaking the whole candles endpoint over a price-correction extra.
+    if (goldSpotCache) return goldSpotCache.price; // serve stale cache over nothing
+    return null;
+  }
+}
+
+function applyGoldSpotPatch(bars: CandleBar[], spotPrice: number): CandleBar[] {
+  if (!bars.length) return bars;
+  const lastClose = bars[bars.length - 1].close;
+  const offset = spotPrice - lastClose;
+  if (!isFinite(offset) || offset === 0) return bars;
+  return bars.map(b => ({
+    time: b.time,
+    open:  b.open  + offset,
+    high:  b.high  + offset,
+    low:   b.low   + offset,
+    close: b.close + offset,
+  }));
+}
+
 async function fetchFromYahoo(yahooSym: string, interval: string, before?: number): Promise<CandleBar[]> {
   const yfInterval = interval === "2h" || interval === "4h" ? "1h" : interval;
   const params = getYFParams(yfInterval, before);
@@ -155,6 +210,13 @@ router.get("/", async (req: Request, res: Response) => {
 
   try {
     let bars = await fetchFromYahoo(yahooSym, iv, beforeTs);
+
+    // Correct gold's price LEVEL to match real spot — see applyGoldSpotPatch
+    // above for why. Only runs for XAUUSD; every other symbol is untouched.
+    if (symbol.toUpperCase().trim() === "XAUUSD" && bars.length) {
+      const spot = await getGoldSpotPrice();
+      if (spot != null) bars = applyGoldSpotPatch(bars, spot);
+    }
 
     if (beforeTs) {
       bars = bars.filter(b => b.time < beforeTs);
