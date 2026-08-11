@@ -3,6 +3,7 @@ import {
   ArrowLeft, ArrowRight, BarChart3, Bell, ChevronRight, CircleDollarSign,
   Coins, Gem, Rocket, Sparkles, Star, TrendingUp, WalletCards,
 } from "lucide-react";
+import planetReference from "./assets/space-coins-planet.jpg";
 
 function useEdgeBack(onBack) {
   const swipeRef = useRef(null);
@@ -31,6 +32,7 @@ const COINS = [
 function PlanetScene({ T, active, onInteract }) {
   return (
     <button type="button" className={`sc-planet-scene${active ? " is-reacting" : ""}`} onClick={onInteract} aria-label="Interact with the rotating planet">
+      <img className="sc-planet-reference" src={planetReference} alt="" />
       <span className="sc-planet-glow" style={{ background: `radial-gradient(circle, ${T.gold}5c, transparent 68%)` }} />
       <span className="sc-planet-ring sc-planet-ring-back" style={{ borderColor: `${T.goldBright}99` }} />
       <span className="sc-planet" style={{ background: `radial-gradient(circle at 32% 26%, ${T.goldBright}, ${T.gold} 47%, ${T.card})`, boxShadow: `inset -12px -8px 16px ${T.ink}55, 0 12px 24px ${T.gold}24` }}>
@@ -90,6 +92,8 @@ export default function SpaceCoinsDashboard({ T, onBack }) {
         .sc-create-button { display:flex; align-items:center; gap:11px; margin-top:17px; border:1px solid var(--sc-gold); border-radius:9px; padding:9px 10px 9px 12px; color:var(--sc-gold-bright); background:var(--sc-card); font:700 11px 'Montserrat',sans-serif; cursor:pointer; }
         .sc-create-button span { display:grid; place-items:center; width:21px; height:21px; margin:-4px -5px -4px 1px; border-radius:6px; color:var(--sc-ink); background:var(--sc-gold); }
         .sc-planet-scene { position:absolute; z-index:1; right:-11px; top:2px; width:185px; height:150px; border:0; background:transparent; cursor:pointer; }
+         .sc-planet-reference { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:center; mix-blend-mode:multiply; pointer-events:none; }
+         .sc-planet-scene > :not(.sc-planet-reference) { display:none; }
         .sc-planet-glow { position:absolute; inset:4px; border-radius:50%; filter:blur(8px); }
         .sc-planet { position:absolute; z-index:2; left:59px; top:39px; width:75px; height:75px; overflow:hidden; border-radius:50%; }
         .sc-planet-line { position:absolute; left:-10px; top:25px; width:105px; height:9px; border-radius:50%; transform:rotate(-16deg); }

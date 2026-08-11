@@ -447,6 +447,16 @@ input, textarea, [contenteditable] {
   -webkit-user-select: text;
 }
 
+/* Space Coins is a standalone flow, not content below the RainX home feed. */
+.sc-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  overflow-y: auto;
+  isolation: isolate;
+  overscroll-behavior: contain;
+}
+
 .rx-pull-refresh-indicator {
   position: fixed;
   top: 0;

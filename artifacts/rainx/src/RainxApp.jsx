@@ -213,7 +213,7 @@ function lsDelete(key) {
 }
 
 // ── URL-hash routing helpers — keeps current page alive across refresh ────────
-const _ROUTE_TABS = ["home","markets","community","more","history","scalping","subscribe"];
+const _ROUTE_TABS = ["home","markets","community","more","history","scalping","subscribe","space-coins"];
 function routeRead() {
   try {
     const h = window.location.hash.slice(1);
@@ -1442,7 +1442,7 @@ function MainAppContent({ account, onLogout }) {
 
   const [tab, setTab] = useState(() => {
     const { tab: urlTab } = routeRead();
-    if (urlTab) return urlTab;
+    if (urlTab && urlTab !== "space-coins") return urlTab;
     const t = lsGet("rainx-tab");
     return _ROUTE_TABS.includes(t) ? t : "home";
   });
@@ -1450,7 +1450,10 @@ function MainAppContent({ account, onLogout }) {
   const [communityProfileOpen, setCommunityProfileOpen] = useState(false);
   // Lazy keep-alive: set to true on first visit, stays true so the tab never unmounts again
   const [communityMounted, setCommunityMounted] = useState(false);
-  const [spaceCoinsScreen, setSpaceCoinsScreen] = useState(null);
+  const [spaceCoinsScreen, setSpaceCoinsScreen] = useState(() => {
+    const { tab: urlTab, sub } = routeRead();
+    return urlTab === "space-coins" && (sub === "intro" || sub === "dashboard") ? sub : null;
+  });
   const [scalpingMounted,  setScalpingMounted]  = useState(false);
   useEffect(() => {
     if (tab === "community" && !communityMounted) setCommunityMounted(true);
@@ -1754,11 +1757,22 @@ function MainAppContent({ account, onLogout }) {
   useEffect(() => { lsSet("rainx-tab", tab); }, [tab]);
   useEffect(() => { if (morePage !== null) lsSet("rainx-morepage", morePage); else lsDelete("rainx-morepage"); }, [morePage]);
   // Keep URL hash in sync with current route state (replaceState — no new history entry)
-  useEffect(() => { routeReplace(tab, morePage, profileFromHeader ? "h" : null); }, [tab, morePage, profileFromHeader]);
+  useEffect(() => {
+    if (spaceCoinsScreen) {
+      routeReplace("space-coins", spaceCoinsScreen, null);
+    } else {
+      routeReplace(tab, morePage, profileFromHeader ? "h" : null);
+    }
+  }, [tab, morePage, profileFromHeader, spaceCoinsScreen]);
   // Sync browser Back/Forward to React state
   useEffect(() => {
     const onPop = () => {
       const { tab: t, sub: mp, flag } = routeRead();
+      if (t === "space-coins") {
+        setSpaceCoinsScreen(mp === "dashboard" ? "dashboard" : "intro");
+        return;
+      }
+      setSpaceCoinsScreen(null);
       if (t) { prevTabRef.current = t; setTab(t); }
       setMorePage(mp ?? null);
       setProfileFromHeader(flag === "h");
@@ -2739,12 +2753,25 @@ function MainAppContent({ account, onLogout }) {
       {spaceCoinsScreen === "intro" && (
         <SpaceCoinsIntro
           T={T}
-          onExplore={() => setSpaceCoinsScreen("dashboard")}
-          onBack={() => setSpaceCoinsScreen(null)}
+          onExplore={() => {
+            setSpaceCoinsScreen("dashboard");
+            routeWrite("space-coins", "dashboard", null);
+          }}
+          onBack={() => {
+            setSpaceCoinsScreen(null);
+            setTab("home");
+            routeWrite("home", null, null);
+          }}
         />
       )}
       {spaceCoinsScreen === "dashboard" && (
-        <SpaceCoinsDashboard T={T} onBack={() => setSpaceCoinsScreen("intro")} />
+        <SpaceCoinsDashboard
+          T={T}
+          onBack={() => {
+            setSpaceCoinsScreen("intro");
+            routeWrite("space-coins", "intro", null);
+          }}
+        />
       )}
       </div>
     </PullToRefresh>

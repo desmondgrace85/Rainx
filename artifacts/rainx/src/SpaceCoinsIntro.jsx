@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
+import rocketReference from "./assets/space-coins-rocket.jpg";
+import rainxLogo from "./assets/rainx-logo-transparent.png";
 
 function useEdgeBack(onBack) {
   const swipeRef = useRef(null);
@@ -31,6 +33,7 @@ function RocketScene({ T, active, onInteract }) {
       onClick={onInteract}
       className={`sc-scene sc-rocket-scene${active ? " is-reacting" : ""}`}
     >
+      <img className="sc-reference-art" src={rocketReference} alt="" />
       <div className="sc-orbit sc-orbit-one" style={{ borderColor: `${T.gold}30` }} />
       <div className="sc-orbit sc-orbit-two" style={{ borderColor: `${T.goldBright}24` }} />
       <Star style={{ top: "14%", left: "17%", color: T.goldBright }} />
@@ -82,8 +85,10 @@ export default function SpaceCoinsIntro({ T, onExplore, onBack }) {
       {...edgeBack}
     >
       <style>{`
-        .sc-screen { position:fixed; inset:0; z-index:600; overflow-y:auto; isolation:isolate; font-family:${"'Montserrat', sans-serif"}; }
+         .sc-screen { font-family:${"'Montserrat', sans-serif"}; }
         .sc-intro-inner { width:min(100%, 480px); min-height:100%; margin:0 auto; padding:18px 24px 28px; display:flex; flex-direction:column; }
+         .sc-brand { display:flex; align-items:center; gap:9px; color:var(--sc-paper); font-size:18px; font-weight:800; letter-spacing:-.04em; }
+         .sc-brand img { width:28px; height:28px; object-fit:contain; }
         .sc-back { width:40px; height:40px; display:grid; place-items:center; border:1px solid var(--sc-border); border-radius:13px; background:var(--sc-card); color:var(--sc-paper); cursor:pointer; }
         .sc-kicker { margin:34px 0 8px; font-size:16px; letter-spacing:.01em; }
         .sc-title { margin:0; font-size:clamp(36px, 10vw, 54px); line-height:1.02; letter-spacing:-.055em; font-weight:800; }
@@ -93,6 +98,8 @@ export default function SpaceCoinsIntro({ T, onExplore, onBack }) {
         .sc-primary { margin-top:22px; align-self:flex-start; display:flex; align-items:center; gap:16px; border:0; border-radius:999px; padding:13px 16px 13px 20px; color:var(--sc-ink); background:var(--sc-gold); font:700 13px 'Montserrat',sans-serif; cursor:pointer; box-shadow:0 10px 28px var(--sc-gold-shadow); }
         .sc-primary span { display:grid; place-items:center; width:25px; height:25px; border-radius:50%; background:var(--sc-ink); color:var(--sc-gold-bright); }
         .sc-scene { position:relative; display:block; width:100%; height:390px; margin-top:auto; border:0; background:transparent; cursor:pointer; touch-action:manipulation; }
+         .sc-reference-art { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:center bottom; mix-blend-mode:multiply; pointer-events:none; }
+         .sc-rocket-scene > :not(.sc-reference-art) { display:none; }
         .sc-star { position:absolute; z-index:1; font-size:16px; opacity:.85; animation:sc-twinkle 2.8s ease-in-out infinite; }
         .sc-orbit { position:absolute; left:50%; top:53%; width:250px; height:92px; border:1px solid; border-radius:50%; transform:translate(-50%,-50%) rotate(-12deg); }
         .sc-orbit-two { width:188px; height:64px; transform:translate(-50%,-50%) rotate(28deg); }
@@ -143,6 +150,7 @@ export default function SpaceCoinsIntro({ T, onExplore, onBack }) {
           "--sc-muted": T.muted,
         }}
       >
+         <div className="sc-brand"><img src={rainxLogo} alt="" />RainX</div>
         <button type="button" className="sc-back" onClick={onBack} aria-label="Back to RainX">
           <ArrowLeft size={18} />
         </button>
