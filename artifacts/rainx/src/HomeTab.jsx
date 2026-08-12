@@ -155,7 +155,7 @@ function CandlestickChart({ candles, overlays, inst, containerHeight = 260 }) {
       overlays.forEach(o => {
         if (o.type !== "entry_zone") return;
         const y1 = toY(o.priceHigh), y2 = toY(o.priceLow);
-        ctx.fillStyle = "rgba(198,161,91,0.09)";
+        ctx.fillStyle = "rgba(255,210,77,0.11)";
         ctx.fillRect(pad.left, y1, cW, y2 - y1);
         [y1, y2].forEach(y => {
           ctx.beginPath(); ctx.strokeStyle = GOLD; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);

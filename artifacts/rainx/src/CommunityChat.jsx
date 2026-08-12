@@ -50,7 +50,7 @@ function playSendTick() {
 
 const buildT = (tokens) => ({
   ink: "#0F0E0B", card: "#1C1913", cardBorder: "#332C1F",
-  gold: "#FFD24D", goldBright: "#FFD24D", paper: "#F2EDE0", muted: "#9C947F",
+  gold: "#FFD24D", goldBright: "#FFD24D", goldGradient: "linear-gradient(135deg, #FFF3AE 0%, #FFD24D 34%, #E2A400 70%, #FFF0A0 100%)", paper: "#F2EDE0", muted: "#9C947F",
   ...(tokens || {}),
 });
 
@@ -326,7 +326,7 @@ function PinnedBar({ pins, onViewPins, T }) {
   if (!pins || !pins.length) return null;
   const latest = pins[pins.length - 1];
   return (
-    <div style={{ background: "rgba(198,161,91,0.1)", borderBottom: "1px solid rgba(198,161,91,0.2)", padding: "8px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flexShrink: 0 }} onClick={onViewPins}>
+    <div style={{ background: "rgba(255,210,77,0.11)", borderBottom: "1px solid rgba(255,210,77,0.24)", padding: "8px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flexShrink: 0 }} onClick={onViewPins}>
       <Pin size={13} color="#FFD24D" />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 10, color: "#FFD24D", fontWeight: 700, marginBottom: 1 }}>
@@ -400,7 +400,7 @@ function MiniChatSettings({ userId, userName, isPro, onClose, T }) {
           <SettingRow label="Show online status" sublabel="Let this user see when you're currently online" value={settings.showOnline} onChange={v => update("showOnline", v)} gated isPro={isPro} T={T} />
         </div>
         {!isPro && (
-          <div style={{ margin: "12px 12px 0", background: "rgba(198,161,91,0.08)", border: "1px solid rgba(198,161,91,0.22)", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ margin: "12px 12px 0", background: "rgba(255,210,77,0.09)", border: "1px solid rgba(255,210,77,0.24)", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
             <Lock size={14} color={T.gold} />
             <span style={{ fontSize: 12, color: T.muted }}>Upgrade to <strong style={{ color: T.gold }}>Subscriber</strong> or <strong style={{ color: T.gold }}>Premium</strong> to enable per-chat privacy controls.</span>
           </div>
@@ -458,7 +458,7 @@ function GeneralChatSettings({ account, isPro, onClose, T }) {
         </div>
 
         {!isPro && (
-          <div style={{ margin: "0 12px 12px", background: "rgba(198,161,91,0.08)", border: "1px solid rgba(198,161,91,0.22)", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ margin: "0 12px 12px", background: "rgba(255,210,77,0.09)", border: "1px solid rgba(255,210,77,0.24)", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
             <Lock size={14} color={T.gold} />
             <span style={{ fontSize: 12, color: T.muted }}>Last seen &amp; online status controls require <strong style={{ color: T.gold }}>Subscriber</strong> or <strong style={{ color: T.gold }}>Premium</strong>.</span>
           </div>
@@ -1398,7 +1398,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
               refreshPins();
               onOpenDM(profile);
             }}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: isPinned ? "rgba(198,161,91,0.06)" : "none", border: "none", cursor: "pointer", borderBottom: "1px solid " + T.cardBorder }}>
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: isPinned ? "rgba(255,210,77,0.07)" : "none", border: "none", cursor: "pointer", borderBottom: "1px solid " + T.cardBorder }}>
               <div style={{ position: "relative", flexShrink: 0 }}>
                 <Avatar name={profile && profile.display_name} avatarUrl={profile && profile.avatar_url} size={46} />
                 {isOnline(profile && profile.last_seen) && (

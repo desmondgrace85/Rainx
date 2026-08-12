@@ -68,6 +68,11 @@
 
 /* LIGHT MODE */
 :root {
+  --rx-gold-base: #FFD24D;
+  --rx-gold-highlight: #FFF3AE;
+  --rx-gold-deep: #E2A400;
+  --rx-gold-gradient: linear-gradient(135deg, #FFF3AE 0%, #FFD24D 34%, #E2A400 70%, #FFF0A0 100%);
+  --rx-gold-text-gradient: linear-gradient(180deg, #FFF3AE 0%, #FFD24D 44%, #E2A400 100%);
   --button-outline: rgba(0, 0, 0, 0.1);
   --badge-outline: rgba(0, 0, 0, 0.05);
 
@@ -325,6 +330,35 @@
   }
 }
 
+/* The reference gold is bright and warm, with a small highlight and a richer
+   amber edge. These selectors cover legacy inline token usage without changing
+   the surrounding layout or the non-gold palette. */
+[style*="background: rgb(255, 210, 77)"],
+[style*="background:rgb(255, 210, 77)"],
+[style*="background: linear-gradient(135deg, rgb(255, 210, 77)"],
+[style*="background:linear-gradient(135deg, rgb(255, 210, 77)"] {
+  background: var(--rx-gold-gradient) !important;
+  background-image: var(--rx-gold-gradient) !important;
+}
+
+[style*="color: rgb(255, 210, 77)"],
+[style*="color:rgb(255, 210, 77)"] {
+  color: transparent !important;
+  background-image: var(--rx-gold-text-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+svg[color="#FFD24D"] path,
+svg[color="#FFD24D"] line,
+svg[color="#FFD24D"] polyline,
+svg[color="#FFD24D"] polygon,
+svg[color="#FFD24D"] circle,
+svg[color="#FFD24D"] rect {
+  stroke: url("#rx-gold-gradient") !important;
+}
+
 /**
  * Using the elevate system.
  * Automatic contrast adjustment.
@@ -549,7 +583,7 @@ input, textarea, [contenteditable] {
   inset: 2px;
   border-radius: 50%;
   background:
-    radial-gradient(circle, rgba(227, 192, 119, 0.22) 0%, rgba(198, 161, 91, 0.12) 38%, rgba(227, 192, 119, 0.08) 58%, transparent 74%);
+    radial-gradient(circle, rgba(255, 243, 174, 0.25) 0%, rgba(226, 164, 0, 0.16) 38%, rgba(255, 210, 77, 0.1) 58%, transparent 74%);
   filter: blur(4px);
   opacity: 0.84;
   animation: rx-center-aura 3.4s ease-in-out infinite;
@@ -559,14 +593,14 @@ input, textarea, [contenteditable] {
   inset: 10px;
   z-index: 4;
   overflow: hidden;
-  border: 1px solid rgba(227, 192, 119, 0.52);
+  border: 1px solid rgba(255, 243, 174, 0.62);
   border-radius: 50%;
   background: var(--rx-logo-bg, #fff);
   box-shadow:
-    0 0 0 3px rgba(198, 161, 91, 0.12),
-    0 0 14px rgba(227, 192, 119, 0.52),
-    0 0 28px rgba(198, 161, 91, 0.22),
-    inset 0 0 14px rgba(227, 192, 119, 0.2);
+    0 0 0 3px rgba(226, 164, 0, 0.16),
+    0 0 14px rgba(255, 243, 174, 0.62),
+    0 0 28px rgba(226, 164, 0, 0.28),
+    inset 0 0 14px rgba(255, 210, 77, 0.24);
   animation: rx-center-core 4.8s ease-in-out infinite;
 }
 
@@ -576,15 +610,15 @@ input, textarea, [contenteditable] {
   display: block;
   object-fit: cover;
   transform: scale(1.02);
-  filter: saturate(1.08) contrast(1.05) drop-shadow(0 0 5px rgba(255, 196, 55, 0.3));
+  filter: saturate(1.08) contrast(1.05) drop-shadow(0 0 5px rgba(255, 210, 77, 0.42));
 }
 
 .rx-center-nav-orbit {
   inset: 2px;
   z-index: 2;
-  border: 1px solid rgba(198, 161, 91, 0.58);
+  border: 1px solid rgba(255, 210, 77, 0.68);
   border-radius: 50%;
-  box-shadow: 0 0 8px rgba(227, 192, 119, 0.46);
+  box-shadow: 0 0 8px rgba(255, 243, 174, 0.58);
   animation: rx-center-orbit 9s linear infinite;
 }
 
@@ -597,12 +631,12 @@ input, textarea, [contenteditable] {
   height: 5px;
   border-radius: 50%;
   background: #FFD24D;
-  box-shadow: 0 0 7px 2px rgba(198, 161, 91, 0.96);
+  box-shadow: 0 0 7px 2px rgba(226, 164, 0, 0.98);
 }
 
 .rx-center-nav-orbit-two {
   inset: -1px;
-  border-color: rgba(198, 161, 91, 0.34);
+  border-color: rgba(226, 164, 0, 0.42);
   transform: rotate(67deg) scale(0.78, 1);
   animation-name: rx-center-orbit-two;
   animation-duration: 7s;
@@ -613,7 +647,7 @@ input, textarea, [contenteditable] {
   top: 50%;
   left: -2px;
   background: #FFD24D;
-  box-shadow: 0 0 7px 2px rgba(227, 192, 119, 0.9);
+  box-shadow: 0 0 7px 2px rgba(255, 243, 174, 0.96);
 }
 
 .rx-center-nav-particle {
@@ -622,7 +656,7 @@ input, textarea, [contenteditable] {
   height: 3px;
   border-radius: 50%;
   background: #FFD24D;
-  box-shadow: 0 0 6px 2px rgba(198, 161, 91, 0.8);
+  box-shadow: 0 0 6px 2px rgba(226, 164, 0, 0.88);
   animation: rx-center-particle 3.2s ease-in-out infinite;
 }
 
@@ -634,7 +668,7 @@ input, textarea, [contenteditable] {
 .rx-center-nav-ripple {
   inset: 7px;
   z-index: 1;
-  border: 1px solid rgba(198, 161, 91, 0);
+  border: 1px solid rgba(226, 164, 0, 0);
   border-radius: 50%;
   opacity: 0;
   transform: scale(0.72);
@@ -717,8 +751,8 @@ input, textarea, [contenteditable] {
 }
 
 @keyframes rx-center-ripple {
-  0% { opacity: 0.8; transform: scale(0.72); border-color: rgba(227, 192, 119, 0.9); box-shadow: 0 0 10px rgba(198, 161, 91, 0.8); }
-  100% { opacity: 0; transform: scale(1.75); border-color: rgba(198, 161, 91, 0); box-shadow: 0 0 25px rgba(227, 192, 119, 0); }
+  0% { opacity: 0.8; transform: scale(0.72); border-color: rgba(255, 243, 174, 0.96); box-shadow: 0 0 10px rgba(226, 164, 0, 0.88); }
+  100% { opacity: 0; transform: scale(1.75); border-color: rgba(226, 164, 0, 0); box-shadow: 0 0 25px rgba(255, 243, 174, 0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -735,7 +769,9 @@ input, textarea, [contenteditable] {
   }
 }
 
-/* Keep legacy inline SVG gold marks on the single reference gold. */
-svg path[fill="#E3C077"] {
-  fill: #FFD24D !important;
+/* Keep legacy inline SVG gold marks on the shared metallic treatment. */
+svg path[fill="#E3C077"],
+svg path[fill="#dcab00"],
+svg path[fill="#C6A15B"] {
+  fill: url("#rx-gold-gradient") !important;
 }

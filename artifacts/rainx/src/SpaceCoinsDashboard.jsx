@@ -64,16 +64,16 @@ export default function SpaceCoinsDashboard({ T, onBack }) {
          .sc-dashboard-shell { width:min(100%,480px); min-height:100%; margin:0 auto; padding:12px 8px 86px; }
          .sc-dashboard-top { display:flex; align-items:center; gap:9px; margin-bottom:14px; }
          .sc-dashboard-heading { flex:1; font-size:16px; font-weight:800; letter-spacing:-.04em; }
-         .sc-dashboard-mark { width:27px; height:27px; display:grid; place-items:center; border:0; border-radius:50%; color:var(--sc-ink); background:linear-gradient(135deg,var(--sc-gold-bright),var(--sc-gold)); box-shadow:0 4px 10px var(--sc-gold-shadow); }
+          .sc-dashboard-mark { width:27px; height:27px; display:grid; place-items:center; border:0; border-radius:50%; color:var(--sc-ink); background:var(--sc-gold-gradient); box-shadow:0 4px 10px var(--sc-gold-shadow); }
          .sc-bell { width:28px; height:28px; display:grid; place-items:center; border:0; border-radius:50%; background:transparent; color:var(--sc-paper); }
          .sc-create-card { position:relative; min-height:136px; overflow:hidden; border:1px solid var(--sc-gold-border); border-radius:15px; padding:18px 14px; background:var(--sc-create-bg); }
          .sc-create-copy { position:relative; z-index:2; width:61%; }
          .sc-create-title { margin:0; font-size:15px; line-height:1.25; font-weight:800; white-space:nowrap; }
          .sc-create-sub { margin:7px 0 0; color:var(--sc-muted); font-size:10px; line-height:1.45; }
          .sc-create-button { display:flex; align-items:center; gap:10px; margin-top:14px; border:1px solid var(--sc-gold); border-radius:7px; padding:7px 8px 7px 10px; color:var(--sc-gold-bright); background:var(--sc-card); font:700 10px 'Montserrat',sans-serif; cursor:pointer; }
-         .sc-create-button span { display:grid; place-items:center; width:22px; height:22px; margin:-4px -4px -4px 1px; border-radius:6px; color:var(--sc-ink); background:var(--sc-gold); }
+          .sc-create-button span { display:grid; place-items:center; width:22px; height:22px; margin:-4px -4px -4px 1px; border-radius:6px; color:var(--sc-ink); background:var(--sc-gold-gradient); }
          .sc-planet-scene { position:absolute; z-index:1; right:0; top:0; width:47%; height:100%; overflow:hidden; pointer-events:none; }
-         .sc-planet-reference { position:absolute; right:-7px; top:8px; width:165px; height:120px; object-fit:cover; object-position:right center; animation:sc-planet-turn 7s ease-in-out infinite; filter:drop-shadow(0 9px 11px rgba(198,161,91,.18)); }
+          .sc-planet-reference { position:absolute; right:-7px; top:8px; width:165px; height:120px; object-fit:cover; object-position:right center; animation:sc-planet-turn 7s ease-in-out infinite; filter:drop-shadow(0 9px 11px rgba(226,164,0,.22)); }
          .sc-quick-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin:14px 0 22px; }
          .sc-quick { min-width:0; min-height:65px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; padding:8px 2px; color:var(--sc-paper); background:var(--sc-card); border:1px solid var(--sc-border); border-radius:11px; font:600 9px 'Montserrat',sans-serif; cursor:pointer; }
          .sc-quick-icon { display:grid; place-items:center; width:27px; height:27px; border-radius:9px; color:var(--sc-gold-bright); background:var(--sc-gold-soft); }
@@ -100,7 +100,7 @@ export default function SpaceCoinsDashboard({ T, onBack }) {
          .sc-bottom-nav { position:fixed; z-index:4; bottom:0; left:50%; width:min(100%,480px); display:grid; grid-template-columns:repeat(5,1fr); align-items:end; padding:8px 8px 7px; transform:translateX(-50%); border-top:1px solid var(--sc-border); background:color-mix(in srgb, var(--sc-ink) 94%, transparent); backdrop-filter:blur(12px); }
          .sc-nav-item { display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0; border:0; padding:0; color:var(--sc-muted); background:transparent; font:600 8px 'Montserrat',sans-serif; cursor:pointer; }
          .sc-nav-item.is-active { color:var(--sc-gold-bright); }
-         .sc-nav-center { width:40px; height:40px; display:grid; place-items:center; margin:-22px auto 0; border:3px solid var(--sc-ink); border-radius:50%; color:var(--sc-ink); background:linear-gradient(135deg,var(--sc-gold-bright),var(--sc-gold)); box-shadow:0 4px 14px var(--sc-gold-shadow); }
+          .sc-nav-center { width:40px; height:40px; display:grid; place-items:center; margin:-22px auto 0; border:3px solid var(--sc-ink); border-radius:50%; color:var(--sc-ink); background:var(--sc-gold-gradient); box-shadow:0 4px 14px var(--sc-gold-shadow); }
          .sc-toast { position:fixed; z-index:5; left:50%; bottom:76px; transform:translateX(-50%); padding:11px 15px; border:1px solid var(--sc-gold-border); border-radius:999px; color:var(--sc-paper); background:var(--sc-card); box-shadow:0 8px 25px rgba(0,0,0,.28); font-size:11px; font-weight:700; white-space:nowrap; animation:sc-toast-in .2s ease-out; }
          @keyframes sc-dashboard-enter { from { opacity:0; transform:translate3d(100%,0,0); } to { opacity:1; transform:translate3d(0,0,0); } }
          @keyframes sc-planet-turn { 0%,100% { transform:rotate(-2deg) scale(1); } 50% { transform:rotate(2deg) scale(1.02); } }
@@ -117,6 +117,7 @@ export default function SpaceCoinsDashboard({ T, onBack }) {
           "--sc-border": T.cardBorder,
           "--sc-gold": T.gold,
           "--sc-gold-bright": T.goldBright,
+           "--sc-gold-gradient": T.goldGradient,
           "--sc-gold-soft": `${T.gold}18`,
           "--sc-gold-border": `${T.gold}45`,
           "--sc-paper": T.paper,
