@@ -82,7 +82,7 @@ export default function SpaceCoinsIntro({ T, onExplore, onBack }) {
         .sc-scene-glow { position:absolute; left:50%; bottom:35px; width:330px; height:220px; border-radius:50%; transform:translateX(-50%); filter:blur(12px); opacity:.7; pointer-events:none; }
         .sc-platform-art { position:absolute; z-index:2; left:50%; bottom:-52px; width:370px; height:370px; object-fit:contain; transform:translateX(-50%); pointer-events:none; }
         .sc-rocket-art { position:absolute; z-index:4; left:50%; top:12px; width:245px; height:245px; object-fit:contain; transform:translateX(-50%); filter:drop-shadow(0 16px 12px rgba(0,0,0,.28)); animation:sc-rocket-hover 3.8s ease-in-out infinite; pointer-events:none; }
-        .sc-space-coins-art { position:absolute; z-index:5; right:-2px; top:46px; width:270px; height:180px; object-fit:contain; filter:drop-shadow(0 8px 14px rgba(198,161,91,.22)); animation:sc-coins-drift 5.6s ease-in-out infinite; pointer-events:none; }
+        .sc-space-coins-art { position:absolute; z-index:5; right:8px; top:52px; width:190px; height:127px; object-fit:contain; filter:drop-shadow(0 8px 14px rgba(198,161,91,.22)); animation:sc-coins-drift 5.6s ease-in-out infinite; pointer-events:none; }
         .sc-star { position:absolute; z-index:1; font-size:16px; opacity:.85; animation:sc-twinkle 2.8s ease-in-out infinite; }
         @keyframes sc-rocket-hover { 0%,100% { transform:translate(-50%,0) rotate(-4deg); } 50% { transform:translate(-50%,-12px) rotate(1deg); } }
         @keyframes sc-coins-drift { 0%,100% { transform:translate3d(0,0,0) rotate(-2deg); } 50% { transform:translate3d(-18px,-14px,0) rotate(5deg); } }
