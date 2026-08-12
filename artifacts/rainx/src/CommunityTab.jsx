@@ -1301,7 +1301,7 @@ function GiftModal({ profile, onClose, senderAccount }) {
                 </button>
               ) : (
                 <button onClick={handleSend} disabled={busy}
-                  style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:busy?"default":"pointer", opacity:busy?0.7:1 }}>
+                  style={{ width:"100%", background:`T.goldGradient`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:busy?"default":"pointer", opacity:busy?0.7:1 }}>
                   {busy ? "Sending…" : `Send GHS ${amount} Gift 🎁`}
                 </button>
               )}
@@ -1602,7 +1602,7 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
             </button>
             {/* Follow */}
             <button onClick={toggleFollow}
-              style={{ display:"flex", alignItems:"center", gap:7, background: isFollowing ? "none" : `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: isFollowing ? T.paper : T.ink, border:`1.5px solid ${isFollowing ? T.cardBorder : "transparent"}`, borderRadius:22, padding:"9px 18px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
+              style={{ display:"flex", alignItems:"center", gap:7, background: isFollowing ? "none" : `T.goldGradient`, color: isFollowing ? T.paper : T.ink, border:`1.5px solid ${isFollowing ? T.cardBorder : "transparent"}`, borderRadius:22, padding:"9px 18px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
               {isFollowing ? <><UserCheck size={14} /> Following</> : <><UserPlus size={14} /> Follow</>}
             </button>
           </div>
