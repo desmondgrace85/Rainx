@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
+import coinArtwork from "./assets/space-coins-coin.png";
+import orbitArtwork from "./assets/space-coins-orbit.png";
 import rocketArtwork from "./assets/space-coins-rocket.png";
 import platformArtwork from "./assets/space-coins-platform.png";
-import spaceCoinsArtwork from "./assets/space-coins-objects.png";
 
 function useEdgeBack(onBack) {
   const swipeRef = useRef(null);
@@ -22,10 +23,6 @@ function useEdgeBack(onBack) {
   };
 }
 
-function Star({ style }) {
-  return <span className="sc-star" style={style}>✦</span>;
-}
-
 function RocketScene({ T, active, onInteract }) {
   return (
     <button
@@ -36,12 +33,9 @@ function RocketScene({ T, active, onInteract }) {
     >
       <span className="sc-scene-glow" style={{ background: `radial-gradient(circle, ${T.gold}40, transparent 68%)` }} />
       <img className="sc-platform-art" src={platformArtwork} alt="" />
-      <img className="sc-space-coins-art" src={spaceCoinsArtwork} alt="" />
+      <img className="sc-coin-art" src={coinArtwork} alt="" />
+      <img className="sc-orbit-art" src={orbitArtwork} alt="" />
       <img className="sc-rocket-art" src={rocketArtwork} alt="" />
-      <Star style={{ top: "13%", left: "12%", color: T.goldBright }} />
-      <Star style={{ top: "22%", right: "13%", color: T.gold }} />
-      <Star style={{ top: "48%", left: "5%", color: T.gold }} />
-      <Star style={{ top: "55%", right: "7%", color: T.goldBright }} />
     </button>
   );
 }
@@ -82,11 +76,11 @@ export default function SpaceCoinsIntro({ T, onExplore, onBack }) {
         .sc-scene-glow { position:absolute; left:50%; bottom:35px; width:330px; height:220px; border-radius:50%; transform:translateX(-50%); filter:blur(12px); opacity:.7; pointer-events:none; }
         .sc-platform-art { position:absolute; z-index:2; left:50%; bottom:-52px; width:370px; height:370px; object-fit:contain; transform:translateX(-50%); pointer-events:none; }
         .sc-rocket-art { position:absolute; z-index:4; left:50%; top:12px; width:245px; height:245px; object-fit:contain; transform:translateX(-50%); filter:drop-shadow(0 16px 12px rgba(0,0,0,.28)); animation:sc-rocket-hover 3.8s ease-in-out infinite; pointer-events:none; }
-        .sc-space-coins-art { position:absolute; z-index:5; right:8px; top:52px; width:190px; height:127px; object-fit:contain; filter:drop-shadow(0 8px 14px rgba(198,161,91,.22)); animation:sc-coins-drift 5.6s ease-in-out infinite; pointer-events:none; }
-        .sc-star { position:absolute; z-index:1; font-size:16px; opacity:.85; animation:sc-twinkle 2.8s ease-in-out infinite; }
+        .sc-coin-art { position:absolute; z-index:5; left:58px; top:78px; width:84px; height:84px; object-fit:contain; filter:drop-shadow(0 7px 11px rgba(198,161,91,.2)); animation:sc-coin-drift 4.8s ease-in-out infinite; pointer-events:none; }
+        .sc-orbit-art { position:absolute; z-index:5; right:2px; top:48px; width:132px; height:166px; object-fit:contain; filter:drop-shadow(0 7px 12px rgba(198,161,91,.2)); animation:sc-orbit-drift 5.6s ease-in-out infinite; pointer-events:none; }
         @keyframes sc-rocket-hover { 0%,100% { transform:translate(-50%,0) rotate(-4deg); } 50% { transform:translate(-50%,-12px) rotate(1deg); } }
-        @keyframes sc-coins-drift { 0%,100% { transform:translate3d(0,0,0) rotate(-2deg); } 50% { transform:translate3d(-18px,-14px,0) rotate(5deg); } }
-        @keyframes sc-twinkle { 50% { opacity:.32; transform:scale(.72) rotate(30deg); } }
+        @keyframes sc-coin-drift { 0%,100% { transform:translate3d(0,0,0) rotate(-2deg); } 50% { transform:translate3d(-5px,-7px,0) rotate(2deg); } }
+        @keyframes sc-orbit-drift { 0%,100% { transform:translate3d(0,0,0) rotate(-2deg); } 50% { transform:translate3d(-10px,-11px,0) rotate(4deg); } }
         @media (min-height:760px) { .sc-scene { height:460px; } }
         @media (prefers-reduced-motion:reduce) { .sc-scene *, .sc-scene { animation:none !important; } }
       `}</style>
