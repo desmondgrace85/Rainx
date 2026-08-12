@@ -22,10 +22,10 @@ const T = {
   ink: "#0F0E0B",
   card: "#1C1913",
   cardBorder: "#332C1F",
-  gold: "#FFD24D",
-  goldBright: "#FFD24D",
-  goldGradient: "linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)",
-  goldShine: "linear-gradient(180deg, #FFD24D 0%, #F3B51D 48%, #D08F14 100%)",
+  gold: "#F7BC2D",
+  goldBright: "#F7BC2D",
+  goldGradient: "linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%)",
+  goldShine: "linear-gradient(180deg, #F7BC2D 0%, #E3A925 48%, #D49818 100%)",
   sage: "#7A9E86",
   rust: "#B0604A",
   paper: "#F2EDE0",
@@ -37,8 +37,8 @@ let _avatarRefreshTick = 0;
 const _avatarRefreshListeners = new Set();
 function notifyAvatarRefresh() { _avatarRefreshTick++; _avatarRefreshListeners.forEach(fn => fn(_avatarRefreshTick)); }
 
-const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#FFD24D", goldBright:"#FFD24D", goldGradient:"linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)", goldShine:"linear-gradient(180deg, #FFD24D 0%, #F3B51D 48%, #D08F14 100%)", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
-const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#FFD24D", goldBright:"#FFD24D", goldGradient:"linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)", goldShine:"linear-gradient(180deg, #FFD24D 0%, #F3B51D 48%, #D08F14 100%)", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
+const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#F7BC2D", goldBright:"#F7BC2D", goldGradient:"linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%)", goldShine:"linear-gradient(180deg, #F7BC2D 0%, #E3A925 48%, #D49818 100%)", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
+const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#F7BC2D", goldBright:"#F7BC2D", goldGradient:"linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%)", goldShine:"linear-gradient(180deg, #F7BC2D 0%, #E3A925 48%, #D49818 100%)", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
 const FONT_HEAD = "'Montserrat', sans-serif";
 const FONT_BODY = "'Montserrat', sans-serif";
 const PUSH_STATE_DB_NAME = "rainx-notification-state";
@@ -146,14 +146,14 @@ function CoverCropModal({ file, onConfirm, onCancel, T, FONT_HEAD }) {
     <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.88)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}
       onPointerMove={onPM} onPointerUp={onPU} onPointerLeave={onPU}>
       <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:15, color:'#fff', marginBottom:14 }}>Drag to position</div>
-      <div style={{ width:DISPLAY_W, height:DISPLAY_H, overflow:'hidden', borderRadius:8, border:'2px solid #FFD24D', cursor:dragging?'grabbing':'grab', position:'relative', userSelect:'none', touchAction:'none' }}
+      <div style={{ width:DISPLAY_W, height:DISPLAY_H, overflow:'hidden', borderRadius:8, border:'2px solid #F7BC2D', cursor:dragging?'grabbing':'grab', position:'relative', userSelect:'none', touchAction:'none' }}
         onPointerDown={onPD}>
         {imgSrc && <img src={imgSrc} style={{ width:DISPLAY_W, height:'auto', position:'absolute', top:offsetY, left:0, pointerEvents:'none', userSelect:'none', draggable:false }} alt='' />}
       </div>
       <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginTop:10, marginBottom:20 }}>Cover photo · 4:1</div>
       <div style={{ display:'flex', gap:12 }}>
         <button onClick={onCancel} style={{ background:'none', border:'1px solid rgba(255,255,255,0.25)', borderRadius:10, padding:'10px 24px', color:'#fff', fontFamily:FONT_HEAD, fontWeight:600, fontSize:13, cursor:'pointer' }}>Cancel</button>
-        <button onClick={confirm} style={{ background:'#FFD24D', border:'none', borderRadius:10, padding:'10px 24px', color:'#0F0E0B', fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:'pointer' }}>Use photo</button>
+        <button onClick={confirm} style={{ background:'#F7BC2D', border:'none', borderRadius:10, padding:'10px 24px', color:'#0F0E0B', fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:'pointer' }}>Use photo</button>
       </div>
       <canvas ref={canvasRef} style={{ display:'none' }} />
     </div>
@@ -838,8 +838,8 @@ function AuthScreen({ onAuthed }) {
   // Local premium palette - scoped to this screen only, doesn't touch the
   // shared T tokens used everywhere else in the app.
   const A = {
-    bg: "#0B0B0B", card: "#171513", gold: "#FFD24D",
-    goldGrad: "linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)",
+    bg: "#0B0B0B", card: "#171513", gold: "#F7BC2D",
+    goldGrad: "linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%)",
     border: "rgba(255,255,255,0.08)", gray: "#B4B4B4",
   };
   const [oauthNotice, setOauthNotice] = useState("");
@@ -851,9 +851,9 @@ function AuthScreen({ onAuthed }) {
       <svg width="100%" height="92" viewBox="0 0 320 92" style={{ display: "block", marginBottom: 4 }}>
         <defs>
           <linearGradient id="authRibbon" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#FFD24D" />
-            <stop offset="50%" stopColor="#F3B51D" />
-            <stop offset="100%" stopColor="#D08F14" />
+            <stop offset="0%" stopColor="#F7BC2D" />
+            <stop offset="50%" stopColor="#E3A925" />
+            <stop offset="100%" stopColor="#D49818" />
           </linearGradient>
         </defs>
         <path id="authRibbonPath" d="M6 74 C 55 6, 95 6, 140 46 S 250 84, 306 14" stroke="url(#authRibbon)" strokeWidth="22" fill="none" strokeLinecap="round" />
@@ -2845,7 +2845,7 @@ function CandlestickChart({ candles, overlays, inst, containerHeight = 260 }) {
       const WBEAR = isDarkCanvas ? "#9ca3af" : "#374151";
       const GRID  = isDarkCanvas ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.065)";
       const TLBL  = isDarkCanvas ? "rgba(220,225,235,0.55)" : "rgba(18,18,42,0.5)";
-      const GOLD  = T.gold || "#FFD24D";
+      const GOLD  = T.gold || "#F7BC2D";
 
       // ── Dashed horizontal grid lines ─────────────────────────────────────
       ctx.setLineDash([3, 4]); ctx.strokeStyle = GRID; ctx.lineWidth = 1;
@@ -5201,9 +5201,9 @@ const DEFAULT_BENEFITS = [
 
 function BenefitIcon({ type }) {
   const s = { width: 36, height: 36, borderRadius: 10, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 };
-  if (type === "trophy") return <div style={s}><Trophy size={18} color="#FFD24D" /></div>;
-  if (type === "shield") return <div style={s}><ShieldCheck size={18} color="#FFD24D" /></div>;
-  return <div style={s}><ShieldCheck size={18} color="#FFD24D" /></div>;
+  if (type === "trophy") return <div style={s}><Trophy size={18} color="#F7BC2D" /></div>;
+  if (type === "shield") return <div style={s}><ShieldCheck size={18} color="#F7BC2D" /></div>;
+  return <div style={s}><ShieldCheck size={18} color="#F7BC2D" /></div>;
 }
 
 function MoreRow({ icon: Icon, iconType, title, subtitle, badge, badgeColor, onPress }) {
