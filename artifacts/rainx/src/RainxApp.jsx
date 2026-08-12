@@ -24,6 +24,8 @@ const T = {
   cardBorder: "#332C1F",
   gold: "#FFD24D",
   goldBright: "#FFD24D",
+  goldGradient: "linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)",
+  goldShine: "linear-gradient(180deg, #FFD24D 0%, #F3B51D 48%, #D08F14 100%)",
   sage: "#7A9E86",
   rust: "#B0604A",
   paper: "#F2EDE0",
@@ -35,8 +37,8 @@ let _avatarRefreshTick = 0;
 const _avatarRefreshListeners = new Set();
 function notifyAvatarRefresh() { _avatarRefreshTick++; _avatarRefreshListeners.forEach(fn => fn(_avatarRefreshTick)); }
 
-const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#FFD24D", goldBright:"#FFD24D", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
-const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#FFD24D", goldBright:"#FFD24D", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
+const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#FFD24D", goldBright:"#FFD24D", goldGradient:"linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)", goldShine:"linear-gradient(180deg, #FFD24D 0%, #F3B51D 48%, #D08F14 100%)", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
+const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#FFD24D", goldBright:"#FFD24D", goldGradient:"linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)", goldShine:"linear-gradient(180deg, #FFD24D 0%, #F3B51D 48%, #D08F14 100%)", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
 const FONT_HEAD = "'Montserrat', sans-serif";
 const FONT_BODY = "'Montserrat', sans-serif";
 const PUSH_STATE_DB_NAME = "rainx-notification-state";
@@ -836,8 +838,8 @@ function AuthScreen({ onAuthed }) {
   // Local premium palette - scoped to this screen only, doesn't touch the
   // shared T tokens used everywhere else in the app.
   const A = {
-    bg: "#0B0B0B", card: "#171513", gold: "#D4AF63",
-    goldGrad: "linear-gradient(135deg, #E6C57A, #C89A3C)",
+    bg: "#0B0B0B", card: "#171513", gold: "#FFD24D",
+    goldGrad: "linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)",
     border: "rgba(255,255,255,0.08)", gray: "#B4B4B4",
   };
   const [oauthNotice, setOauthNotice] = useState("");
@@ -849,8 +851,9 @@ function AuthScreen({ onAuthed }) {
       <svg width="100%" height="92" viewBox="0 0 320 92" style={{ display: "block", marginBottom: 4 }}>
         <defs>
           <linearGradient id="authRibbon" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#E6C57A" />
-            <stop offset="100%" stopColor="#C89A3C" />
+            <stop offset="0%" stopColor="#FFD24D" />
+            <stop offset="50%" stopColor="#F3B51D" />
+            <stop offset="100%" stopColor="#D08F14" />
           </linearGradient>
         </defs>
         <path id="authRibbonPath" d="M6 74 C 55 6, 95 6, 140 46 S 250 84, 306 14" stroke="url(#authRibbon)" strokeWidth="22" fill="none" strokeLinecap="round" />

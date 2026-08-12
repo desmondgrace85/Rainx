@@ -10,7 +10,10 @@ import { supabase } from "./supabaseClient";
 
 const T = {
   ink: "#0F0E0B", card: "#1C1913", cardBorder: "#332C1F",
-  gold: "#FFD24D", goldBright: "#FFD24D", sage: "#7A9E86", rust: "#B0604A",
+  gold: "#FFD24D", goldBright: "#FFD24D",
+  goldGradient: "linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)",
+  goldShine: "linear-gradient(180deg, #FFD24D 0%, #F3B51D 48%, #D08F14 100%)",
+  sage: "#7A9E86", rust: "#B0604A",
   paper: "#F2EDE0", muted: "#9C947F",
 };
 const FONT_HEAD = "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif";
@@ -321,7 +324,7 @@ function Avatar({ name, size = 34, avatarUrl }) {
   if (avatarUrl) return <img src={avatarUrl} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />;
   const letter = (name || "?").trim()[0]?.toUpperCase() || "?";
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: `linear-gradient(135deg, ${T.gold}, #8a6f34)`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT_HEAD, fontWeight: 800, color: T.ink, fontSize: size * 0.4, flexShrink: 0 }}>
+    <div style={{ width: size, height: size, borderRadius: "50%", background: T.goldGradient, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT_HEAD, fontWeight: 800, color: T.ink, fontSize: size * 0.4, flexShrink: 0 }}>
       {letter}
     </div>
   );
@@ -629,7 +632,7 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
               <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 6, color: T.paper }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
-              <button onClick={submit} disabled={!canPost} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 20, padding: "9px 24px", fontWeight: 800, fontSize: 14, cursor: canPost ? "pointer" : "default", opacity: canPost ? 1 : 0.4, transition: "opacity 0.15s", fontFamily: FONT_HEAD }}>
+              <button onClick={submit} disabled={!canPost} style={{ background: T.goldGradient, color: T.ink, border: "none", borderRadius: 20, padding: "9px 24px", fontWeight: 800, fontSize: 14, cursor: canPost ? "pointer" : "default", opacity: canPost ? 1 : 0.4, transition: "opacity 0.15s", fontFamily: FONT_HEAD }}>
                 {posting ? "Posting…" : "Post"}
               </button>
             </div>
@@ -750,7 +753,7 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 10, color: T.muted }}>{text.length}/500</span>
-              <button onClick={submit} disabled={posting || (!text.trim() && images.length === 0)} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 8, padding: "7px 16px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, cursor: "pointer", opacity: (!text.trim() && images.length === 0) ? 0.5 : 1, transition: "opacity 0.15s" }}>
+              <button onClick={submit} disabled={posting || (!text.trim() && images.length === 0)} style={{ background: T.goldGradient, color: T.ink, border: "none", borderRadius: 8, padding: "7px 16px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, cursor: "pointer", opacity: (!text.trim() && images.length === 0) ? 0.5 : 1, transition: "opacity 0.15s" }}>
                 {posting ? "Posting…" : "Post"}
               </button>
             </div>
@@ -863,7 +866,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
             style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: "8px 10px", fontFamily: FONT_BODY, fontSize: 12, resize: "none" }}
           />
         </div>
-        <button onClick={submitComment} disabled={!text.trim()} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 8, padding: "8px 14px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, cursor: "pointer", flexShrink: 0 }}>Reply</button>
+        <button onClick={submitComment} disabled={!text.trim()} style={{ background: T.goldGradient, color: T.ink, border: "none", borderRadius: 8, padding: "8px 14px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, cursor: "pointer", flexShrink: 0 }}>Reply</button>
       </div>
     </div>
   );
@@ -1063,7 +1066,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
         <div style={{ marginTop: 8 }}>
           <textarea value={editText} onChange={(e) => setEditText(e.target.value.slice(0, 500))} rows={3} style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: 8, fontFamily: FONT_BODY, fontSize: 13 }} />
           <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-            <button onClick={saveEdit} style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 6, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Save</button>
+            <button onClick={saveEdit} style={{ background: T.goldGradient, color: T.ink, border: "none", borderRadius: 6, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Save</button>
             <button onClick={() => setEditing(false)} style={{ background: "none", border: `1px solid ${T.cardBorder}`, color: T.muted, borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: "pointer" }}>Cancel</button>
           </div>
         </div>
@@ -1575,7 +1578,7 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
         <div style={{ position:"absolute", bottom:-48, left:14, borderRadius:"50%", border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}`, overflow:"hidden", width:92, height:92 }}>
           {profile.avatar_url
             ? <img src={profile.avatar_url} alt={profile.display_name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-            : <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${T.gold},#8a6f34)`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, color:T.ink, fontSize:34 }}>
+            : <div style={{ width:"100%", height:"100%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, color:T.ink, fontSize:34 }}>
                 {(profile.display_name || "?")[0]?.toUpperCase()}
               </div>
           }
@@ -1662,7 +1665,7 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, fontSize:12.5, color:T.muted }}>
             <div style={{ display:"flex", alignItems:"center", flexShrink:0 }}>
               {mutualFollowers.slice(0, 3).map((f, i) => (
-                <div key={f.id} style={{ width:22, height:22, borderRadius:"50%", marginLeft:i > 0 ? -7 : 0, border:`1.5px solid ${T.ink}`, overflow:"hidden", background:`linear-gradient(135deg,${T.gold},#8a6f34)`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:700, fontSize:8, color:T.ink, flexShrink:0 }}>
+                <div key={f.id} style={{ width:22, height:22, borderRadius:"50%", marginLeft:i > 0 ? -7 : 0, border:`1.5px solid ${T.ink}`, overflow:"hidden", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:700, fontSize:8, color:T.ink, flexShrink:0 }}>
                   {f.avatar_url ? <img src={f.avatar_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" /> : (f.display_name || "?")[0]?.toUpperCase()}
                 </div>
               ))}

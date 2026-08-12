@@ -15,6 +15,8 @@ export const T = {
   cardBorder: "#332C1F",
   gold: "#FFD24D",
   goldBright: "#FFD24D",
+  goldGradient: "linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)",
+  goldShine: "linear-gradient(180deg, #FFD24D 0%, #F3B51D 48%, #D08F14 100%)",
   sage: "#7A9E86",
   rust: "#B0604A",
   paper: "#F2EDE0",
@@ -26,8 +28,8 @@ export let _avatarRefreshTick = 0;
 export const _avatarRefreshListeners = new Set();
 export function notifyAvatarRefresh() { _avatarRefreshTick++; _avatarRefreshListeners.forEach(fn => fn(_avatarRefreshTick)); }
 
-export const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#FFD24D", goldBright:"#FFD24D", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
-export const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#FFD24D", goldBright:"#FFD24D", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
+export const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#FFD24D", goldBright:"#FFD24D", goldGradient:"linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)", goldShine:"linear-gradient(180deg, #FFD24D 0%, #F3B51D 48%, #D08F14 100%)", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
+export const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#FFD24D", goldBright:"#FFD24D", goldGradient:"linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)", goldShine:"linear-gradient(180deg, #FFD24D 0%, #F3B51D 48%, #D08F14 100%)", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
 export const FONT_HEAD = "'Montserrat', sans-serif";
 export const FONT_BODY = "'Montserrat', sans-serif";
 export const COUNTRIES = ["Afghanistan","Albania","Algeria","Angola","Argentina","Armenia","Australia","Austria","Azerbaijan","Bahrain","Bangladesh","Belarus","Belgium","Bolivia","Bosnia and Herzegovina","Botswana","Brazil","Bulgaria","Cameroon","Canada","Chile","China","Colombia","Costa Rica","Croatia","Cuba","Czech Republic","Denmark","Ecuador","Egypt","Ethiopia","Finland","France","Georgia","Germany","Ghana","Greece","Guatemala","Hungary","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kuwait","Lebanon","Libya","Malaysia","Mexico","Morocco","Mozambique","Myanmar","Nepal","Netherlands","New Zealand","Nicaragua","Nigeria","Norway","Oman","Pakistan","Panama","Peru","Philippines","Poland","Portugal","Qatar","Romania","Russia","Rwanda","Saudi Arabia","Senegal","Serbia","Singapore","Somalia","South Africa","South Korea","Spain","Sudan","Sweden","Switzerland","Taiwan","Tanzania","Thailand","Tunisia","Turkey","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States","Uruguay","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"];
@@ -118,7 +120,7 @@ export function CoverCropModal({ file, onConfirm, onCancel, T, FONT_HEAD }) {
       <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginTop:10, marginBottom:20 }}>Cover photo · 4:1</div>
       <div style={{ display:'flex', gap:12 }}>
         <button onClick={onCancel} style={{ background:'none', border:'1px solid rgba(255,255,255,0.25)', borderRadius:10, padding:'10px 24px', color:'#fff', fontFamily:FONT_HEAD, fontWeight:600, fontSize:13, cursor:'pointer' }}>Cancel</button>
-        <button onClick={confirm} style={{ background:'#FFD24D', border:'none', borderRadius:10, padding:'10px 24px', color:'#0F0E0B', fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:'pointer' }}>Use photo</button>
+      <button onClick={confirm} style={{ background:T.goldGradient, border:'none', borderRadius:10, padding:'10px 24px', color:'#0F0E0B', fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:'pointer' }}>Use photo</button>
       </div>
       <canvas ref={canvasRef} style={{ display:'none' }} />
     </div>

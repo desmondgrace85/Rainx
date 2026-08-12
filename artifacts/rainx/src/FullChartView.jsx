@@ -553,7 +553,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
           const t1 = bars[Math.max(0, bars.length - 6)].time;
           addLineSeries([{ time: t0, value: o.price1 }, { time: t1, value: o.price2 }], GOLD, 1.5, LineStyle.Dashed);
           if (o.price3 != null) {
-            addLineSeries([{ time: t0, value: o.price3 }, { time: t1, value: o.price4 }], "rgba(198,161,91,0.5)", 1, LineStyle.Dashed);
+            addLineSeries([{ time: t0, value: o.price3 }, { time: t1, value: o.price4 }], "rgba(208,143,20,0.5)", 1, LineStyle.Dashed);
           }
           break;
         }

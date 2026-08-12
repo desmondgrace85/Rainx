@@ -31,7 +31,7 @@ function SignalCard({ sig }) {
         </div>
       </div>
       <div style={{ height: 4, background: `${T.muted}25`, borderRadius: 99, overflow: "hidden", margin: "13px 0 14px" }}>
-        <div style={{ width: `${Math.min(100, Math.max(0, confidence))}%`, height: "100%", background: confidence >= 70 ? T.goldBright : T.gold, borderRadius: 99, transition: "all 0.2s" }} />
+        <div style={{ width: `${Math.min(100, Math.max(0, confidence))}%`, height: "100%", background: T.goldGradient, borderRadius: 99, transition: "all 0.2s" }} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", gap: 8 }}>
         <div><div style={{ fontSize: 11.5, color: T.muted, marginBottom: 3 }}>Entry</div><div style={{ fontSize: 13, color: T.paper, fontWeight: 600 }}>{sig.entry_zone ? `${formatPrice(sig.entry_zone[0])}–${formatPrice(sig.entry_zone[1])}` : formatPrice(sig.entry)}</div></div>

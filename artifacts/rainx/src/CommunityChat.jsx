@@ -51,6 +51,8 @@ function playSendTick() {
 const buildT = (tokens) => ({
   ink: "#0F0E0B", card: "#1C1913", cardBorder: "#332C1F",
   gold: "#FFD24D", goldBright: "#FFD24D", paper: "#F2EDE0", muted: "#9C947F",
+  goldGradient: "linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)",
+  goldShine: "linear-gradient(180deg, #FFD24D 0%, #F3B51D 48%, #D08F14 100%)",
   ...(tokens || {}),
 });
 
@@ -122,7 +124,7 @@ function savePinnedMessages(convId, arr) { try { localStorage.setItem("rainx_pin
 function Avatar({ name, avatarUrl, size }) {
   size = size || 40;
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: "linear-gradient(135deg,#FFD24D,#FFD24D)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: size * 0.38, color: "#0F0E0B", flexShrink: 0, overflow: "hidden" }}>
+    <div style={{ width: size, height: size, borderRadius: "50%", background: T.goldGradient, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: size * 0.38, color: "#0F0E0B", flexShrink: 0, overflow: "hidden" }}>
       {avatarUrl
         ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         : (name || "?")[0].toUpperCase()}
@@ -171,7 +173,7 @@ function ConfirmDialog({ title, body, confirmLabel, danger, onConfirm, onCancel 
         {body && <div style={{ fontSize: 13, color: "#9C947F", lineHeight: 1.65, marginBottom: 22 }}>{body}</div>}
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onCancel} style={{ flex: 1, background: "#332C1F", border: "none", borderRadius: 12, padding: "13px 0", color: "#F2EDE0", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
-          <button onClick={onConfirm} style={{ flex: 1, background: danger ? "#B0604A" : "#FFD24D", border: "none", borderRadius: 12, padding: "13px 0", color: danger ? "#fff" : "#0F0E0B", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{confirmLabel || "Confirm"}</button>
+          <button onClick={onConfirm} style={{ flex: 1, background: danger ? "#B0604A" : T.goldGradient, border: "none", borderRadius: 12, padding: "13px 0", color: danger ? "#fff" : "#0F0E0B", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{confirmLabel || "Confirm"}</button>
         </div>
       </div>
     </div>
@@ -189,7 +191,7 @@ function ProGateModal({ onClose, T }) {
           This feature is available to <strong style={{ color: T.gold }}>Subscribers</strong> and <strong style={{ color: T.gold }}>Premium</strong> users.<br />
           You can see it but not use it. Upgrade your plan to unlock it.
         </div>
-        <button onClick={onClose} style={{ width: "100%", background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Got it</button>
+        <button onClick={onClose} style={{ width: "100%", background: T.goldGradient, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontWeight: 800, fontSize: 15, cursor: "pointer" }}>Got it</button>
       </div>
     </div>
   );
@@ -213,7 +215,7 @@ function SettingRow({ label, sublabel, value, onChange, gated, isPro, T }) {
           </div>
           {sublabel && <div style={{ color: T.muted, fontSize: 11, marginTop: 2, lineHeight: 1.4 }}>{sublabel}</div>}
         </div>
-        <div style={{ width: 46, height: 27, borderRadius: 14, background: value ? T.gold : T.cardBorder, position: "relative", transition: "background 0.2s", flexShrink: 0, opacity: gated && !isPro ? 0.5 : 1 }}>
+        <div style={{ width: 46, height: 27, borderRadius: 14, background: value ? T.goldGradient : T.cardBorder, position: "relative", transition: "background 0.2s", flexShrink: 0, opacity: gated && !isPro ? 0.5 : 1 }}>
           <div style={{ position: "absolute", top: 3, left: value ? 22 : 3, width: 21, height: 21, borderRadius: "50%", background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
         </div>
       </div>
@@ -290,7 +292,7 @@ function ForwardModal({ account, senderName, onForward, onClose, T }) {
             <div style={{ color: T.paper, fontSize: 13, fontWeight: 600 }}>Hide my name</div>
             <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>Recipient won't see who forwarded it</div>
           </div>
-          <div onClick={() => setHideSender(v => !v)} style={{ width: 46, height: 27, borderRadius: 14, background: hideSender ? T.gold : T.cardBorder, position: "relative", cursor: "pointer", transition: "background 0.2s" }}>
+          <div onClick={() => setHideSender(v => !v)} style={{ width: 46, height: 27, borderRadius: 14, background: hideSender ? T.goldGradient : T.cardBorder, position: "relative", cursor: "pointer", transition: "background 0.2s" }}>
             <div style={{ position: "absolute", top: 3, left: hideSender ? 22 : 3, width: 21, height: 21, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
           </div>
         </div>
@@ -303,7 +305,7 @@ function ForwardModal({ account, senderName, onForward, onClose, T }) {
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 0", background: "none", border: "none", cursor: "pointer", borderBottom: "1px solid " + T.cardBorder }}>
               <Avatar name={p.display_name} avatarUrl={p.avatar_url} size={40} />
               <div style={{ flex: 1, textAlign: "left", fontSize: 14, color: T.paper, fontWeight: 500 }}>{p.display_name || p.username || "User"}</div>
-              <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid " + (selected && selected.id === p.id ? T.gold : T.cardBorder), background: selected && selected.id === p.id ? T.gold : "transparent", transition: "all 0.15s", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid " + (selected && selected.id === p.id ? T.gold : T.cardBorder), background: selected && selected.id === p.id ? T.goldGradient : "transparent", transition: "all 0.15s", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {selected && selected.id === p.id && <Check size={12} color="#0F0E0B" strokeWidth={3} />}
               </div>
             </button>
@@ -312,7 +314,7 @@ function ForwardModal({ account, senderName, onForward, onClose, T }) {
 
         <div style={{ padding: "12px 16px 32px" }}>
           <button onClick={() => { if (selected) onForward(selected, hideSender); }} disabled={!selected}
-            style={{ width: "100%", background: selected ? T.gold : T.cardBorder, color: selected ? T.ink : T.muted, border: "none", borderRadius: 12, padding: "13px 0", fontWeight: 800, fontSize: 15, cursor: selected ? "pointer" : "default" }}>
+            style={{ width: "100%", background: selected ? T.goldGradient : T.cardBorder, color: selected ? T.ink : T.muted, border: "none", borderRadius: 12, padding: "13px 0", fontWeight: 800, fontSize: 15, cursor: selected ? "pointer" : "default" }}>
             {selected ? "Forward to " + (selected.display_name || "User") : "Select a recipient"}
           </button>
         </div>
@@ -571,7 +573,7 @@ function EditBar({ editText, setEditText, onSave, onCancel, T }) {
         />
       </div>
       <button onClick={onCancel} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: 6 }}><X size={18} /></button>
-      <button onClick={onSave} style={{ background: T.gold, border: "none", borderRadius: 10, padding: "8px 14px", color: T.ink, fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>Save</button>
+      <button onClick={onSave} style={{ background: T.goldGradient, border: "none", borderRadius: 10, padding: "8px 14px", color: T.ink, fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>Save</button>
     </div>
   );
 }
@@ -1092,7 +1094,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
                 onContextMenu={e => { e.preventDefault(); if (!deleted) setContextMenu({ msg }); }}
                 style={{
                   maxWidth: "78%",
-                  background: isMe ? "#FFD24D" : "#1C1913",
+                  background: isMe ? T.goldGradient : "#1C1913",
                   color: isMe ? "#0F0E0B" : "#F2EDE0",
                   borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                   padding: "8px 12px 6px",
@@ -1145,7 +1147,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
             onBlur={e => { e.target.style.borderColor = T.cardBorder; }}
           />
           <button onClick={send} disabled={!text.trim() || sending}
-            style={{ width: 44, height: 44, borderRadius: "50%", background: text.trim() ? "#FFD24D" : "#332C1F", border: "none", cursor: text.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            style={{ width: 44, height: 44, borderRadius: "50%", background: text.trim() ? T.goldGradient : "#332C1F", border: "none", cursor: text.trim() ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <Send size={18} color={text.trim() ? "#0F0E0B" : "#9C947F"} />
           </button>
         </div>
@@ -1405,7 +1407,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
                   <div style={{ position: "absolute", bottom: 1, right: 1, width: 11, height: 11, borderRadius: "50%", background: "#4CAF50", border: "2px solid " + T.ink }} />
                 )}
                 {unread > 0 && (
-                  <div style={{ position: "absolute", top: -2, right: -2, background: "#FFD24D", color: "#0F0E0B", borderRadius: "50%", minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, padding: "0 4px" }}>{unread}</div>
+                  <div style={{ position: "absolute", top: -2, right: -2, background: T.goldGradient, color: "#0F0E0B", borderRadius: "50%", minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, padding: "0 4px" }}>{unread}</div>
                 )}
               </div>
               <div style={{ flex: 1, minWidth: 0, textAlign: "left" }} data-chatlist-row>
