@@ -41,6 +41,24 @@ const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold
 const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#F7BC2D", goldBright:"#F7BC2D", goldGradient:"linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%)", goldShine:"linear-gradient(180deg, #F7BC2D 0%, #E3A925 48%, #D49818 100%)", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
 const FONT_HEAD = "'Montserrat', sans-serif";
 const FONT_BODY = "'Montserrat', sans-serif";
+
+// Format a notification timestamp as "DD/MM/YYYY, HH:MM" (date + time).
+// Falls back to n.time (time-only) or n.created_at when available.
+function notifDateTime(n) {
+  const raw = n.created_at;
+  if (raw) {
+    const d = new Date(raw);
+    if (!isNaN(d)) {
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const yyyy = d.getFullYear();
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mi = String(d.getMinutes()).padStart(2, "0");
+      return `${dd}/${mm}/${yyyy}, ${hh}:${mi}`;
+    }
+  }
+  return n.time || "";
+}
 const PUSH_STATE_DB_NAME = "rainx-notification-state";
 const PUSH_STATE_STORE_NAME = "delivered-pushes";
 
@@ -1138,7 +1156,7 @@ function SubscribeScreen({ account, entitlement, onBack }) {
         </div>
         <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 4 }}>Payment reference (optional)</label>
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. transaction ID" style={{ ...getInputStyle(), width: "100%", marginBottom: 14 }} />
-        <button onClick={submitPayment} disabled={busy} style={{ width: "100%", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+        <button onClick={submitPayment} disabled={busy} style={{ width: "100%", background: T.goldGradient, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
           {busy ? "Submitting…" : "I've Paid — Confirm →"}
         </button>
       </div>
@@ -1244,19 +1262,19 @@ function SubscribeScreen({ account, entitlement, onBack }) {
           Loading…
         </div>
       ) : methods.length === 0 ? (
-        <div style={{ margin: "0 16px 8px", background: `T.goldGradient`, borderRadius: 14, padding: "15px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
+        <div style={{ margin: "0 16px 8px", background: T.goldGradient, borderRadius: 14, padding: "15px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
           onClick={() => alert("No payment methods configured. Please contact support.")}>
           <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.ink }}>Subscribe Now</span>
           <span style={{ fontSize: 20, color: T.ink }}>→</span>
         </div>
       ) : methods.length === 1 ? (
-        <button onClick={() => setSelectedMethod(methods[0])} style={{ margin: "0 16px 8px", width: "calc(100% - 32px)", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 14, padding: "15px 20px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <button onClick={() => setSelectedMethod(methods[0])} style={{ margin: "0 16px 8px", width: "calc(100% - 32px)", background: T.goldGradient, color: T.ink, border: "none", borderRadius: 14, padding: "15px 20px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span>Subscribe Now</span><span style={{ fontSize: 20 }}>→</span>
         </button>
       ) : (
         <div style={{ margin: "0 16px 8px", display: "flex", flexDirection: "column", gap: 8 }}>
           {methods.map(m => (
-            <button key={m.id} onClick={() => setSelectedMethod(m)} style={{ width: "100%", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 14, padding: "13px 20px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <button key={m.id} onClick={() => setSelectedMethod(m)} style={{ width: "100%", background: T.goldGradient, color: T.ink, border: "none", borderRadius: 14, padding: "13px 20px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span>Subscribe via {m.name}</span><span style={{ fontSize: 18 }}>→</span>
             </button>
           ))}
@@ -1525,6 +1543,7 @@ function MainAppContent({ account, onLogout }) {
   const [notifications, setNotifications] = useState([]);
   const [communityUnreadCount, setCommunityUnreadCount] = useState(0);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const [notifToDelete, setNotifToDelete] = useState(null);
   const [toastQueue, setToastQueue] = useState([]);
   const [activeToast, setActiveToast] = useState(null);
   const [activeToastItems, setActiveToastItems] = useState([]);
@@ -1898,7 +1917,7 @@ function MainAppContent({ account, onLogout }) {
       conversationId: n.conversationId,
       senderId: n.senderId,
     };
-    const entry = { id, read: false, time: new Date().toLocaleTimeString(), ...n, data: target };
+    const entry = { id, read: false, time: new Date().toLocaleTimeString(), created_at: new Date().toISOString(), ...n, data: target };
     enqueueInAppNotification(entry);
     const apiBase = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
     fetch(`${apiBase}/api/push/send`, {
@@ -2093,7 +2112,7 @@ function MainAppContent({ account, onLogout }) {
         deliveredPushIds.forEach((id) => seenNotificationIdsRef.current.add(id));
         const { data } = await supabase.from("user_notifications").select("*").eq("user_id", account.id).order("created_at", { ascending: false }).limit(50);
         const loaded = (data || []).map((row) => ({
-            id: row.id, title: row.title, body: row.body, type: row.type, section: row.section, read: row.read, time: new Date(row.created_at).toLocaleTimeString(),
+            id: row.id, title: row.title, body: row.body, type: row.type, section: row.section, read: row.read, time: new Date(row.created_at).toLocaleTimeString(), created_at: row.created_at,
         }));
         loaded.forEach((row) => seenNotificationIdsRef.current.add(String(row.id)));
         persistSeenNotificationIds();
@@ -2571,7 +2590,7 @@ function MainAppContent({ account, onLogout }) {
               <div style={{ fontSize:10, color:T.muted, fontWeight:600 }}>Powered by Raina AI</div>
               {/* Clickable Profile */}
               <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); setShowSidebar(false); routeWrite(tab, "profile-menu", "h"); }} style={{ marginTop:18, width:"100%", display:"flex", alignItems:"center", gap:12, background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"12px 14px", cursor:"pointer", textAlign:"left" }}>
-                <div style={{ width:44, height:44, borderRadius:"50%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>
+                <div style={{ width:44, height:44, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>
                   {(account?.email || "?")[0].toUpperCase()}
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
@@ -2614,7 +2633,7 @@ function MainAppContent({ account, onLogout }) {
           <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
             {/* Header */}
             <div style={{ padding: "16px 18px 10px", borderBottom: `1px solid ${T.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-              <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.goldBright, fontWeight: 700 }}>Notifications</div>
+              <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.paper, fontWeight: 700 }}>Notifications</div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 {notifications.length > 0 && (
                   <button onClick={() => {
@@ -2653,21 +2672,39 @@ function MainAppContent({ account, onLogout }) {
                           <div style={{ flex: 1 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                               {!n.read && <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.gold, flexShrink: 0 }} />}
-                              <div style={{ fontSize: 12.5, fontWeight: 700, color: n.type === "warning" ? T.rust : n.type === "update" ? T.sage : T.gold }}>{n.title}</div>
+                              <div style={{ fontSize: 16, fontWeight: 700, color: n.type === "warning" ? T.rust : n.type === "update" ? T.sage : T.gold }}>{n.title}</div>
                             </div>
-                            <div style={{ fontSize: 12, color: T.paper, marginTop: 2, fontWeight: 500 }}>{n.body}</div>
-                            <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>{n.time}</div>
+                            <div style={{ fontSize: 16, color: T.paper, marginTop: 2, fontWeight: 500, lineHeight: 1.55 }}>{n.body}</div>
+                            <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>{notifDateTime(n)}</div>
                           </div>
-                          <button onClick={() => {
-                            setNotifications(list => list.filter(x => x.id !== n.id));
-                            if (account?.id) supabase.from("user_notifications").delete().eq("id", n.id).then(() => {}, () => {});
-                          }} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: "2px 4px", flexShrink: 0, alignSelf: "flex-start" }}><X size={14} /></button>
+                          <button onClick={() => setNotifToDelete(n)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: "2px 4px", flexShrink: 0, alignSelf: "flex-start" }}><X size={14} /></button>
                         </div>
                       ))}
                     </div>
                   ));
                 })()}
               </BlurGate>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Notification delete confirmation modal ── */}
+      {notifToDelete && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:600, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px" }} onClick={() => setNotifToDelete(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:24, maxWidth:360, width:"100%" }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:10 }}>Delete notification?</div>
+            <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.7, marginBottom:20 }}>
+              This notification will be permanently removed from your list. You won't be able to recover it after deleting.
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={() => setNotifToDelete(null)} style={{ flex:1, background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, cursor:"pointer" }}>Cancel</button>
+              <button onClick={() => {
+                const n = notifToDelete;
+                setNotifToDelete(null);
+                setNotifications(list => list.filter(x => x.id !== n.id));
+                if (account?.id) supabase.from("user_notifications").delete().eq("id", n.id).then(() => {}, () => {});
+              }} style={{ flex:1, background:"#E53935", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer" }}>Delete</button>
             </div>
           </div>
         </div>
@@ -2728,7 +2765,10 @@ function MainAppContent({ account, onLogout }) {
               </svg>
             )},
           ].map(({ key, label, icon, center }) => {
-            const active = !profileFromHeader && tab === key;
+            // "More" only highlights on its landing menu (morePage === null).
+            // Inside a More sub-page (profile/security/wallet/settings) nothing highlights.
+            const insideMoreSub = tab === "more" && morePage;
+            const active = !profileFromHeader && !insideMoreSub && tab === key;
             return (
               center ? (
                 <CenterNavLogo
@@ -3386,7 +3426,7 @@ function GamesTab() {
         <div className={pageReady ? "games-fade" : ""} style={{ position: "relative", zIndex: 3, textAlign: "center" }}>
           <h1 style={{ fontFamily: FONT_HEAD, fontSize: 38, lineHeight: 1.05, fontWeight: 800, color: "#F2EDE0", margin: "0 0 8px", textShadow: `0 0 14px ${T.gold}66` }}>Play Smart.<br />Win More.</h1>
           <p style={{ color: `${T.goldBright}CC`, fontSize: 13, fontWeight: 600, margin: "0 auto 22px", maxWidth: 280 }}>The premium gaming platform for serious players</p>
-          <button onClick={() => document.getElementById("games-trending")?.scrollIntoView({ behavior: "smooth", block: "start" })} style={{ border: "none", borderRadius: 999, padding: "14px 28px", background: `T.goldGradient`, color: "#050505", fontFamily: FONT_HEAD, fontSize: 12, fontWeight: 800, letterSpacing: 1, cursor: "pointer", boxShadow: `0 0 24px ${T.gold}55` }}>
+          <button onClick={() => document.getElementById("games-trending")?.scrollIntoView({ behavior: "smooth", block: "start" })} style={{ border: "none", borderRadius: 999, padding: "14px 28px", background: T.goldGradient, color: "#050505", fontFamily: FONT_HEAD, fontSize: 12, fontWeight: 800, letterSpacing: 1, cursor: "pointer", boxShadow: `0 0 24px ${T.gold}55` }}>
             Enter Games <span style={{ marginLeft: 6 }}>▶</span>
           </button>
         </div>
@@ -3896,7 +3936,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
             <div style={{ fontSize:38, marginBottom:12 }}>🔒</div>
             <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:8 }}>Subscription Required</div>
             <div style={{ fontSize:13, color:T.muted, lineHeight:1.7, marginBottom:22 }}>An active subscription is required to access live market analysis, Raina AI signals, and real-time charts. Subscribe to unlock up to 3 active markets.</div>
-            <button onClick={() => { setShowSubLock(false); onSubscribe(); }} style={{ width:"100%", background:`T.goldGradient`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:"pointer", marginBottom:10 }}>View Plans</button>
+            <button onClick={() => { setShowSubLock(false); onSubscribe(); }} style={{ width:"100%", background:T.goldGradient, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:"pointer", marginBottom:10 }}>View Plans</button>
             <button onClick={() => setShowSubLock(false)} style={{ width:"100%", background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"11px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.muted, cursor:"pointer" }}>Close</button>
           </div>
         </div>
@@ -4150,7 +4190,7 @@ function HistoryTab({ account, entitlement, onSubscribe }) {
 
   return (
     <div style={{ padding: 16 }}>
-      <div style={{ fontFamily: FONT_HEAD, fontSize: 18, color: T.goldBright, fontWeight: 800, marginBottom: 12 }}>Trade History</div>
+      <div style={{ fontFamily: FONT_HEAD, fontSize: 18, color: T.paper, fontWeight: 800, marginBottom: 12 }}>Trade History</div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         {[["Closed trades", rows.length], ["Wins", wins], ["Losses", losses], ["Net points", netPoints]].map(([l, v]) => (
@@ -4538,13 +4578,13 @@ const SCALP_SYMBOLS = [
             <div key={key} style={{ marginBottom: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                 <span style={{ fontSize: 13.5, color: T.muted }}>{label}</span>
-                <span style={{ fontSize: 13.5, color: T.goldBright, fontFamily: FONT_HEAD, fontWeight: 700 }}>{localS[key]}</span>
+                <span style={{ fontSize: 13.5, color: T.paper, fontFamily: FONT_HEAD, fontWeight: 700 }}>{localS[key]}</span>
               </div>
               <input type="range" min={min} max={max} step={step} value={localS[key]} onChange={e => setLocalS(p => ({ ...p, [key]: parseFloat(e.target.value) }))} style={{ width: "100%", accentColor: T.gold }} />
             </div>
           ))}
           {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 8, lineHeight: 1.5 }}>{err}</div>}
-          <button onClick={handleSaveSettings} disabled={busy} style={{ width: "100%", background: saved ? T.sage : `T.goldGradient`, color: T.ink, border: "none", borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
+          <button onClick={handleSaveSettings} disabled={busy} style={{ width: "100%", background: saved ? T.sage : T.goldGradient, color: T.ink, border: "none", borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
             {saved ? "Saved" : busy ? "Saving…" : "Save Settings"}
           </button>
         </div>
@@ -4641,7 +4681,7 @@ const SCALP_SYMBOLS = [
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
                   <button onClick={() => setPendingScalpMode(null)} style={{ flex: 1, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, color: T.paper, cursor: "pointer" }}>Cancel</button>
-                  <button onClick={() => { setScalpMode(pendingScalpMode); setSmartAlert(null); setPendingScalpMode(null); }} style={{ flex: 1, background: `T.goldGradient`, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: T.ink, cursor: "pointer" }}>Switch</button>
+                  <button onClick={() => { setScalpMode(pendingScalpMode); setSmartAlert(null); setPendingScalpMode(null); }} style={{ flex: 1, background: T.goldGradient, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: T.ink, cursor: "pointer" }}>Switch</button>
                 </div>
               </div>
             </div>
@@ -4875,7 +4915,7 @@ const SCALP_SYMBOLS = [
                         else { setSelectedSymbol(sym); lsSet("rainx-scalp-sym", sym); }
                       }}
                       disabled={busy}
-                      style={{ width: "100%", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 10, padding: "9px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, cursor: busy ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "opacity 0.2s" }}
+                      style={{ width: "100%", background: T.goldGradient, color: T.ink, border: "none", borderRadius: 10, padding: "9px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, cursor: busy ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "opacity 0.2s" }}
                     >
                       Scalp Now <ArrowRight size={13} />
                     </button>
@@ -4935,7 +4975,7 @@ const SCALP_SYMBOLS = [
           <div style={{ marginBottom: 16 }}><div style={{ fontSize: 13.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Account Mode</div><div style={{ display: "flex", gap: 8 }}>{["demo", "live"].map(m => <button key={m} onClick={() => setMode(m)} style={{ flex: 1, background: mode === m ? T.gold : T.card, color: mode === m ? T.ink : T.muted, border: `1px solid ${mode === m ? T.gold : T.cardBorder}`, borderRadius: 10, padding: "10px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, cursor: "pointer", textTransform: "capitalize", transition: "all 0.2s" }}>{m}</button>)}</div></div>
           {connectMethod === "metaapi" ? <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}><div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.goldBright, marginBottom: 4 }}><Key size={16} /> MT5 Credentials</div><div style={{ fontSize: 12.5, color: T.muted, marginBottom: 14, lineHeight: 1.6 }}>Your credentials are encrypted in transit and used only to connect your trading account.</div><div style={{ marginBottom: 14 }}><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>MT5 Login Number</div><input type="text" value={mt5Login} onChange={e => setMt5Login(e.target.value)} placeholder="e.g. 12345678" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /></div><div style={{ marginBottom: 14 }}><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>MT5 Password</div><input type="password" value={mt5Password} onChange={e => setMt5Password(e.target.value)} placeholder="Master or Investor password" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /></div><div><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>Broker Server</div><input type="text" value={mt5Server} onChange={e => setMt5Server(e.target.value)} placeholder="e.g. ICMarkets-Demo" list="broker-servers" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /><datalist id="broker-servers">{BROKER_SERVERS.map(s => <option key={s} value={s} />)}</datalist></div></div> : <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}><div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.goldBright, marginBottom: 4 }}><Key size={16} /> EA Desktop Mode</div><div style={{ fontSize: 13, color: T.muted, lineHeight: 1.7 }}>Generate an API key, install the Raina AI Expert Advisor in MetaTrader 5, and keep MT5 open on a PC or VPS.</div></div>}
           {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 10, padding: "10px 12px", background: `${T.rust}15`, borderRadius: 9, lineHeight: 1.5 }}>{err}</div>}
-          <button onClick={handleConnect} disabled={busy} style={{ width: "100%", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>{busy ? "Connecting…" : connectMethod === "metaapi" ? "Connect via MetaAPI" : "Generate API Key & Connect"}</button>
+          <button onClick={handleConnect} disabled={busy} style={{ width: "100%", background: T.goldGradient, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>{busy ? "Connecting…" : connectMethod === "metaapi" ? "Connect via MetaAPI" : "Generate API Key & Connect"}</button>
           {Disclaimer()}
         </div>
       );
@@ -4960,7 +5000,7 @@ const SCALP_SYMBOLS = [
                 <a
                   href={`/api/mt5/ea/download/${mt5UserId}`}
                   download={`RainX_Scalper.mq5`}
-                  style={{ display: "block", width: "100%", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 10, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, cursor: "pointer", textAlign: "center", textDecoration: "none", boxSizing: "border-box" }}
+                  style={{ display: "block", width: "100%", background: T.goldGradient, color: T.ink, border: "none", borderRadius: 10, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, cursor: "pointer", textAlign: "center", textDecoration: "none", boxSizing: "border-box" }}
                 >
                   ⬇ Download EA File (.mq5)
                 </a>
@@ -4996,7 +5036,7 @@ const SCALP_SYMBOLS = [
           {SymbolPicker()}
           {RiskSettings()}
           {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 10, padding: "10px 12px", background: `${T.rust}15`, borderRadius: 9, lineHeight: 1.5 }}>{err}</div>}
-          <button onClick={handleToggle} disabled={busy || !selectedSymbol} style={{ width: "100%", background: selectedSymbol ? `T.goldGradient` : T.card, color: selectedSymbol ? T.ink : T.muted, border: selectedSymbol ? "none" : `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy || !selectedSymbol ? "not-allowed" : "pointer", marginBottom: 14, transition: "all 0.2s" }}>
+          <button onClick={handleToggle} disabled={busy || !selectedSymbol} style={{ width: "100%", background: selectedSymbol ? T.goldGradient : T.card, color: selectedSymbol ? T.ink : T.muted, border: selectedSymbol ? "none" : `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy || !selectedSymbol ? "not-allowed" : "pointer", marginBottom: 14, transition: "all 0.2s" }}>
             {busy ? "Please wait…" : selectedSymbol ? `Start ${scalpMode === "quick" ? "Quick" : "Smart"} Scalp` : "Select a market to start scalping"}
           </button>
           {Disclaimer()}
@@ -5168,7 +5208,7 @@ const SCALP_SYMBOLS = [
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
                   <button onClick={() => setPendingScalpMode(null)} style={{ flex: 1, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, color: T.paper, cursor: "pointer" }}>Cancel</button>
-                  <button onClick={() => { setScalpMode(pendingScalpMode); setSmartAlert(null); setPendingScalpMode(null); }} style={{ flex: 1, background: `T.goldGradient`, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: T.ink, cursor: "pointer" }}>Switch</button>
+                  <button onClick={() => { setScalpMode(pendingScalpMode); setSmartAlert(null); setPendingScalpMode(null); }} style={{ flex: 1, background: T.goldGradient, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: T.ink, cursor: "pointer" }}>Switch</button>
                 </div>
               </div>
             </div>
@@ -5200,18 +5240,18 @@ const DEFAULT_BENEFITS = [
 ];
 
 function BenefitIcon({ type }) {
-  const s = { width: 36, height: 36, borderRadius: 10, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 };
-  if (type === "trophy") return <div style={s}><Trophy size={18} color="#F7BC2D" /></div>;
-  if (type === "shield") return <div style={s}><ShieldCheck size={18} color="#F7BC2D" /></div>;
-  return <div style={s}><ShieldCheck size={18} color="#F7BC2D" /></div>;
+  const s = { width: 36, height: 36, borderRadius: 10, background: "rgba(140,140,140,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 };
+  if (type === "trophy") return <div style={s}><Trophy size={18} color={T.muted} /></div>;
+  if (type === "shield") return <div style={s}><ShieldCheck size={18} color={T.muted} /></div>;
+  return <div style={s}><ShieldCheck size={18} color={T.muted} /></div>;
 }
 
 function MoreRow({ icon: Icon, iconType, title, subtitle, badge, badgeColor, onPress }) {
   return (
     <button onClick={onPress} style={{ display: "flex", alignItems: "center", width: "100%", background: "none", border: "none", padding: "13px 14px", cursor: "pointer", gap: 12 }}>
       {iconType ? <BenefitIcon type={iconType} /> : (
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <Icon size={18} color={T.gold} />
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(140,140,140,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Icon size={18} color={T.muted} />
         </div>
       )}
       <div style={{ flex: 1, textAlign: "left" }}>
@@ -5422,7 +5462,7 @@ function NotificationSettingsScreen({ account, activeMarkets = [] }) {
 function MoreSection({ title, children }) {
   return (
     <div style={{ marginBottom: 22 }}>
-      <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.goldBright, marginBottom: 8, paddingLeft: 2 }}>{title}</div>
+      <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 8, paddingLeft: 2 }}>{title}</div>
       <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, overflow: "hidden" }}>
         {children}
       </div>
@@ -5476,7 +5516,7 @@ function MoreSubScreen({ onBack, title, subtitle, rightElement, children }) {
           <ChevronLeft size={22} />
         </button>
         <div style={{ flex: 1, textAlign: "center" }}>
-          {title && <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright, lineHeight: 1.2 }}>{title}</div>}
+          {title && <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, lineHeight: 1.2 }}>{title}</div>}
           {subtitle && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{subtitle}</div>}
         </div>
         <div style={{ flexShrink: 0, width: 30, display: "flex", justifyContent: "flex-end" }}>
@@ -5741,7 +5781,7 @@ function CreatorWalletScreen({ account }) {
           style={{ ...getInputStyle(), width: "100%", marginBottom: 16, fontSize: 20, fontFamily: FONT_HEAD, fontWeight: 700, textAlign: "center" }}
         />
         {!msg && (
-          <button onClick={handleSubmit} disabled={busy} style={{ width: "100%", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+          <button onClick={handleSubmit} disabled={busy} style={{ width: "100%", background: T.goldGradient, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
             {busy ? "Processing…" : walletPage === "topup" ? `Top Up ${amount ? fmtGHS(+amount) : ""}` : `Withdraw ${amount ? fmtGHS(+amount) : ""}`}
           </button>
         )}
@@ -5887,7 +5927,7 @@ function HeaderAvatar({ account, morePage, T }) {
   const initial = (account?.email || "?")[0].toUpperCase();
   return url
     ? <img src={url} alt="me" style={{ width:34, height:34, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} />
-    : <div style={{ width:34, height:34, borderRadius:"50%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.ink }}>{initial}</div>;
+    : <div style={{ width:34, height:34, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.ink }}>{initial}</div>;
 }
 
 function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, onLogoutConfirm, setTab, entitlement, themeMode, setThemeMode, morePage, setMorePage, setProfileFromHeader, activeMarkets = [] }) {
@@ -6231,7 +6271,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       <div style={{ padding:"8px 20px 18px", display:"flex", alignItems:"center", gap:14 }}>
         {avatarUrl
           ? <img src={avatarUrl} alt="avatar" style={{ width:56, height:56, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} />
-          : <div style={{ width:56, height:56, borderRadius:"50%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
+          : <div style={{ width:56, height:56, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
         }
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>{fullName || (profileLoaded ? "User" : "…")}</div>
@@ -6249,7 +6289,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <button key={item.label} onClick={() => setMorePage(item.page)}
               style={{ flex:1, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", gap:8, position:"relative" }}>
               <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:14, right:14 }} />
-              <div style={{ width:40, height:40, borderRadius:"50%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                 <item.icon size={18} color={T.ink} />
               </div>
               <div style={{ width:28, height:3, borderRadius:2, background:T.gold, marginTop:6 }} />
@@ -6261,7 +6301,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <button onClick={() => setMorePage("wallet")}
           style={{ width:"100%", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
           <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:"50%", right:14, transform:"translateY(-50%)" }} />
-          <div style={{ width:40, height:40, borderRadius:"50%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+          <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <Wallet size={18} color={T.ink} />
           </div>
           <div>
@@ -6273,7 +6313,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <button onClick={() => setMorePage("settings")}
           style={{ width:"100%", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
           <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:"50%", right:14, transform:"translateY(-50%)" }} />
-          <div style={{ width:40, height:40, borderRadius:"50%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+          <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <Settings size={18} color={T.ink} />
           </div>
           <div>
@@ -6346,7 +6386,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:22, padding:"0 4px" }}>
                 {avatarUrl
                   ? <img src={avatarUrl} style={{ width:46, height:46, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} alt="" />
-                  : <div style={{ width:46, height:46, borderRadius:"50%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
+                  : <div style={{ width:46, height:46, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
                 }
                 <div>
                   <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{fullName || username || account?.email?.split("@")[0]}</div>
@@ -6397,7 +6437,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ width:92, height:92, borderRadius:"50%", border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}`, overflow:"hidden", position:"relative" }}>
               {avatarUrl
                 ? <img src={avatarUrl} alt="avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                : <div style={{ width:"100%", height:"100%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:32 }}>{profileInitial}</div>
+                : <div style={{ width:"100%", height:"100%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:32 }}>{profileInitial}</div>
               }
               {/* Camera badge on avatar — bottom-right corner only */}
               <div style={{ position:"absolute", bottom:2, right:2, background:"rgba(0,0,0,0.6)", borderRadius:"50%", padding:5, display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -6413,7 +6453,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               Share
             </button>
             <button onClick={() => setMorePage("profile-edit")}
-              style={{ background:`T.goldGradient`, border:"none", borderRadius:22, padding:"9px 16px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.ink, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
+              style={{ background:T.goldGradient, border:"none", borderRadius:22, padding:"9px 16px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.ink, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
               Edit profile
             </button>
           </div>
@@ -6456,7 +6496,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, fontSize:12.5, color:T.muted }}>
               <div style={{ display:"flex", alignItems:"center" }}>
                 {mutualFollowers.slice(0, 3).map((f, i) => (
-                  <div key={f.id} style={{ width:22, height:22, borderRadius:"50%", marginLeft:i > 0 ? -7 : 0, border:`1.5px solid ${T.ink}`, overflow:"hidden", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:700, fontSize:8, color:T.ink, flexShrink:0 }}>
+                  <div key={f.id} style={{ width:22, height:22, borderRadius:"50%", marginLeft:i > 0 ? -7 : 0, border:`1.5px solid ${T.ink}`, overflow:"hidden", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:700, fontSize:8, color:T.ink, flexShrink:0 }}>
                     {f.avatar_url ? <img src={f.avatar_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" /> : (f.username || f.email || "?")[0]?.toUpperCase()}
                   </div>
                 ))}
@@ -6566,7 +6606,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ width:88, height:88, borderRadius:"50%", border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}`, overflow:"hidden", position:"relative" }}>
               {avatarUrl
                 ? <img src={avatarUrl} alt="avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                : <div style={{ width:"100%", height:"100%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:30 }}>{profileInitial}</div>
+                : <div style={{ width:"100%", height:"100%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:30 }}>{profileInitial}</div>
               }
               {/* Camera badge — bottom-right corner only */}
               <div style={{ position:"absolute", bottom:2, right:2, background:"rgba(0,0,0,0.6)", borderRadius:"50%", padding:5, display:"flex", alignItems:"center", justifyContent:"center" }}><CamIcon /></div>
@@ -6736,7 +6776,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
           {/* Tier breakdown */}
           <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: "6px 0", marginBottom: 14 }}>
-            <div style={{ padding: "12px 16px 8px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: T.goldBright, letterSpacing: 0.5 }}>HOW IT WORKS</div>
+            <div style={{ padding: "12px 16px 8px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: T.muted, letterSpacing: 0.5 }}>HOW IT WORKS</div>
             {tiers.map((t, i) => {
               const active = entitlement.tier === t.key;
               const tBlue = t.icon === "blue";
@@ -6767,7 +6807,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
           {/* CTA */}
           {!isVerif && (
-            <button onClick={() => setMorePage("rewards")} style={{ width: "100%", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
+            <button onClick={() => setMorePage("rewards")} style={{ width: "100%", background: T.goldGradient, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
               Get Verified — View Plans
             </button>
           )}
@@ -6943,15 +6983,15 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:16, padding:16, marginBottom:22 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
           <div>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.goldBright }}>Analytics</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper }}>Analytics</div>
             <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>Your creator performance</div>
           </div>
-          <button onClick={() => setMorePage("analytics")} style={{ background:"none", border:"none", color:T.gold, fontSize:11.5, fontFamily:FONT_HEAD, fontWeight:700, cursor:"pointer" }}>View all →</button>
+          <button onClick={() => setMorePage("analytics")} style={{ background:"none", border:"none", color:T.muted, fontSize:11.5, fontFamily:FONT_HEAD, fontWeight:700, cursor:"pointer" }}>View all →</button>
         </div>
         {/* Mini bar chart sparkline */}
         <div style={{ height:52, display:"flex", alignItems:"flex-end", gap:3, marginBottom:12 }}>
           {[35,50,28,65,42,78,55,90,68,88].map((h,i) => (
-            <div key={i} style={{ flex:1, height:`${h}%`, background:i===9?T.gold:`${T.gold}35`, borderRadius:2, minHeight:4 }} />
+            <div key={i} style={{ flex:1, height:`${h}%`, background:i===9?T.muted:`${T.muted}55`, borderRadius:2, minHeight:4 }} />
           ))}
         </div>
         <div style={{ display:"flex", gap:12, alignItems:"center" }}>
@@ -6963,14 +7003,14 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, color:T.paper }}>{followerCount.toLocaleString()}</div>
             <div style={{ fontSize:10.5, color:T.muted, marginTop:1 }}>Followers</div>
           </div>
-          <button onClick={() => setMorePage("analytics")} style={{ background:`rgba(198,161,91,0.15)`, border:`1px solid ${T.gold}44`, borderRadius:10, padding:"8px 14px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, color:T.gold, cursor:"pointer", flexShrink:0 }}>Open</button>
+          <button onClick={() => setMorePage("analytics")} style={{ background:`rgba(140,140,140,0.15)`, border:`1px solid ${T.muted}44`, borderRadius:10, padding:"8px 14px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, color:T.muted, cursor:"pointer", flexShrink:0 }}>Open</button>
         </div>
       </div>
 
       <MoreSection title="TRADER REWARDS PROGRAM">
         {/* Get Verified row with dual badges */}
         <button onClick={() => setMorePage("verification")} style={{ width:"100%", display:"flex", alignItems:"center", padding:"14px 16px", background:"none", border:"none", cursor:"pointer", gap:12 }}>
-          <div style={{ width:36, height:36, borderRadius:10, background:"rgba(198,161,91,0.12)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, position:"relative" }}>
+          <div style={{ width:36, height:36, borderRadius:10, background:"rgba(140,140,140,0.14)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, position:"relative" }}>
             {/* Overlapping blue + gold badges */}
             <svg width="16" height="16" viewBox="1.604 1.604 18.792 18.792" style={{ position:"absolute", left:6, top:10 }}>
               <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1d9bf0" />
@@ -6998,10 +7038,10 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               <div key={label} style={{ marginBottom:14 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
                   <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.paper }}>{target.toLocaleString()} {label}</span>
-                  <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:done?T.sage:T.gold }}>{val.toLocaleString()}/{target.toLocaleString()}</span>
+                  <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:done?T.sage:T.paper }}>{val.toLocaleString()}/{target.toLocaleString()}</span>
                 </div>
                 <div style={{ height:6, borderRadius:3, background:T.cardBorder, overflow:"hidden" }}>
-                  <div style={{ height:"100%", width:`${Math.min(1,val/target)*100}%`, borderRadius:3, background:done?T.sage:T.gold, transition:"width 0.6s ease" }} />
+                  <div style={{ height:"100%", width:`${Math.min(1,val/target)*100}%`, borderRadius:3, background:done?T.sage:T.muted, transition:"width 0.6s ease" }} />
                 </div>
               </div>
             );
@@ -7009,7 +7049,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           <div style={{ fontSize:11, color:T.muted, lineHeight:1.6, marginBottom:14 }}>A qualified referral is a user who signs up through your link and activates a subscription.</div>
           {/* Referral link + wallet balance */}
           <div style={{ background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px", marginBottom:14 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.goldBright, marginBottom:8 }}>YOUR REFERRAL LINK</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.paper, marginBottom:8 }}>YOUR REFERRAL LINK</div>
             <div style={{ fontSize:11, color:T.muted, lineHeight:1.6, marginBottom:10 }}>Earn 20% cash reward — sent to your wallet — every time someone signs up with your link and activates a subscription.</div>
             {referralCode ? (
               <div style={{ display:"flex", alignItems:"center", gap:8, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:10, padding:"10px 12px", marginBottom:12 }}>
@@ -7027,7 +7067,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           <button
             disabled={!rewardEligible}
             onClick={rewardEligible ? () => setMorePage("rewards") : undefined}
-            style={{ width:"100%", background:rewardEligible?`T.goldGradient`:"rgba(100,100,100,0.18)", color:rewardEligible?T.ink:"rgba(150,150,150,0.6)", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:rewardEligible?"pointer":"not-allowed", transition:"background 0.3s" }}>
+            style={{ width:"100%", background:rewardEligible?T.goldGradient:"rgba(100,100,100,0.18)", color:rewardEligible?T.ink:"rgba(150,150,150,0.6)", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:rewardEligible?"pointer":"not-allowed", transition:"background 0.3s" }}>
             Apply Now
           </button>
         </div>
@@ -7060,19 +7100,19 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}>
           <div style={{ background: T.card, width: '100%', maxWidth: 480, margin: '0 auto', borderRadius: '16px 16px 0 0', padding: '22px 20px 36px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.goldBright, fontWeight: 800 }}>Install RainX</div>
+              <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.paper, fontWeight: 800 }}>Install RainX</div>
               <button onClick={() => setShowInstallHelp(false)} style={{ background: 'none', border: 'none', color: T.muted, cursor: 'pointer' }}><X size={20} /></button>
             </div>
             <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.8, marginBottom: 20 }}>
               <div style={{ color: T.paper, fontWeight: 700, marginBottom: 6 }}>📱 On iPhone / Safari:</div>
-              <div>1. Tap the <strong style={{ color: T.gold }}>Share</strong> button at the bottom of your screen</div>
-              <div>2. Scroll and tap <strong style={{ color: T.gold }}>Add to Home Screen</strong></div>
-              <div>3. Tap <strong style={{ color: T.gold }}>Add</strong></div>
+              <div>1. Tap the <strong style={{ color: T.paper }}>Share</strong> button at the bottom of your screen</div>
+              <div>2. Scroll and tap <strong style={{ color: T.paper }}>Add to Home Screen</strong></div>
+              <div>3. Tap <strong style={{ color: T.paper }}>Add</strong></div>
               <div style={{ color: T.paper, fontWeight: 700, margin: '14px 0 6px' }}>🤖 On Android / Chrome:</div>
-              <div>1. Tap the <strong style={{ color: T.gold }}>⋮ menu</strong> at the top right</div>
-              <div>2. Tap <strong style={{ color: T.gold }}>Add to Home Screen</strong> or <strong style={{ color: T.gold }}>Install App</strong></div>
+              <div>1. Tap the <strong style={{ color: T.paper }}>⋮ menu</strong> at the top right</div>
+              <div>2. Tap <strong style={{ color: T.paper }}>Add to Home Screen</strong> or <strong style={{ color: T.paper }}>Install App</strong></div>
             </div>
-            <button onClick={() => setShowInstallHelp(false)} style={{ width: '100%', background: `T.goldGradient`, color: T.ink, border: 'none', borderRadius: 12, padding: '13px 0', fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Got it</button>
+            <button onClick={() => setShowInstallHelp(false)} style={{ width: '100%', background: T.goldGradient, color: T.ink, border: 'none', borderRadius: 12, padding: '13px 0', fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Got it</button>
           </div>
         </div>
       )}
@@ -7080,7 +7120,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 500, display: "flex", alignItems: "flex-end" }}>
           <div style={{ background: T.card, width: "100%", maxWidth: 480, margin: "0 auto", borderRadius: "16px 16px 0 0", padding: 22, maxHeight: "80vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.goldBright, fontWeight: 800 }}>Terms & Risk Disclosure</div>
+              <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.paper, fontWeight: 800 }}>Terms & Risk Disclosure</div>
               <button onClick={() => setShowLegal(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><X size={20} /></button>
             </div>
             <div style={{ fontSize: 12, color: T.paper, lineHeight: 1.7, fontWeight: 500 }}>
@@ -7169,7 +7209,7 @@ function AnalyticsScreen({ account }) {
       <div style={{ display:"flex", alignItems:"flex-end", gap:2, height:80, marginTop:12, overflowX:"auto" }}>
         {data.map((d,i)=>(
           <div key={i} style={{ flex:1, minWidth:6, display:"flex", flexDirection:"column", alignItems:"center", gap:2 }}>
-            <div style={{ width:"100%", height:`${(d.val/max)*72}px`, background:color||T.gold, borderRadius:2, minHeight:2, transition:"height 0.4s ease" }} />
+            <div style={{ width:"100%", height:`${(d.val/max)*72}px`, background:color||T.muted, borderRadius:2, minHeight:2, transition:"height 0.4s ease" }} />
           </div>
         ))}
       </div>
@@ -7180,16 +7220,16 @@ function AnalyticsScreen({ account }) {
     <div style={{ padding:"0 0 24px", background:T.card, minHeight:"100%" }}>
       {/* Header */}
       <div style={{ padding:"20px 16px 12px", borderBottom:`1px solid ${T.cardBorder}` }}>
-        <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:22, color:T.goldBright, letterSpacing:-0.5 }}>ANALYTICS</div>
+        <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:22, color:T.paper, letterSpacing:-0.5 }}>ANALYTICS</div>
         <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Track your creator performance</div>
       </div>
 
       {/* Period selector */}
       <div style={{ display:"flex", gap:6, padding:"12px 16px", overflowX:"auto" }}>
         {PERIODS.map(p=>(
-          <button key={p} onClick={()=>{setPeriod(p);setShowCustom(false);}} style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, border:`1px solid ${period===p?T.gold:T.cardBorder}`, background:period===p?"rgba(198,161,91,0.15)":"none", color:period===p?T.gold:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer" }}>{p}</button>
+          <button key={p} onClick={()=>{setPeriod(p);setShowCustom(false);}} style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, border:`1px solid ${period===p?T.muted:T.cardBorder}`, background:period===p?"rgba(140,140,140,0.15)":"none", color:period===p?T.paper:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer" }}>{p}</button>
         ))}
-        <button onClick={()=>setShowCustom(v=>!v)} style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, border:`1px solid ${showCustom?T.gold:T.cardBorder}`, background:showCustom?"rgba(198,161,91,0.15)":"none", color:showCustom?T.gold:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer" }}>Custom</button>
+        <button onClick={()=>setShowCustom(v=>!v)} style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, border:`1px solid ${showCustom?T.muted:T.cardBorder}`, background:showCustom?"rgba(140,140,140,0.15)":"none", color:showCustom?T.paper:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer" }}>Custom</button>
       </div>
       {showCustom && (
         <div style={{ display:"flex", gap:10, padding:"0 16px 12px" }}>
@@ -7201,7 +7241,7 @@ function AnalyticsScreen({ account }) {
       {/* Tabs */}
       <div style={{ display:"flex", borderBottom:`1px solid ${T.cardBorder}`, marginBottom:16 }}>
         {TABS.map(t=>(
-          <button key={t} onClick={()=>setActiveTab(t)} style={{ flex:1, padding:"10px 0", background:"none", border:"none", borderBottom:`2px solid ${activeTab===t?T.gold:"transparent"}`, color:activeTab===t?T.gold:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer", transition:"color 0.15s" }}>{t}</button>
+          <button key={t} onClick={()=>setActiveTab(t)} style={{ flex:1, padding:"10px 0", background:"none", border:"none", borderBottom:`2px solid ${activeTab===t?T.paper:"transparent"}`, color:activeTab===t?T.paper:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer", transition:"color 0.15s" }}>{t}</button>
         ))}
       </div>
 
@@ -7222,7 +7262,7 @@ function AnalyticsScreen({ account }) {
                 </div>
                 <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:16, marginBottom:16 }}>
                   <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, marginBottom:4 }}>Post Views — {period}</div>
-                  <BarChart data={stats.daily} color={T.gold} />
+                  <BarChart data={stats.daily} color={T.muted} />
                   <div style={{ display:"flex", justifyContent:"space-between", fontSize:9.5, color:T.muted, marginTop:6 }}>
                     {stats.daily.filter((_,i)=>i===0||i===Math.floor(stats.daily.length/2)||i===stats.daily.length-1).map(d=><span key={d.date}>{d.date}</span>)}
                   </div>
@@ -7238,7 +7278,7 @@ function AnalyticsScreen({ account }) {
             <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:8 }}>Content Breakdown</div>
             <div style={{ fontSize:12, color:T.muted, lineHeight:1.8 }}>Views, likes, and comments per post will appear here.<br/>Post more to see your top-performing content.</div>
             {stats && stats.posts > 0 && (
-              <div style={{ marginTop:20, fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.gold }}>{stats.posts} posts in this period</div>
+              <div style={{ marginTop:20, fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{stats.posts} posts in this period</div>
             )}
           </div>
         )}
@@ -7256,7 +7296,7 @@ function AnalyticsScreen({ account }) {
                   <div key={slot} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
                     <span style={{ width:40, fontSize:11, color:T.muted, flexShrink:0 }}>{slot}</span>
                     <div style={{ flex:1, height:8, borderRadius:4, background:T.cardBorder, overflow:"hidden" }}>
-                      <div style={{ height:"100%", width:`${h}%`, borderRadius:4, background:T.gold }} />
+                      <div style={{ height:"100%", width:`${h}%`, borderRadius:4, background:T.muted }} />
                     </div>
                   </div>
                 );
@@ -7269,7 +7309,7 @@ function AnalyticsScreen({ account }) {
           <div>
             <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:18, marginBottom:16 }}>
               <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, marginBottom:4 }}>New Followers</div>
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:28, color:T.goldBright }}>{stats?.newFollowers||0}</div>
+              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:28, color:T.paper }}>{stats?.newFollowers||0}</div>
               <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>in the last {period}</div>
               {stats && <BarChart data={stats.daily.map(d=>({...d,val:0}))} color={T.sage} />}
             </div>
@@ -7317,7 +7357,7 @@ function NewFeaturesPrompt() {
           RainX has been updated. <strong style={{ color: T.gold }}>Force restart</strong> or <strong style={{ color: T.gold }}>close and reopen</strong> the app to see the latest features.
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={forceRestart} style={{ flex: 1, background: `T.goldGradient`, color: T.ink, border: 'none', borderRadius: 12, padding: '13px 0', fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Restart Now</button>
+          <button onClick={forceRestart} style={{ flex: 1, background: T.goldGradient, color: T.ink, border: 'none', borderRadius: 12, padding: '13px 0', fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Restart Now</button>
           <button onClick={dismiss} style={{ flex: 1, background: 'none', border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: '13px 0', fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.muted, cursor: 'pointer' }}>Got it</button>
         </div>
       </div>
@@ -7363,7 +7403,7 @@ function InstallBanner() {
       style={{ position: "fixed", top: 10, left: 10, right: 10, maxWidth: 460, margin: "0 auto", zIndex: 110, background: T.card, border: `1px solid ${T.gold}`, borderRadius: 12, padding: "10px 12px", boxShadow: "0 8px 24px rgba(0,0,0,0.5)", display: "flex", alignItems: "center", gap: 10, fontFamily: FONT_BODY, transform: `translateX(${dragX}px)`, opacity: Math.max(0, 1 - Math.abs(dragX) / 200), transition: dragging.current ? "none" : "transform 0.2s, opacity 0.2s" }}
     >
       <div style={{ flex: 1 }}>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.goldBright }}>Install RainX</div>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper }}>Install RainX</div>
         <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>Add to your home screen for quick access</div>
       </div>
       <button
