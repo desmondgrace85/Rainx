@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ArrowLeft, ArrowRight, BarChart3, Bell, ChevronRight, CircleDollarSign,
-  Coins, Gem, Rocket, Sparkles, Star, TrendingUp, WalletCards,
+  ArrowRight, BarChart3, ChevronRight, Coins, Rocket, Sparkles,
+  TrendingUp, WalletCards,
 } from "lucide-react";
-import planetReference from "./assets/space-coins-planet.jpg";
+import planetReference from "./assets/space-coins-planet-3d.png";
 
 function useEdgeBack(onBack) {
   const swipeRef = useRef(null);
@@ -26,22 +26,58 @@ const COINS = [
   { name: "Galaxy Doge", ticker: "GDOGE", price: "$0.000245", change: "+23.14%", tone: "gold", icon: "D" },
   { name: "Moon Cat", ticker: "MCAT", price: "$0.000182", change: "+12.08%", tone: "blue", icon: "M" },
   { name: "Planet Pepe", ticker: "PPEPE", price: "$0.000092", change: "+8.19%", tone: "green", icon: "P" },
-  { name: "Star Inu", ticker: "SINU", price: "$0.000071", change: "-2.44%", tone: "rose", icon: "✦" },
 ];
 
-function PlanetScene({ T, active, onInteract }) {
+function PlanetScene({ T }) {
+  const [rotation, setRotation] = useState(0);
+  const rotationRef = useRef(0);
+  const dragRef = useRef(null);
+
+  useEffect(() => {
+    let frameId;
+    let previous = performance.now();
+    const animate = (now) => {
+      const elapsed = now - previous;
+      previous = now;
+      if (!dragRef.current) {
+        rotationRef.current = (rotationRef.current + elapsed * 0.012) % 360;
+        setRotation(rotationRef.current);
+      }
+      frameId = requestAnimationFrame(animate);
+    };
+    frameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frameId);
+  }, []);
+
+  const onPointerDown = (event) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = { startX: event.clientX, startRotation: rotationRef.current };
+  };
+  const onPointerMove = (event) => {
+    if (!dragRef.current) return;
+    rotationRef.current = dragRef.current.startRotation + (event.clientX - dragRef.current.startX) * 0.55;
+    setRotation(rotationRef.current);
+  };
+  const onPointerUp = () => { dragRef.current = null; };
+
   return (
-    <button type="button" className={`sc-planet-scene${active ? " is-reacting" : ""}`} onClick={onInteract} aria-label="Interact with the rotating planet">
-      <img className="sc-planet-reference" src={planetReference} alt="" />
-      <span className="sc-planet-glow" style={{ background: `radial-gradient(circle, ${T.gold}5c, transparent 68%)` }} />
-      <span className="sc-planet-ring sc-planet-ring-back" style={{ borderColor: `${T.goldBright}99` }} />
-      <span className="sc-planet" style={{ background: `radial-gradient(circle at 32% 26%, ${T.goldBright}, ${T.gold} 47%, ${T.card})`, boxShadow: `inset -12px -8px 16px ${T.ink}55, 0 12px 24px ${T.gold}24` }}>
-        <span className="sc-planet-line" style={{ background: `${T.paper}45` }} />
-        <span className="sc-planet-line sc-planet-line-two" style={{ background: `${T.paper}35` }} />
+    <button
+      type="button"
+      className="sc-planet-scene"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      aria-label="Drag to rotate the planet"
+    >
+      <span className="sc-planet-motion" style={{ transform: `rotate(${rotation}deg)` }}>
+        <span className="sc-planet-glow" style={{ background: `radial-gradient(circle, ${T.gold}5c, transparent 68%)` }} />
+        <span className="sc-planet-orbit sc-planet-orbit-back" style={{ borderColor: `${T.goldBright}99` }} />
+        <img className="sc-planet-reference" src={planetReference} alt="" />
+        <span className="sc-planet-orbit sc-planet-orbit-front" style={{ borderColor: `${T.goldBright}aa` }} />
+        <span className="sc-planet-orbit-dot sc-planet-orbit-dot-one" style={{ background: T.goldBright }} />
+        <span className="sc-planet-orbit-dot sc-planet-orbit-dot-two" style={{ background: T.gold }} />
       </span>
-      <span className="sc-planet-ring sc-planet-ring-front" style={{ borderColor: `${T.goldBright}aa` }} />
-      <Star className="sc-planet-star sc-planet-star-one" color={T.goldBright} size={11} />
-      <Star className="sc-planet-star sc-planet-star-two" color={T.gold} size={9} />
     </button>
   );
 }
@@ -57,15 +93,8 @@ function CoinMark({ coin, T }) {
 }
 
 export default function SpaceCoinsDashboard({ T, onBack }) {
-  const [reacting, setReacting] = useState(false);
   const [toast, setToast] = useState("");
   const edgeBack = useEdgeBack(onBack);
-
-  const interact = () => {
-    setReacting(false);
-    requestAnimationFrame(() => setReacting(true));
-    window.setTimeout(() => setReacting(false), 780);
-  };
 
   const notify = (message) => {
     setToast(message);
@@ -80,43 +109,41 @@ export default function SpaceCoinsDashboard({ T, onBack }) {
   return (
     <main className="sc-screen sc-dashboard-screen" style={{ background: T.ink, color: T.paper }} {...edgeBack}>
       <style>{`
-        .sc-dashboard-shell { width:min(100%,480px); min-height:100%; margin:0 auto; padding:17px 16px 32px; }
-        .sc-dashboard-top { display:flex; align-items:center; gap:13px; margin-bottom:22px; }
+        .sc-dashboard-screen { animation:sc-dashboard-enter .42s cubic-bezier(.22,.75,.2,1) both; }
+        .sc-dashboard-shell { width:min(100%,480px); min-height:100%; margin:0 auto; padding:14px 8px 32px; }
+        .sc-dashboard-top { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
         .sc-dashboard-top .sc-back { flex:0 0 auto; }
-        .sc-dashboard-heading { flex:1; font-size:20px; font-weight:800; letter-spacing:-.04em; }
-        .sc-bell { width:40px; height:40px; display:grid; place-items:center; border:1px solid var(--sc-border); border-radius:13px; background:var(--sc-card); color:var(--sc-paper); }
-        .sc-create-card { position:relative; min-height:155px; overflow:hidden; border:1px solid var(--sc-gold-border); border-radius:20px; padding:22px 16px; background:linear-gradient(120deg, var(--sc-card), var(--sc-card-warm)); }
-        .sc-create-copy { position:relative; z-index:2; width:58%; }
-        .sc-create-title { margin:0; font-size:17px; line-height:1.2; font-weight:800; }
-        .sc-create-sub { margin:7px 0 0; color:var(--sc-muted); font-size:11px; line-height:1.45; }
-        .sc-create-button { display:flex; align-items:center; gap:11px; margin-top:17px; border:1px solid var(--sc-gold); border-radius:9px; padding:9px 10px 9px 12px; color:var(--sc-gold-bright); background:var(--sc-card); font:700 11px 'Montserrat',sans-serif; cursor:pointer; }
+        .sc-dashboard-heading { flex:1; font-size:17px; font-weight:800; letter-spacing:-.04em; }
+        .sc-dashboard-mark { width:28px; height:28px; display:grid; place-items:center; border-radius:50%; color:var(--sc-ink); background:linear-gradient(135deg,var(--sc-gold-bright),var(--sc-gold)); box-shadow:0 4px 10px var(--sc-gold-shadow); }
+        .sc-bell { width:36px; height:36px; display:grid; place-items:center; border:1px solid var(--sc-border); border-radius:12px; background:var(--sc-card); color:var(--sc-paper); }
+        .sc-create-card { position:relative; min-height:136px; overflow:hidden; border:1px solid var(--sc-gold-border); border-radius:18px; padding:17px 14px; background:linear-gradient(115deg, var(--sc-card), var(--sc-card-warm)); }
+        .sc-create-copy { position:relative; z-index:2; width:64%; }
+        .sc-create-title { margin:0; font-size:13px; line-height:1.25; font-weight:800; white-space:nowrap; }
+        .sc-create-sub { margin:7px 0 0; color:var(--sc-muted); font-size:10px; line-height:1.45; }
+        .sc-create-button { display:flex; align-items:center; gap:10px; margin-top:14px; border:1px solid var(--sc-gold); border-radius:8px; padding:8px 9px 8px 11px; color:var(--sc-gold-bright); background:var(--sc-card); font:700 10px 'Montserrat',sans-serif; cursor:pointer; }
         .sc-create-button span { display:grid; place-items:center; width:21px; height:21px; margin:-4px -5px -4px 1px; border-radius:6px; color:var(--sc-ink); background:var(--sc-gold); }
-        .sc-planet-scene { position:absolute; z-index:1; right:-11px; top:2px; width:185px; height:150px; border:0; background:transparent; cursor:pointer; }
-         .sc-planet-reference { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:center; mix-blend-mode:multiply; pointer-events:none; }
-         .sc-planet-scene > :not(.sc-planet-reference) { display:none; }
-        .sc-planet-glow { position:absolute; inset:4px; border-radius:50%; filter:blur(8px); }
-        .sc-planet { position:absolute; z-index:2; left:59px; top:39px; width:75px; height:75px; overflow:hidden; border-radius:50%; }
-        .sc-planet-line { position:absolute; left:-10px; top:25px; width:105px; height:9px; border-radius:50%; transform:rotate(-16deg); }
-        .sc-planet-line-two { top:49px; transform:rotate(12deg); }
-        .sc-planet-ring { position:absolute; z-index:3; left:30px; top:54px; width:134px; height:49px; border:5px solid; border-left-color:transparent !important; border-right-color:transparent !important; border-radius:50%; transform:rotate(-13deg); }
-        .sc-planet-ring-back { z-index:1; }
-        .sc-planet-ring-front { top:57px; clip-path:polygon(0 48%,100% 48%,100% 100%,0 100%); }
-        .sc-planet-star { position:absolute; z-index:4; animation:sc-twinkle 2.7s ease-in-out infinite; }
-        .sc-planet-star-one { top:22px; right:30px; } .sc-planet-star-two { top:41px; right:17px; animation-delay:.5s; }
-        .sc-planet-scene.is-reacting .sc-planet-ring { animation:sc-planet-burst .75s ease-out; }
-        .sc-planet-scene.is-reacting .sc-planet-star-one { animation:sc-star-burst-one .75s ease-out; }
-        .sc-planet-scene.is-reacting .sc-planet-star-two { animation:sc-star-burst-two .75s ease-out; }
-        .sc-quick-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:16px 0 27px; }
-        .sc-quick { min-width:0; display:flex; flex-direction:column; align-items:center; gap:8px; padding:13px 3px 10px; color:var(--sc-paper); background:var(--sc-card); border:1px solid var(--sc-border); border-radius:14px; font:600 9px 'Montserrat',sans-serif; cursor:pointer; }
-        .sc-quick-icon { display:grid; place-items:center; width:29px; height:29px; border-radius:10px; color:var(--sc-gold-bright); background:var(--sc-gold-soft); }
-        .sc-section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
-        .sc-section-title { font-size:15px; font-weight:800; letter-spacing:-.02em; }
+        .sc-planet-scene { position:absolute; z-index:1; right:-3px; top:0; width:188px; height:136px; border:0; padding:0; background:transparent; cursor:grab; touch-action:none; }
+        .sc-planet-scene:active { cursor:grabbing; }
+        .sc-planet-motion { position:absolute; inset:0; transform-origin:50% 50%; }
+        .sc-planet-reference { position:absolute; z-index:2; left:50%; top:14px; width:104px; height:104px; object-fit:contain; transform:translateX(-50%); filter:drop-shadow(0 9px 11px rgba(198,161,91,.22)); pointer-events:none; }
+        .sc-planet-glow { position:absolute; z-index:1; left:50%; top:16px; width:108px; height:108px; transform:translateX(-50%); border-radius:50%; filter:blur(8px); pointer-events:none; }
+        .sc-planet-orbit { position:absolute; z-index:3; left:50%; top:45px; width:154px; height:49px; border:2px solid; border-left-color:transparent !important; border-right-color:transparent !important; border-radius:50%; transform:translateX(-50%) rotate(-14deg); box-shadow:0 0 8px var(--sc-gold-shadow); pointer-events:none; }
+        .sc-planet-orbit-back { opacity:.78; }
+        .sc-planet-orbit-front { top:47px; clip-path:polygon(0 48%,100% 48%,100% 100%,0 100%); }
+        .sc-planet-orbit-dot { position:absolute; z-index:4; width:5px; height:5px; border-radius:50%; box-shadow:0 0 8px 2px var(--sc-gold-shadow); pointer-events:none; }
+        .sc-planet-orbit-dot-one { top:29px; left:40px; }
+        .sc-planet-orbit-dot-two { right:28px; top:85px; }
+        .sc-quick-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:15px 0 23px; }
+        .sc-quick { min-width:0; display:flex; flex-direction:column; align-items:center; gap:7px; padding:11px 2px 9px; color:var(--sc-paper); background:var(--sc-card); border:1px solid var(--sc-border); border-radius:13px; font:600 8px 'Montserrat',sans-serif; cursor:pointer; }
+        .sc-quick-icon { display:grid; place-items:center; width:27px; height:27px; border-radius:9px; color:var(--sc-gold-bright); background:var(--sc-gold-soft); }
+        .sc-section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:9px; }
+        .sc-section-title { font-size:14px; font-weight:800; letter-spacing:-.02em; }
         .sc-view-all { border:0; padding:4px 0; color:var(--sc-gold-bright); background:transparent; font:700 10px 'Montserrat',sans-serif; cursor:pointer; }
-        .sc-coin-list { overflow:hidden; margin-bottom:27px; border:1px solid var(--sc-border); border-radius:15px; background:var(--sc-card); }
-        .sc-coin-row { width:100%; display:flex; align-items:center; gap:10px; padding:12px 12px; border:0; border-bottom:1px solid var(--sc-border); background:transparent; color:inherit; text-align:left; cursor:pointer; }
+         .sc-coin-list { overflow:hidden; margin-bottom:24px; border:1px solid var(--sc-border); border-radius:14px; background:var(--sc-card); }
+         .sc-coin-row { width:100%; display:flex; align-items:center; gap:9px; padding:11px 10px; border:0; border-bottom:1px solid var(--sc-border); background:transparent; color:inherit; text-align:left; cursor:pointer; }
         .sc-coin-row:last-child { border-bottom:0; }
         .sc-coin-row:active, .sc-quick:active, .sc-create-button:active { transform:scale(.98); }
-        .sc-coin-mark { display:grid; place-items:center; width:34px; height:34px; flex-shrink:0; border-radius:50%; font-size:16px; box-shadow:inset -5px -4px 0 rgba(0,0,0,.15); }
+         .sc-coin-mark { display:grid; place-items:center; width:32px; height:32px; flex-shrink:0; border-radius:50%; font-size:15px; box-shadow:inset -5px -4px 0 rgba(0,0,0,.15); }
         .sc-coin-name { min-width:0; flex:1; }
         .sc-coin-name strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; font-weight:800; }
         .sc-coin-name small { display:block; margin-top:4px; color:var(--sc-muted); font-size:9px; font-weight:600; }
@@ -129,9 +156,7 @@ export default function SpaceCoinsDashboard({ T, onBack }) {
         .sc-trend-rank { color:var(--sc-gold-bright); font-size:10px; font-weight:800; }
         .sc-trend-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; font-weight:700; }
         .sc-toast { position:fixed; z-index:5; left:50%; bottom:25px; transform:translateX(-50%); padding:11px 15px; border:1px solid var(--sc-gold-border); border-radius:999px; color:var(--sc-paper); background:var(--sc-card); box-shadow:0 8px 25px rgba(0,0,0,.28); font-size:11px; font-weight:700; white-space:nowrap; animation:sc-toast-in .2s ease-out; }
-        @keyframes sc-planet-burst { 50% { transform:rotate(-13deg) scale(1.12); } }
-        @keyframes sc-star-burst-one { 50% { transform:translate(10px,-12px) rotate(40deg); } }
-        @keyframes sc-star-burst-two { 50% { transform:translate(13px,10px) rotate(-35deg); } }
+         @keyframes sc-dashboard-enter { from { opacity:0; transform:translate3d(100%,0,0); } to { opacity:1; transform:translate3d(0,0,0); } }
         @keyframes sc-toast-in { from { opacity:0; transform:translate(-50%,10px); } }
         @media (max-width:340px) { .sc-create-copy { width:62%; } .sc-planet-scene { right:-32px; } .sc-quick { font-size:8px; } }
         @media (prefers-reduced-motion:reduce) { .sc-screen *, .sc-screen { animation:none !important; transition:none !important; } }
@@ -141,7 +166,7 @@ export default function SpaceCoinsDashboard({ T, onBack }) {
         style={{
           "--sc-ink": T.ink,
           "--sc-card": T.card,
-          "--sc-card-warm": `${T.gold}12`,
+          "--sc-card-warm": T.ink === "#FFFFFF" ? "#fff2d3" : `${T.gold}12`,
           "--sc-border": T.cardBorder,
           "--sc-gold": T.gold,
           "--sc-gold-bright": T.goldBright,
@@ -154,9 +179,8 @@ export default function SpaceCoinsDashboard({ T, onBack }) {
         }}
       >
         <header className="sc-dashboard-top">
-          <button type="button" className="sc-back" onClick={onBack} aria-label="Back to Space Coins intro"><ArrowLeft size={18} /></button>
+          <button type="button" className="sc-dashboard-mark" onClick={onBack} aria-label="Back to Space Coins intro"><Coins size={15} /></button>
           <h1 className="sc-dashboard-heading">Space Coins</h1>
-          <div className="sc-bell" aria-label="Notifications"><Bell size={17} /></div>
         </header>
 
         <section className="sc-create-card">
