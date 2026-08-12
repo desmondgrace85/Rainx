@@ -1138,7 +1138,7 @@ function SubscribeScreen({ account, entitlement, onBack }) {
         </div>
         <label style={{ fontSize: 11, color: T.muted, fontWeight: 600, display: "block", marginBottom: 4 }}>Payment reference (optional)</label>
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. transaction ID" style={{ ...getInputStyle(), width: "100%", marginBottom: 14 }} />
-        <button onClick={submitPayment} disabled={busy} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+        <button onClick={submitPayment} disabled={busy} style={{ width: "100%", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
           {busy ? "Submitting…" : "I've Paid — Confirm →"}
         </button>
       </div>
@@ -1244,19 +1244,19 @@ function SubscribeScreen({ account, entitlement, onBack }) {
           Loading…
         </div>
       ) : methods.length === 0 ? (
-        <div style={{ margin: "0 16px 8px", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, borderRadius: 14, padding: "15px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
+        <div style={{ margin: "0 16px 8px", background: `T.goldGradient`, borderRadius: 14, padding: "15px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
           onClick={() => alert("No payment methods configured. Please contact support.")}>
           <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, color: T.ink }}>Subscribe Now</span>
           <span style={{ fontSize: 20, color: T.ink }}>→</span>
         </div>
       ) : methods.length === 1 ? (
-        <button onClick={() => setSelectedMethod(methods[0])} style={{ margin: "0 16px 8px", width: "calc(100% - 32px)", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 14, padding: "15px 20px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <button onClick={() => setSelectedMethod(methods[0])} style={{ margin: "0 16px 8px", width: "calc(100% - 32px)", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 14, padding: "15px 20px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span>Subscribe Now</span><span style={{ fontSize: 20 }}>→</span>
         </button>
       ) : (
         <div style={{ margin: "0 16px 8px", display: "flex", flexDirection: "column", gap: 8 }}>
           {methods.map(m => (
-            <button key={m.id} onClick={() => setSelectedMethod(m)} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 14, padding: "13px 20px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <button key={m.id} onClick={() => setSelectedMethod(m)} style={{ width: "100%", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 14, padding: "13px 20px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span>Subscribe via {m.name}</span><span style={{ fontSize: 18 }}>→</span>
             </button>
           ))}
@@ -2571,7 +2571,7 @@ function MainAppContent({ account, onLogout }) {
               <div style={{ fontSize:10, color:T.muted, fontWeight:600 }}>Powered by Raina AI</div>
               {/* Clickable Profile */}
               <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); setShowSidebar(false); routeWrite(tab, "profile-menu", "h"); }} style={{ marginTop:18, width:"100%", display:"flex", alignItems:"center", gap:12, background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"12px 14px", cursor:"pointer", textAlign:"left" }}>
-                <div style={{ width:44, height:44, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>
+                <div style={{ width:44, height:44, borderRadius:"50%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>
                   {(account?.email || "?")[0].toUpperCase()}
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
@@ -3386,7 +3386,7 @@ function GamesTab() {
         <div className={pageReady ? "games-fade" : ""} style={{ position: "relative", zIndex: 3, textAlign: "center" }}>
           <h1 style={{ fontFamily: FONT_HEAD, fontSize: 38, lineHeight: 1.05, fontWeight: 800, color: "#F2EDE0", margin: "0 0 8px", textShadow: `0 0 14px ${T.gold}66` }}>Play Smart.<br />Win More.</h1>
           <p style={{ color: `${T.goldBright}CC`, fontSize: 13, fontWeight: 600, margin: "0 auto 22px", maxWidth: 280 }}>The premium gaming platform for serious players</p>
-          <button onClick={() => document.getElementById("games-trending")?.scrollIntoView({ behavior: "smooth", block: "start" })} style={{ border: "none", borderRadius: 999, padding: "14px 28px", background: `linear-gradient(90deg, ${T.gold}, ${T.goldBright})`, color: "#050505", fontFamily: FONT_HEAD, fontSize: 12, fontWeight: 800, letterSpacing: 1, cursor: "pointer", boxShadow: `0 0 24px ${T.gold}55` }}>
+          <button onClick={() => document.getElementById("games-trending")?.scrollIntoView({ behavior: "smooth", block: "start" })} style={{ border: "none", borderRadius: 999, padding: "14px 28px", background: `T.goldGradient`, color: "#050505", fontFamily: FONT_HEAD, fontSize: 12, fontWeight: 800, letterSpacing: 1, cursor: "pointer", boxShadow: `0 0 24px ${T.gold}55` }}>
             Enter Games <span style={{ marginLeft: 6 }}>▶</span>
           </button>
         </div>
@@ -3896,7 +3896,7 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
             <div style={{ fontSize:38, marginBottom:12 }}>🔒</div>
             <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:8 }}>Subscription Required</div>
             <div style={{ fontSize:13, color:T.muted, lineHeight:1.7, marginBottom:22 }}>An active subscription is required to access live market analysis, Raina AI signals, and real-time charts. Subscribe to unlock up to 3 active markets.</div>
-            <button onClick={() => { setShowSubLock(false); onSubscribe(); }} style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:"pointer", marginBottom:10 }}>View Plans</button>
+            <button onClick={() => { setShowSubLock(false); onSubscribe(); }} style={{ width:"100%", background:`T.goldGradient`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:"pointer", marginBottom:10 }}>View Plans</button>
             <button onClick={() => setShowSubLock(false)} style={{ width:"100%", background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"11px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.muted, cursor:"pointer" }}>Close</button>
           </div>
         </div>
@@ -4544,7 +4544,7 @@ const SCALP_SYMBOLS = [
             </div>
           ))}
           {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 8, lineHeight: 1.5 }}>{err}</div>}
-          <button onClick={handleSaveSettings} disabled={busy} style={{ width: "100%", background: saved ? T.sage : `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
+          <button onClick={handleSaveSettings} disabled={busy} style={{ width: "100%", background: saved ? T.sage : `T.goldGradient`, color: T.ink, border: "none", borderRadius: 12, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>
             {saved ? "Saved" : busy ? "Saving…" : "Save Settings"}
           </button>
         </div>
@@ -4641,7 +4641,7 @@ const SCALP_SYMBOLS = [
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
                   <button onClick={() => setPendingScalpMode(null)} style={{ flex: 1, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, color: T.paper, cursor: "pointer" }}>Cancel</button>
-                  <button onClick={() => { setScalpMode(pendingScalpMode); setSmartAlert(null); setPendingScalpMode(null); }} style={{ flex: 1, background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: T.ink, cursor: "pointer" }}>Switch</button>
+                  <button onClick={() => { setScalpMode(pendingScalpMode); setSmartAlert(null); setPendingScalpMode(null); }} style={{ flex: 1, background: `T.goldGradient`, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: T.ink, cursor: "pointer" }}>Switch</button>
                 </div>
               </div>
             </div>
@@ -4875,7 +4875,7 @@ const SCALP_SYMBOLS = [
                         else { setSelectedSymbol(sym); lsSet("rainx-scalp-sym", sym); }
                       }}
                       disabled={busy}
-                      style={{ width: "100%", background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 10, padding: "9px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, cursor: busy ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "opacity 0.2s" }}
+                      style={{ width: "100%", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 10, padding: "9px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, cursor: busy ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "opacity 0.2s" }}
                     >
                       Scalp Now <ArrowRight size={13} />
                     </button>
@@ -4935,7 +4935,7 @@ const SCALP_SYMBOLS = [
           <div style={{ marginBottom: 16 }}><div style={{ fontSize: 13.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Account Mode</div><div style={{ display: "flex", gap: 8 }}>{["demo", "live"].map(m => <button key={m} onClick={() => setMode(m)} style={{ flex: 1, background: mode === m ? T.gold : T.card, color: mode === m ? T.ink : T.muted, border: `1px solid ${mode === m ? T.gold : T.cardBorder}`, borderRadius: 10, padding: "10px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, cursor: "pointer", textTransform: "capitalize", transition: "all 0.2s" }}>{m}</button>)}</div></div>
           {connectMethod === "metaapi" ? <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}><div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.goldBright, marginBottom: 4 }}><Key size={16} /> MT5 Credentials</div><div style={{ fontSize: 12.5, color: T.muted, marginBottom: 14, lineHeight: 1.6 }}>Your credentials are encrypted in transit and used only to connect your trading account.</div><div style={{ marginBottom: 14 }}><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>MT5 Login Number</div><input type="text" value={mt5Login} onChange={e => setMt5Login(e.target.value)} placeholder="e.g. 12345678" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /></div><div style={{ marginBottom: 14 }}><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>MT5 Password</div><input type="password" value={mt5Password} onChange={e => setMt5Password(e.target.value)} placeholder="Master or Investor password" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /></div><div><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>Broker Server</div><input type="text" value={mt5Server} onChange={e => setMt5Server(e.target.value)} placeholder="e.g. ICMarkets-Demo" list="broker-servers" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /><datalist id="broker-servers">{BROKER_SERVERS.map(s => <option key={s} value={s} />)}</datalist></div></div> : <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}><div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.goldBright, marginBottom: 4 }}><Key size={16} /> EA Desktop Mode</div><div style={{ fontSize: 13, color: T.muted, lineHeight: 1.7 }}>Generate an API key, install the Raina AI Expert Advisor in MetaTrader 5, and keep MT5 open on a PC or VPS.</div></div>}
           {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 10, padding: "10px 12px", background: `${T.rust}15`, borderRadius: 9, lineHeight: 1.5 }}>{err}</div>}
-          <button onClick={handleConnect} disabled={busy} style={{ width: "100%", background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>{busy ? "Connecting…" : connectMethod === "metaapi" ? "Connect via MetaAPI" : "Generate API Key & Connect"}</button>
+          <button onClick={handleConnect} disabled={busy} style={{ width: "100%", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>{busy ? "Connecting…" : connectMethod === "metaapi" ? "Connect via MetaAPI" : "Generate API Key & Connect"}</button>
           {Disclaimer()}
         </div>
       );
@@ -4960,7 +4960,7 @@ const SCALP_SYMBOLS = [
                 <a
                   href={`/api/mt5/ea/download/${mt5UserId}`}
                   download={`RainX_Scalper.mq5`}
-                  style={{ display: "block", width: "100%", background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: "none", borderRadius: 10, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, cursor: "pointer", textAlign: "center", textDecoration: "none", boxSizing: "border-box" }}
+                  style={{ display: "block", width: "100%", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 10, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, cursor: "pointer", textAlign: "center", textDecoration: "none", boxSizing: "border-box" }}
                 >
                   ⬇ Download EA File (.mq5)
                 </a>
@@ -4996,7 +4996,7 @@ const SCALP_SYMBOLS = [
           {SymbolPicker()}
           {RiskSettings()}
           {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 10, padding: "10px 12px", background: `${T.rust}15`, borderRadius: 9, lineHeight: 1.5 }}>{err}</div>}
-          <button onClick={handleToggle} disabled={busy || !selectedSymbol} style={{ width: "100%", background: selectedSymbol ? `linear-gradient(135deg,${T.gold},${T.goldBright})` : T.card, color: selectedSymbol ? T.ink : T.muted, border: selectedSymbol ? "none" : `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy || !selectedSymbol ? "not-allowed" : "pointer", marginBottom: 14, transition: "all 0.2s" }}>
+          <button onClick={handleToggle} disabled={busy || !selectedSymbol} style={{ width: "100%", background: selectedSymbol ? `T.goldGradient` : T.card, color: selectedSymbol ? T.ink : T.muted, border: selectedSymbol ? "none" : `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy || !selectedSymbol ? "not-allowed" : "pointer", marginBottom: 14, transition: "all 0.2s" }}>
             {busy ? "Please wait…" : selectedSymbol ? `Start ${scalpMode === "quick" ? "Quick" : "Smart"} Scalp` : "Select a market to start scalping"}
           </button>
           {Disclaimer()}
@@ -5168,7 +5168,7 @@ const SCALP_SYMBOLS = [
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
                   <button onClick={() => setPendingScalpMode(null)} style={{ flex: 1, background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, color: T.paper, cursor: "pointer" }}>Cancel</button>
-                  <button onClick={() => { setScalpMode(pendingScalpMode); setSmartAlert(null); setPendingScalpMode(null); }} style={{ flex: 1, background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: T.ink, cursor: "pointer" }}>Switch</button>
+                  <button onClick={() => { setScalpMode(pendingScalpMode); setSmartAlert(null); setPendingScalpMode(null); }} style={{ flex: 1, background: `T.goldGradient`, border: "none", borderRadius: 12, padding: "12px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: T.ink, cursor: "pointer" }}>Switch</button>
                 </div>
               </div>
             </div>
@@ -5741,7 +5741,7 @@ function CreatorWalletScreen({ account }) {
           style={{ ...getInputStyle(), width: "100%", marginBottom: 16, fontSize: 20, fontFamily: FONT_HEAD, fontWeight: 700, textAlign: "center" }}
         />
         {!msg && (
-          <button onClick={handleSubmit} disabled={busy} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+          <button onClick={handleSubmit} disabled={busy} style={{ width: "100%", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
             {busy ? "Processing…" : walletPage === "topup" ? `Top Up ${amount ? fmtGHS(+amount) : ""}` : `Withdraw ${amount ? fmtGHS(+amount) : ""}`}
           </button>
         )}
@@ -5796,7 +5796,7 @@ function CreatorWalletScreen({ account }) {
       {/* Virtual card */}
       <div style={{ margin: "16px 16px 0" }}>
         <div style={{
-          background: `linear-gradient(135deg, ${T.gold} 0%, ${T.goldBright} 40%, #8B6914 100%)`,
+          background: T.goldGradient,
           borderRadius: 20, padding: "26px 22px 22px", position: "relative", overflow: "hidden", minHeight: 170,
           boxShadow: `0 8px 32px ${T.gold}44`,
         }}>
@@ -5887,7 +5887,7 @@ function HeaderAvatar({ account, morePage, T }) {
   const initial = (account?.email || "?")[0].toUpperCase();
   return url
     ? <img src={url} alt="me" style={{ width:34, height:34, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} />
-    : <div style={{ width:34, height:34, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.ink }}>{initial}</div>;
+    : <div style={{ width:34, height:34, borderRadius:"50%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.ink }}>{initial}</div>;
 }
 
 function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, onLogoutConfirm, setTab, entitlement, themeMode, setThemeMode, morePage, setMorePage, setProfileFromHeader, activeMarkets = [] }) {
@@ -6231,7 +6231,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       <div style={{ padding:"8px 20px 18px", display:"flex", alignItems:"center", gap:14 }}>
         {avatarUrl
           ? <img src={avatarUrl} alt="avatar" style={{ width:56, height:56, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} />
-          : <div style={{ width:56, height:56, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
+          : <div style={{ width:56, height:56, borderRadius:"50%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
         }
         <div style={{ flex:1 }}>
           <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>{fullName || (profileLoaded ? "User" : "…")}</div>
@@ -6249,7 +6249,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <button key={item.label} onClick={() => setMorePage(item.page)}
               style={{ flex:1, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", gap:8, position:"relative" }}>
               <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:14, right:14 }} />
-              <div style={{ width:40, height:40, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <div style={{ width:40, height:40, borderRadius:"50%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                 <item.icon size={18} color={T.ink} />
               </div>
               <div style={{ width:28, height:3, borderRadius:2, background:T.gold, marginTop:6 }} />
@@ -6261,7 +6261,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <button onClick={() => setMorePage("wallet")}
           style={{ width:"100%", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
           <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:"50%", right:14, transform:"translateY(-50%)" }} />
-          <div style={{ width:40, height:40, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+          <div style={{ width:40, height:40, borderRadius:"50%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <Wallet size={18} color={T.ink} />
           </div>
           <div>
@@ -6273,7 +6273,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <button onClick={() => setMorePage("settings")}
           style={{ width:"100%", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
           <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:"50%", right:14, transform:"translateY(-50%)" }} />
-          <div style={{ width:40, height:40, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+          <div style={{ width:40, height:40, borderRadius:"50%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <Settings size={18} color={T.ink} />
           </div>
           <div>
@@ -6346,7 +6346,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:22, padding:"0 4px" }}>
                 {avatarUrl
                   ? <img src={avatarUrl} style={{ width:46, height:46, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} alt="" />
-                  : <div style={{ width:46, height:46, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
+                  : <div style={{ width:46, height:46, borderRadius:"50%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
                 }
                 <div>
                   <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper }}>{fullName || username || account?.email?.split("@")[0]}</div>
@@ -6397,7 +6397,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ width:92, height:92, borderRadius:"50%", border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}`, overflow:"hidden", position:"relative" }}>
               {avatarUrl
                 ? <img src={avatarUrl} alt="avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                : <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:32 }}>{profileInitial}</div>
+                : <div style={{ width:"100%", height:"100%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:32 }}>{profileInitial}</div>
               }
               {/* Camera badge on avatar — bottom-right corner only */}
               <div style={{ position:"absolute", bottom:2, right:2, background:"rgba(0,0,0,0.6)", borderRadius:"50%", padding:5, display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -6413,7 +6413,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               Share
             </button>
             <button onClick={() => setMorePage("profile-edit")}
-              style={{ background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, border:"none", borderRadius:22, padding:"9px 16px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.ink, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
+              style={{ background:`T.goldGradient`, border:"none", borderRadius:22, padding:"9px 16px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.ink, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
               Edit profile
             </button>
           </div>
@@ -6456,7 +6456,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, fontSize:12.5, color:T.muted }}>
               <div style={{ display:"flex", alignItems:"center" }}>
                 {mutualFollowers.slice(0, 3).map((f, i) => (
-                  <div key={f.id} style={{ width:22, height:22, borderRadius:"50%", marginLeft:i > 0 ? -7 : 0, border:`1.5px solid ${T.ink}`, overflow:"hidden", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:700, fontSize:8, color:T.ink, flexShrink:0 }}>
+                  <div key={f.id} style={{ width:22, height:22, borderRadius:"50%", marginLeft:i > 0 ? -7 : 0, border:`1.5px solid ${T.ink}`, overflow:"hidden", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:700, fontSize:8, color:T.ink, flexShrink:0 }}>
                     {f.avatar_url ? <img src={f.avatar_url} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" /> : (f.username || f.email || "?")[0]?.toUpperCase()}
                   </div>
                 ))}
@@ -6566,7 +6566,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ width:88, height:88, borderRadius:"50%", border:`3px solid ${T.gold}`, boxShadow:`0 0 0 3px ${T.ink}`, overflow:"hidden", position:"relative" }}>
               {avatarUrl
                 ? <img src={avatarUrl} alt="avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                : <div style={{ width:"100%", height:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:30 }}>{profileInitial}</div>
+                : <div style={{ width:"100%", height:"100%", background:`T.goldGradient`, display:"flex", alignItems:"center", justifyContent:"center", color:T.ink, fontWeight:800, fontFamily:FONT_HEAD, fontSize:30 }}>{profileInitial}</div>
               }
               {/* Camera badge — bottom-right corner only */}
               <div style={{ position:"absolute", bottom:2, right:2, background:"rgba(0,0,0,0.6)", borderRadius:"50%", padding:5, display:"flex", alignItems:"center", justifyContent:"center" }}><CamIcon /></div>
@@ -6767,7 +6767,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
           {/* CTA */}
           {!isVerif && (
-            <button onClick={() => setMorePage("rewards")} style={{ width: "100%", background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
+            <button onClick={() => setMorePage("rewards")} style={{ width: "100%", background: `T.goldGradient`, color: T.ink, border: "none", borderRadius: 13, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
               Get Verified — View Plans
             </button>
           )}
@@ -7027,7 +7027,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           <button
             disabled={!rewardEligible}
             onClick={rewardEligible ? () => setMorePage("rewards") : undefined}
-            style={{ width:"100%", background:rewardEligible?`linear-gradient(135deg,${T.gold},${T.goldBright})`:"rgba(100,100,100,0.18)", color:rewardEligible?T.ink:"rgba(150,150,150,0.6)", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:rewardEligible?"pointer":"not-allowed", transition:"background 0.3s" }}>
+            style={{ width:"100%", background:rewardEligible?`T.goldGradient`:"rgba(100,100,100,0.18)", color:rewardEligible?T.ink:"rgba(150,150,150,0.6)", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:rewardEligible?"pointer":"not-allowed", transition:"background 0.3s" }}>
             Apply Now
           </button>
         </div>
@@ -7072,7 +7072,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               <div>1. Tap the <strong style={{ color: T.gold }}>⋮ menu</strong> at the top right</div>
               <div>2. Tap <strong style={{ color: T.gold }}>Add to Home Screen</strong> or <strong style={{ color: T.gold }}>Install App</strong></div>
             </div>
-            <button onClick={() => setShowInstallHelp(false)} style={{ width: '100%', background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: 'none', borderRadius: 12, padding: '13px 0', fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Got it</button>
+            <button onClick={() => setShowInstallHelp(false)} style={{ width: '100%', background: `T.goldGradient`, color: T.ink, border: 'none', borderRadius: 12, padding: '13px 0', fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Got it</button>
           </div>
         </div>
       )}
@@ -7317,7 +7317,7 @@ function NewFeaturesPrompt() {
           RainX has been updated. <strong style={{ color: T.gold }}>Force restart</strong> or <strong style={{ color: T.gold }}>close and reopen</strong> the app to see the latest features.
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={forceRestart} style={{ flex: 1, background: `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: T.ink, border: 'none', borderRadius: 12, padding: '13px 0', fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Restart Now</button>
+          <button onClick={forceRestart} style={{ flex: 1, background: `T.goldGradient`, color: T.ink, border: 'none', borderRadius: 12, padding: '13px 0', fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Restart Now</button>
           <button onClick={dismiss} style={{ flex: 1, background: 'none', border: `1px solid ${T.cardBorder}`, borderRadius: 12, padding: '13px 0', fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.muted, cursor: 'pointer' }}>Got it</button>
         </div>
       </div>
