@@ -10,7 +10,7 @@ import { supabase } from "./supabaseClient";
 
 const T = {
   ink: "#0F0E0B", card: "#1C1913", cardBorder: "#332C1F",
-  gold: "#C6A15B", goldBright: "#E3C077", sage: "#7A9E86", rust: "#B0604A",
+  gold: "#FFD24D", goldBright: "#FFD24D", sage: "#7A9E86", rust: "#B0604A",
   paper: "#F2EDE0", muted: "#9C947F",
 };
 const FONT_HEAD = "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif";
@@ -120,7 +120,7 @@ function MentionTextarea({ value, onChange, placeholder, rows, style, textareaRe
               onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
             >
               <div style={{
-                width: 28, height: 28, borderRadius: "50%", background: "#C6A15B",
+                width: 28, height: 28, borderRadius: "50%", background: "#FFD24D",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 11, fontWeight: 800, color: "#0F0E0B", flexShrink: 0,
                 overflow: "hidden",
@@ -129,7 +129,7 @@ function MentionTextarea({ value, onChange, placeholder, rows, style, textareaRe
                   ? <img src={s.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   : (s.display_name?.[0] || "?").toUpperCase()}
               </div>
-              <span style={{ color: "#E3C077", fontWeight: 700, fontSize: 13, fontFamily: "'Montserrat', sans-serif" }}>
+              <span style={{ color: "#FFD24D", fontWeight: 700, fontSize: 13, fontFamily: "'Montserrat', sans-serif" }}>
                 @{s.display_name}
               </span>
             </div>

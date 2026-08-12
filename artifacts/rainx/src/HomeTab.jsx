@@ -78,7 +78,7 @@ function CandlestickChart({ candles, overlays, inst, containerHeight = 260 }) {
       const WBEAR = isDarkCanvas ? "#9ca3af" : "#374151";
       const GRID  = isDarkCanvas ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.065)";
       const TLBL  = isDarkCanvas ? "rgba(220,225,235,0.55)" : "rgba(18,18,42,0.5)";
-      const GOLD  = T.gold || "#C6A15B";
+      const GOLD  = T.gold || "#FFD24D";
 
       // ── Dashed horizontal grid lines ─────────────────────────────────────
       ctx.setLineDash([3, 4]); ctx.strokeStyle = GRID; ctx.lineWidth = 1;

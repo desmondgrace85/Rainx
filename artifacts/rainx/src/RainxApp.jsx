@@ -22,8 +22,8 @@ const T = {
   ink: "#0F0E0B",
   card: "#1C1913",
   cardBorder: "#332C1F",
-  gold: "#C6A15B",
-  goldBright: "#E3C077",
+  gold: "#FFD24D",
+  goldBright: "#FFD24D",
   sage: "#7A9E86",
   rust: "#B0604A",
   paper: "#F2EDE0",
@@ -35,8 +35,8 @@ let _avatarRefreshTick = 0;
 const _avatarRefreshListeners = new Set();
 function notifyAvatarRefresh() { _avatarRefreshTick++; _avatarRefreshListeners.forEach(fn => fn(_avatarRefreshTick)); }
 
-const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#C6A15B", goldBright:"#E3C077", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
-const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#C6A15B", goldBright:"#9E7B35", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
+const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#FFD24D", goldBright:"#FFD24D", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
+const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#FFD24D", goldBright:"#FFD24D", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
 const FONT_HEAD = "'Montserrat', sans-serif";
 const FONT_BODY = "'Montserrat', sans-serif";
 const PUSH_STATE_DB_NAME = "rainx-notification-state";
@@ -144,14 +144,14 @@ function CoverCropModal({ file, onConfirm, onCancel, T, FONT_HEAD }) {
     <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.88)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}
       onPointerMove={onPM} onPointerUp={onPU} onPointerLeave={onPU}>
       <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:15, color:'#fff', marginBottom:14 }}>Drag to position</div>
-      <div style={{ width:DISPLAY_W, height:DISPLAY_H, overflow:'hidden', borderRadius:8, border:'2px solid #C6A15B', cursor:dragging?'grabbing':'grab', position:'relative', userSelect:'none', touchAction:'none' }}
+      <div style={{ width:DISPLAY_W, height:DISPLAY_H, overflow:'hidden', borderRadius:8, border:'2px solid #FFD24D', cursor:dragging?'grabbing':'grab', position:'relative', userSelect:'none', touchAction:'none' }}
         onPointerDown={onPD}>
         {imgSrc && <img src={imgSrc} style={{ width:DISPLAY_W, height:'auto', position:'absolute', top:offsetY, left:0, pointerEvents:'none', userSelect:'none', draggable:false }} alt='' />}
       </div>
       <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginTop:10, marginBottom:20 }}>Cover photo · 4:1</div>
       <div style={{ display:'flex', gap:12 }}>
         <button onClick={onCancel} style={{ background:'none', border:'1px solid rgba(255,255,255,0.25)', borderRadius:10, padding:'10px 24px', color:'#fff', fontFamily:FONT_HEAD, fontWeight:600, fontSize:13, cursor:'pointer' }}>Cancel</button>
-        <button onClick={confirm} style={{ background:'#C6A15B', border:'none', borderRadius:10, padding:'10px 24px', color:'#0F0E0B', fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:'pointer' }}>Use photo</button>
+        <button onClick={confirm} style={{ background:'#FFD24D', border:'none', borderRadius:10, padding:'10px 24px', color:'#0F0E0B', fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:'pointer' }}>Use photo</button>
       </div>
       <canvas ref={canvasRef} style={{ display:'none' }} />
     </div>
@@ -1328,12 +1328,6 @@ function CenterNavLogo({ active, onActivate }) {
     >
       <span className="rx-center-nav-stage" aria-hidden="true">
         <span className="rx-center-nav-aura" />
-        <span className="rx-center-nav-orbit rx-center-nav-orbit-one" />
-        <span className="rx-center-nav-orbit rx-center-nav-orbit-two" />
-        <span className="rx-center-nav-particle rx-center-nav-particle-one" />
-        <span className="rx-center-nav-particle rx-center-nav-particle-two" />
-        <span className="rx-center-nav-particle rx-center-nav-particle-three" />
-        <span className="rx-center-nav-particle rx-center-nav-particle-four" />
         <span className="rx-center-nav-core">
           <img src={rainxLogoTransparent} alt="" />
         </span>
@@ -2701,7 +2695,7 @@ function MainAppContent({ account, onLogout }) {
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", zIndex: 100, background: T.card, opacity: 1, borderTop: `1px solid ${T.cardBorder}`, boxShadow: "0 -8px 24px rgba(0,0,0,0.12)", display: "flex", justifyContent: "space-around", padding: "6px 0 calc(20px + env(safe-area-inset-bottom))", "--rx-logo-bg": isDark ? "#000" : "#fff" }}>
           {[
             { key: "home", label: "Home", icon: (active) => (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+               <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
                 <path d="M9 21V12h6v9"/>
               </svg>
@@ -2848,7 +2842,7 @@ function CandlestickChart({ candles, overlays, inst, containerHeight = 260 }) {
       const WBEAR = isDarkCanvas ? "#9ca3af" : "#374151";
       const GRID  = isDarkCanvas ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.065)";
       const TLBL  = isDarkCanvas ? "rgba(220,225,235,0.55)" : "rgba(18,18,42,0.5)";
-      const GOLD  = T.gold || "#C6A15B";
+      const GOLD  = T.gold || "#FFD24D";
 
       // ── Dashed horizontal grid lines ─────────────────────────────────────
       ctx.setLineDash([3, 4]); ctx.strokeStyle = GRID; ctx.lineWidth = 1;
@@ -5204,9 +5198,9 @@ const DEFAULT_BENEFITS = [
 
 function BenefitIcon({ type }) {
   const s = { width: 36, height: 36, borderRadius: 10, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 };
-  if (type === "trophy") return <div style={s}><Trophy size={18} color="#C6A15B" /></div>;
-  if (type === "shield") return <div style={s}><ShieldCheck size={18} color="#C6A15B" /></div>;
-  return <div style={s}><ShieldCheck size={18} color="#C6A15B" /></div>;
+  if (type === "trophy") return <div style={s}><Trophy size={18} color="#FFD24D" /></div>;
+  if (type === "shield") return <div style={s}><ShieldCheck size={18} color="#FFD24D" /></div>;
+  return <div style={s}><ShieldCheck size={18} color="#FFD24D" /></div>;
 }
 
 function MoreRow({ icon: Icon, iconType, title, subtitle, badge, badgeColor, onPress }) {

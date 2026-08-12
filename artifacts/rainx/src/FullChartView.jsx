@@ -7,8 +7,8 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createChart, CrosshairMode, LineStyle } from "lightweight-charts";
 import { X, ChevronLeft, Activity, TrendingUp, TrendingDown, Minus, Maximize2, Minimize2 } from "lucide-react";
 
-const GOLD        = "#C6A15B";
-const GOLD_BRIGHT = "#E3C077";
+const GOLD        = "#FFD24D";
+const GOLD_BRIGHT = "#FFD24D";
 const BULL        = "#1D6FE8";
 const BEAR        = "#131722";
 const WICK_BEAR   = "#374151";

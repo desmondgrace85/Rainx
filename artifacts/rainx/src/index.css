@@ -596,7 +596,7 @@ input, textarea, [contenteditable] {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #E3C077;
+  background: #FFD24D;
   box-shadow: 0 0 7px 2px rgba(198, 161, 91, 0.96);
 }
 
@@ -612,7 +612,7 @@ input, textarea, [contenteditable] {
 .rx-center-nav-orbit-two::after {
   top: 50%;
   left: -2px;
-  background: #C6A15B;
+  background: #FFD24D;
   box-shadow: 0 0 7px 2px rgba(227, 192, 119, 0.9);
 }
 
@@ -621,15 +621,15 @@ input, textarea, [contenteditable] {
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: #E3C077;
+  background: #FFD24D;
   box-shadow: 0 0 6px 2px rgba(198, 161, 91, 0.8);
   animation: rx-center-particle 3.2s ease-in-out infinite;
 }
 
 .rx-center-nav-particle-one { top: 7px; left: 14px; animation-delay: -0.4s; }
-.rx-center-nav-particle-two { top: 16px; right: 5px; animation-delay: -1.5s; background: #C6A15B; }
+.rx-center-nav-particle-two { top: 16px; right: 5px; animation-delay: -1.5s; background: #FFD24D; }
 .rx-center-nav-particle-three { bottom: 7px; right: 14px; animation-delay: -2.3s; }
-.rx-center-nav-particle-four { bottom: 16px; left: 5px; animation-delay: -2.9s; background: #C6A15B; }
+.rx-center-nav-particle-four { bottom: 16px; left: 5px; animation-delay: -2.9s; background: #FFD24D; }
 
 .rx-center-nav-ripple {
   inset: 7px;
@@ -733,4 +733,9 @@ input, textarea, [contenteditable] {
   .rx-center-nav-control.is-energized .rx-center-nav-ripple {
     animation: none;
   }
+}
+
+/* Keep legacy inline SVG gold marks on the single reference gold. */
+svg path[fill="#E3C077"] {
+  fill: #FFD24D !important;
 }
