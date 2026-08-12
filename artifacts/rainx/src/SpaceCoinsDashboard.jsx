@@ -191,7 +191,7 @@ export default function SpaceCoinsDashboard({ T, onBack }) {
               Create Coin <span><ArrowRight size={13} /></span>
             </button>
           </div>
-          <PlanetScene T={T} active={reacting} onInteract={interact} />
+          <PlanetScene T={T} />
         </section>
 
         <nav className="sc-quick-grid" aria-label="Space coin shortcuts">
