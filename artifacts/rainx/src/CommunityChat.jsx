@@ -50,9 +50,9 @@ function playSendTick() {
 
 const buildT = (tokens) => ({
   ink: "#0F0E0B", card: "#1C1913", cardBorder: "#332C1F",
-  gold: "#FFD24D", goldBright: "#FFD24D", paper: "#F2EDE0", muted: "#9C947F",
-  goldGradient: "linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)",
-  goldShine: "linear-gradient(180deg, #FFD24D 0%, #F3B51D 48%, #D08F14 100%)",
+  gold: "#F7BC2D", goldBright: "#F7BC2D", paper: "#F2EDE0", muted: "#9C947F",
+  goldGradient: "linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%)",
+  goldShine: "linear-gradient(180deg, #F7BC2D 0%, #E3A925 48%, #D49818 100%)",
   ...(tokens || {}),
 });
 
@@ -329,9 +329,9 @@ function PinnedBar({ pins, onViewPins, T }) {
   const latest = pins[pins.length - 1];
   return (
     <div style={{ background: "rgba(198,161,91,0.1)", borderBottom: "1px solid rgba(198,161,91,0.2)", padding: "8px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flexShrink: 0 }} onClick={onViewPins}>
-      <Pin size={13} color="#FFD24D" />
+      <Pin size={13} color="#F7BC2D" />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 10, color: "#FFD24D", fontWeight: 700, marginBottom: 1 }}>
+        <div style={{ fontSize: 10, color: "#F7BC2D", fontWeight: 700, marginBottom: 1 }}>
           Pinned Message{pins.length > 1 ? "s (" + pins.length + ")" : ""}
         </div>
         <div style={{ fontSize: 12, color: "#F2EDE0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -1108,7 +1108,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
                 }}
               >
                 {isForwarded && !deleted && (
-                  <div style={{ fontSize: 10, color: isMe ? "rgba(15,14,11,0.65)" : "#FFD24D", fontWeight: 700, marginBottom: 5, borderLeft: "2px solid " + (isMe ? "rgba(15,14,11,0.4)" : "#FFD24D"), paddingLeft: 6 }}>
+                  <div style={{ fontSize: 10, color: isMe ? "rgba(15,14,11,0.65)" : "#F7BC2D", fontWeight: 700, marginBottom: 5, borderLeft: "2px solid " + (isMe ? "rgba(15,14,11,0.4)" : "#F7BC2D"), paddingLeft: 6 }}>
                     ↗ Forwarded{forwardedFrom ? " from " + forwardedFrom : ""}
                   </div>
                 )}
@@ -1143,7 +1143,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
             placeholder="Message…"
             style={{ flex: 1, background: T.ink, border: "1.5px solid " + T.cardBorder, borderRadius: 24, padding: "10px 16px", color: T.paper, fontSize: 15, outline: "none", fontFamily: "inherit", lineHeight: 1.4 }}
-            onFocus={e => { e.target.style.borderColor = "#FFD24D"; }}
+            onFocus={e => { e.target.style.borderColor = "#F7BC2D"; }}
             onBlur={e => { e.target.style.borderColor = T.cardBorder; }}
           />
           <button onClick={send} disabled={!text.trim() || sending}
@@ -1419,7 +1419,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
                       {typingUsers[pid] && <span style={{ fontSize: 11, color: T.goldBright, fontWeight: 600 }}>typing…</span>}
                     {isPinned && <Pin size={11} color={T.gold} />}
                   </div>
-                  <div style={{ fontSize: 11, color: unread > 0 ? "#FFD24D" : T.muted, flexShrink: 0, marginLeft: 8 }}>{timeAgo(lastMsg.created_at)}</div>
+                  <div style={{ fontSize: 11, color: unread > 0 ? "#F7BC2D" : T.muted, flexShrink: 0, marginLeft: 8 }}>{timeAgo(lastMsg.created_at)}</div>
                 </div>
                 <div style={{ fontSize: 13, color: unread > 0 ? T.paper : T.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: unread > 0 ? 600 : 400 }}>
                   {lastMsg.sender_id === aid ? "You: " : ""}{lastDisplay}
