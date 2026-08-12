@@ -1105,7 +1105,7 @@ function SubscribeScreen({ account, entitlement, onBack }) {
   if (entitlement.pendingPlan || submitted) {
     return (
       <div style={{ padding: 20, textAlign: "center" }}>
-        <div style={{ width: 64, height: 64, borderRadius: "50%", background: `rgba(255,210,77,0.14)`, border: `2px solid ${T.gold}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+        <div style={{ width: 64, height: 64, borderRadius: "50%", background: `rgba(198,161,91,0.12)`, border: `2px solid ${T.gold}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
           <ShieldCheck size={30} color={T.gold} />
         </div>
         <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.paper, marginBottom: 8 }}>Payment Submitted!</div>
@@ -1205,7 +1205,7 @@ function SubscribeScreen({ account, entitlement, onBack }) {
         <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 10 }}>
           {plan.features.map((f, i) => (
             <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-              <div style={{ width: 22, height: 22, borderRadius: "50%", background: `rgba(255,210,77,0.16)`, border: `1px solid ${T.gold}44`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+              <div style={{ width: 22, height: 22, borderRadius: "50%", background: `rgba(198,161,91,0.15)`, border: `1px solid ${T.gold}44`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
                 <span style={{ fontSize: 11, color: T.gold, fontWeight: 800 }}>✓</span>
               </div>
               <div style={{ flex: 1 }}>
@@ -2457,19 +2457,9 @@ function MainAppContent({ account, onLogout }) {
         .rx-slide-left  { animation: rx-slide-in-left  0.22s cubic-bezier(0.25,0.46,0.45,0.94) backwards; }
         .hide-scroll::-webkit-scrollbar { display:none; }
         .hide-scroll { -ms-overflow-style:none; scrollbar-width:none; }
-        .scroll-hint::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,rgba(255,243,174,0.6),rgba(226,164,0,0.55),transparent); opacity:0; transition:opacity 0.3s; pointer-events:none; }
+        .scroll-hint::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,rgba(198,161,91,0.5),transparent); opacity:0; transition:opacity 0.3s; pointer-events:none; }
         .scroll-hint.scrolling::after { opacity:1; }
       `}</style>
-      <svg aria-hidden="true" width="0" height="0" style={{ position: "absolute", pointerEvents: "none" }}>
-        <defs>
-          <linearGradient id="rx-gold-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FFF3AE" />
-            <stop offset="34%" stopColor="#FFD24D" />
-            <stop offset="70%" stopColor="#E2A400" />
-            <stop offset="100%" stopColor="#FFF0A0" />
-          </linearGradient>
-        </defs>
-      </svg>
 
       <Toast
         toast={activeToast}
@@ -2929,7 +2919,7 @@ function CandlestickChart({ candles, overlays, inst, containerHeight = 260 }) {
       overlays.forEach(o => {
         if (o.type !== "entry_zone") return;
         const y1 = toY(o.priceHigh), y2 = toY(o.priceLow);
-        ctx.fillStyle = "rgba(255,210,77,0.11)";
+        ctx.fillStyle = "rgba(198,161,91,0.09)";
         ctx.fillRect(pad.left, y1, cW, y2 - y1);
         [y1, y2].forEach(y => {
           ctx.beginPath(); ctx.strokeStyle = GOLD; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
@@ -3372,7 +3362,7 @@ function GamesTab() {
         .games-scroll-hide { scrollbar-width:none; -ms-overflow-style:none; }
       `}</style>
 
-      <header style={{ position: "sticky", top: 0, zIndex: 20, background: "rgba(5,5,5,.82)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(255,210,77,.24)", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <header style={{ position: "sticky", top: 0, zIndex: 20, background: "rgba(5,5,5,.82)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(198,161,91,.2)", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ color: T.gold, fontSize: 20 }}>✦</span>
           <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: "#F2EDE0" }}>RainX</span>
@@ -5207,7 +5197,7 @@ const DEFAULT_BENEFITS = [
 ];
 
 function BenefitIcon({ type }) {
-  const s = { width: 36, height: 36, borderRadius: 10, background: "rgba(255,210,77,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 };
+  const s = { width: 36, height: 36, borderRadius: 10, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 };
   if (type === "trophy") return <div style={s}><Trophy size={18} color="#FFD24D" /></div>;
   if (type === "shield") return <div style={s}><ShieldCheck size={18} color="#FFD24D" /></div>;
   return <div style={s}><ShieldCheck size={18} color="#FFD24D" /></div>;
@@ -5217,7 +5207,7 @@ function MoreRow({ icon: Icon, iconType, title, subtitle, badge, badgeColor, onP
   return (
     <button onClick={onPress} style={{ display: "flex", alignItems: "center", width: "100%", background: "none", border: "none", padding: "13px 14px", cursor: "pointer", gap: 12 }}>
       {iconType ? <BenefitIcon type={iconType} /> : (
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,210,77,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <Icon size={18} color={T.gold} />
         </div>
       )}
@@ -5236,7 +5226,7 @@ function MoreRow({ icon: Icon, iconType, title, subtitle, badge, badgeColor, onP
 function SecuritySection({ icon: Icon, title, desc, onPress, label, comingSoon }) {
   return (
     <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
-      <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(255,210,77,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         <Icon size={19} color={T.gold} />
       </div>
       <div style={{ flex: 1 }}>
@@ -5563,7 +5553,7 @@ function RewardsScreen({ account, entitlement }) {
           <ChevronLeft size={18} /> Back
         </button>
         <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: 32, textAlign: "center" }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,210,77,0.14)", border: `1px solid ${T.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(198,161,91,0.12)", border: `1px solid ${T.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
             <Trophy size={26} color={T.goldBright} />
           </div>
           <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper, marginBottom: 8 }}>{titles[quickPage]}</div>
@@ -5579,7 +5569,7 @@ function RewardsScreen({ account, entitlement }) {
       {/* Balance Card — uses theme tokens, no hardcoded dark colors */}
       <div style={{ margin: "16px 16px 0" }}>
         <div style={{ background: `linear-gradient(135deg, ${T.card} 0%, ${T.ink} 100%)`, border: `1px solid ${T.cardBorder}`, borderRadius: 18, padding: "22px 20px 20px", position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", inset: 0, borderRadius: 18, background: "linear-gradient(135deg, rgba(255,243,174,0.11) 0%, rgba(226,164,0,0.05) 42%, transparent 60%)", pointerEvents: "none" }} />
+          <div style={{ position: "absolute", inset: 0, borderRadius: 18, background: "linear-gradient(135deg, rgba(198,161,91,0.07) 0%, transparent 60%)", pointerEvents: "none" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11.5, color: T.goldBright, fontWeight: 600, marginBottom: 8, letterSpacing: 0.3 }}>Total Rewards Balance</div>
@@ -5655,7 +5645,7 @@ function RewardsScreen({ account, entitlement }) {
             const isPos = (tx.amount || 0) >= 0;
             return (
               <button key={tx.id || i} onClick={() => setQuickPage("txHistory")} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 14, padding: "13px 0", borderBottom: i < displayTxns.length - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: `rgba(255,210,77,0.14)`, border: `1px solid ${T.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: `rgba(198,161,91,0.12)`, border: `1px solid ${T.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <IconComp size={20} color={T.goldBright} strokeWidth={1.6} />
                 </div>
                 <div style={{ flex: 1, textAlign: "left" }}>
@@ -5821,7 +5811,7 @@ function CreatorWalletScreen({ account }) {
       {/* Action buttons */}
       <div style={{ margin: "16px 16px 0", display: "flex", gap: 10 }}>
         <button onClick={() => setWalletPage("topup")} style={{ flex: 1, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "16px 0", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 44, height: 44, borderRadius: "50%", background: `rgba(255,210,77,0.14)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 44, height: 44, borderRadius: "50%", background: `rgba(198,161,91,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <ArrowUpCircle size={22} color={T.gold} />
           </div>
           <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper }}>Top Up</span>
@@ -5854,7 +5844,7 @@ function CreatorWalletScreen({ account }) {
             return (
               <div key={tx.id || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: i < Math.min(displayTxns.length, 5) - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: isPos ? `rgba(255,210,77,0.14)` : `rgba(176,96,74,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: isPos ? `rgba(198,161,91,0.12)` : `rgba(176,96,74,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {isPos ? <ArrowUpCircle size={18} color={T.gold} /> : <ArrowDownCircle size={18} color={T.rust} />}
                   </div>
                   <div>
@@ -6698,9 +6688,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     const isGolden = verification === "golden";
     const isBlue   = verification === "blue";
     const isVerif  = isGolden || isBlue;
-    const badgeBg  = isGolden ? "rgba(255,210,77,0.14)" : isBlue ? "rgba(91,156,246,0.12)" : "rgba(100,100,100,0.10)";
+    const badgeBg  = isGolden ? "rgba(198,161,91,0.12)" : isBlue ? "rgba(91,156,246,0.12)" : "rgba(100,100,100,0.10)";
     const badgeBorder = isGolden ? T.gold : isBlue ? "#5B9CF6" : T.cardBorder;
-    const iconBg   = isGolden ? "rgba(255,210,77,0.16)" : isBlue ? "rgba(91,156,246,0.15)" : "rgba(100,100,100,0.08)";
+    const iconBg   = isGolden ? "rgba(198,161,91,0.15)" : isBlue ? "rgba(91,156,246,0.15)" : "rgba(100,100,100,0.08)";
     const iconBorder = isGolden ? `2px solid ${T.gold}` : isBlue ? "2px solid #5B9CF6" : `1px solid ${T.cardBorder}`;
 
     const tiers = [
@@ -6748,8 +6738,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               const active = entitlement.tier === t.key;
               const tBlue = t.icon === "blue";
               return (
-                <div key={t.key} style={{ padding: "12px 16px", borderTop: i > 0 ? `1px solid ${T.cardBorder}` : "none", display: "flex", alignItems: "center", gap: 12, background: active ? (tBlue ? "rgba(91,156,246,0.06)" : "rgba(255,210,77,0.08)") : "transparent" }}>
-                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: tBlue ? "rgba(91,156,246,0.12)" : "rgba(255,210,77,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div key={t.key} style={{ padding: "12px 16px", borderTop: i > 0 ? `1px solid ${T.cardBorder}` : "none", display: "flex", alignItems: "center", gap: 12, background: active ? (tBlue ? "rgba(91,156,246,0.06)" : "rgba(198,161,91,0.06)") : "transparent" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: tBlue ? "rgba(91,156,246,0.12)" : "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     {tBlue ? (
                       <svg width="16" height="16" viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
                         <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1d9bf0" />
@@ -6763,7 +6753,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper }}>{t.label} Plan</span>
-                      {active && <span style={{ fontSize: 10, fontWeight: 700, color: tBlue ? "#5B9CF6" : T.goldBright, background: tBlue ? "rgba(91,156,246,0.15)" : "rgba(255,210,77,0.16)", borderRadius: 8, padding: "2px 7px" }}>ACTIVE</span>}
+                      {active && <span style={{ fontSize: 10, fontWeight: 700, color: tBlue ? "#5B9CF6" : T.goldBright, background: tBlue ? "rgba(91,156,246,0.15)" : "rgba(198,161,91,0.15)", borderRadius: 8, padding: "2px 7px" }}>ACTIVE</span>}
                     </div>
                     <div style={{ fontSize: 11, color: tBlue ? "#5B9CF6" : T.goldBright, marginTop: 2, fontWeight: 600 }}>{t.verif}</div>
                   </div>
@@ -6970,14 +6960,14 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, color:T.paper }}>{followerCount.toLocaleString()}</div>
             <div style={{ fontSize:10.5, color:T.muted, marginTop:1 }}>Followers</div>
           </div>
-          <button onClick={() => setMorePage("analytics")} style={{ background:`rgba(255,210,77,0.16)`, border:`1px solid ${T.gold}44`, borderRadius:10, padding:"8px 14px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, color:T.gold, cursor:"pointer", flexShrink:0 }}>Open</button>
+          <button onClick={() => setMorePage("analytics")} style={{ background:`rgba(198,161,91,0.15)`, border:`1px solid ${T.gold}44`, borderRadius:10, padding:"8px 14px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, color:T.gold, cursor:"pointer", flexShrink:0 }}>Open</button>
         </div>
       </div>
 
       <MoreSection title="TRADER REWARDS PROGRAM">
         {/* Get Verified row with dual badges */}
         <button onClick={() => setMorePage("verification")} style={{ width:"100%", display:"flex", alignItems:"center", padding:"14px 16px", background:"none", border:"none", cursor:"pointer", gap:12 }}>
-          <div style={{ width:36, height:36, borderRadius:10, background:"rgba(255,210,77,0.14)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, position:"relative" }}>
+          <div style={{ width:36, height:36, borderRadius:10, background:"rgba(198,161,91,0.12)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, position:"relative" }}>
             {/* Overlapping blue + gold badges */}
             <svg width="16" height="16" viewBox="1.604 1.604 18.792 18.792" style={{ position:"absolute", left:6, top:10 }}>
               <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1d9bf0" />
@@ -7194,9 +7184,9 @@ function AnalyticsScreen({ account }) {
       {/* Period selector */}
       <div style={{ display:"flex", gap:6, padding:"12px 16px", overflowX:"auto" }}>
         {PERIODS.map(p=>(
-          <button key={p} onClick={()=>{setPeriod(p);setShowCustom(false);}} style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, border:`1px solid ${period===p?T.gold:T.cardBorder}`, background:period===p?"rgba(255,210,77,0.16)":"none", color:period===p?T.gold:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer" }}>{p}</button>
+          <button key={p} onClick={()=>{setPeriod(p);setShowCustom(false);}} style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, border:`1px solid ${period===p?T.gold:T.cardBorder}`, background:period===p?"rgba(198,161,91,0.15)":"none", color:period===p?T.gold:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer" }}>{p}</button>
         ))}
-        <button onClick={()=>setShowCustom(v=>!v)} style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, border:`1px solid ${showCustom?T.gold:T.cardBorder}`, background:showCustom?"rgba(255,210,77,0.16)":"none", color:showCustom?T.gold:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer" }}>Custom</button>
+        <button onClick={()=>setShowCustom(v=>!v)} style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, border:`1px solid ${showCustom?T.gold:T.cardBorder}`, background:showCustom?"rgba(198,161,91,0.15)":"none", color:showCustom?T.gold:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer" }}>Custom</button>
       </div>
       {showCustom && (
         <div style={{ display:"flex", gap:10, padding:"0 16px 12px" }}>

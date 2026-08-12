@@ -277,7 +277,7 @@ function BlueBadge({ size = 17 }) {
 function GoldenBadge({ size = 17 }) {
   return (
     <svg width={size} height={size} viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }} title="Golden Verified">
-        <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347-1.246z" fill="url(#rx-gold-gradient)" />
+      <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#E3C077" />
     </svg>
   );
 }
@@ -288,10 +288,9 @@ function OfficialBadge({ size = 17 }) {
     <svg width={size} height={size} viewBox="0 0 1254 1254" style={{ flexShrink: 0 }} title="Official RainX Account">
       <defs>
         <linearGradient id="officialGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FFF3AE" />
-          <stop offset="34%" stopColor="#FFD24D" />
-          <stop offset="70%" stopColor="#E2A400" />
-          <stop offset="100%" stopColor="#FFF0A0" />
+          <stop offset="0%" stopColor="#ffd66b" />
+          <stop offset="50%" stopColor="#e8a733" />
+          <stop offset="100%" stopColor="#b9791e" />
         </linearGradient>
       </defs>
       <path d="M 626.0,38.0 L 595.0,50.0 L 521.0,111.0 L 430.0,92.0 L 397.0,95.0 L 372.0,118.0 L 327.0,205.0 L 236.0,225.0 L 210.0,240.0 L 196.0,269.0 L 189.0,368.0 L 109.0,425.0 L 92.0,452.0 L 93.0,482.0 L 124.0,572.0 L 73.0,655.0 L 69.0,687.0 L 86.0,718.0 L 145.0,776.0 L 149.0,802.0 L 136.0,872.0 L 145.0,907.0 L 163.0,923.0 L 254.0,962.0 L 281.0,1050.0 L 300.0,1076.0 L 321.0,1085.0 L 423.0,1082.0 L 491.0,1158.0 L 514.0,1169.0 L 545.0,1166.0 L 626.0,1127.0 L 711.0,1165.0 L 745.0,1169.0 L 767.0,1158.0 L 836.0,1082.0 L 937.0,1085.0 L 960.0,1075.0 L 977.0,1051.0 L 1006.0,960.0 L 1111.0,910.0 L 1122.0,885.0 L 1111.0,783.0 L 1178.0,711.0 L 1190.0,672.0 L 1135.0,574.0 L 1137.0,548.0 L 1165.0,483.0 L 1166.0,450.0 L 1146.0,422.0 L 1068.0,366.0 L 1063.0,275.0 L 1051.0,243.0 L 1023.0,225.0 L 930.0,204.0 L 887.0,119.0 L 861.0,95.0 L 829.0,92.0 L 742.0,112.0 L 719.0,102.0 L 659.0,47.0 Z" fill="#000000" />
@@ -608,7 +607,7 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
 
   // ── Location chip (shared between both modes) ──
   const locationChip = location && (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(255,210,77,0.14)", border: `1px solid ${T.gold}44`, borderRadius: 20, padding: "4px 11px", marginTop: 8, cursor: "pointer" }} onClick={() => setLocation(null)}>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(198,161,91,0.12)", border: `1px solid ${T.gold}44`, borderRadius: 20, padding: "4px 11px", marginTop: 8, cursor: "pointer" }} onClick={() => setLocation(null)}>
       <svg width="11" height="11" viewBox="0 0 24 24" fill={T.gold}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
       <span style={{ fontSize: 12, color: T.gold, fontWeight: 600 }}>{location.label}</span>
       <span style={{ fontSize: 13, color: T.muted, marginLeft: 2 }}>×</span>
@@ -949,7 +948,7 @@ function PollWidget({ pollId, account }) {
         const isWinner = myVote && count === maxVotes;
         return (
           <button key={opt.id} onClick={() => castVote(opt.id)} disabled={!!myVote} style={{ position: "relative", width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", background: "none", border: "none", borderBottom: i < options.length - 1 ? `1px solid ${T.cardBorder}` : "none", cursor: myVote ? "default" : "pointer", overflow: "hidden", textAlign: "left" }}>
-            {myVote && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: isChosen ? "rgba(255,210,77,0.24)" : "rgba(242,237,224,0.07)", transition: "width 0.5s ease", borderRadius: i === 0 ? "13px 0 0 0" : i === options.length - 1 ? "0 0 0 13px" : 0 }} />}
+            {myVote && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: isChosen ? "rgba(198,161,91,0.22)" : "rgba(242,237,224,0.07)", transition: "width 0.5s ease", borderRadius: i === 0 ? "13px 0 0 0" : i === options.length - 1 ? "0 0 0 13px" : 0 }} />}
             <span style={{ flex: 1, fontSize: 14, color: T.paper, fontWeight: isChosen ? 700 : 400, position: "relative" }}>{opt.text}</span>
             {myVote && <span style={{ fontSize: 12, color: isChosen ? T.gold : T.muted, fontWeight: 600, position: "relative", minWidth: 30, textAlign: "right" }}>{pct}%</span>}
           </button>
@@ -1278,7 +1277,7 @@ function GiftModal({ profile, onClose, senderAccount }) {
                 <div style={{ display:"flex", gap:8, marginBottom:10 }}>
                   {["1","5","10","20","50"].map(v => (
                     <button key={v} onClick={() => setAmount(v)}
-                      style={{ flex:1, padding:"8px 0", borderRadius:10, border:`1px solid ${amount===v?T.gold:T.cardBorder}`, background:amount===v?"rgba(255,210,77,0.16)":"none", color:amount===v?T.gold:T.paper, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, cursor:"pointer" }}>
+                      style={{ flex:1, padding:"8px 0", borderRadius:10, border:`1px solid ${amount===v?T.gold:T.cardBorder}`, background:amount===v?"rgba(198,161,91,0.15)":"none", color:amount===v?T.gold:T.paper, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, cursor:"pointer" }}>
                       ${v}
                     </button>
                   ))}

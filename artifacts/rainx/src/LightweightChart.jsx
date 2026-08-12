@@ -10,7 +10,7 @@ const BULL_COLOR   = "#1D6FE8";   // RainX blue
 const BEAR_COLOR   = "#131722";   // Near-black
 const WICK_BEAR    = "#374151";
 const GOLD         = "#FFD24D";
-const GOLD_ALPHA   = "rgba(255,210,77,0.18)";
+const GOLD_ALPHA   = "rgba(198,161,91,0.15)";
 const RED_LINE     = "#ef4444";
 const GREEN_LINE   = "#22c55e";
 
@@ -376,7 +376,7 @@ export default function LightweightChart({
           if (!startBar || !endBar || o.price1 == null) break;
           [
             [o.price1, o.price2, GOLD],
-            [o.price3, o.price4, "rgba(255,210,77,0.58)"],
+            [o.price3, o.price4, "rgba(198,161,91,0.5)"],
           ].forEach(([p1, p2, color]) => {
             if (p1 == null) return;
             try {
@@ -403,7 +403,7 @@ export default function LightweightChart({
           break;
 
         case "swing_low":
-          addPriceLine(o.price, "rgba(255,210,77,0.78)", "↓ SL", LineStyle.Dotted, 1, false);
+          addPriceLine(o.price, "rgba(198,161,91,0.7)", "↓ SL", LineStyle.Dotted, 1, false);
           break;
 
         case "direction_arrow":
