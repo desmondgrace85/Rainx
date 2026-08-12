@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import coinArtwork from "./assets/space-coins-coin.png";
 import orbitArtwork from "./assets/space-coins-orbit.png";
 import rocketArtwork from "./assets/space-coins-rocket.png";
@@ -76,8 +76,8 @@ export default function SpaceCoinsIntro({ T, onExplore, onBack }) {
         .sc-scene-glow { position:absolute; left:50%; bottom:35px; width:330px; height:220px; border-radius:50%; transform:translateX(-50%); filter:blur(12px); opacity:.7; pointer-events:none; }
         .sc-platform-art { position:absolute; z-index:2; left:50%; bottom:-52px; width:370px; height:370px; object-fit:contain; transform:translateX(-50%); pointer-events:none; }
         .sc-rocket-art { position:absolute; z-index:4; left:50%; top:12px; width:245px; height:245px; object-fit:contain; transform:translateX(-50%); filter:drop-shadow(0 16px 12px rgba(0,0,0,.28)); animation:sc-rocket-hover 3.8s ease-in-out infinite; pointer-events:none; }
-        .sc-coin-art { position:absolute; z-index:5; left:58px; top:78px; width:84px; height:84px; object-fit:contain; filter:drop-shadow(0 7px 11px rgba(198,161,91,.2)); animation:sc-coin-drift 4.8s ease-in-out infinite; pointer-events:none; }
-        .sc-orbit-art { position:absolute; z-index:5; right:2px; top:48px; width:132px; height:166px; object-fit:contain; filter:drop-shadow(0 7px 12px rgba(198,161,91,.2)); animation:sc-orbit-drift 5.6s ease-in-out infinite; pointer-events:none; }
+        .sc-coin-art { position:absolute; z-index:5; left:68px; top:88px; width:56px; height:56px; object-fit:contain; filter:drop-shadow(0 6px 9px rgba(198,161,91,.18)); animation:sc-coin-drift 4.8s ease-in-out infinite; pointer-events:none; }
+        .sc-orbit-art { position:absolute; z-index:5; right:4px; top:45px; width:100px; height:160px; object-fit:contain; filter:drop-shadow(0 6px 10px rgba(198,161,91,.18)); animation:sc-orbit-drift 5.6s ease-in-out infinite; pointer-events:none; }
         @keyframes sc-rocket-hover { 0%,100% { transform:translate(-50%,0) rotate(-4deg); } 50% { transform:translate(-50%,-12px) rotate(1deg); } }
         @keyframes sc-coin-drift { 0%,100% { transform:translate3d(0,0,0) rotate(-2deg); } 50% { transform:translate3d(-5px,-7px,0) rotate(2deg); } }
         @keyframes sc-orbit-drift { 0%,100% { transform:translate3d(0,0,0) rotate(-2deg); } 50% { transform:translate3d(-10px,-11px,0) rotate(4deg); } }
@@ -108,9 +108,6 @@ export default function SpaceCoinsIntro({ T, onExplore, onBack }) {
           Explore Space Coins <span><ArrowRight size={15} /></span>
         </button>
         <RocketScene T={T} active={reacting} onInteract={interact} />
-        <div style={{ position: "absolute", right: 24, bottom: 28, color: `${T.goldBright}88` }} aria-hidden="true">
-          <Sparkles size={18} />
-        </div>
       </div>
     </main>
   );
