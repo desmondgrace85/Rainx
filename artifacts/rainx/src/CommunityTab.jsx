@@ -1987,8 +1987,8 @@ function CommunityNotifBell({ account, onOpenProfile, onOpenPost }) {
                   <div style={{ position: "relative", flexShrink: 0 }} onClick={(e) => { if (actor?.id && onOpenProfile) { e.stopPropagation(); setOpen(false); onOpenProfile(actor.id); } }}>
                     <Avatar name={actor?.display_name} size={44} avatarUrl={actor?.avatar_url} />
                     {badge && (
-                      <span style={{ position: "absolute", right: -3, bottom: -3, width: 19, height: 19, borderRadius: "50%", background: badge.bg, border: `2px solid ${T.ink}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <badge.Icon size={11} strokeWidth={2.5} fill={badge.fill} color={badge.fill} />
+                      <span style={{ position: "absolute", right: -4, bottom: -4, width: 23, height: 23, borderRadius: "50%", background: badge.bg, border: `2.5px solid ${T.ink}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <badge.Icon size={14} strokeWidth={2.5} fill={badge.fill} color={badge.fill} />
                       </span>
                     )}
                   </div>

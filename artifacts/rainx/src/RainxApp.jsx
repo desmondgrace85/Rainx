@@ -61,6 +61,34 @@ function notifDateTime(n) {
   return n.time || "";
 }
 
+/**
+ * Relative time for notification lists:
+ *   - Same calendar day → show the clock time only (e.g. "11:31")
+ *   - 1+ days but < 1 year → "1 day ago", "2 days ago", … "300 days ago"
+ *   - 1 year+ → "1 year ago", "2 years ago"
+ */
+function notifTimeAgo(n) {
+  const raw = n.created_at;
+  if (!raw) return n.time || "";
+  const d = new Date(raw);
+  if (isNaN(d)) return n.time || "";
+  const now = new Date();
+  // Same calendar day → time only.
+  const sameDay = d.toDateString() === now.toDateString();
+  if (sameDay) {
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${mi}`;
+  }
+  const diffMs = now.getTime() - d.getTime();
+  const days = Math.floor(diffMs / 86400000);
+  const years = Math.floor(days / 365);
+  if (years >= 1) {
+    return years === 1 ? "1 year ago" : `${years} years ago`;
+  }
+  return days === 1 ? "1 day ago" : `${days} days ago`;
+}
+
 // ---------- Market notification avatar (logo + BUY/SELL badge) ----------
 // Renders a market logo as the "profile image" for signal / trade / news
 // notifications, with a small BUY (sage, up-arrow) or SELL (rust, down-arrow)
@@ -1960,12 +1988,44 @@ function MainAppContent({ account, onLogout }) {
     if (isTradingNotif && !hasAccess(entitlement?.tier, "weekly")) return; // only send trading notifs to subscribers
     let id = Date.now() + Math.random();
     if (account?.id) {
-      const { data } = await supabase.from("user_notifications").insert({ user_id: account.id, title: n.title, body: n.body }).select("id").single().then((r) => r, () => ({ data: null }));
-      if (data?.id) id = data.id;
+      const targetKind = n.targetKind || (n.type === "signal" || n.type === "update" || n.type === "warning" ? "signal" : undefined);
+      const target = {
+        targetKind,
+        symbol: n.symbol,
+        timeframe: n.timeframe,
+        postId: n.postId,
+        conversationId: n.conversationId,
+        senderId: n.senderId,
+      };
+      // Persist with type/section/data so notifications survive reload and
+      // market logos / buy-sell badges still resolve after closing the app.
+      // Try the full insert first; fall back to title+body only if the extra
+      // columns don't exist yet on the user_notifications table.
+      let rowId = null;
+      try {
+        const fullInsert = {
+          user_id: account.id,
+          title: n.title,
+          body: n.body,
+          type: n.type || null,
+          section: n.section || null,
+          data: target,
+        };
+        const r = await supabase.from("user_notifications").insert(fullInsert).select("id").single();
+        if (r?.data?.id) rowId = r.data.id;
+        else if (r?.error) throw r.error;
+      } catch (_) {
+        // Fallback: the table may not have type/section/data columns yet.
+        try {
+          const r2 = await supabase.from("user_notifications").insert({ user_id: account.id, title: n.title, body: n.body }).select("id").single();
+          if (r2?.data?.id) rowId = r2.data.id;
+        } catch (__) {}
+      }
+      if (rowId) id = rowId;
     }
-    const targetKind = n.targetKind || (n.type === "signal" || n.type === "update" || n.type === "warning" ? "signal" : undefined);
+    const targetKind2 = n.targetKind || (n.type === "signal" || n.type === "update" || n.type === "warning" ? "signal" : undefined);
     const target = {
-      targetKind,
+      targetKind: targetKind2,
       symbol: n.symbol,
       timeframe: n.timeframe,
       postId: n.postId,
@@ -2167,7 +2227,13 @@ function MainAppContent({ account, onLogout }) {
         deliveredPushIds.forEach((id) => seenNotificationIdsRef.current.add(id));
         const { data } = await supabase.from("user_notifications").select("*").eq("user_id", account.id).order("created_at", { ascending: false }).limit(50);
         const loaded = (data || []).map((row) => ({
-            id: row.id, title: row.title, body: row.body, type: row.type, section: row.section, read: row.read, time: new Date(row.created_at).toLocaleTimeString(), created_at: row.created_at,
+            id: row.id, title: row.title, body: row.body,
+            type: row.type || null, section: row.section || null,
+            read: row.read, time: new Date(row.created_at).toLocaleTimeString(), created_at: row.created_at,
+            // Reconstruct the data object (symbol etc.) so market logos resolve
+            // after the app is closed and reopened.
+            data: row.data || {},
+            symbol: row.data?.symbol || row.symbol || null,
         }));
         loaded.forEach((row) => seenNotificationIdsRef.current.add(String(row.id)));
         persistSeenNotificationIds();
@@ -2734,17 +2800,17 @@ function MainAppContent({ account, onLogout }) {
                       {group.items.map((n) => {
                         const market = isMarketNotification(n);
                         return (
-                        <div key={n.id} style={{ borderBottom: `1px solid ${T.cardBorder}`, padding: "12px 0", display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
-                          {market && <MarketNotifAvatar n={n} size={44} />}
+                        <div key={n.id} style={{ borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 0", display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+                          {market && <MarketNotifAvatar n={n} size={40} />}
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                               {!n.read && <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.gold, flexShrink: 0 }} />}
-                              <div style={{ fontSize: 15, fontWeight: 700, color: T.paper, lineHeight: 1.3 }}>{n.title}</div>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: T.paper, lineHeight: 1.35 }}>{n.title}</div>
                             </div>
-                            <div style={{ fontSize: 14, color: T.paper, marginTop: 3, fontWeight: 500, lineHeight: 1.5 }}>{n.body}</div>
-                            <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>{notifDateTime(n)}</div>
+                            <div style={{ fontSize: 12.5, color: T.muted, marginTop: 2, fontWeight: 500, lineHeight: 1.45 }}>{n.body}</div>
+                            <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>{notifTimeAgo(n)}</div>
                           </div>
-                          <button onClick={() => setNotifToDelete(n)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: "2px 4px", flexShrink: 0, alignSelf: "flex-start" }}><X size={14} /></button>
+                          <button onClick={() => setNotifToDelete(n)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: "2px 4px", flexShrink: 0, alignSelf: "flex-start" }}><X size={13} /></button>
                         </div>
                         );
                       })}
