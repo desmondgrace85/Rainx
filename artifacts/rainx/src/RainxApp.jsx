@@ -16,6 +16,7 @@ import SpaceCoinsIntro from "./SpaceCoinsIntro";
 import SpaceCoinsDashboard from "./SpaceCoinsDashboard";
 
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
+import { resolveMarketLogo, resolveMarketDirection, isMarketNotification, FALLBACK_NEWS_LOGO, FALLBACK_RAINX_LOGO, MARKET_NAMES } from "./MarketLogos";
 
 // ---------- Design tokens ----------
 const T = {
@@ -58,6 +59,37 @@ function notifDateTime(n) {
     }
   }
   return n.time || "";
+}
+
+// ---------- Market notification avatar (logo + BUY/SELL badge) ----------
+// Renders a market logo as the "profile image" for signal / trade / news
+// notifications, with a small BUY (sage, up-arrow) or SELL (rust, down-arrow)
+// badge at the bottom-right corner — mirroring the community notification style.
+function MarketNotifAvatar({ n, size = 44 }) {
+  const logo = resolveMarketLogo(n);
+  const dir = resolveMarketDirection(n);
+  // Pick the fallback: a news icon for news-type, RainX mark otherwise.
+  const fallback = (n?.type === "news" || /news|cpi|nfp|fomc|economic/i.test(`${n?.title || ""} ${n?.body || ""}`))
+    ? FALLBACK_NEWS_LOGO
+    : FALLBACK_RAINX_LOGO;
+  const src = logo?.src || fallback;
+  const alt = logo ? (MARKET_NAMES[logo.symbol] || logo.symbol) : "RainX";
+  return (
+    <div style={{ position: "relative", flexShrink: 0 }}>
+      <img src={src} alt={alt} width={size} height={size} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+      {dir && (
+        <span style={{
+          position: "absolute", right: -3, bottom: -3, width: 20, height: 20, borderRadius: "50%",
+          background: dir === "buy" ? T.sage : T.rust, border: `2px solid ${T.ink}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {dir === "buy"
+            ? <TrendingUp size={12} strokeWidth={3} color="#fff" />
+            : <TrendingDown size={12} strokeWidth={3} color="#fff" />}
+        </span>
+      )}
+    </div>
+  );
 }
 const PUSH_STATE_DB_NAME = "rainx-notification-state";
 const PUSH_STATE_STORE_NAME = "delivered-pushes";
@@ -631,11 +663,30 @@ function Toast({ toast, items = [], onDone, onDismissOne, onOpen }) {
       }}
     >
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-        <img
-          src={`${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/")}icons/icon-192.png`}
-          alt=""
-          style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0 }}
-        />
+        {(() => {
+          const logo = resolveMarketLogo(toast);
+          const dir = resolveMarketDirection(toast);
+          if (logo || isMarketNotification(toast)) {
+            const src = logo?.src || ((toast?.type === "news" || /news|cpi|nfp|fomc|economic/i.test(`${toast?.title || ""} ${toast?.body || ""}`)) ? FALLBACK_NEWS_LOGO : FALLBACK_RAINX_LOGO);
+            return (
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <img src={src} alt="" style={{ width: 30, height: 30, borderRadius: "50%", flexShrink: 0 }} />
+                {dir && (
+                  <span style={{ position: "absolute", right: -2, bottom: -2, width: 14, height: 14, borderRadius: "50%", background: dir === "buy" ? T.sage : T.rust, border: `1.5px solid ${T.ink}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {dir === "buy" ? <TrendingUp size={8} strokeWidth={3} color="#fff" /> : <TrendingDown size={8} strokeWidth={3} color="#fff" />}
+                  </span>
+                )}
+              </div>
+            );
+          }
+          return (
+            <img
+              src={`${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/")}icons/icon-192.png`}
+              alt=""
+              style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0 }}
+            />
+          );
+        })()}
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
@@ -2680,19 +2731,23 @@ function MainAppContent({ account, onLogout }) {
                   return list.map(group => (
                     <div key={group.label || "all"}>
                       {group.label && <div style={{ fontSize: 10, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, padding: "12px 0 6px" }}>{group.label}</div>}
-                      {group.items.map((n) => (
-                        <div key={n.id} style={{ borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 0", display: "flex", justifyContent: "space-between", gap: 8 }}>
-                          <div style={{ flex: 1 }}>
+                      {group.items.map((n) => {
+                        const market = isMarketNotification(n);
+                        return (
+                        <div key={n.id} style={{ borderBottom: `1px solid ${T.cardBorder}`, padding: "12px 0", display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+                          {market && <MarketNotifAvatar n={n} size={44} />}
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                               {!n.read && <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.gold, flexShrink: 0 }} />}
-                              <div style={{ fontSize: 15, fontWeight: 700, color: T.paper }}>{n.title}</div>
+                              <div style={{ fontSize: 15, fontWeight: 700, color: T.paper, lineHeight: 1.3 }}>{n.title}</div>
                             </div>
-                            <div style={{ fontSize: 14, color: T.paper, marginTop: 2, fontWeight: 500, lineHeight: 1.5 }}>{n.body}</div>
+                            <div style={{ fontSize: 14, color: T.paper, marginTop: 3, fontWeight: 500, lineHeight: 1.5 }}>{n.body}</div>
                             <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>{notifDateTime(n)}</div>
                           </div>
                           <button onClick={() => setNotifToDelete(n)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: "2px 4px", flexShrink: 0, alignSelf: "flex-start" }}><X size={14} /></button>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ));
                 })()}

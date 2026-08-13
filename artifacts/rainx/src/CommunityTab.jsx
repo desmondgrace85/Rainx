@@ -782,8 +782,8 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
   const [comments, setComments] = useState(null);
   const [text, setText] = useState("");
   const [likeData, setLikeData] = useState({});
-  const [replyTo, setReplyTo] = useState(null); // comment id being replied to
-  const [replyText, setReplyText] = useState("");
+  const [replyTo, setReplyTo] = useState(null); // comment id being replied to (uses the main bottom box)
+  const mainInputRef = useRef(null);
 
   const load = useCallback(async () => {
     const { data } = await supabase.from("post_comments").select("*").eq("post_id", postId).order("created_at", { ascending: true });
@@ -835,15 +835,32 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
     load();
   };
 
+  // Unified submit: if replying to a comment, send a threaded reply; otherwise a top-level comment.
+  const handleSubmit = () => {
+    if (replyTo) submitReply();
+    else submitComment();
+  };
+
+  // Begin a reply to a specific comment — reuses the main bottom box.
+  const startReply = (commentId) => {
+    setReplyTo(commentId);
+    setTimeout(() => { try { mainInputRef.current?.focus(); } catch (_) {} }, 0);
+  };
+
+  const cancelReply = () => {
+    setReplyTo(null);
+    setText("");
+  };
+
   const submitReply = async () => {
-    if (!replyTo || !replyText.trim()) return;
-    const trimmed = replyText.trim();
+    if (!replyTo || !text.trim()) return;
+    const trimmed = text.trim();
     // Try inserting with parent_comment_id for proper threading.
     // If the column doesn't exist yet, fall back to a top-level comment
     // prefixed with an @mention of the parent comment's author.
     const parentComment = (comments || []).find((c) => c.id === replyTo);
     const parentProfile = parentComment ? profilesMap[parentComment.user_id] : null;
-    const parentHandle = parentProfile?.display_name || parentProfile?.username || "";
+    const parentHandle = parentProfile?.display_name || parentProfile?.username || parentProfile?.full_name || "";
     let inserted = false;
     try {
       const { error } = await supabase
@@ -865,7 +882,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
       const { data: mentioned } = await supabase.from("public_profiles").select("id, display_name").in("display_name", mentions);
       (mentioned || []).forEach((m) => notify(m.id, account.id, "mention", postId));
     }
-    setReplyText("");
+    setText("");
     setReplyTo(null);
     load();
   };
@@ -887,7 +904,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
     const ld = likeData[c.id] || { count: 0, likedByMe: false };
     const childReplies = repliesByParent[c.id] || [];
     return (
-      <div key={c.id} style={{ display: "flex", gap: 8, marginBottom: 10, paddingLeft: isReply ? 10 : 10, borderLeft: `2px solid ${T.cardBorder}` }}>
+      <div key={c.id} style={{ display: "flex", gap: 8, marginBottom: 10, paddingLeft: 10, borderLeft: `2px solid ${T.cardBorder}` }}>
         <button onClick={() => onOpenProfile(c.user_id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
           <Avatar name={p?.display_name} size={isReply ? 22 : 24} avatarUrl={p?.avatar_url} />
         </button>
@@ -900,31 +917,14 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
             <span style={{ fontSize: 11, color: T.muted }}>· {timeAgo(c.created_at)}</span>
           </div>
           <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 2, lineHeight: 1.5, fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(c.text, onOpenProfile)}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 4 }}>
-            <button onClick={() => toggleCommentLike(c.id, c.user_id, postId, account.id, likeData, setLikeData)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : engAsh() }}>
-              <Heart size={13} strokeWidth={2} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11, fontWeight: 600 }}>{ld.count}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 6 }}>
+            <button onClick={() => toggleCommentLike(c.id, c.user_id, postId, account.id, likeData, setLikeData)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : engAsh() }}>
+              <Heart size={16} strokeWidth={2} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{ld.count}</span>
             </button>
-            <button onClick={() => { setReplyTo(c.id); setReplyText(""); }} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", color: engAsh() }}>
-              <MessageCircle size={13} strokeWidth={2} /> <span style={{ fontSize: 11, fontWeight: 600 }}>Reply</span>
+            <button onClick={() => startReply(c.id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: engAsh() }}>
+              <MessageCircle size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>Reply</span>
             </button>
           </div>
-          {/* Inline reply input */}
-          {replyTo === c.id && (
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginTop: 8 }}>
-              <div style={{ flex: 1 }}>
-                <MentionTextarea
-                  value={replyText}
-                  onChange={setReplyText}
-                  placeholder={`Reply to ${p?.display_name || p?.username || "comment"}…`}
-                  rows={1}
-                  maxLength={300}
-                  style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: "8px 10px", fontFamily: FONT_BODY, fontSize: 13, resize: "none" }}
-                />
-              </div>
-              <button onClick={submitReply} disabled={!replyText.trim()} style={{ background: T.goldGradient, color: T.ink, border: "none", borderRadius: 8, padding: "8px 14px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, cursor: "pointer", flexShrink: 0, opacity: replyText.trim() ? 1 : 0.5 }}>Send</button>
-              <button onClick={() => { setReplyTo(null); setReplyText(""); }} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 16, lineHeight: 1, flexShrink: 0 }}>×</button>
-            </div>
-          )}
           {/* Nested replies */}
           {childReplies.length > 0 && (
             <div style={{ marginTop: 8 }}>
@@ -936,21 +936,36 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
     );
   };
 
+  const replyTarget = replyTo ? (comments || []).find((c) => c.id === replyTo) : null;
+  const replyTargetProfile = replyTarget ? profilesMap[replyTarget.user_id] : null;
+  const replyTargetName = replyTargetProfile?.full_name || replyTargetProfile?.display_name || replyTargetProfile?.username || "comment";
+
   return (
     <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.cardBorder}` }}>
       {topLevel.map((c) => renderCommentBlock(c, false))}
-      <div style={{ display: "flex", gap: 8, alignItems: "flex-end", position: "sticky", bottom: 0, background: T.card, padding: "10px 0", marginTop: 8, borderTop: `1px solid ${T.cardBorder}` }}>
-        <div style={{ flex: 1 }}>
-          <MentionTextarea
-            value={text}
-            onChange={setText}
-            placeholder="Write a comment…"
-            rows={1}
-            maxLength={300}
-            style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: "8px 10px", fontFamily: FONT_BODY, fontSize: 13, resize: "none" }}
-          />
+      <div style={{ position: "sticky", bottom: 0, background: T.card, padding: "10px 0", marginTop: 8, borderTop: `1px solid ${T.cardBorder}` }}>
+        {replyTo && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 2px 8px" }}>
+            <span style={{ fontSize: 12.5, color: T.muted }}>
+              Replying to <span style={{ color: T.gold, fontWeight: 700 }}>{replyTargetName}</span>
+            </span>
+            <button onClick={cancelReply} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 12.5, fontWeight: 600 }}>Cancel</button>
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+          <div style={{ flex: 1 }}>
+            <MentionTextarea
+              textareaRef={mainInputRef}
+              value={text}
+              onChange={setText}
+              placeholder={replyTo ? `Reply to ${replyTargetName}…` : "Write a comment…"}
+              rows={1}
+              maxLength={300}
+              style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: "8px 10px", fontFamily: FONT_BODY, fontSize: 13, resize: "none" }}
+            />
+          </div>
+          <button onClick={handleSubmit} disabled={!text.trim()} style={{ background: T.goldGradient, color: T.ink, border: "none", borderRadius: 8, padding: "8px 14px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, cursor: "pointer", flexShrink: 0, opacity: text.trim() ? 1 : 0.5 }}>{replyTo ? "Reply" : "Post"}</button>
         </div>
-        <button onClick={submitComment} disabled={!text.trim()} style={{ background: T.goldGradient, color: T.ink, border: "none", borderRadius: 8, padding: "8px 14px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, cursor: "pointer", flexShrink: 0 }}>Reply</button>
       </div>
     </div>
   );
@@ -1870,6 +1885,7 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
 const NOTIF_LABELS = {
   like: "liked your post.",
   reply: "replied to your post.",
+  comment_reply: "replied to your comment.",
   mention: "mentioned you.",
   follow: "followed you.",
   repost: "reposted your post.",
@@ -2175,27 +2191,47 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Track IDs we've SUCCESSFULLY resolved (have a name) so we don't refetch them.
+  // IDs that failed or returned empty are NOT marked — they get retried on next call.
   const seenProfileIdsRef = useRef(new Set());
+  const inflightProfileIdsRef = useRef(new Set());
   const viewedPostIdsRef = useRef(new Set());
   const mergeProfiles = useCallback(async (ids) => {
-    const missing = ids.filter((id) => !seenProfileIdsRef.current.has(id));
+    if (!ids || !ids.length) return;
+    // Only fetch IDs we haven't successfully resolved AND aren't currently in-flight.
+    const missing = ids.filter((id) => id && !seenProfileIdsRef.current.has(id) && !inflightProfileIdsRef.current.has(id));
     if (!missing.length) return;
-    missing.forEach((id) => seenProfileIdsRef.current.add(id));
-    const extra = await fetchProfilesMap(missing);
+    missing.forEach((id) => inflightProfileIdsRef.current.add(id));
+    let extra = {};
+    try {
+      extra = await fetchProfilesMap(missing);
+    } catch (_) { extra = {}; }
+    missing.forEach((id) => inflightProfileIdsRef.current.delete(id));
+    // Only mark IDs as "seen" if we actually got a usable profile back (has a name field).
+    missing.forEach((id) => {
+      if (extra[id] && (extra[id].full_name || extra[id].display_name || extra[id].username)) {
+        seenProfileIdsRef.current.add(id);
+      }
+    });
     // Enrich badges from subscriptions so comment authors also show verified badges
-    if (missing.length) {
-      const { data: subRows } = await supabase.from("subscriptions").select("user_id, status, expires_at, plan").eq("status", "active").in("user_id", missing);
-      (subRows || []).forEach((s) => {
-        if (!extra[s.user_id]) return;
-        const active = s.plan === "vip_lifetime" || (s.expires_at && new Date(s.expires_at) > new Date());
-        if (!active) return;
-        if (!extra[s.user_id].badge) {
-          extra[s.user_id].badge = s.plan === "yearly" ? "golden" : "blue";
-        }
-        extra[s.user_id].isPro = true;
-      });
+    const resolvedIds = missing.filter((id) => extra[id]);
+    if (resolvedIds.length) {
+      try {
+        const { data: subRows } = await supabase.from("subscriptions").select("user_id, status, expires_at, plan").eq("status", "active").in("user_id", resolvedIds);
+        (subRows || []).forEach((s) => {
+          if (!extra[s.user_id]) return;
+          const active = s.plan === "vip_lifetime" || (s.expires_at && new Date(s.expires_at) > new Date());
+          if (!active) return;
+          if (!extra[s.user_id].badge) {
+            extra[s.user_id].badge = s.plan === "yearly" ? "golden" : "blue";
+          }
+          extra[s.user_id].isPro = true;
+        });
+      } catch (_) {}
     }
-    setProfilesMap((m) => ({ ...m, ...extra }));
+    if (Object.keys(extra).length) {
+      setProfilesMap((m) => ({ ...m, ...extra }));
+    }
   }, []);
 
   const loadPosts = useCallback(async () => {
