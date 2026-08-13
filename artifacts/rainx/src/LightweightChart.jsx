@@ -9,8 +9,8 @@ import { createChart, CrosshairMode, LineStyle } from "lightweight-charts";
 const BULL_COLOR   = "#1D6FE8";   // RainX blue
 const BEAR_COLOR   = "#131722";   // Near-black
 const WICK_BEAR    = "#374151";
-const GOLD         = "#D08F14";
-const GOLD_ALPHA   = "rgba(208,143,20,0.15)";
+const GOLD         = "#D49818";
+const GOLD_ALPHA   = "rgba(212,152,24,0.15)";
 const RED_LINE     = "#ef4444";
 const GREEN_LINE   = "#22c55e";
 
@@ -376,7 +376,7 @@ export default function LightweightChart({
           if (!startBar || !endBar || o.price1 == null) break;
           [
             [o.price1, o.price2, GOLD],
-            [o.price3, o.price4, "rgba(208,143,20,0.5)"],
+            [o.price3, o.price4, "rgba(212,152,24,0.5)"],
           ].forEach(([p1, p2, color]) => {
             if (p1 == null) return;
             try {
@@ -403,7 +403,7 @@ export default function LightweightChart({
           break;
 
         case "swing_low":
-          addPriceLine(o.price, "rgba(208,143,20,0.7)", "↓ SL", LineStyle.Dotted, 1, false);
+          addPriceLine(o.price, "rgba(212,152,24,0.7)", "↓ SL", LineStyle.Dotted, 1, false);
           break;
 
         case "direction_arrow":

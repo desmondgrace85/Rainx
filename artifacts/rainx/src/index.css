@@ -596,7 +596,7 @@ input, textarea, [contenteditable] {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%);
+  background: linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%);
   box-shadow: 0 0 7px 2px rgba(198, 161, 91, 0.96);
 }
 
@@ -612,7 +612,7 @@ input, textarea, [contenteditable] {
 .rx-center-nav-orbit-two::after {
   top: 50%;
   left: -2px;
-  background: linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%);
+  background: linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%);
   box-shadow: 0 0 7px 2px rgba(227, 192, 119, 0.9);
 }
 
@@ -621,15 +621,15 @@ input, textarea, [contenteditable] {
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%);
+  background: linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%);
   box-shadow: 0 0 6px 2px rgba(198, 161, 91, 0.8);
   animation: rx-center-particle 3.2s ease-in-out infinite;
 }
 
 .rx-center-nav-particle-one { top: 7px; left: 14px; animation-delay: -0.4s; }
-.rx-center-nav-particle-two { top: 16px; right: 5px; animation-delay: -1.5s; background: linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%); }
+.rx-center-nav-particle-two { top: 16px; right: 5px; animation-delay: -1.5s; background: linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%); }
 .rx-center-nav-particle-three { bottom: 7px; right: 14px; animation-delay: -2.3s; }
-.rx-center-nav-particle-four { bottom: 16px; left: 5px; animation-delay: -2.9s; background: linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%); }
+.rx-center-nav-particle-four { bottom: 16px; left: 5px; animation-delay: -2.9s; background: linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%); }
 
 .rx-center-nav-ripple {
   inset: 7px;
@@ -736,6 +736,7 @@ input, textarea, [contenteditable] {
 }
 
 /* Keep legacy inline SVG gold marks on the single reference gold. */
-svg path[fill="#E3C077"] {
-  fill: #D08F14 !important;
+svg path[fill="#E3C077"],
+svg path[fill="#D49818"] {
+  fill: #D49818 !important;
 }

@@ -1547,6 +1547,7 @@ function MainAppContent({ account, onLogout }) {
   const [communityUnreadCount, setCommunityUnreadCount] = useState(0);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [notifToDelete, setNotifToDelete] = useState(null);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
   const [toastQueue, setToastQueue] = useState([]);
   const [activeToast, setActiveToast] = useState(null);
   const [activeToastItems, setActiveToastItems] = useState([]);
@@ -2637,10 +2638,7 @@ function MainAppContent({ account, onLogout }) {
               <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.paper, fontWeight: 700 }}>Notifications</div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 {notifications.length > 0 && (
-                  <button onClick={() => {
-                    setNotifications([]);
-                    if (account?.id) supabase.from("user_notifications").delete().eq("user_id", account.id).then(() => {}, () => {});
-                  }} style={{ background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 7, padding: "4px 10px", fontSize: 11, color: T.muted, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 600 }}>Clear all</button>
+                  <button onClick={() => setShowClearAllConfirm(true)} style={{ background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 7, padding: "4px 10px", fontSize: 11, color: T.muted, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 600 }}>Clear all</button>
                 )}
                 <button onClick={() => setShowNotifPanel(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><X size={20} /></button>
               </div>
@@ -2673,10 +2671,10 @@ function MainAppContent({ account, onLogout }) {
                           <div style={{ flex: 1 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                               {!n.read && <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.gold, flexShrink: 0 }} />}
-                              <div style={{ fontSize: 16, fontWeight: 700, color: n.type === "warning" ? T.rust : n.type === "update" ? T.sage : T.gold }}>{n.title}</div>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: n.type === "warning" ? T.rust : n.type === "update" ? T.sage : T.gold }}>{n.title}</div>
                             </div>
-                            <div style={{ fontSize: 16, color: T.paper, marginTop: 2, fontWeight: 500, lineHeight: 1.55 }}>{n.body}</div>
-                            <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>{notifDateTime(n)}</div>
+                            <div style={{ fontSize: 12.5, color: T.paper, marginTop: 2, fontWeight: 500, lineHeight: 1.5 }}>{n.body}</div>
+                            <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>{notifDateTime(n)}</div>
                           </div>
                           <button onClick={() => setNotifToDelete(n)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: "2px 4px", flexShrink: 0, alignSelf: "flex-start" }}><X size={14} /></button>
                         </div>
@@ -2706,6 +2704,26 @@ function MainAppContent({ account, onLogout }) {
                 setNotifications(list => list.filter(x => x.id !== n.id));
                 if (account?.id) supabase.from("user_notifications").delete().eq("id", n.id).then(() => {}, () => {});
               }} style={{ flex:1, background:"#E53935", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer" }}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Clear all notifications confirmation modal ── */}
+      {showClearAllConfirm && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:600, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px" }} onClick={() => setShowClearAllConfirm(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:24, maxWidth:360, width:"100%" }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:10 }}>Clear all notifications?</div>
+            <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.7, marginBottom:20 }}>
+              This will permanently remove all notifications from your list. This action cannot be undone.
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={() => setShowClearAllConfirm(false)} style={{ flex:1, background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, cursor:"pointer" }}>Cancel</button>
+              <button onClick={() => {
+                setShowClearAllConfirm(false);
+                setNotifications([]);
+                if (account?.id) supabase.from("user_notifications").delete().eq("user_id", account.id).then(() => {}, () => {});
+              }} style={{ flex:1, background:"#E53935", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer" }}>Clear all</button>
             </div>
           </div>
         </div>
@@ -5271,7 +5289,7 @@ function SecuritySection({ icon: Icon, title, desc, onPress, label, comingSoon }
   return (
     <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
       <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <Icon size={19} color={T.gold} />
+        <Icon size={19} color={T.paper} />
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
@@ -6128,7 +6146,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const VerifBadgeIcon = ({ size = 16 }) =>
     verification === "golden" ? (
       <svg width={size} height={size} viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
-        <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#E3C077" />
+        <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D49818" />
       </svg>
     ) : verification === "blue" ? (
       <svg width={size} height={size} viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
@@ -6653,7 +6671,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             { label:"Username", val:username, set:setUsername, ph:"@handle" },
           ].map(({ label, val, set, ph, multiline }) => (
             <div key={label} style={{ marginBottom:0, paddingBottom:0 }}>
-              <label style={{ fontSize:12, color:T.gold, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>{label}</label>
+              <label style={{ fontSize:12, color:T.paper, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>{label}</label>
               {multiline
                 ? <textarea value={val} onChange={e => set(e.target.value)} placeholder={ph} rows={3}
                     style={{ width:"100%", background:"none", border:"none", borderBottom:`1px solid ${T.cardBorder}`, color:T.paper, fontSize:15, padding:"6px 0", fontFamily:FONT_HEAD, outline:"none", resize:"none", boxSizing:"border-box" }} />
@@ -6665,13 +6683,13 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
           {/* Location with search suggestions */}
           <div style={{ marginBottom:0, paddingBottom:0, position:"relative" }}>
-            <label style={{ fontSize:12, color:T.gold, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>Location</label>
+            <label style={{ fontSize:12, color:T.paper, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>Location</label>
             <ProfileLocationInput value={location} onChange={setLocation} T={T} FONT_HEAD={FONT_HEAD} />
           </div>
 
           {/* Date of birth — month + day inline, year opens bottom sheet */}
           <div style={{ marginBottom:0, paddingBottom:0 }}>
-            <label style={{ fontSize:12, color:T.gold, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>Date of birth</label>
+            <label style={{ fontSize:12, color:T.paper, fontWeight:600, display:"block", marginBottom:4, marginTop:18 }}>Date of birth</label>
             <div style={{ display:"flex", gap:8, alignItems:"center" }}>
               <select
                 value={dob ? dob.split("-")[1] || "" : ""}
@@ -6707,7 +6725,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           {/* DOB privacy selector */}
           {dob && (
             <div style={{ marginTop:18 }}>
-              <label style={{ fontSize:12, color:T.gold, fontWeight:600, display:"block", marginBottom:8 }}>DOB visibility</label>
+              <label style={{ fontSize:12, color:T.paper, fontWeight:600, display:"block", marginBottom:8 }}>DOB visibility</label>
               <div style={{ display:"flex", gap:8 }}>
                 {[["daymonth","Day & Month"],["everyone","Full Date"],["friends","Friends"]].map(([v, lbl]) => (
                   <button key={v} onClick={() => { setDobPrivacy(v); lsSet("rainx-dob-privacy", v); }}
@@ -6751,7 +6769,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ width: 70, height: 70, borderRadius: "50%", background: iconBg, border: iconBorder, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
               {isGolden ? (
                 <svg width="38" height="38" viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
-                  <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#E3C077" />
+                  <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D49818" />
                 </svg>
               ) : isBlue ? (
                 <svg width="38" height="38" viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
@@ -6790,7 +6808,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
                       </svg>
                     ) : (
                       <svg width="16" height="16" viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
-                        <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#E3C077" />
+                        <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D49818" />
                       </svg>
                     )}
                   </div>
@@ -7017,7 +7035,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1d9bf0" />
             </svg>
             <svg width="16" height="16" viewBox="1.604 1.604 18.792 18.792" style={{ position:"absolute", right:6, top:10 }}>
-              <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#E3C077" />
+              <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D49818" />
             </svg>
           </div>
           <div style={{ flex:1, textAlign:"left" }}>
