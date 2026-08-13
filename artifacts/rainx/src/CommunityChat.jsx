@@ -50,9 +50,9 @@ function playSendTick() {
 
 const buildT = (tokens) => ({
   ink: "#0F0E0B", card: "#1C1913", cardBorder: "#332C1F",
-  gold: "#FFD24D", goldBright: "#FFD24D", paper: "#F2EDE0", muted: "#9C947F",
-  goldGradient: "linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)",
-  goldShine: "linear-gradient(180deg, #FFD24D 0%, #F3B51D 48%, #D08F14 100%)",
+  gold: "#F7BC2D", goldBright: "#F7BC2D", paper: "#F2EDE0", muted: "#9C947F",
+  goldGradient: "linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%)",
+  goldShine: "linear-gradient(180deg, #F7BC2D 0%, #E3A925 48%, #D49818 100%)",
   ...(tokens || {}),
 });
 
@@ -121,10 +121,11 @@ function getPinnedMessages(convId) { try { return JSON.parse(localStorage.getIte
 function savePinnedMessages(convId, arr) { try { localStorage.setItem("rainx_pins_" + convId, JSON.stringify(arr)); } catch {} }
 
 // ── Avatar ─────────────────────────────────────────────────────────────────
-function Avatar({ name, avatarUrl, size }) {
+function Avatar({ name, avatarUrl, size, T }) {
   size = size || 40;
+  const bg = (T && T.goldGradient) || "linear-gradient(135deg,#F7BC2D 0%,#E3A925 50%,#D49818 100%)";
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: T.goldGradient, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: size * 0.38, color: "#0F0E0B", flexShrink: 0, overflow: "hidden" }}>
+    <div style={{ width: size, height: size, borderRadius: "50%", background: bg, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: size * 0.38, color: "#0F0E0B", flexShrink: 0, overflow: "hidden" }}>
       {avatarUrl
         ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         : (name || "?")[0].toUpperCase()}
@@ -165,7 +166,8 @@ function getTickStatus(msg, otherOnline, readReceiptsEnabled) {
 }
 
 // ── ConfirmDialog ──────────────────────────────────────────────────────────
-function ConfirmDialog({ title, body, confirmLabel, danger, onConfirm, onCancel }) {
+function ConfirmDialog({ title, body, confirmLabel, danger, onConfirm, onCancel, T }) {
+  const goldGrad = (T && T.goldGradient) || "linear-gradient(135deg,#F7BC2D 0%,#E3A925 50%,#D49818 100%)";
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 20px" }} onClick={onCancel}>
       <div onClick={e => e.stopPropagation()} style={{ background: "#1C1913", border: "1px solid #332C1F", borderRadius: 18, padding: "26px 22px 22px", width: "100%", maxWidth: 360 }}>
@@ -173,7 +175,7 @@ function ConfirmDialog({ title, body, confirmLabel, danger, onConfirm, onCancel 
         {body && <div style={{ fontSize: 13, color: "#9C947F", lineHeight: 1.65, marginBottom: 22 }}>{body}</div>}
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onCancel} style={{ flex: 1, background: "#332C1F", border: "none", borderRadius: 12, padding: "13px 0", color: "#F2EDE0", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
-          <button onClick={onConfirm} style={{ flex: 1, background: danger ? "#B0604A" : T.goldGradient, border: "none", borderRadius: 12, padding: "13px 0", color: danger ? "#fff" : "#0F0E0B", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{confirmLabel || "Confirm"}</button>
+          <button onClick={onConfirm} style={{ flex: 1, background: danger ? "#B0604A" : goldGrad, border: "none", borderRadius: 12, padding: "13px 0", color: danger ? "#fff" : "#0F0E0B", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{confirmLabel || "Confirm"}</button>
         </div>
       </div>
     </div>
@@ -303,7 +305,7 @@ function ForwardModal({ account, senderName, onForward, onClose, T }) {
           {convos.map(p => (
             <button key={p.id} onClick={() => setSelected(p)}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "11px 0", background: "none", border: "none", cursor: "pointer", borderBottom: "1px solid " + T.cardBorder }}>
-              <Avatar name={p.display_name} avatarUrl={p.avatar_url} size={40} />
+              <Avatar name={p.display_name} avatarUrl={p.avatar_url} size={40} T={T} />
               <div style={{ flex: 1, textAlign: "left", fontSize: 14, color: T.paper, fontWeight: 500 }}>{p.display_name || p.username || "User"}</div>
               <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid " + (selected && selected.id === p.id ? T.gold : T.cardBorder), background: selected && selected.id === p.id ? T.goldGradient : "transparent", transition: "all 0.15s", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {selected && selected.id === p.id && <Check size={12} color="#0F0E0B" strokeWidth={3} />}
@@ -328,10 +330,10 @@ function PinnedBar({ pins, onViewPins, T }) {
   if (!pins || !pins.length) return null;
   const latest = pins[pins.length - 1];
   return (
-    <div style={{ background: "rgba(198,161,91,0.1)", borderBottom: "1px solid rgba(198,161,91,0.2)", padding: "8px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flexShrink: 0 }} onClick={onViewPins}>
-      <Pin size={13} color="#FFD24D" />
+    <div style={{ background: "rgba(247,188,45,0.1)", borderBottom: "1px solid rgba(247,188,45,0.2)", padding: "8px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flexShrink: 0 }} onClick={onViewPins}>
+      <Pin size={13} color={T.gold} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 10, color: "#FFD24D", fontWeight: 700, marginBottom: 1 }}>
+        <div style={{ fontSize: 10, color: T.gold, fontWeight: 700, marginBottom: 1 }}>
           Pinned Message{pins.length > 1 ? "s (" + pins.length + ")" : ""}
         </div>
         <div style={{ fontSize: 12, color: "#F2EDE0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -402,7 +404,7 @@ function MiniChatSettings({ userId, userName, isPro, onClose, T }) {
           <SettingRow label="Show online status" sublabel="Let this user see when you're currently online" value={settings.showOnline} onChange={v => update("showOnline", v)} gated isPro={isPro} T={T} />
         </div>
         {!isPro && (
-          <div style={{ margin: "12px 12px 0", background: "rgba(198,161,91,0.08)", border: "1px solid rgba(198,161,91,0.22)", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ margin: "12px 12px 0", background: "rgba(247,188,45,0.08)", border: "1px solid rgba(247,188,45,0.22)", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
             <Lock size={14} color={T.gold} />
             <span style={{ fontSize: 12, color: T.muted }}>Upgrade to <strong style={{ color: T.gold }}>Subscriber</strong> or <strong style={{ color: T.gold }}>Premium</strong> to enable per-chat privacy controls.</span>
           </div>
@@ -460,7 +462,7 @@ function GeneralChatSettings({ account, isPro, onClose, T }) {
         </div>
 
         {!isPro && (
-          <div style={{ margin: "0 12px 12px", background: "rgba(198,161,91,0.08)", border: "1px solid rgba(198,161,91,0.22)", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ margin: "0 12px 12px", background: "rgba(247,188,45,0.08)", border: "1px solid rgba(247,188,45,0.22)", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
             <Lock size={14} color={T.gold} />
             <span style={{ fontSize: 12, color: T.muted }}>Last seen &amp; online status controls require <strong style={{ color: T.gold }}>Subscriber</strong> or <strong style={{ color: T.gold }}>Premium</strong>.</span>
           </div>
@@ -493,6 +495,7 @@ function MenuSheet({ user, onClose, onViewProfile, onClearHistory, onReport, onB
         confirmLabel={confirm.label} danger={confirm.danger}
         onConfirm={() => { confirm.action(); setConfirm(null); }}
         onCancel={() => setConfirm(null)}
+        T={T}
       />
     );
   }
@@ -506,7 +509,7 @@ function MenuSheet({ user, onClose, onViewProfile, onClearHistory, onReport, onB
         </button>
 
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 0 24px" }}>
-          <Avatar name={user && user.display_name} avatarUrl={user && user.avatar_url} size={72} />
+          <Avatar name={user && user.display_name} avatarUrl={user && user.avatar_url} size={72} T={T} />
           <div style={{ marginTop: 12, fontWeight: 800, fontSize: 18, color: T.paper }}>{(user && user.display_name) || "User"}</div>
         </div>
 
@@ -1035,7 +1038,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
         <button onClick={onBack} style={{ background: "none", border: "none", color: T.paper, cursor: "pointer", padding: 4 }}><ArrowLeft size={22} /></button>
         <button onClick={() => onViewProfile(oid)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
           <div style={{ position: "relative" }}>
-            <Avatar name={otherProfile && otherProfile.display_name} avatarUrl={otherProfile && otherProfile.avatar_url} size={38} />
+            <Avatar name={otherProfile && otherProfile.display_name} avatarUrl={otherProfile && otherProfile.avatar_url} size={38} T={T} />
             {otherOnline && <div style={{ position: "absolute", bottom: 0, right: 0, width: 11, height: 11, borderRadius: "50%", background: "#4CAF50", border: "2px solid " + T.card }} />}
           </div>
           <div style={{ textAlign: "left" }}>
@@ -1108,7 +1111,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
                 }}
               >
                 {isForwarded && !deleted && (
-                  <div style={{ fontSize: 10, color: isMe ? "rgba(15,14,11,0.65)" : "#FFD24D", fontWeight: 700, marginBottom: 5, borderLeft: "2px solid " + (isMe ? "rgba(15,14,11,0.4)" : "#FFD24D"), paddingLeft: 6 }}>
+                  <div style={{ fontSize: 10, color: isMe ? "rgba(15,14,11,0.65)" : T.gold, fontWeight: 700, marginBottom: 5, borderLeft: "2px solid " + (isMe ? "rgba(15,14,11,0.4)" : T.gold), paddingLeft: 6 }}>
                     ↗ Forwarded{forwardedFrom ? " from " + forwardedFrom : ""}
                   </div>
                 )}
@@ -1143,7 +1146,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
             placeholder="Message…"
             style={{ flex: 1, background: T.ink, border: "1.5px solid " + T.cardBorder, borderRadius: 24, padding: "10px 16px", color: T.paper, fontSize: 15, outline: "none", fontFamily: "inherit", lineHeight: 1.4 }}
-            onFocus={e => { e.target.style.borderColor = "#FFD24D"; }}
+            onFocus={e => { e.target.style.borderColor = T.gold; }}
             onBlur={e => { e.target.style.borderColor = T.cardBorder; }}
           />
           <button onClick={send} disabled={!text.trim() || sending}
@@ -1225,6 +1228,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
           confirmLabel={confirm.label} danger={confirm.danger}
           onConfirm={() => { confirm.action(); setConfirm(null); }}
           onCancel={() => setConfirm(null)}
+          T={T}
         />
       )}
     </div>
@@ -1400,9 +1404,9 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
               refreshPins();
               onOpenDM(profile);
             }}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: isPinned ? "rgba(198,161,91,0.06)" : "none", border: "none", cursor: "pointer", borderBottom: "1px solid " + T.cardBorder }}>
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: isPinned ? "rgba(247,188,45,0.06)" : "none", border: "none", cursor: "pointer", borderBottom: "1px solid " + T.cardBorder }}>
               <div style={{ position: "relative", flexShrink: 0 }}>
-                <Avatar name={profile && profile.display_name} avatarUrl={profile && profile.avatar_url} size={46} />
+                <Avatar name={profile && profile.display_name} avatarUrl={profile && profile.avatar_url} size={46} T={T} />
                 {isOnline(profile && profile.last_seen) && (
                   <div style={{ position: "absolute", bottom: 1, right: 1, width: 11, height: 11, borderRadius: "50%", background: "#4CAF50", border: "2px solid " + T.ink }} />
                 )}
@@ -1419,7 +1423,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
                       {typingUsers[pid] && <span style={{ fontSize: 11, color: T.goldBright, fontWeight: 600 }}>typing…</span>}
                     {isPinned && <Pin size={11} color={T.gold} />}
                   </div>
-                  <div style={{ fontSize: 11, color: unread > 0 ? "#FFD24D" : T.muted, flexShrink: 0, marginLeft: 8 }}>{timeAgo(lastMsg.created_at)}</div>
+                  <div style={{ fontSize: 11, color: unread > 0 ? T.gold : T.muted, flexShrink: 0, marginLeft: 8 }}>{timeAgo(lastMsg.created_at)}</div>
                 </div>
                 <div style={{ fontSize: 13, color: unread > 0 ? T.paper : T.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: unread > 0 ? 600 : 400 }}>
                   {lastMsg.sender_id === aid ? "You: " : ""}{lastDisplay}
