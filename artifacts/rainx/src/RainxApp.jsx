@@ -2671,10 +2671,10 @@ function MainAppContent({ account, onLogout }) {
                           <div style={{ flex: 1 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                               {!n.read && <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.gold, flexShrink: 0 }} />}
-                              <div style={{ fontSize: 13, fontWeight: 700, color: n.type === "warning" ? T.rust : n.type === "update" ? T.sage : T.gold }}>{n.title}</div>
+                              <div style={{ fontSize: 15, fontWeight: 700, color: T.paper }}>{n.title}</div>
                             </div>
-                            <div style={{ fontSize: 12.5, color: T.paper, marginTop: 2, fontWeight: 500, lineHeight: 1.5 }}>{n.body}</div>
-                            <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>{notifDateTime(n)}</div>
+                            <div style={{ fontSize: 14, color: T.paper, marginTop: 2, fontWeight: 500, lineHeight: 1.5 }}>{n.body}</div>
+                            <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>{notifDateTime(n)}</div>
                           </div>
                           <button onClick={() => setNotifToDelete(n)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: "2px 4px", flexShrink: 0, alignSelf: "flex-start" }}><X size={14} /></button>
                         </div>
@@ -2754,13 +2754,13 @@ function MainAppContent({ account, onLogout }) {
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", zIndex: 100, background: T.card, opacity: 1, borderTop: `1px solid ${T.cardBorder}`, boxShadow: "0 -8px 24px rgba(0,0,0,0.12)", display: "flex", justifyContent: "space-around", padding: "6px 0 calc(20px + env(safe-area-inset-bottom))", "--rx-logo-bg": isDark ? "#000" : "#fff" }}>
           {[
             { key: "home", label: "Home", icon: (active) => (
-               <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "#B9871A" : "currentColor"} strokeWidth={active ? 1.6 : 1.8} strokeLinecap="round" strokeLinejoin="round" fillRule="evenodd">
+               <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "none" : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" fillRule="evenodd">
                 {/* House silhouette + door cutout so the door stays empty when filled */}
                 <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z M9 21V12h6v9z"/>
               </svg>
             )},
             { key: "markets", label: "Markets", icon: (active) => (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "#B9871A" : "currentColor"} strokeWidth={active ? 1.6 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "none" : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                 <rect x="4" y="13" width="3" height="7" rx="0.8"/>
                 <rect x="10.5" y="8" width="3" height="12" rx="0.8"/>
                 <rect x="17" y="4" width="3" height="16" rx="0.8"/>
@@ -2769,7 +2769,7 @@ function MainAppContent({ account, onLogout }) {
             )},
             { key: "space-coins", center: true },
             { key: "community", label: "Community", icon: (active) => (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "#B9871A" : "currentColor"} strokeWidth={active ? 1.6 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "none" : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="9" cy="7" r="3"/>
                 <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
                 <circle cx="18" cy="8" r="2.2"/>
@@ -2777,7 +2777,7 @@ function MainAppContent({ account, onLogout }) {
               </svg>
             )},
             { key: "more", label: "More", icon: (active) => (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "#B9871A" : "currentColor"} strokeWidth={active ? 1.6 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "none" : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="5" cy="12" r="1.4"/>
                 <circle cx="12" cy="12" r="1.4"/>
                 <circle cx="19" cy="12" r="1.4"/>

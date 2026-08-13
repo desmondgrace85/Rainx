@@ -724,11 +724,9 @@ input, textarea, [contenteditable] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rx-center-nav-stage,
-  .rx-center-nav-aura,
-  .rx-center-nav-core,
-  .rx-center-nav-orbit,
-  .rx-center-nav-particle,
+  /* Center-nav float/aura/orbit animations are intentionally kept ON so the
+     signature gold centerpiece (disc + orbiting ring + glow) always shows,
+     matching the reference design. Only the energize (tap) burst is reduced. */
   .rx-center-nav-control.is-energized .rx-center-nav-stage,
   .rx-center-nav-control.is-energized .rx-center-nav-core,
   .rx-center-nav-control.is-energized .rx-center-nav-aura,
