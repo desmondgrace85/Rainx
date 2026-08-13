@@ -10,9 +10,9 @@ import { supabase } from "./supabaseClient";
 
 const T = {
   ink: "#0F0E0B", card: "#1C1913", cardBorder: "#332C1F",
-  gold: "#FFD24D", goldBright: "#FFD24D",
-  goldGradient: "linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%)",
-  goldShine: "linear-gradient(180deg, #FFD24D 0%, #F3B51D 48%, #D08F14 100%)",
+  gold: "#F7BC2D", goldBright: "#F7BC2D",
+  goldGradient: "linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%)",
+  goldShine: "linear-gradient(180deg, #F7BC2D 0%, #E3A925 48%, #D49818 100%)",
   sage: "#7A9E86", rust: "#B0604A",
   paper: "#F2EDE0", muted: "#9C947F",
 };
@@ -123,7 +123,7 @@ function MentionTextarea({ value, onChange, placeholder, rows, style, textareaRe
               onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
             >
               <div style={{
-                width: 28, height: 28, borderRadius: "50%", background: "#FFD24D",
+                width: 28, height: 28, borderRadius: "50%", background: "#F7BC2D",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 11, fontWeight: 800, color: "#0F0E0B", flexShrink: 0,
                 overflow: "hidden",
@@ -132,7 +132,7 @@ function MentionTextarea({ value, onChange, placeholder, rows, style, textareaRe
                   ? <img src={s.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   : (s.display_name?.[0] || "?").toUpperCase()}
               </div>
-              <span style={{ color: "#FFD24D", fontWeight: 700, fontSize: 13, fontFamily: "'Montserrat', sans-serif" }}>
+              <span style={{ color: "#F7BC2D", fontWeight: 700, fontSize: 13, fontFamily: "'Montserrat', sans-serif" }}>
                 @{s.display_name}
               </span>
             </div>
@@ -1301,7 +1301,7 @@ function GiftModal({ profile, onClose, senderAccount }) {
                 </button>
               ) : (
                 <button onClick={handleSend} disabled={busy}
-                  style={{ width:"100%", background:`linear-gradient(135deg,${T.gold},${T.goldBright})`, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:busy?"default":"pointer", opacity:busy?0.7:1 }}>
+                  style={{ width:"100%", background:T.goldGradient, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:busy?"default":"pointer", opacity:busy?0.7:1 }}>
                   {busy ? "Sending…" : `Send GHS ${amount} Gift 🎁`}
                 </button>
               )}
@@ -1602,7 +1602,7 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
             </button>
             {/* Follow */}
             <button onClick={toggleFollow}
-              style={{ display:"flex", alignItems:"center", gap:7, background: isFollowing ? "none" : `linear-gradient(135deg,${T.gold},${T.goldBright})`, color: isFollowing ? T.paper : T.ink, border:`1.5px solid ${isFollowing ? T.cardBorder : "transparent"}`, borderRadius:22, padding:"9px 18px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
+              style={{ display:"flex", alignItems:"center", gap:7, background: isFollowing ? "none" : T.goldGradient, color: isFollowing ? T.paper : T.ink, border:`1.5px solid ${isFollowing ? T.cardBorder : "transparent"}`, borderRadius:22, padding:"9px 18px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:"pointer", lineHeight:1, flexShrink:0, whiteSpace:"nowrap" }}>
               {isFollowing ? <><UserCheck size={14} /> Following</> : <><UserPlus size={14} /> Follow</>}
             </button>
           </div>
