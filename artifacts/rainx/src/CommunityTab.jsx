@@ -778,15 +778,18 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
 }
 
 // ---------- Comments (single level) ----------
-function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfilesNeeded, onOpenProfile }) {
+function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfilesNeeded, onOpenProfile, onCommentsChange }) {
   const [comments, setComments] = useState(null);
   const [text, setText] = useState("");
   const [likeData, setLikeData] = useState({});
+  const [replyTo, setReplyTo] = useState(null); // comment id being replied to
+  const [replyText, setReplyText] = useState("");
 
   const load = useCallback(async () => {
     const { data } = await supabase.from("post_comments").select("*").eq("post_id", postId).order("created_at", { ascending: true });
     const rows = data || [];
     setComments(rows);
+    if (typeof onCommentsChange === "function") onCommentsChange(rows.length);
     onProfilesNeeded([...new Set(rows.map((r) => r.user_id))]);
     if (rows.length) {
       const ids = rows.map((r) => r.id);
@@ -796,7 +799,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
       (likes || []).forEach((l) => { ld[l.comment_id].count += 1; if (l.user_id === account.id) ld[l.comment_id].likedByMe = true; });
       setLikeData(ld);
     }
-  }, [postId, account.id, onProfilesNeeded]);
+  }, [postId, account.id, onProfilesNeeded, onCommentsChange]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -832,43 +835,119 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
     load();
   };
 
+  const submitReply = async () => {
+    if (!replyTo || !replyText.trim()) return;
+    const trimmed = replyText.trim();
+    // Try inserting with parent_comment_id for proper threading.
+    // If the column doesn't exist yet, fall back to a top-level comment
+    // prefixed with an @mention of the parent comment's author.
+    const parentComment = (comments || []).find((c) => c.id === replyTo);
+    const parentProfile = parentComment ? profilesMap[parentComment.user_id] : null;
+    const parentHandle = parentProfile?.display_name || parentProfile?.username || "";
+    let inserted = false;
+    try {
+      const { error } = await supabase
+        .from("post_comments")
+        .insert({ post_id: postId, user_id: account.id, text: trimmed, parent_comment_id: replyTo });
+      if (!error) inserted = true;
+    } catch (_) {}
+    if (!inserted) {
+      // Fallback: column may not exist — store as top-level comment with @mention prefix
+      const prefixed = parentHandle ? `@${parentHandle} ${trimmed}` : trimmed;
+      await supabase.from("post_comments").insert({ post_id: postId, user_id: account.id, text: prefixed });
+    }
+    notify(postAuthorId, account.id, "comment_reply", postId);
+    if (parentComment && parentComment.user_id !== account.id) {
+      notify(parentComment.user_id, account.id, "comment_reply", postId);
+    }
+    const mentions = extractMentions(trimmed);
+    if (mentions.length) {
+      const { data: mentioned } = await supabase.from("public_profiles").select("id, display_name").in("display_name", mentions);
+      (mentioned || []).forEach((m) => notify(m.id, account.id, "mention", postId));
+    }
+    setReplyText("");
+    setReplyTo(null);
+    load();
+  };
+
   if (comments === null) return <div style={{ fontSize: 11, color: T.muted, padding: "8px 0" }}>Loading comments…</div>;
+
+  // Separate top-level comments from replies (grouped by parent).
+  // Falls back gracefully when parent_comment_id is absent (all comments are top-level).
+  const topLevel = (comments || []).filter((c) => !c.parent_comment_id);
+  const repliesByParent = {};
+  (comments || []).forEach((c) => {
+    if (c.parent_comment_id) {
+      (repliesByParent[c.parent_comment_id] = repliesByParent[c.parent_comment_id] || []).push(c);
+    }
+  });
+
+  const renderCommentBlock = (c, isReply = false) => {
+    const p = profilesMap[c.user_id];
+    const ld = likeData[c.id] || { count: 0, likedByMe: false };
+    const childReplies = repliesByParent[c.id] || [];
+    return (
+      <div key={c.id} style={{ display: "flex", gap: 8, marginBottom: 10, paddingLeft: isReply ? 10 : 10, borderLeft: `2px solid ${T.cardBorder}` }}>
+        <button onClick={() => onOpenProfile(c.user_id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
+          <Avatar name={p?.display_name} size={isReply ? 22 : 24} avatarUrl={p?.avatar_url} />
+        </button>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <button onClick={() => onOpenProfile(c.user_id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: T.paper }}>{p?.full_name || p?.display_name || p?.username || <span style={{ color: T.muted }}>…</span>}</span>
+            </button>
+            <Badge isAdmin={p?.is_admin} badge={p?.badge} />
+            <span style={{ fontSize: 11, color: T.muted }}>· {timeAgo(c.created_at)}</span>
+          </div>
+          <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 2, lineHeight: 1.5, fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(c.text, onOpenProfile)}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 4 }}>
+            <button onClick={() => toggleCommentLike(c.id, c.user_id, postId, account.id, likeData, setLikeData)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : engAsh() }}>
+              <Heart size={13} strokeWidth={2} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11, fontWeight: 600 }}>{ld.count}</span>
+            </button>
+            <button onClick={() => { setReplyTo(c.id); setReplyText(""); }} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", color: engAsh() }}>
+              <MessageCircle size={13} strokeWidth={2} /> <span style={{ fontSize: 11, fontWeight: 600 }}>Reply</span>
+            </button>
+          </div>
+          {/* Inline reply input */}
+          {replyTo === c.id && (
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginTop: 8 }}>
+              <div style={{ flex: 1 }}>
+                <MentionTextarea
+                  value={replyText}
+                  onChange={setReplyText}
+                  placeholder={`Reply to ${p?.display_name || p?.username || "comment"}…`}
+                  rows={1}
+                  maxLength={300}
+                  style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: "8px 10px", fontFamily: FONT_BODY, fontSize: 13, resize: "none" }}
+                />
+              </div>
+              <button onClick={submitReply} disabled={!replyText.trim()} style={{ background: T.goldGradient, color: T.ink, border: "none", borderRadius: 8, padding: "8px 14px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, cursor: "pointer", flexShrink: 0, opacity: replyText.trim() ? 1 : 0.5 }}>Send</button>
+              <button onClick={() => { setReplyTo(null); setReplyText(""); }} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 16, lineHeight: 1, flexShrink: 0 }}>×</button>
+            </div>
+          )}
+          {/* Nested replies */}
+          {childReplies.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              {childReplies.map((r) => renderCommentBlock(r, true))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.cardBorder}` }}>
-      {comments.map((c) => {
-        const p = profilesMap[c.user_id];
-        const ld = likeData[c.id] || { count: 0, likedByMe: false };
-        return (
-          <div key={c.id} style={{ display: "flex", gap: 8, marginBottom: 10, paddingLeft: 10, borderLeft: `2px solid ${T.cardBorder}` }}>
-            <button onClick={() => onOpenProfile(c.user_id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
-              <Avatar name={p?.display_name} size={24} avatarUrl={p?.avatar_url} />
-            </button>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <button onClick={() => onOpenProfile(c.user_id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: T.paper }}>{p?.display_name || p?.username || <span style={{ color: T.muted }}>…</span>}</span>
-                </button>
-                <Badge isAdmin={p?.is_admin} badge={p?.badge} />
-                <span style={{ fontSize: 9.5, color: T.muted }}>· {timeAgo(c.created_at)}</span>
-              </div>
-              <div style={{ fontSize: 12, color: T.paper, marginTop: 2, lineHeight: 1.5 }}>{renderTextWithTags(c.text, onOpenProfile)}</div>
-              <button onClick={() => toggleCommentLike(c.id, c.user_id, postId, account.id, likeData, setLikeData)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : engAsh(), marginTop: 4 }}>
-                <Heart size={13} strokeWidth={2} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 10.5, fontWeight: 600 }}>{ld.count}</span>
-              </button>
-            </div>
-          </div>
-        );
-      })}
+      {topLevel.map((c) => renderCommentBlock(c, false))}
       <div style={{ display: "flex", gap: 8, alignItems: "flex-end", position: "sticky", bottom: 0, background: T.card, padding: "10px 0", marginTop: 8, borderTop: `1px solid ${T.cardBorder}` }}>
         <div style={{ flex: 1 }}>
           <MentionTextarea
             value={text}
             onChange={setText}
-            placeholder="Write a reply…"
+            placeholder="Write a comment…"
             rows={1}
             maxLength={300}
-            style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: "8px 10px", fontFamily: FONT_BODY, fontSize: 12, resize: "none" }}
+            style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: "8px 10px", fontFamily: FONT_BODY, fontSize: 13, resize: "none" }}
           />
         </div>
         <button onClick={submitComment} disabled={!text.trim()} style={{ background: T.goldGradient, color: T.ink, border: "none", borderRadius: 8, padding: "8px 14px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, cursor: "pointer", flexShrink: 0 }}>Reply</button>
@@ -992,6 +1071,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(post.text);
+  const [commentCount, setCommentCount] = useState(Number(post.comments_count) || 0);
   const isOwn = post.user_id === account.id;
   const ld = likeData[post.id] || { count: 0, likedByMe: false };
   const rd = repostData[post.id] || { count: 0, repostedByMe: false };
@@ -1103,7 +1183,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           <Heart size={16} strokeWidth={2} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(ld.count)}</span>
         </button>
         <button onClick={() => setShowComments(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ash }}>
-          <MessageCircle size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(Number(post.comments_count) || 0)}</span>
+          <MessageCircle size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(commentCount)}</span>
         </button>
         <button onClick={() => onToggleRepost(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: rd.repostedByMe ? T.sage : ash }}>
           <Repeat2 size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(rd.count)}</span>
@@ -1135,7 +1215,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
                   <Badge isAdmin={profile?.is_admin} badge={profile?.badge} isPro={profile?.isPro} />
                 </div>
                 {(profile?.username || profile?.display_name) && <span style={{ fontSize: 12, color: T.muted }}>@{profile?.username || profile?.display_name}</span>}
-                <div style={{ fontSize: 16, fontWeight: 600, color: T.paper, marginTop: 10, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
+                <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 10, lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
                 {post.images?.length > 0 && (
                   <div style={{ marginTop: 10, borderRadius: 14, overflow: "hidden" }}>
                     <img src={post.images[0]} alt="" style={{ width: "100%", display: "block" }} />
@@ -1145,7 +1225,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
               </div>
             </div>
             <div style={{ padding: "0 16px" }}>
-              <CommentsSection postId={post.id} postAuthorId={post.user_id} account={account} profilesMap={profilesMap} onProfilesNeeded={onProfilesNeeded} onOpenProfile={onOpenProfile} />
+              <CommentsSection postId={post.id} postAuthorId={post.user_id} account={account} profilesMap={profilesMap} onProfilesNeeded={onProfilesNeeded} onOpenProfile={onOpenProfile} onCommentsChange={setCommentCount} />
             </div>
           </div>
         </div>
