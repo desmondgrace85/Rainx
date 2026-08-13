@@ -622,8 +622,8 @@ function Toast({ toast, items = [], onDone, onDismissOne, onOpen }) {
       aria-live="polite"
       style={{
         position: "fixed", top: 10, left: 10, right: 10, maxWidth: 460, margin: "0 auto", zIndex: 1000,
-        background: "#ffffff", borderRadius: 16,
-        padding: "12px 14px", boxShadow: "0 10px 32px rgba(0,0,0,0.22)", cursor: expanded ? "default" : "pointer",
+        background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 16,
+        padding: "12px 14px", boxShadow: "0 10px 32px rgba(0,0,0,0.28)", cursor: expanded ? "default" : "pointer",
         transform: `translateX(${dragX}px)`, opacity: Math.max(0, 1 - Math.abs(dragX) / 200),
         transition: dragging.current ? "none" : "transform 0.2s, opacity 0.2s",
         animation: dragX === 0 ? "slideDown 0.25s ease-out" : "none",
@@ -639,15 +639,15 @@ function Toast({ toast, items = [], onDone, onDismissOne, onOpen }) {
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
-              <div style={{ fontFamily: FONT_HEAD, fontSize: 12.5, fontWeight: 800, color: "#111", flexShrink: 0 }}>RainX</div>
-              <div style={{ fontSize: 10.5, color: "#8a8a8a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ fontFamily: FONT_HEAD, fontSize: 12.5, fontWeight: 800, color: T.paper, flexShrink: 0 }}>RainX</div>
+              <div style={{ fontSize: 10.5, color: T.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {count > 1 ? `${count} messages` : "Just now"}
               </div>
             </div>
             {count > 1 && (
               <button
                 onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
-                style={{ background: "#e6e6e6", border: "none", color: "#333", fontSize: 11, fontWeight: 700, borderRadius: 999, minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 7px", flexShrink: 0, cursor: "pointer", gap: 3 }}
+                style={{ background: T.card, border: `1px solid ${T.cardBorder}`, color: T.paper, fontSize: 11, fontWeight: 700, borderRadius: 999, minWidth: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 7px", flexShrink: 0, cursor: "pointer", gap: 3 }}
               >
                 {count}
                 <ChevronDown size={11} style={{ transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.15s" }} />
@@ -657,8 +657,8 @@ function Toast({ toast, items = [], onDone, onDismissOne, onOpen }) {
 
           {!expanded && (
             <>
-              <div style={{ fontFamily: FONT_HEAD, fontSize: 13.5, fontWeight: 800, color: "#111", marginTop: 3 }}>{toast.title}</div>
-              <div style={{ fontFamily: FONT_BODY, fontSize: 12.5, color: "#444", marginTop: 3, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{toast.body}</div>
+              <div style={{ fontFamily: FONT_HEAD, fontSize: 13.5, fontWeight: 800, color: T.paper, marginTop: 3 }}>{toast.title}</div>
+              <div style={{ fontFamily: FONT_BODY, fontSize: 12.5, color: T.paper, marginTop: 3, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{toast.body}</div>
             </>
           )}
         </div>
@@ -667,7 +667,7 @@ function Toast({ toast, items = [], onDone, onDismissOne, onOpen }) {
             type="button"
             aria-label="Dismiss notification"
             onClick={(event) => { event.stopPropagation(); onDoneRef.current(); }}
-            style={{ background: "none", border: "none", color: "#999", padding: 2, display: "flex", flexShrink: 0, cursor: "pointer" }}
+            style={{ background: "none", border: "none", color: T.muted, padding: 2, display: "flex", flexShrink: 0, cursor: "pointer" }}
           >
             <X size={16} />
           </button>
@@ -681,16 +681,16 @@ function Toast({ toast, items = [], onDone, onDismissOne, onOpen }) {
             <div
               key={item.id ?? i}
               onClick={(e) => { e.stopPropagation(); onOpen?.(item); onDismissOne?.(item); }}
-              style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, padding: "8px 0", borderTop: i > 0 ? "1px solid #eee" : "none", cursor: "pointer" }}
+              style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, padding: "8px 0", borderTop: i > 0 ? `1px solid ${T.cardBorder}` : "none", cursor: "pointer" }}
             >
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontFamily: FONT_HEAD, fontSize: 12.5, fontWeight: 700, color: colorMap[item.type] || "#111" }}>{item.title}</div>
-                <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: "#555", marginTop: 2 }}>{item.body}</div>
+                <div style={{ fontFamily: FONT_HEAD, fontSize: 12.5, fontWeight: 700, color: colorMap[item.type] || T.paper }}>{item.title}</div>
+                <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: T.paper, marginTop: 2 }}>{item.body}</div>
               </div>
               <button
                 aria-label="Dismiss"
                 onClick={(e) => { e.stopPropagation(); onDismissOne?.(item); }}
-                style={{ background: "none", border: "none", color: "#bbb", padding: 2, flexShrink: 0, cursor: "pointer" }}
+                style={{ background: "none", border: "none", color: T.muted, padding: 2, flexShrink: 0, cursor: "pointer" }}
               >
                 <X size={13} />
               </button>
@@ -2140,12 +2140,26 @@ function MainAppContent({ account, onLogout }) {
         .select("id", { count: "exact", head: true })
         .eq("user_id", account.id)
         .eq("read", false);
-      if (!cancelled) setCommunityUnreadCount(count || 0);
+      if (!cancelled) {
+        // Never let a stale poll shrink the badge below a realtime increment
+        // that the database may not have caught up to yet (replication lag).
+        // This stops the community menu badge from flickering "on and off".
+        const dbCount = count || 0;
+        setCommunityUnreadCount((current) => Math.max(current, dbCount));
+      }
     };
     loadCommunityUnreadCount();
     const interval = window.setInterval(loadCommunityUnreadCount, 30000);
     return () => { cancelled = true; window.clearInterval(interval); };
   }, [account?.id]);
+
+  // When the community notification sheet marks everything read, clear the
+  // community menu-icon badge instantly instead of waiting for the next poll.
+  useEffect(() => {
+    const onRead = () => setCommunityUnreadCount(0);
+    window.addEventListener("rainx:community-notifs-read", onRead);
+    return () => window.removeEventListener("rainx:community-notifs-read", onRead);
+  }, []);
 
   // Checks one (instrument, timeframe) combo's latest candle. If it's the
   // same candle as last time, does nothing - signals only refresh when a
@@ -2667,7 +2681,7 @@ function MainAppContent({ account, onLogout }) {
                     <div key={group.label || "all"}>
                       {group.label && <div style={{ fontSize: 10, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, padding: "12px 0 6px" }}>{group.label}</div>}
                       {group.items.map((n) => (
-                        <div key={n.id} style={{ borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 0", display: "flex", justifyContent: "space-between", gap: 8, opacity: n.read ? 0.65 : 1 }}>
+                        <div key={n.id} style={{ borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 0", display: "flex", justifyContent: "space-between", gap: 8 }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                               {!n.read && <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.gold, flexShrink: 0 }} />}

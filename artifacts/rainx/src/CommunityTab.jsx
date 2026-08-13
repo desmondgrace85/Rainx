@@ -1808,12 +1808,25 @@ function CommunityNotifBell({ account, onOpenProfile }) {
     return () => clearInterval(id);
   }, [load]);
 
+  // Realtime: refresh instantly when a new community notification is inserted
+  // so the bell dot and the list update without waiting for the 30s poll.
+  useEffect(() => {
+    if (!account?.id) return undefined;
+    const channel = supabase.channel("community-notif-bell-" + account.id)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "community_notifications", filter: `user_id=eq.${account.id}` }, () => { load(); })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "community_notifications", filter: `user_id=eq.${account.id}` }, () => { load(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [account?.id, load]);
+
   const unreadCount = (notifs || []).filter((n) => !n.read).length;
 
   const markAllRead = async () => {
     const unreadIds = (notifs || []).filter((n) => !n.read).map((n) => n.id);
     setNotifs((list) => list.map((n) => ({ ...n, read: true })));
     if (unreadIds.length) await supabase.from("community_notifications").update({ read: true }).in("id", unreadIds);
+    // Tell the app shell to clear the community menu-icon badge immediately.
+    try { window.dispatchEvent(new CustomEvent("rainx:community-notifs-read")); } catch {}
   };
 
   const filterMap = { all: () => true, likes: (n) => n.type === "like" || n.type === "comment_like", replies: (n) => n.type === "reply", mentions: (n) => n.type === "mention", reposts: (n) => n.type === "repost", followers: (n) => n.type === "follow" };
