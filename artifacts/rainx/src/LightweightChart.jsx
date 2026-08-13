@@ -9,8 +9,8 @@ import { createChart, CrosshairMode, LineStyle } from "lightweight-charts";
 const BULL_COLOR   = "#1D6FE8";   // RainX blue
 const BEAR_COLOR   = "#131722";   // Near-black
 const WICK_BEAR    = "#374151";
-const GOLD         = "#D08F14";
-const GOLD_ALPHA   = "rgba(208,143,20,0.15)";
+const GOLD         = "#D49818";
+const GOLD_ALPHA   = "rgba(212,152,24,0.15)";
 const RED_LINE     = "#ef4444";
 const GREEN_LINE   = "#22c55e";
 

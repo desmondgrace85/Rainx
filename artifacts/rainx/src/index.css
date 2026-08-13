@@ -559,14 +559,15 @@ input, textarea, [contenteditable] {
   inset: 10px;
   z-index: 4;
   overflow: hidden;
-  border: 1px solid rgba(227, 192, 119, 0.52);
+  border: 1px solid rgba(227, 192, 119, 0.62);
   border-radius: 50%;
-  background: var(--rx-logo-bg, #fff);
+  background: linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%);
   box-shadow:
-    0 0 0 3px rgba(198, 161, 91, 0.12),
+    0 0 0 3px rgba(198, 161, 91, 0.16),
     0 0 14px rgba(227, 192, 119, 0.52),
-    0 0 28px rgba(198, 161, 91, 0.22),
-    inset 0 0 14px rgba(227, 192, 119, 0.2);
+    0 0 28px rgba(198, 161, 91, 0.24),
+    inset 0 1px 3px rgba(255, 240, 200, 0.55),
+    inset 0 0 14px rgba(180, 130, 30, 0.22);
   animation: rx-center-core 4.8s ease-in-out infinite;
 }
 
@@ -575,8 +576,9 @@ input, textarea, [contenteditable] {
   height: 100%;
   display: block;
   object-fit: cover;
-  transform: scale(1.02);
-  filter: saturate(1.08) contrast(1.05) drop-shadow(0 0 5px rgba(255, 196, 55, 0.3));
+  transform: scale(0.62);
+  /* Render the gold logo as a solid white icon on the gold gradient disc */
+  filter: brightness(0) invert(1) drop-shadow(0 0 5px rgba(255, 255, 255, 0.25));
 }
 
 .rx-center-nav-orbit {
@@ -596,7 +598,7 @@ input, textarea, [contenteditable] {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%);
+  background: linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%);
   box-shadow: 0 0 7px 2px rgba(198, 161, 91, 0.96);
 }
 
@@ -612,7 +614,7 @@ input, textarea, [contenteditable] {
 .rx-center-nav-orbit-two::after {
   top: 50%;
   left: -2px;
-  background: linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%);
+  background: linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%);
   box-shadow: 0 0 7px 2px rgba(227, 192, 119, 0.9);
 }
 
@@ -621,15 +623,15 @@ input, textarea, [contenteditable] {
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%);
+  background: linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%);
   box-shadow: 0 0 6px 2px rgba(198, 161, 91, 0.8);
   animation: rx-center-particle 3.2s ease-in-out infinite;
 }
 
 .rx-center-nav-particle-one { top: 7px; left: 14px; animation-delay: -0.4s; }
-.rx-center-nav-particle-two { top: 16px; right: 5px; animation-delay: -1.5s; background: linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%); }
+.rx-center-nav-particle-two { top: 16px; right: 5px; animation-delay: -1.5s; background: linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%); }
 .rx-center-nav-particle-three { bottom: 7px; right: 14px; animation-delay: -2.3s; }
-.rx-center-nav-particle-four { bottom: 16px; left: 5px; animation-delay: -2.9s; background: linear-gradient(135deg, #FFD24D 0%, #F3B51D 50%, #D08F14 100%); }
+.rx-center-nav-particle-four { bottom: 16px; left: 5px; animation-delay: -2.9s; background: linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%); }
 
 .rx-center-nav-ripple {
   inset: 7px;
@@ -737,5 +739,5 @@ input, textarea, [contenteditable] {
 
 /* Keep legacy inline SVG gold marks on the single reference gold. */
 svg path[fill="#E3C077"] {
-  fill: #D08F14 !important;
+  fill: #D49818 !important;
 }

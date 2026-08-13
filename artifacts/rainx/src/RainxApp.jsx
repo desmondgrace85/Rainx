@@ -2736,13 +2736,13 @@ function MainAppContent({ account, onLogout }) {
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", zIndex: 100, background: T.card, opacity: 1, borderTop: `1px solid ${T.cardBorder}`, boxShadow: "0 -8px 24px rgba(0,0,0,0.12)", display: "flex", justifyContent: "space-around", padding: "6px 0 calc(20px + env(safe-area-inset-bottom))", "--rx-logo-bg": isDark ? "#000" : "#fff" }}>
           {[
             { key: "home", label: "Home", icon: (active) => (
-               <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
-                <path d="M9 21V12h6v9"/>
+               <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "#B9871A" : "currentColor"} strokeWidth={active ? 1.6 : 1.8} strokeLinecap="round" strokeLinejoin="round" fillRule="evenodd">
+                {/* House silhouette + door cutout so the door stays empty when filled */}
+                <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z M9 21V12h6v9z"/>
               </svg>
             )},
             { key: "markets", label: "Markets", icon: (active) => (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "#B9871A" : "currentColor"} strokeWidth={active ? 1.6 : 1.8} strokeLinecap="round" strokeLinejoin="round">
                 <rect x="4" y="13" width="3" height="7" rx="0.8"/>
                 <rect x="10.5" y="8" width="3" height="12" rx="0.8"/>
                 <rect x="17" y="4" width="3" height="16" rx="0.8"/>
@@ -2751,7 +2751,7 @@ function MainAppContent({ account, onLogout }) {
             )},
             { key: "space-coins", center: true },
             { key: "community", label: "Community", icon: (active) => (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "#B9871A" : "currentColor"} strokeWidth={active ? 1.6 : 1.8} strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="9" cy="7" r="3"/>
                 <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
                 <circle cx="18" cy="8" r="2.2"/>
@@ -2759,7 +2759,7 @@ function MainAppContent({ account, onLogout }) {
               </svg>
             )},
             { key: "more", label: "More", icon: (active) => (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "#B9871A" : "currentColor"} strokeWidth={active ? 1.6 : 1.8} strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="5" cy="12" r="1.4"/>
                 <circle cx="12" cy="12" r="1.4"/>
                 <circle cx="19" cy="12" r="1.4"/>
@@ -2779,9 +2779,19 @@ function MainAppContent({ account, onLogout }) {
                 />
               ) : (
                 <button key={key} onClick={() => { if (key === "more") setMorePage(null); setProfileFromHeader(false); goTab(key); }} style={{ position: "relative", background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 52, padding: "4px 2px", transition: "color 0.15s" }}>
+                  {/* Shared deep-gold gradient used to fill active nav icons (fills the icon shape, not a box) */}
+                  <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
+                    <defs>
+                      <linearGradient id="rxNavGold" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#F7BC2D"/>
+                        <stop offset="50%" stopColor="#E3A925"/>
+                        <stop offset="100%" stopColor="#D49818"/>
+                      </linearGradient>
+                    </defs>
+                  </svg>
                   {icon(active)}
                   {navBadges[key] && <span className="rx-nav-badge">{navBadges[key]}</span>}
-                  <span style={{ fontSize: 11, fontFamily: FONT_HEAD, fontWeight: active ? 700 : 500, letterSpacing: 0.1 }}>{label}</span>
+                  <span style={{ fontSize: 11, fontFamily: FONT_HEAD, fontWeight: active ? 700 : 500, letterSpacing: 0.1, color: active ? T.gold : T.muted }}>{label}</span>
                 </button>
               )
             );
