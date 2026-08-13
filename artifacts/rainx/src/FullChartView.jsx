@@ -7,8 +7,8 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createChart, CrosshairMode, LineStyle } from "lightweight-charts";
 import { X, ChevronLeft, Activity, TrendingUp, TrendingDown, Minus, Maximize2, Minimize2 } from "lucide-react";
 
-const GOLD        = "#FFD24D";
-const GOLD_BRIGHT = "#FFD24D";
+const GOLD        = "#F7BC2D";
+const GOLD_BRIGHT = "#F7BC2D";
 const BULL        = "#1D6FE8";
 const BEAR        = "#131722";
 const WICK_BEAR   = "#374151";
@@ -702,7 +702,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
 
         {/* Live price pill */}
         {!ohlc && price != null && (
-          <div style={{ background: GOLD, borderRadius: 8, padding: "4px 10px", fontFamily: FONT, fontWeight: 800, fontSize: 13, color: "#fff" }}>
+          <div style={{ background: `linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%)`, borderRadius: 8, padding: "4px 10px", fontFamily: FONT, fontWeight: 800, fontSize: 13, color: "#0F0E0B" }}>
             {fmtPrice(price)}
           </div>
         )}
@@ -720,9 +720,9 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
             onClick={() => setActiveTf(tf.key)}
             style={{
               flexShrink: 0, padding: "6px 14px", borderRadius: 8,
-              border: `1px solid ${activeTf === tf.key ? GOLD : TK.border}`,
-              background: activeTf === tf.key ? GOLD : "transparent",
-              color: activeTf === tf.key ? "#fff" : TK.muted,
+              border: `1px solid ${activeTf === tf.key ? "transparent" : TK.border}`,
+              background: activeTf === tf.key ? `linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%)` : "transparent",
+              color: activeTf === tf.key ? "#0F0E0B" : TK.muted,
               fontFamily: FONT, fontWeight: 700, fontSize: 12,
               cursor: "pointer",
             }}

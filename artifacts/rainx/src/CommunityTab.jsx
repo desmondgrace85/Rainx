@@ -1855,7 +1855,7 @@ function CommunityNotifBell({ account, onOpenProfile }) {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 16, color: T.paper, lineHeight: 1.55 }}>
                       <button onClick={() => { if (actor?.id && onOpenProfile) { setOpen(false); onOpenProfile(actor.id); } }} style={{ background: "none", border: "none", padding: 0, cursor: actor?.id ? "pointer" : "default" }}>
-                        <strong style={{ color: T.goldBright, fontFamily: FONT_HEAD }}>{actor?.display_name || "Someone"}</strong>
+                        <strong style={{ color: T.paper, fontFamily: FONT_HEAD }}>{actor?.display_name || "Someone"}</strong>
                       </button>{" "}{NOTIF_LABELS[n.type] || n.type}
                     </div>
                     <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>{timeAgo(n.created_at)}</div>

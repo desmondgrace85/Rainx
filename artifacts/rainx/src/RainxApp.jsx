@@ -341,6 +341,9 @@ const ASSET_CATALOG = [
 const ALL_ASSETS = ASSET_CATALOG.flatMap(c => c.assets.map(a => ({ ...a, category:c.id })));
 // Keep INSTRUMENTS as the 3 default chart-data assets (price engine seeded for these)
 const INSTRUMENTS = ALL_ASSETS;
+// Trading unit label for an instrument — "pips" for forex/metals, "points" for crypto/indices/energy.
+// (inst.unit was never defined, which caused "undefined" in profit notifications.)
+const unitFor = (inst) => (inst && (inst.cls === "forex" || inst.cls === "metal")) ? "pips" : "points";
 
 // ---------- Analysis durations -----------------------------------------------
 const ANALYSIS_DURATIONS = [
@@ -2403,7 +2406,7 @@ function MainAppContent({ account, onLogout }) {
               if (profit >= step && !updatedSig.milestones.includes(step)) {
                 updatedSig = { ...updatedSig, milestones: [...updatedSig.milestones, step] };
                 changed = true;
-                sideEffects.push(() => pushNotification({ type: "update", symbol: inst.symbol, title: `+${step} ${inst.unit} — ${inst.name} (${tf.label})`, body: `Trade is now +${step} ${inst.unit} in profit.` }));
+                sideEffects.push(() => pushNotification({ type: "update", symbol: inst.symbol, title: `+${step} ${unitFor(inst)} — ${inst.name} (${tf.label})`, body: `Trade is now moving +${step} ${unitFor(inst)} in profit.` }));
               }
             });
 
@@ -2415,7 +2418,7 @@ function MainAppContent({ account, onLogout }) {
             } else if (profit >= tpDist) {
               updatedSig = { ...updatedSig, status: "tp_hit" };
               changed = true;
-              sideEffects.push(() => pushNotification({ type: "update", symbol: inst.symbol, title: `🎯 Take Profit Hit — ${inst.name} (${tf.label})`, body: `Take Profit reached! +${Math.round(tpDist)} ${inst.unit}.` }));
+              sideEffects.push(() => pushNotification({ type: "update", symbol: inst.symbol, title: `🎯 Take Profit Hit — ${inst.name} (${tf.label})`, body: `Take Profit reached! +${Math.round(tpDist)} ${unitFor(inst)}.` }));
               sideEffects.push(() => saveTradeHistory(account, inst, tf, sig, "tp", Math.round(tpDist)));
             }
 
@@ -2489,13 +2492,11 @@ function MainAppContent({ account, onLogout }) {
         onOpen={openNotificationTarget}
       />
 
-      {(tab === "home" || tab === "markets") && <div style={{ background: T.card, borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
+      {tab === "home" && <div style={{ background: T.card, borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
         {/* ── Profile avatar trigger ── */}
-        {tab === "home"
-          ? <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); routeWrite(tab, "profile-menu", "h"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
+          <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); routeWrite(tab, "profile-menu", "h"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
               <HeaderAvatar account={account} morePage={morePage} T={T} />
             </button>
-          : <div style={{ width: 38 }} />}
         <div style={{ textAlign: "center" }}>
           <div style={{ fontFamily: FONT_HEAD, fontSize: 19, fontWeight: 800, color: T.goldBright, letterSpacing: -0.3 }}>RainX</div>
           <div style={{ fontSize: 9.5, color: T.muted, fontWeight: 600, marginTop: -2 }}>Powered by Raina AI</div>
@@ -4021,7 +4022,7 @@ function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }
           />
         </FullChartErrorBoundary>
       )}
-      <div style={{ fontFamily: FONT_HEAD, fontSize: 18, color: T.goldBright, fontWeight: 800, marginBottom: 12 }}>All markets</div>
+      <div style={{ fontFamily: FONT_HEAD, fontSize: 18, color: T.paper, fontWeight: 800, marginBottom: 12 }}>Market</div>
       {INSTRUMENTS.map((i) => {
         const arr = seriesMap[i.symbol] || [];
         const price = arr.length ? arr[arr.length - 1].price : 0;
@@ -4031,7 +4032,7 @@ function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }
         const open = isMarketOpen(i.cls);
         const combo = signalsMap[i.symbol] || {};
         return (
-          <div key={i.symbol} style={{ background: T.card, border: `1px solid ${i.symbol === activeSymbol ? T.gold : T.cardBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, color: T.paper }}>
+          <div key={i.symbol} style={{ background: T.card, border: `1px solid ${i.symbol === activeSymbol ? "#F7BC2D" : T.cardBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, color: T.paper, boxShadow: i.symbol === activeSymbol ? "0 0 0 1px #F7BC2D, 0 0 12px rgba(247,188,45,0.25)" : "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {/* Left: name + symbol + signals — tap to go to home */}
               <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => onSelect(i.symbol)}>
@@ -4069,7 +4070,7 @@ function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }
                 <div style={{ fontSize: 10, color: open ? T.sage : T.rust, fontWeight: 500, marginTop: 1 }}>{open ? "Open" : "Closed"}</div>
                 <button
                   onClick={(e) => { e.stopPropagation(); setFullChartInst(i); }}
-                  style={{ marginTop: 5, background: "transparent", border: `1px solid ${T.gold}55`, borderRadius: 6, padding: "3px 9px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 9.5, color: T.gold, cursor: "pointer" }}
+                  style={{ marginTop: 5, background: "transparent", border: `1px solid ${T.paper}55`, borderRadius: 6, padding: "3px 9px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 9.5, color: T.paper, cursor: "pointer" }}
                 >
                   Full Chart ↗
                 </button>
@@ -4608,7 +4609,7 @@ const SCALP_SYMBOLS = [
           <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 14, marginBottom: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: `${T.gold}18`, color: T.goldBright, flexShrink: 0 }}><DirectionIcon size={18} /></div>
+                <div style={{ width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: `${T.gold}18`, color: T.paper, flexShrink: 0 }}><DirectionIcon size={18} /></div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 15.5, color: T.paper }}>{sig.asset || "—"}</div>
                   <div style={{ fontSize: 12, color: T.muted, marginTop: 3 }}>{sig.timeframe || "5m"} timeframe</div>
@@ -4616,7 +4617,7 @@ const SCALP_SYMBOLS = [
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
                 <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 12.5, color: T.paper, border: `1px solid ${T.cardBorder}`, borderRadius: 6, padding: "3px 7px" }}>{sig.direction}</div>
-                <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.goldBright, marginTop: 5 }}>{confidence}%</div>
+                <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.paper, marginTop: 5 }}>{confidence}%</div>
               </div>
             </div>
             <div style={{ height: 4, background: `${T.muted}25`, borderRadius: 99, overflow: "hidden", margin: "13px 0 14px" }}><div style={{ width: `${Math.min(100, Math.max(0, confidence))}%`, height: "100%", background: confidence >= 70 ? T.goldBright : T.gold, borderRadius: 99, transition: "all 0.2s" }} /></div>
@@ -4646,7 +4647,7 @@ const SCALP_SYMBOLS = [
             ) : SCALP_SYMBOLS.map(({ group, symbols }) => (
               <div key={group} style={{ marginBottom: 10 }}><div style={{ fontSize: 11.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>{group}</div><div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{symbols.map(sym => <button key={sym} onClick={() => choose(sym)} style={{ padding: "7px 12px", borderRadius: 8, fontSize: 13, fontFamily: FONT_HEAD, fontWeight: 700, cursor: "pointer", background: selectedSymbol === sym ? T.gold : T.ink, color: selectedSymbol === sym ? T.ink : T.muted, border: `1px solid ${selectedSymbol === sym ? T.gold : T.cardBorder}`, transition: "all 0.2s" }}>{sym}</button>)}</div></div>
             ))}
-            {selectedSymbol && <div style={{ marginTop: 5, fontSize: 12.5, color: T.goldBright, fontFamily: FONT_HEAD, fontWeight: 700 }}>{selectedSymbol} selected</div>}
+            {selectedSymbol && <div style={{ marginTop: 5, fontSize: 12.5, color: T.paper, fontFamily: FONT_HEAD, fontWeight: 700 }}>{selectedSymbol} selected</div>}
           </div>
         );
       };
@@ -4733,13 +4734,13 @@ const SCALP_SYMBOLS = [
             {/* Status + broker row */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: active ? T.sage : T.gold, display: "inline-block", boxShadow: active ? `0 0 6px ${T.sage}88` : "none" }} />
-                <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: active ? T.sage : T.gold }}>{active ? "Scalping Active" : "MT5 Connected"}</span>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: active ? T.sage : T.muted, display: "inline-block", boxShadow: active ? `0 0 6px ${T.sage}88` : "none" }} />
+                <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: active ? T.sage : T.paper }}>{active ? "Scalping Active" : "MT5 Connected"}</span>
               </div>
               <button onClick={() => setShowDisconnectConfirm(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                <Activity size={13} color={T.gold} />
+                <Activity size={13} color={T.paper} />
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: T.goldBright }}>{mt5?.broker_name || "Broker"}</div>
+                  <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12, color: T.paper }}>{mt5?.broker_name || "Broker"}</div>
                   <div style={{ fontSize: 10.5, color: T.muted }}>{(mt5?.account_mode || "demo").toUpperCase()} · #{mt5?.account_number || "—"}</div>
                 </div>
               </button>
@@ -4751,7 +4752,7 @@ const SCALP_SYMBOLS = [
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
                   <span style={{ fontFamily: FONT_HEAD, fontWeight: 900, fontSize: 22, color: T.paper, letterSpacing: -0.5 }}>{selectedSymbol || "—"}</span>
-                  <span style={{ color: T.gold, fontSize: 15 }}>★</span>
+                  <span style={{ color: T.paper, fontSize: 15 }}>★</span>
                 </div>
                 {direction ? (
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
@@ -4759,7 +4760,7 @@ const SCALP_SYMBOLS = [
                       {direction}{isBuy ? " ↗" : isSell ? " ↘" : ""}
                     </span>
                     <div>
-                      <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright }}>{confidence}%</span>
+                      <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper }}>{confidence}%</span>
                       <span style={{ fontSize: 10.5, color: T.muted, marginLeft: 3 }}>Confidence</span>
                     </div>
                   </div>
@@ -4827,7 +4828,7 @@ const SCALP_SYMBOLS = [
               }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, textAlign: "left", background: T.card, border: `1.5px solid ${isActive ? T.gold : T.cardBorder}`, borderRadius: 18, padding: "13px 11px 13px 12px", cursor: "pointer", transition: "all 0.2s" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 9 }}>
                   <div style={{ width: 36, height: 36, borderRadius: 11, background: `${T.gold}20`, display: "grid", placeItems: "center", flexShrink: 0 }}>
-                    <Icon size={18} color={T.goldBright} />
+                    <Icon size={18} color={T.paper} />
                   </div>
                   <div>
                     <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 12.5, color: T.paper, lineHeight: 1.2 }}>{label}</div>
@@ -4868,7 +4869,7 @@ const SCALP_SYMBOLS = [
                 const conf = sig ? signalConfidence(sig) : 0;
                 const isBuy = dir === "BUY";
                 const isSell = dir === "SELL";
-                const dirCol = isBuy ? T.sage : isSell ? T.rust : T.gold;
+                const dirCol = isBuy ? T.sage : isSell ? T.rust : T.muted;
                 const dirLabel = isBuy ? "BUY" : isSell ? "SELL" : "WAIT";
                 const tag = TAGS[i % TAGS.length];
                 const tagCol = tagColor(tag);
@@ -4879,7 +4880,7 @@ const SCALP_SYMBOLS = [
                     {/* Symbol + tag */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: `${T.gold}22`, border: `1.5px solid ${T.gold}55`, display: "grid", placeItems: "center", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 12, color: T.goldBright, flexShrink: 0 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: `${T.gold}22`, border: `1.5px solid ${T.gold}55`, display: "grid", placeItems: "center", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 12, color: T.paper, flexShrink: 0 }}>
                           {sym.charAt(0)}
                         </div>
                         <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 12, color: T.paper }}>{sym}</span>
@@ -4928,7 +4929,7 @@ const SCALP_SYMBOLS = [
             {items.length > 2 && (
               <div style={{ display: "flex", justifyContent: "center", gap: 5, marginTop: 8 }}>
                 {Array.from({ length: Math.min(3, Math.ceil(items.length / 2)) }).map((_, i) => (
-                  <div key={i} style={{ width: i === 0 ? 18 : 6, height: 6, borderRadius: 99, background: i === 0 ? T.gold : `${T.muted}44` }} />
+                  <div key={i} style={{ width: i === 0 ? 18 : 6, height: 6, borderRadius: 99, background: i === 0 ? T.paper : `${T.muted}44` }} />
                 ))}
               </div>
             )}
@@ -4944,7 +4945,7 @@ const SCALP_SYMBOLS = [
         return (
           <div style={{ background: `${T.gold}16`, border: `1px solid ${T.gold}66`, borderRadius: 14, padding: 14, marginBottom: 16 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7, color: T.goldBright, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, color: T.paper, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14 }}>
                 <Bell size={16} /> Setup ready
               </div>
               <button onClick={() => setSmartAlert(null)} aria-label="Dismiss signal" style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}>
@@ -4973,7 +4974,7 @@ const SCALP_SYMBOLS = [
           <div style={{ background: `${T.sage}14`, border: `1px solid ${T.sage}44`, borderRadius: 14, padding: "12px 16px", marginBottom: 16 }}><div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, color: T.sage, fontWeight: 700, marginBottom: 3 }}><ShieldCheck size={16} /> Start with a Demo account</div><div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6 }}>Open a free demo account on any MT5 broker and test Raina AI scalping with virtual funds before going live.</div></div>
           <div style={{ marginBottom: 16 }}><div style={{ fontSize: 13.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Connection Method</div><div style={{ display: "flex", gap: 8 }}>{[["metaapi", "MetaAPI (Cloud)"], ["ea", "EA Desktop"]].map(([m, label]) => <button key={m} onClick={() => { setConnectMethod(m); setErr(""); }} style={{ flex: 1, background: connectMethod === m ? T.gold : T.card, color: connectMethod === m ? T.ink : T.muted, border: `1px solid ${connectMethod === m ? T.gold : T.cardBorder}`, borderRadius: 10, padding: "10px 6px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer", transition: "all 0.2s" }}>{label}</button>)}</div><div style={{ fontSize: 12.5, color: T.muted, marginTop: 6, lineHeight: 1.5 }}>{connectMethod === "metaapi" ? "Recommended — no PC or VPS needed. Raina AI stays connected to your broker through MetaAPI cloud." : "Install an Expert Advisor in your local MetaTrader 5. MT5 must stay open on a PC or VPS."}</div></div>
           <div style={{ marginBottom: 16 }}><div style={{ fontSize: 13.5, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, marginBottom: 8 }}>Account Mode</div><div style={{ display: "flex", gap: 8 }}>{["demo", "live"].map(m => <button key={m} onClick={() => setMode(m)} style={{ flex: 1, background: mode === m ? T.gold : T.card, color: mode === m ? T.ink : T.muted, border: `1px solid ${mode === m ? T.gold : T.cardBorder}`, borderRadius: 10, padding: "10px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14.5, cursor: "pointer", textTransform: "capitalize", transition: "all 0.2s" }}>{m}</button>)}</div></div>
-          {connectMethod === "metaapi" ? <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}><div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.goldBright, marginBottom: 4 }}><Key size={16} /> MT5 Credentials</div><div style={{ fontSize: 12.5, color: T.muted, marginBottom: 14, lineHeight: 1.6 }}>Your credentials are encrypted in transit and used only to connect your trading account.</div><div style={{ marginBottom: 14 }}><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>MT5 Login Number</div><input type="text" value={mt5Login} onChange={e => setMt5Login(e.target.value)} placeholder="e.g. 12345678" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /></div><div style={{ marginBottom: 14 }}><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>MT5 Password</div><input type="password" value={mt5Password} onChange={e => setMt5Password(e.target.value)} placeholder="Master or Investor password" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /></div><div><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>Broker Server</div><input type="text" value={mt5Server} onChange={e => setMt5Server(e.target.value)} placeholder="e.g. ICMarkets-Demo" list="broker-servers" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /><datalist id="broker-servers">{BROKER_SERVERS.map(s => <option key={s} value={s} />)}</datalist></div></div> : <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}><div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.goldBright, marginBottom: 4 }}><Key size={16} /> EA Desktop Mode</div><div style={{ fontSize: 13, color: T.muted, lineHeight: 1.7 }}>Generate an API key, install the Raina AI Expert Advisor in MetaTrader 5, and keep MT5 open on a PC or VPS.</div></div>}
+          {connectMethod === "metaapi" ? <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}><div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.paper, marginBottom: 4 }}><Key size={16} /> MT5 Credentials</div><div style={{ fontSize: 12.5, color: T.muted, marginBottom: 14, lineHeight: 1.6 }}>Your credentials are encrypted in transit and used only to connect your trading account.</div><div style={{ marginBottom: 14 }}><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>MT5 Login Number</div><input type="text" value={mt5Login} onChange={e => setMt5Login(e.target.value)} placeholder="e.g. 12345678" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /></div><div style={{ marginBottom: 14 }}><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>MT5 Password</div><input type="password" value={mt5Password} onChange={e => setMt5Password(e.target.value)} placeholder="Master or Investor password" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /></div><div><div style={{ fontSize: 13, color: T.muted, fontWeight: 700, marginBottom: 4 }}>Broker Server</div><input type="text" value={mt5Server} onChange={e => setMt5Server(e.target.value)} placeholder="e.g. ICMarkets-Demo" list="broker-servers" style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 9, color: T.paper, fontSize: 15, padding: "10px 12px", fontFamily: FONT_BODY, outline: "none", boxSizing: "border-box" }} /><datalist id="broker-servers">{BROKER_SERVERS.map(s => <option key={s} value={s} />)}</datalist></div></div> : <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}><div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14.5, color: T.paper, marginBottom: 4 }}><Key size={16} /> EA Desktop Mode</div><div style={{ fontSize: 13, color: T.muted, lineHeight: 1.7 }}>Generate an API key, install the Raina AI Expert Advisor in MetaTrader 5, and keep MT5 open on a PC or VPS.</div></div>}
           {err && <div style={{ fontSize: 13.5, color: T.rust, marginBottom: 10, padding: "10px 12px", background: `${T.rust}15`, borderRadius: 9, lineHeight: 1.5 }}>{err}</div>}
           <button onClick={handleConnect} disabled={busy} style={{ width: "100%", background: T.goldGradient, color: T.ink, border: "none", borderRadius: 12, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, cursor: busy ? "not-allowed" : "pointer", transition: "all 0.2s" }}>{busy ? "Connecting…" : connectMethod === "metaapi" ? "Connect via MetaAPI" : "Generate API Key & Connect"}</button>
           {Disclaimer()}
@@ -4983,8 +4984,8 @@ const SCALP_SYMBOLS = [
       const PhasePending = () => (
         <div>
           <div style={{ background: `${T.gold}14`, border: `1px solid ${T.gold}55`, borderRadius: 14, padding: "14px 16px", marginBottom: 16, textAlign: "center" }}>
-            <Activity size={20} color={T.goldBright} />
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.goldBright, margin: "6px 0 4px" }}>Waiting for MT5 connection</div>
+            <Activity size={20} color={T.paper} />
+            <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, margin: "6px 0 4px" }}>Waiting for MT5 connection</div>
             <div style={{ fontSize: 13.5, color: T.muted, lineHeight: 1.6 }}>Install the Expert Advisor in MetaTrader 5 to complete setup. This page checks automatically every 30 seconds.</div>
           </div>
 
@@ -4992,7 +4993,7 @@ const SCALP_SYMBOLS = [
             <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
               <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper, marginBottom: 10 }}>Your API Key</div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, background: T.ink, borderRadius: 9, padding: "10px 12px", marginBottom: 12 }}>
-                <div style={{ flex: 1, fontFamily: "monospace", fontSize: 13, color: T.gold, wordBreak: "break-all" }}>{showKey ? apiKey : "●".repeat(Math.min(apiKey.length, 36))}</div>
+                <div style={{ flex: 1, fontFamily: "monospace", fontSize: 13, color: T.paper, wordBreak: "break-all" }}>{showKey ? apiKey : "●".repeat(Math.min(apiKey.length, 36))}</div>
                 <button onClick={() => setShowKey(v => !v)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}>{showKey ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                 <button onClick={() => navigator.clipboard?.writeText(apiKey)} style={{ background: "none", border: "none", color: T.gold, cursor: "pointer", fontSize: 12.5, fontFamily: FONT_BODY }}>Copy</button>
               </div>
@@ -5020,7 +5021,7 @@ const SCALP_SYMBOLS = [
               "Click ▶ Auto Trading and keep MT5 open (PC or VPS)",
             ].map((step, i) => (
               <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "flex-start" }}>
-                <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.gold, minWidth: 18 }}>{i + 1}.</span>
+                <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13, color: T.paper, minWidth: 18 }}>{i + 1}.</span>
                 <span style={{ fontSize: 13, color: T.paper, lineHeight: 1.65 }}>{step}</span>
               </div>
             ))}
@@ -5090,7 +5091,7 @@ const SCALP_SYMBOLS = [
                     <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: i < trades.length - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
                         <div style={{ width: 32, height: 32, borderRadius: 9, background: `${T.gold}18`, display: "grid", placeItems: "center" }}>
-                          <TradeIcon size={16} color={T.goldBright} />
+                          <TradeIcon size={16} color={T.paper} />
                         </div>
                         <div>
                           <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>{trade.asset || "—"}</div>
@@ -5108,9 +5109,9 @@ const SCALP_SYMBOLS = [
             <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 18, padding: "14px", marginBottom: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 7, fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, color: T.paper }}>
-                  <Activity size={15} color={T.goldBright} /> Live Signals
+                  <Activity size={15} color={T.paper} /> Live Signals
                 </div>
-                {sigLoading && <div style={{ width: 18, height: 18, border: `2px solid ${T.cardBorder}`, borderTopColor: T.gold, borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />}
+                {sigLoading && <div style={{ width: 18, height: 18, border: `2px solid ${T.cardBorder}`, borderTopColor: T.paper, borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />}
               </div>
               {sigLoading && signals.length === 0 && <div style={{ textAlign: "center", color: T.muted, fontSize: 13.5, padding: "14px 0" }}>Loading signals…</div>}
               {signals.map((sig, i) => <SignalCard key={`${signalKey(sig)}-${i}`} sig={sig} />)}
@@ -5125,7 +5126,7 @@ const SCALP_SYMBOLS = [
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, padding: "7px 11px", background: `${T.gold}12`, borderRadius: 9 }}>
                         <div style={{ fontSize: 12, color: T.muted }}>Current confidence</div>
-                        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: Math.round(holdSignal.confidence || 0) >= 40 ? T.gold : T.muted }}>
+                        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 13.5, color: Math.round(holdSignal.confidence || 0) >= 40 ? T.paper : T.muted }}>
                           {Math.round(holdSignal.confidence || 0)}% <span style={{ fontSize: 11, color: T.muted, fontWeight: 500 }}>/ 55% needed</span>
                         </div>
                       </div>
@@ -5156,8 +5157,8 @@ const SCALP_SYMBOLS = [
           {/* ── Page header ── */}
           <div style={{ padding: "18px 16px 12px", textAlign: "center" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
-              <Zap size={18} color={T.goldBright} />
-              <span style={{ fontFamily: FONT_HEAD, fontWeight: 900, fontSize: 22, color: T.goldBright }}>RainX</span>
+              <Zap size={18} color={T.paper} />
+              <span style={{ fontFamily: FONT_HEAD, fontWeight: 900, fontSize: 22, color: T.paper }}>RainX</span>
             </div>
             <div style={{ fontSize: 12, color: T.muted, marginTop: 2, fontFamily: FONT_HEAD, fontWeight: 600, letterSpacing: 0.3 }}>Scalping Engine</div>
           </div>
