@@ -1066,7 +1066,7 @@ function GiftIconButton({ profile, account }) {
   );
 }
 
-function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeData, onToggleLike, repostData, onToggleRepost, onOpenProfile, onDelete, onEdit, onReport, onActivityOpen, onDmUser }) {
+function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeData, onToggleLike, repostData, onToggleRepost, onOpenProfile, onDelete, onEdit, onReport, onActivityOpen, onDmUser, forceOpen, onOpened }) {
   const [showComments, setShowComments] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -1074,6 +1074,14 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
   const [commentCount, setCommentCount] = useState(Number(post.comments_count) || 0);
   const isOwn = post.user_id === account.id;
   const ld = likeData[post.id] || { count: 0, likedByMe: false };
+
+  // Auto-open the post detail when a notification targets this post.
+  useEffect(() => {
+    if (forceOpen && !showComments) {
+      setShowComments(true);
+      if (typeof onOpened === "function") onOpened();
+    }
+  }, [forceOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   const rd = repostData[post.id] || { count: 0, repostedByMe: false };
   const ash = engAsh();
 
@@ -1868,7 +1876,7 @@ const NOTIF_LABELS = {
   comment_like: "liked your comment.",
 };
 
-function CommunityNotifBell({ account, onOpenProfile }) {
+function CommunityNotifBell({ account, onOpenProfile, onOpenPost }) {
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -1912,6 +1920,23 @@ function CommunityNotifBell({ account, onOpenProfile }) {
   const filterMap = { all: () => true, likes: (n) => n.type === "like" || n.type === "comment_like", replies: (n) => n.type === "reply", mentions: (n) => n.type === "mention", reposts: (n) => n.type === "repost", followers: (n) => n.type === "follow" };
   const filtered = (notifs || []).filter(filterMap[filter] || (() => true));
 
+  // Per-type professional icon badge (Facebook-style: small round circle on the avatar corner).
+  const notifIcon = (type) => {
+    if (type === "like" || type === "comment_like") return { Icon: Heart, bg: T.rust, fill: "#fff" };
+    if (type === "reply" || type === "comment_reply") return { Icon: MessageCircle, bg: T.gold, fill: T.ink };
+    if (type === "repost") return { Icon: Repeat2, bg: T.sage, fill: "#fff" };
+    if (type === "follow") return { Icon: UserPlus, bg: T.gold, fill: T.ink };
+    if (type === "mention") return { Icon: AtSign, bg: T.gold, fill: T.ink };
+    return null;
+  };
+
+  // Tap behaviour: open the relevant post when possible, otherwise the actor's profile.
+  const handleNotifTap = (n) => {
+    setOpen(false);
+    if (n.post_id && typeof onOpenPost === "function") onOpenPost(n.post_id);
+    else if (n.actor_id && onOpenProfile) onOpenProfile(n.actor_id);
+  };
+
   return (
     <>
       <button onClick={() => { setOpen(true); markAllRead(); }} style={{ position: "relative", background: "none", border: "none", color: T.paper, cursor: "pointer" }}>
@@ -1940,21 +1965,25 @@ function CommunityNotifBell({ account, onOpenProfile }) {
               <div style={{ fontSize: 14, color: T.muted, paddingTop: 16 }}>Nothing here yet.</div>
             ) : filtered.map((n) => {
               const actor = actorsMap[n.actor_id];
+              const badge = notifIcon(n.type);
               return (
-                <div key={n.id} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "14px 0", borderBottom: `1px solid ${T.cardBorder}` }}>
-                  <button onClick={() => { if (actor?.id && onOpenProfile) { setOpen(false); onOpenProfile(actor.id); } }} style={{ background: "none", border: "none", padding: 0, cursor: actor?.id ? "pointer" : "default", flexShrink: 0 }}>
-                    <Avatar name={actor?.display_name} size={42} avatarUrl={actor?.avatar_url} />
-                  </button>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 16, color: T.paper, lineHeight: 1.55 }}>
-                      <button onClick={() => { if (actor?.id && onOpenProfile) { setOpen(false); onOpenProfile(actor.id); } }} style={{ background: "none", border: "none", padding: 0, cursor: actor?.id ? "pointer" : "default" }}>
-                        <strong style={{ color: T.paper, fontFamily: FONT_HEAD }}>{actor?.display_name || "Someone"}</strong>
-                      </button>{" "}{NOTIF_LABELS[n.type] || n.type}
+                <button key={n.id} onClick={() => handleNotifTap(n)} style={{ display: "flex", gap: 12, alignItems: "flex-start", width: "100%", padding: "14px 0", borderBottom: `1px solid ${T.cardBorder}`, background: "none", border: "none", cursor: "pointer", textAlign: "left" }}>
+                  <div style={{ position: "relative", flexShrink: 0 }} onClick={(e) => { if (actor?.id && onOpenProfile) { e.stopPropagation(); setOpen(false); onOpenProfile(actor.id); } }}>
+                    <Avatar name={actor?.display_name} size={44} avatarUrl={actor?.avatar_url} />
+                    {badge && (
+                      <span style={{ position: "absolute", right: -3, bottom: -3, width: 19, height: 19, borderRadius: "50%", background: badge.bg, border: `2px solid ${T.ink}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <badge.Icon size={11} strokeWidth={2.5} fill={badge.fill} color={badge.fill} />
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15.5, color: T.paper, lineHeight: 1.5 }}>
+                      <span style={{ color: T.paper, fontFamily: FONT_HEAD, fontWeight: 700 }}>{actor?.full_name || actor?.display_name || actor?.username || "Someone"}</span>{" "}{NOTIF_LABELS[n.type] || n.type}
                     </div>
                     <div style={{ fontSize: 12, color: T.muted, marginTop: 4 }}>{timeAgo(n.created_at)}</div>
                   </div>
                   {!n.read && <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.gold, marginTop: 6, flexShrink: 0 }} />}
-                </div>
+                </button>
               );
             })}
           </div>
@@ -2084,6 +2113,7 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInitUser, setChatInitUser] = useState(null);
   const [postActivity, setPostActivity] = useState(null); // { post, profile }
+  const [openPostId, setOpenPostId] = useState(null); // set when a notification should open a specific post's detail
   const [followingIds, setFollowingIds] = useState(new Set());
   const _TIER_RANK = { none: 0, weekly: 1, monthly: 2, yearly: 3 };
   const isAccountPro = (_TIER_RANK[entitlement?.tier] || 0) >= 1; // any paid subscriber unlocks chat settings
@@ -2333,7 +2363,7 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
 
       {/* Top bar: bell left, chat right, NO Community title */}
       <div style={{ display: "flex", alignItems: "center", padding: "12px 16px 0", gap: 8 }}>
-        <CommunityNotifBell account={account} onOpenProfile={setViewingUserId} />
+        <CommunityNotifBell account={account} onOpenProfile={setViewingUserId} onOpenPost={(postId) => setOpenPostId(postId)} />
         <div style={{ flex: 1, display: "flex", justifyContent: "center", gap: 0 }}>
           {/* For you / Following tabs */}
           <button onClick={() => setFeedTab("foryou")} style={{ background: "none", border: "none", cursor: "pointer", padding: "8px 16px", borderBottom: `2px solid ${feedTab==="foryou"?T.gold:"transparent"}`, color: feedTab==="foryou"?T.paper:T.muted, fontWeight: feedTab==="foryou"?700:500, fontSize: 14, transition: "color 0.15s" }}>For you</button>
@@ -2395,6 +2425,8 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
           onOpenProfile={setViewingUserId} onDelete={deletePost} onEdit={loadPosts} onReport={reportPost}
           onActivityOpen={(post) => setPostActivity({ post, profile: profilesMap[post.user_id] })}
           onDmUser={(profile) => { setChatInitUser(profile); setChatOpen(true); }}
+          forceOpen={openPostId === p.id}
+          onOpened={() => setOpenPostId(null)}
         />
       ))}
 
