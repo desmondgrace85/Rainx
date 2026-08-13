@@ -19,6 +19,11 @@ const T = {
 const FONT_HEAD = "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif";
 const FONT_BODY = "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif";
 
+// Deep ash for engagement icons — bolder/standard like Facebook & X.
+// Reads current theme via T.ink (mutated in-place by Object.assign(T, themeTokens)).
+// Neutral medium grey on dark theme; X-style grey on light theme.
+const engAsh = () => (T.ink && T.ink.toUpperCase() === "#FFFFFF") ? "#536471" : "#8E8E8E";
+
 const fadeIn = "@keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }";
 const pulse = "@keyframes likePulse { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }";
 const slideIn = "@keyframes slideInPanel { from { transform: translateX(100%); } to { transform: translateX(0); } }";
@@ -848,8 +853,8 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
                 <span style={{ fontSize: 9.5, color: T.muted }}>· {timeAgo(c.created_at)}</span>
               </div>
               <div style={{ fontSize: 12, color: T.paper, marginTop: 2, lineHeight: 1.5 }}>{renderTextWithTags(c.text, onOpenProfile)}</div>
-              <button onClick={() => toggleCommentLike(c.id, c.user_id, postId, account.id, likeData, setLikeData)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : T.muted, marginTop: 4 }}>
-                <Heart size={11} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 10.5 }}>{ld.count}</span>
+              <button onClick={() => toggleCommentLike(c.id, c.user_id, postId, account.id, likeData, setLikeData)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : engAsh(), marginTop: 4 }}>
+                <Heart size={13} strokeWidth={2} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 10.5, fontWeight: 600 }}>{ld.count}</span>
               </button>
             </div>
           </div>
@@ -990,6 +995,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
   const isOwn = post.user_id === account.id;
   const ld = likeData[post.id] || { count: 0, likedByMe: false };
   const rd = repostData[post.id] || { count: 0, repostedByMe: false };
+  const ash = engAsh();
 
   const saveEdit = async () => {
     if (!editText.trim()) return;
@@ -1093,17 +1099,17 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       {post.poll_id && <PollWidget pollId={post.poll_id} account={account} />}
 
       <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 10 }}>
-        <button onClick={() => onToggleLike(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : T.muted }}>
-          <Heart size={14} strokeWidth={1.5} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5 }}>{formatCount(ld.count)}</span>
+        <button onClick={() => onToggleLike(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : ash }}>
+          <Heart size={16} strokeWidth={2} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(ld.count)}</span>
         </button>
-        <button onClick={() => setShowComments(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: T.muted }}>
-          <MessageCircle size={14} strokeWidth={1.5} /> <span style={{ fontSize: 11.5 }}>{formatCount(Number(post.comments_count) || 0)}</span>
+        <button onClick={() => setShowComments(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ash }}>
+          <MessageCircle size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(Number(post.comments_count) || 0)}</span>
         </button>
-        <button onClick={() => onToggleRepost(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: rd.repostedByMe ? T.sage : T.muted }}>
-          <Repeat2 size={14} strokeWidth={1.5} /> <span style={{ fontSize: 11.5 }}>{formatCount(rd.count)}</span>
+        <button onClick={() => onToggleRepost(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: rd.repostedByMe ? T.sage : ash }}>
+          <Repeat2 size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(rd.count)}</span>
         </button>
-        <button onClick={() => isOwn && onActivityOpen && onActivityOpen(post)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: isOwn ? "pointer" : "default", color: isOwn ? T.gold : T.muted }}>
-          <AnalyticsBarIcon size={14} color={isOwn ? T.gold : "rgba(120,120,120,0.7)"} /> <span style={{ fontSize: 11.5 }}>{formatCount(post.views || 0)}</span>
+        <button onClick={() => isOwn && onActivityOpen && onActivityOpen(post)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: isOwn ? "pointer" : "default", color: isOwn ? T.gold : ash }}>
+          <AnalyticsBarIcon size={16} color={isOwn ? T.gold : ash} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(post.views || 0)}</span>
         </button>
         {profile?.isPro && post.user_id !== account.id && (
           <GiftIconButton profile={profile} account={account} />
@@ -1870,6 +1876,7 @@ function CommunityNotifBell({ account, onOpenProfile }) {
 function PostActivityScreen({ post, profile, account, likeData, repostData, T, onClose }) {
   const [activityData, setActivityData] = useState(null);
   const [dailyViews, setDailyViews] = useState([]);
+  const ash = engAsh();
 
   useEffect(() => {
     if (!post?.id) return;
@@ -1922,9 +1929,9 @@ function PostActivityScreen({ post, profile, account, likeData, repostData, T, o
 
       {/* Engagement row */}
       <div style={{ margin: "0 16px 16px", background: T.card, borderRadius: 14, border: `1px solid ${T.cardBorder}`, padding: 16, display: "flex", justifyContent: "space-around" }}>
-        <div style={{ textAlign: "center" }}><Heart size={18} color={T.muted} /><div style={{ fontWeight: 800, fontSize: 18, color: T.paper, marginTop: 4 }}>{likes}</div></div>
-        <div style={{ textAlign: "center" }}><Repeat2 size={18} color={T.muted} /><div style={{ fontWeight: 800, fontSize: 18, color: T.paper, marginTop: 4 }}>{reposts}</div></div>
-        <div style={{ textAlign: "center" }}><MessageCircle size={18} color={T.muted} /><div style={{ fontWeight: 800, fontSize: 18, color: T.paper, marginTop: 4 }}>{comments}</div></div>
+        <div style={{ textAlign: "center" }}><Heart size={18} strokeWidth={2} color={ash} /><div style={{ fontWeight: 800, fontSize: 18, color: T.paper, marginTop: 4 }}>{likes}</div></div>
+        <div style={{ textAlign: "center" }}><Repeat2 size={18} strokeWidth={2} color={ash} /><div style={{ fontWeight: 800, fontSize: 18, color: T.paper, marginTop: 4 }}>{reposts}</div></div>
+        <div style={{ textAlign: "center" }}><MessageCircle size={18} strokeWidth={2} color={ash} /><div style={{ fontWeight: 800, fontSize: 18, color: T.paper, marginTop: 4 }}>{comments}</div></div>
       </div>
 
       {/* Metrics */}
