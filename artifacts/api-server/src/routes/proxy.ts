@@ -5,9 +5,10 @@
  *
  * Also handles:
  *   /api/price?symbol=BTCUSD — live price (last close from Yahoo Finance 1m)
- *   /api/push/keys            — VAPID public key
- *   /api/push/subscribe       — push subscription registration
  *   /api/community-ai         — Raina AI community replies
+ *
+ * (Push endpoints /api/push/{keys,subscribe,send} are handled by the dedicated
+ *  push router in src/routes/push.ts, which proxies them to RAINA_AI_URL.)
  */
 import { Router, Request, Response } from "express";
 
@@ -77,64 +78,14 @@ router.get("/price", async (req: Request, res: Response) => {
   }
 });
 
-// ── Push notification keys ────────────────────────────────────────────────────
-    // FIX: proxy to Railway's GET /push/keys — Railway is the single source of truth for VAPID keys.
-    // Previously this read process.env.VAPID_PUBLIC_KEY locally, which was never set, causing 503.
-    router.get("/push/keys", async (_req: Request, res: Response) => {
-    const botUrl = process.env.RAINA_AI_URL;
-    if (!botUrl) {
-      console.error("[push/keys] RAINA_AI_URL not set — cannot fetch VAPID public key from Railway");
-      return res.status(503).json({ error: "Push service not configured — set RAINA_AI_URL" });
-    }
-    try {
-      const target = `${botUrl.replace(/\/$/, "")}/push/keys`;
-      console.log(`[push/keys] fetching from Railway: ${target}`);
-      const r = await fetch(target, { signal: AbortSignal.timeout(8_000) });
-      const data = await r.json() as any;
-      console.log(`[push/keys] Railway status=${r.status} publicKey.present=${!!data?.publicKey} len=${data?.publicKey?.length ?? 0}`);
-      return res.status(r.status).json(data);
-    } catch (err: any) {
-      console.error(`[push/keys] fetch error: ${err.message}`);
-      return res.status(502).json({ error: "Push key fetch failed", detail: err.message });
-    }
-    });
-
-    // ── Push subscription registration ───────────────────────────────────────────
-    router.post("/push/subscribe", async (req: Request, res: Response) => {
-    const botUrl = process.env.RAINA_AI_URL;
-    const { userId, subscription } = req.body ?? {};
-    const endpoint = String(subscription?.endpoint ?? "").slice(0, 60);
-    console.log(`[push/subscribe] userId=${userId ?? "(MISSING)"} endpoint=${endpoint}`);
-
-    if (!botUrl) {
-      console.error("[push/subscribe] RAINA_AI_URL not set — cannot forward subscription to Railway");
-      return res.status(503).json({ error: "RAINA_AI_URL not configured" });
-    }
-    if (!userId) {
-      console.warn("[push/subscribe] WARNING: userId is undefined — subscription will not be linked to any user");
-    }
-    if (!subscription?.endpoint) {
-      console.error("[push/subscribe] subscription.endpoint missing — rejecting invalid payload");
-      return res.status(400).json({ error: "subscription.endpoint is required" });
-    }
-
-    try {
-      const target = `${botUrl.replace(/\/$/, "")}/push/subscribe`;
-      console.log(`[push/subscribe] forwarding to Railway: ${target}`);
-      const r = await fetch(target, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(req.body),
-        signal: AbortSignal.timeout(10_000),
-      });
-      const data = await r.text();
-      console.log(`[push/subscribe] Railway responded ${r.status}: ${data.slice(0, 200)}`);
-      return res.status(r.status).send(data);
-    } catch (err: any) {
-      console.error(`[push/subscribe] fetch error: ${err.message}`);
-      return res.status(502).json({ error: "Push subscribe failed", detail: err.message });
-    }
-    });
+// NOTE: /api/push/keys, /api/push/subscribe and /api/push/send are all handled
+// by the dedicated push router (src/routes/push.ts), which is mounted BEFORE
+// this proxy router and proxies those three endpoints to the Railway bot
+// (RAINA_AI_URL) — the single source of truth for VAPID keys and push
+// subscriptions. They are intentionally NOT redefined here to avoid duplicate,
+// divergent handlers. (Previously /push/keys and /push/subscribe were proxied
+// here while /push/send was left on the broken local web-push path; that split
+// is what stopped pushes from ever reaching a closed/offline app.)
 
     // ── Community AI replies ──────────────────────────────────────────────────────
 router.post("/community-ai", async (req: Request, res: Response) => {

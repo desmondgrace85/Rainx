@@ -1624,6 +1624,13 @@ function MainAppContent({ account, onLogout }) {
   const [selectedTf, setSelectedTf] = useState("15m");
   const [notifications, setNotifications] = useState([]);
   const [communityUnreadCount, setCommunityUnreadCount] = useState(0);
+  // Tracks whether the user has explicitly cleared the community badge this
+  // session (by opening the Community Notifications panel and marking all read).
+  // While true, the periodic DB poll trusts the DB count directly instead of
+  // using Math.max, so a stale/lagging DB row can't reassert a badge the user
+  // already dismissed. Reset to false when a genuinely new community event
+  // arrives (realtime or push), so the badge can climb again.
+  const communityBadgeUserClearedRef = useRef(false);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [notifToDelete, setNotifToDelete] = useState(null);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
@@ -1644,6 +1651,27 @@ function MainAppContent({ account, onLogout }) {
       localStorage.setItem(
         notificationSeenStorageKey,
         JSON.stringify([...seenNotificationIdsRef.current].slice(-300)),
+      );
+    } catch {}
+  };
+  // Community events can be delivered twice for the same row — once via the
+  // realtime community_notifications INSERT and once via the service-worker
+  // RAINX_PUSH_RECEIVED message (the community notify() helper fires both a DB
+  // row and a push). This set dedupes by the community_notifications row id so
+  // the community badge only increments once per real event, no matter which
+  // path delivers it. Persisted per-account so a refresh cannot replay it.
+  const communitySeenStorageKey = `rainx-seen-community-ids:${account?.id || "anonymous"}`;
+  const seenCommunityIdsRef = useRef((() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(communitySeenStorageKey) || "[]");
+      return new Set(stored);
+    } catch { return new Set(); }
+  })());
+  const persistSeenCommunityIds = () => {
+    try {
+      localStorage.setItem(
+        communitySeenStorageKey,
+        JSON.stringify([...seenCommunityIdsRef.current].slice(-300)),
       );
     } catch {}
   };
@@ -1947,6 +1975,31 @@ function MainAppContent({ account, onLogout }) {
     return true;
   }, [notificationSeenStorageKey]);
 
+  // Community notifications have their OWN panel (CommunityNotifBell) and their
+  // OWN badge (communityUnreadCount). They must NEVER enter the unified
+  // `notifications` list (that backs the trading/signals "Notifications" panel).
+  // This helper shows an in-app toast for a community event WITHOUT touching the
+  // unified notifications state, and dedupes by the community_notifications row
+  // id so the same event delivered via BOTH realtime (Path A) and the service-
+  // worker push message (Path B) only shows once. The badge increment is handled
+  // by the caller (once, via setCommunityUnreadCount) because the DB row is the
+  // single source of truth for the badge count.
+  const showCommunityToast = useCallback((entry) => {
+    if (!notificationsHydratedRef.current) return false;
+    const cid = entry?.communityId != null ? String(entry.communityId) : null;
+    if (cid) {
+      if (seenCommunityIdsRef.current.has(cid)) return false;
+      seenCommunityIdsRef.current.add(cid);
+      persistSeenCommunityIds();
+      if (seenCommunityIdsRef.current.size > 300) {
+        const oldest = seenCommunityIdsRef.current.values().next().value;
+        if (oldest) seenCommunityIdsRef.current.delete(oldest);
+      }
+    }
+    setToastQueue((queue) => [...queue, entry]);
+    return true;
+  }, [persistSeenCommunityIds]);
+
   const openNotificationTarget = useCallback((entry) => {
     const data = entry?.data || {};
     const target = data.targetKind ? data : entry;
@@ -2066,6 +2119,45 @@ function MainAppContent({ account, onLogout }) {
       if (event.data?.type === "RAINX_PUSH_RECEIVED") {
         const payload = event.data.payload || {};
         const data = payload.data || {};
+        // Community pushes (likes/replies/mentions/follows/reposts/DMs) belong
+        // in the Community Notifications panel + community badge, NOT the
+        // unified trading/signals "Notifications" panel. Route them separately
+        // so they increment the community badge and show a community toast only,
+        // and never enter the unified `notifications` list.
+        const isCommunityPush = data.kind === "community" ||
+          data.category === "community" ||
+          data.tag === "rainx-community" ||
+          data.targetKind === "post" ||
+          data.targetKind === "chat";
+        if (isCommunityPush) {
+          // Only increment the badge + toast when the app is in the foreground
+          // (the service worker already showed the OS notification when it was
+          // backgrounded). Dedupe by community row id / notificationId so a
+          // realtime delivery and a push delivery of the SAME event don't both
+          // increment the badge.
+          if (document.visibilityState === "visible") {
+            const cid = data.notificationId || data.messageId || null;
+            if (cid && seenCommunityIdsRef.current.has(String(cid))) return;
+            if (cid) {
+              seenCommunityIdsRef.current.add(String(cid));
+              persistSeenCommunityIds();
+            }
+            communityBadgeUserClearedRef.current = false;
+            setCommunityUnreadCount((count) => count + 1);
+            showCommunityToast({
+              id: data.notificationId || data.messageId || (Date.now() + Math.random()),
+              communityId: cid,
+              title: payload.title || "RainX",
+              body: payload.body || "",
+              type: "community",
+              read: false,
+              time: new Date().toLocaleTimeString(),
+              data,
+            });
+          }
+          return;
+        }
+        // Non-community (trading/market/news) pushes go to the unified list.
         if (document.visibilityState === "visible") enqueueInAppNotification({
           id: data.notificationId || data.messageId || (Date.now() + Math.random()),
           title: payload.title || "RainX",
@@ -2093,7 +2185,7 @@ function MainAppContent({ account, onLogout }) {
     return () => {
       if ("serviceWorker" in navigator) navigator.serviceWorker.removeEventListener("message", handleMsg);
     };
-  }, [account?.id, enqueueInAppNotification]);
+  }, [account?.id, enqueueInAppNotification, showCommunityToast, persistSeenCommunityIds]);
 
   // Push is the background delivery path. These realtime channels are the
   // foreground fallback and deliberately do not suppress an open chat.
@@ -2115,9 +2207,19 @@ function MainAppContent({ account, onLogout }) {
         filter: `user_id=eq.${account.id}`,
       }, ({ new: row }) => {
         const [title, body] = communityCopy[row.type] || ["RainX Notification", "You have a new notification"];
+        // Community events live in their OWN panel (CommunityNotifBell) + badge.
+        // Do NOT inject them into the unified `notifications` list (that backs
+        // the trading/signals "Notifications" panel). Dedupe by row.id so the
+        // same event arriving via both realtime and the SW push only counts once.
+        const cid = String(row.id);
+        if (seenCommunityIdsRef.current.has(cid)) return;
+        seenCommunityIdsRef.current.add(cid);
+        persistSeenCommunityIds();
+        communityBadgeUserClearedRef.current = false;
         setCommunityUnreadCount((count) => count + 1);
-        if (document.visibilityState === "visible") enqueueInAppNotification({
+        if (document.visibilityState === "visible") showCommunityToast({
           id: row.id,
+          communityId: cid,
           title,
           body,
           type: "community",
@@ -2130,8 +2232,17 @@ function MainAppContent({ account, onLogout }) {
         event: "INSERT", schema: "public", table: "direct_messages",
         filter: `receiver_id=eq.${account.id}`,
       }, ({ new: message }) => {
-        if (document.visibilityState === "visible") enqueueInAppNotification({
+        // DMs are community/social events too: route to the community badge +
+        // toast, NOT the unified trading panel. Dedupe by message id.
+        const cid = String(message.id);
+        if (seenCommunityIdsRef.current.has(cid)) return;
+        seenCommunityIdsRef.current.add(cid);
+        persistSeenCommunityIds();
+        communityBadgeUserClearedRef.current = false;
+        setCommunityUnreadCount((count) => count + 1);
+        if (document.visibilityState === "visible") showCommunityToast({
           id: message.id,
+          communityId: cid,
           title: "New Message",
           body: message.content || "",
           type: "community",
@@ -2161,7 +2272,7 @@ function MainAppContent({ account, onLogout }) {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [account?.id, enqueueInAppNotification]);
+  }, [account?.id, enqueueInAppNotification, showCommunityToast, persistSeenCommunityIds]);
 
   // ─── Register service worker push subscription ──────────────────────────
   useEffect(() => {
@@ -2258,11 +2369,17 @@ function MainAppContent({ account, onLogout }) {
         .eq("user_id", account.id)
         .eq("read", false);
       if (!cancelled) {
-        // Never let a stale poll shrink the badge below a realtime increment
-        // that the database may not have caught up to yet (replication lag).
-        // This stops the community menu badge from flickering "on and off".
         const dbCount = count || 0;
-        setCommunityUnreadCount((current) => Math.max(current, dbCount));
+        // If the user has explicitly cleared the badge this session (opened the
+        // Community Notifications panel and marked all read), trust the DB count
+        // directly. This prevents a lagging DB row from reasserting a badge the
+        // user already dismissed. Otherwise use Math.max to avoid flicker from
+        // realtime increments that the DB hasn't caught up to yet.
+        if (communityBadgeUserClearedRef.current) {
+          setCommunityUnreadCount(dbCount);
+        } else {
+          setCommunityUnreadCount((current) => Math.max(current, dbCount));
+        }
       }
     };
     loadCommunityUnreadCount();
@@ -2272,8 +2389,13 @@ function MainAppContent({ account, onLogout }) {
 
   // When the community notification sheet marks everything read, clear the
   // community menu-icon badge instantly instead of waiting for the next poll.
+  // Also set the user-cleared flag so the periodic poll doesn't reassert the
+  // badge from a lagging DB row.
   useEffect(() => {
-    const onRead = () => setCommunityUnreadCount(0);
+    const onRead = () => {
+      communityBadgeUserClearedRef.current = true;
+      setCommunityUnreadCount(0);
+    };
     window.addEventListener("rainx:community-notifs-read", onRead);
     return () => window.removeEventListener("rainx:community-notifs-read", onRead);
   }, []);
