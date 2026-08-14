@@ -1,7 +1,7 @@
 /* RainX Service Worker — Push Notifications + Offline Cache */
 // IMPORTANT: bump this version string on every future deploy, or users may keep
 // seeing a stale cached version of the app for a while after you ship changes.
-const CACHE_NAME = "rainx-v2026-08-13-notif-routing-fix-2";
+const CACHE_NAME = "rainx-v2026-08-14-notif-fixes-2";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
 const presenceByClient = new Map();
 const recentPushIds = new Set();
@@ -127,15 +127,19 @@ self.addEventListener("push", (event) => {
   // Pushes are sent as { title, body, data: { ...notificationData } }.
   // Accept flat payloads too so older senders continue to work.
   const notificationData = { ...(data.data || {}), ...data };
-  const title    = notificationData.title    || "RainX";
-  const body     = notificationData.body     || "";
+  // Prefer the nested push data object for routing metadata. The outer payload
+  // is only the transport envelope; keeping these fields explicit prevents a
+  // generic/default category from overwriting a community or signal category.
+  const pushData = data.data && typeof data.data === "object" ? data.data : {};
+  const title    = data.title || pushData.title || "RainX";
+  const body     = data.body || pushData.body || "";
   const icon     = notificationData.icon     || "/icons/icon-192.png";
   const badge    = notificationData.badge    || "/icons/icon-192.png";
   const url      = notificationData.url      || "/";
   const vibrate  = notificationData.vibrate  || [200, 100, 200];
-  const category = notificationData.category || "default";
-  const kind     = notificationData.kind || "default";
-  const pushId   = notificationData.messageId || notificationData.notificationId || notificationData.id;
+  const category = pushData.category || notificationData.category || "default";
+  const kind     = pushData.kind || notificationData.kind || "default";
+  const pushId   = pushData.notificationId || pushData.messageId || notificationData.notificationId || notificationData.messageId || notificationData.id;
   const tag      = notificationData.tag
     || (kind === "chat"
       ? "rainx-message"
