@@ -23,10 +23,10 @@ const T = {
   ink: "#0F0E0B",
   card: "#1C1913",
   cardBorder: "#332C1F",
-  gold: "#F7BC2D",
-  goldBright: "#F7BC2D",
-  goldGradient: "linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%)",
-  goldShine: "linear-gradient(180deg, #F7BC2D 0%, #E3A925 48%, #D49818 100%)",
+  gold: "#FFBE0B",
+  goldBright: "#FFBE0B",
+  goldGradient: "linear-gradient(135deg, #FFBE0B 0%, #F0A800 50%, #D89E00 100%)",
+  goldShine: "linear-gradient(180deg, #FFBE0B 0%, #F0A800 48%, #D89E00 100%)",
   sage: "#7A9E86",
   rust: "#B0604A",
   paper: "#F2EDE0",
@@ -38,8 +38,8 @@ let _avatarRefreshTick = 0;
 const _avatarRefreshListeners = new Set();
 function notifyAvatarRefresh() { _avatarRefreshTick++; _avatarRefreshListeners.forEach(fn => fn(_avatarRefreshTick)); }
 
-const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#F7BC2D", goldBright:"#F7BC2D", goldGradient:"linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%)", goldShine:"linear-gradient(180deg, #F7BC2D 0%, #E3A925 48%, #D49818 100%)", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
-const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#F7BC2D", goldBright:"#F7BC2D", goldGradient:"linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%)", goldShine:"linear-gradient(180deg, #F7BC2D 0%, #E3A925 48%, #D49818 100%)", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
+const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#FFBE0B", goldBright:"#FFBE0B", goldGradient:"linear-gradient(135deg, #FFBE0B 0%, #F0A800 50%, #D89E00 100%)", goldShine:"linear-gradient(180deg, #FFBE0B 0%, #F0A800 48%, #D89E00 100%)", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
+const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#FFBE0B", goldBright:"#FFBE0B", goldGradient:"linear-gradient(135deg, #FFBE0B 0%, #F0A800 50%, #D89E00 100%)", goldShine:"linear-gradient(180deg, #FFBE0B 0%, #F0A800 48%, #D89E00 100%)", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
 const FONT_HEAD = "'Montserrat', sans-serif";
 const FONT_BODY = "'Montserrat', sans-serif";
 
@@ -224,14 +224,14 @@ function CoverCropModal({ file, onConfirm, onCancel, T, FONT_HEAD }) {
     <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.88)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}
       onPointerMove={onPM} onPointerUp={onPU} onPointerLeave={onPU}>
       <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:15, color:'#fff', marginBottom:14 }}>Drag to position</div>
-      <div style={{ width:DISPLAY_W, height:DISPLAY_H, overflow:'hidden', borderRadius:8, border:'2px solid #F7BC2D', cursor:dragging?'grabbing':'grab', position:'relative', userSelect:'none', touchAction:'none' }}
+      <div style={{ width:DISPLAY_W, height:DISPLAY_H, overflow:'hidden', borderRadius:8, border:'2px solid #FFBE0B', cursor:dragging?'grabbing':'grab', position:'relative', userSelect:'none', touchAction:'none' }}
         onPointerDown={onPD}>
         {imgSrc && <img src={imgSrc} style={{ width:DISPLAY_W, height:'auto', position:'absolute', top:offsetY, left:0, pointerEvents:'none', userSelect:'none', draggable:false }} alt='' />}
       </div>
       <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginTop:10, marginBottom:20 }}>Cover photo · 4:1</div>
       <div style={{ display:'flex', gap:12 }}>
         <button onClick={onCancel} style={{ background:'none', border:'1px solid rgba(255,255,255,0.25)', borderRadius:10, padding:'10px 24px', color:'#fff', fontFamily:FONT_HEAD, fontWeight:600, fontSize:13, cursor:'pointer' }}>Cancel</button>
-        <button onClick={confirm} style={{ background:'#F7BC2D', border:'none', borderRadius:10, padding:'10px 24px', color:'#0F0E0B', fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:'pointer' }}>Use photo</button>
+        <button onClick={confirm} style={{ background:'#FFBE0B', border:'none', borderRadius:10, padding:'10px 24px', color:'#0F0E0B', fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:'pointer' }}>Use photo</button>
       </div>
       <canvas ref={canvasRef} style={{ display:'none' }} />
     </div>
@@ -938,8 +938,8 @@ function AuthScreen({ onAuthed }) {
   // Local premium palette - scoped to this screen only, doesn't touch the
   // shared T tokens used everywhere else in the app.
   const A = {
-    bg: "#0B0B0B", card: "#171513", gold: "#F7BC2D",
-    goldGrad: "linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%)",
+    bg: "#0B0B0B", card: "#171513", gold: "#FFBE0B",
+    goldGrad: "linear-gradient(135deg, #FFBE0B 0%, #F0A800 50%, #D89E00 100%)",
     border: "rgba(255,255,255,0.08)", gray: "#B4B4B4",
   };
   const [oauthNotice, setOauthNotice] = useState("");
@@ -951,9 +951,9 @@ function AuthScreen({ onAuthed }) {
       <svg width="100%" height="92" viewBox="0 0 320 92" style={{ display: "block", marginBottom: 4 }}>
         <defs>
           <linearGradient id="authRibbon" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#F7BC2D" />
-            <stop offset="50%" stopColor="#E3A925" />
-            <stop offset="100%" stopColor="#D49818" />
+            <stop offset="0%" stopColor="#FFBE0B" />
+            <stop offset="50%" stopColor="#F0A800" />
+            <stop offset="100%" stopColor="#D89E00" />
           </linearGradient>
         </defs>
         <path id="authRibbonPath" d="M6 74 C 55 6, 95 6, 140 46 S 250 84, 306 14" stroke="url(#authRibbon)" strokeWidth="22" fill="none" strokeLinecap="round" />
@@ -2952,9 +2952,9 @@ function MainAppContent({ account, onLogout }) {
                   <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
                     <defs>
                       <linearGradient id="rxNavGold" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#F7BC2D"/>
-                        <stop offset="50%" stopColor="#E3A925"/>
-                        <stop offset="100%" stopColor="#D49818"/>
+                        <stop offset="0%" stopColor="#FFBE0B"/>
+                        <stop offset="50%" stopColor="#F0A800"/>
+                        <stop offset="100%" stopColor="#D89E00"/>
                       </linearGradient>
                     </defs>
                   </svg>
@@ -3065,7 +3065,7 @@ function CandlestickChart({ candles, overlays, inst, containerHeight = 260 }) {
       const WBEAR = isDarkCanvas ? "#9ca3af" : "#374151";
       const GRID  = isDarkCanvas ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.065)";
       const TLBL  = isDarkCanvas ? "rgba(220,225,235,0.55)" : "rgba(18,18,42,0.5)";
-      const GOLD  = T.gold || "#F7BC2D";
+      const GOLD  = T.gold || "#FFBE0B";
 
       // ── Dashed horizontal grid lines ─────────────────────────────────────
       ctx.setLineDash([3, 4]); ctx.strokeStyle = GRID; ctx.lineWidth = 1;
@@ -3574,9 +3574,9 @@ function GamesTab() {
         @keyframes games-fade-in { from { opacity:0; } to { opacity:1; } }
         @keyframes games-scale-in { from { opacity:0; transform:scale(.82); } to { opacity:1; transform:scale(1); } }
         @keyframes games-pulse-ring {
-          0% { transform:scale(.95); box-shadow:0 0 0 0 rgba(201,168,76,.7); }
-          70% { transform:scale(1); box-shadow:0 0 0 10px rgba(201,168,76,0); }
-          100% { transform:scale(.95); box-shadow:0 0 0 0 rgba(201,168,76,0); }
+          0% { transform:scale(.95); box-shadow:0 0 0 0 rgba(255,190,11,.7); }
+          70% { transform:scale(1); box-shadow:0 0 0 10px rgba(255,190,11,0); }
+          100% { transform:scale(.95); box-shadow:0 0 0 0 rgba(255,190,11,0); }
         }
         @keyframes games-shimmer { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
         .games-reveal { opacity:0; animation:games-fade-up .6s ease-out forwards; }
@@ -3601,7 +3601,7 @@ function GamesTab() {
           <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(to top, #050505, rgba(5,5,5,.45) 58%, rgba(5,5,5,.3))" }} />
           <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(to bottom, rgba(5,5,5,.45), transparent 35%)" }} />
           <img src={gamesHeroRocket} alt="Gold rocket launching" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
-          <div style={{ position: "absolute", inset: 0, zIndex: 2, opacity: .25, background: "radial-gradient(circle at 50% 50%, rgba(201,168,76,.15), transparent 45%)", animation: "games-shimmer 15s linear infinite" }} />
+          <div style={{ position: "absolute", inset: 0, zIndex: 2, opacity: .25, background: "radial-gradient(circle at 50% 50%, rgba(255,190,11,.15), transparent 45%)", animation: "games-shimmer 15s linear infinite" }} />
         </div>
         <div className={pageReady ? "games-fade" : ""} style={{ position: "relative", zIndex: 3, textAlign: "center" }}>
           <h1 style={{ fontFamily: FONT_HEAD, fontSize: 38, lineHeight: 1.05, fontWeight: 800, color: "#F2EDE0", margin: "0 0 8px", textShadow: `0 0 14px ${T.gold}66` }}>Play Smart.<br />Win More.</h1>
@@ -4211,7 +4211,7 @@ function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }
         const open = isMarketOpen(i.cls);
         const combo = signalsMap[i.symbol] || {};
         return (
-          <div key={i.symbol} style={{ background: T.card, border: `1px solid ${i.symbol === activeSymbol ? "#F7BC2D" : T.cardBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, color: T.paper, boxShadow: i.symbol === activeSymbol ? "0 0 0 1px #F7BC2D, 0 0 12px rgba(247,188,45,0.25)" : "none" }}>
+          <div key={i.symbol} style={{ background: T.card, border: `1px solid ${i.symbol === activeSymbol ? "#FFBE0B" : T.cardBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, color: T.paper, boxShadow: i.symbol === activeSymbol ? "0 0 0 1px #FFBE0B, 0 0 12px rgba(255,190,11,0.25)" : "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {/* Left: name + symbol + signals — tap to go to home */}
               <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => onSelect(i.symbol)}>
@@ -6307,7 +6307,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const VerifBadgeIcon = ({ size = 16 }) =>
     verification === "golden" ? (
       <svg width={size} height={size} viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
-        <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D49818" />
+        <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D89E00" />
       </svg>
     ) : verification === "blue" ? (
       <svg width={size} height={size} viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
@@ -6942,7 +6942,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ width: 70, height: 70, borderRadius: "50%", background: iconBg, border: iconBorder, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
               {isGolden ? (
                 <svg width="38" height="38" viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
-                  <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D49818" />
+                  <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D89E00" />
                 </svg>
               ) : isBlue ? (
                 <svg width="38" height="38" viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
@@ -6981,7 +6981,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
                       </svg>
                     ) : (
                       <svg width="16" height="16" viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
-                        <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D49818" />
+                        <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D89E00" />
                       </svg>
                     )}
                   </div>
@@ -7075,7 +7075,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   };
 
   if (morePage === "appearance") return (
-    <div onClick={() => setMorePage("profile-menu")} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:60, display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
+    <div onClick={() => setMorePage("profile-menu")} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.35)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)", zIndex:60, display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
       <style>{"@keyframes rxSheetUp { from { transform:translateY(100%) } to { transform:translateY(0) } }"}</style>
       <div onClick={(e) => e.stopPropagation()} style={{ background:"#ffffff", borderRadius:24, padding:"14px 14px 28px", animation:"rxSheetUp 0.28s cubic-bezier(0.22,1,0.36,1)" }}> 
         <div style={{ width:42, height:5, borderRadius:3, background:"#e2e2e2", margin:"0 auto 18px" }} />
@@ -7237,7 +7237,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1d9bf0" />
             </svg>
             <svg width="16" height="16" viewBox="1.604 1.604 18.792 18.792" style={{ position:"absolute", right:6, top:10 }}>
-              <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D49818" />
+              <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D89E00" />
             </svg>
           </div>
           <div style={{ flex:1, textAlign:"left" }}>

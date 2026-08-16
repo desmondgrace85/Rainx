@@ -67,7 +67,7 @@ export default function SpaceCoinsIntro({ T, onExplore, onBack }) {
         .sc-back { width:40px; height:40px; display:grid; place-items:center; border:1px solid var(--sc-border); border-radius:13px; background:var(--sc-card); color:var(--sc-paper); cursor:pointer; }
         .sc-kicker { margin:28px 0 8px; color:var(--sc-gold-bright); font-size:16px; letter-spacing:.01em; }
         .sc-title { margin:0; color:var(--sc-gold-bright); font-size:clamp(36px, 10vw, 54px); line-height:1.02; letter-spacing:-.055em; font-weight:800; text-shadow:0 0 24px var(--sc-gold-shadow); }
-         .sc-title-gold { color:#F7BC2D; }
+         .sc-title-gold { color:#FFBE0B; }
         .sc-tagline { margin:22px 0 0; font-size:17px; color:var(--sc-paper); font-weight:600; }
         .sc-subtext { max-width:230px; margin:8px 0 0; color:var(--sc-muted); font-size:14px; line-height:1.55; }
         .sc-primary { margin-top:22px; align-self:flex-start; display:flex; align-items:center; gap:16px; border:0; border-radius:999px; padding:13px 16px 13px 20px; color:var(--sc-ink); background:var(--sc-gold-gradient); font:700 13px 'Montserrat',sans-serif; cursor:pointer; box-shadow:0 10px 28px var(--sc-gold-shadow); }

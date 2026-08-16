@@ -10,9 +10,9 @@ import { supabase } from "./supabaseClient";
 
 const T = {
   ink: "#0F0E0B", card: "#1C1913", cardBorder: "#332C1F",
-  gold: "#F7BC2D", goldBright: "#F7BC2D",
-  goldGradient: "linear-gradient(135deg, #F7BC2D 0%, #E3A925 50%, #D49818 100%)",
-  goldShine: "linear-gradient(180deg, #F7BC2D 0%, #E3A925 48%, #D49818 100%)",
+  gold: "#FFBE0B", goldBright: "#FFBE0B",
+  goldGradient: "linear-gradient(135deg, #FFBE0B 0%, #F0A800 50%, #D89E00 100%)",
+  goldShine: "linear-gradient(180deg, #FFBE0B 0%, #F0A800 48%, #D89E00 100%)",
   sage: "#7A9E86", rust: "#B0604A",
   paper: "#F2EDE0", muted: "#9C947F",
 };
@@ -128,7 +128,7 @@ function MentionTextarea({ value, onChange, placeholder, rows, style, textareaRe
               onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
             >
               <div style={{
-                width: 28, height: 28, borderRadius: "50%", background: "#F7BC2D",
+                width: 28, height: 28, borderRadius: "50%", background: "#FFBE0B",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 11, fontWeight: 800, color: "#0F0E0B", flexShrink: 0,
                 overflow: "hidden",
@@ -137,7 +137,7 @@ function MentionTextarea({ value, onChange, placeholder, rows, style, textareaRe
                   ? <img src={s.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   : (s.display_name?.[0] || "?").toUpperCase()}
               </div>
-              <span style={{ color: "#F7BC2D", fontWeight: 700, fontSize: 13, fontFamily: "'Montserrat', sans-serif" }}>
+              <span style={{ color: "#FFBE0B", fontWeight: 700, fontSize: 13, fontFamily: "'Montserrat', sans-serif" }}>
                 @{s.display_name}
               </span>
             </div>
@@ -285,7 +285,7 @@ function BlueBadge({ size = 17 }) {
 function GoldenBadge({ size = 17 }) {
   return (
     <svg width={size} height={size} viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }} title="Golden Verified">
-      <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D49818" />
+      <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D89E00" />
     </svg>
   );
 }

@@ -20,7 +20,7 @@ export function Leaderboard() {
 
   const getRankStyle = (rank: number) => {
     switch (rank) {
-      case 1: return "bg-primary text-primary-foreground shadow-[0_0_10px_rgba(201,168,76,0.5)]";
+      case 1: return "bg-primary text-primary-foreground shadow-[0_0_10px_rgba(255,190,11,0.5)]";
       case 2: return "bg-slate-300 text-slate-800 shadow-[0_0_10px_rgba(203,213,225,0.4)]";
       case 3: return "bg-amber-700 text-amber-50 shadow-[0_0_10px_rgba(180,83,9,0.4)]";
       default: return "bg-card border border-border text-muted-foreground";

@@ -57,7 +57,7 @@ export function RainaAI() {
           <div className="absolute inset-0 rounded-full pulse-ring-anim z-0" />
           <div className="absolute inset-0 rounded-full pulse-ring-anim z-0" style={{ animationDelay: "1s" }} />
           
-          <div className="relative z-10 w-32 h-32 rounded-full border-2 border-primary/50 overflow-hidden shadow-[0_0_30px_rgba(201,168,76,0.3)] p-1 bg-background">
+          <div className="relative z-10 w-32 h-32 rounded-full border-2 border-primary/50 overflow-hidden shadow-[0_0_30px_rgba(255,190,11,0.3)] p-1 bg-background">
             <div className="w-full h-full rounded-full overflow-hidden">
               <img 
                 src={rainaAvatarImg} 
@@ -114,7 +114,7 @@ export function RainaAI() {
             </div>
           </div>
 
-          <button className="w-full bg-card hover:bg-card/80 text-primary border border-primary/50 font-bold py-3 px-6 rounded-xl shadow-[0_0_15px_rgba(201,168,76,0.15)] hover:shadow-[0_0_25px_rgba(201,168,76,0.3)] transition-all flex justify-center items-center gap-2">
+          <button className="w-full bg-card hover:bg-card/80 text-primary border border-primary/50 font-bold py-3 px-6 rounded-xl shadow-[0_0_15px_rgba(255,190,11,0.15)] hover:shadow-[0_0_25px_rgba(255,190,11,0.3)] transition-all flex justify-center items-center gap-2">
             Challenge Raina
           </button>
         </motion.div>
