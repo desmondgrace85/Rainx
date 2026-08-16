@@ -98,6 +98,16 @@ self.addEventListener("activate", (event) => {
           .map((k) => caches.delete(k))
       )
     ).then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: "window", includeUncontrolled: true }))
+      .then((clients) =>
+        Promise.all(
+          clients.map((client) =>
+            "navigate" in client
+              ? client.navigate(client.url).catch(() => null)
+              : null
+          )
+        )
+      )
   );
 });
 

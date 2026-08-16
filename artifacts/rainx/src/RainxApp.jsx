@@ -7075,7 +7075,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   };
 
   if (morePage === "appearance") return (
-    <div onClick={() => setMorePage("profile-menu")} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.35)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)", zIndex:60, display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
+    <div onClick={() => setMorePage("profile-menu")} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.16)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)", zIndex:60, display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
       <style>{"@keyframes rxSheetUp { from { transform:translateY(100%) } to { transform:translateY(0) } }"}</style>
       <div onClick={(e) => e.stopPropagation()} style={{ background:"#ffffff", borderRadius:24, padding:"14px 14px 28px", animation:"rxSheetUp 0.28s cubic-bezier(0.22,1,0.36,1)" }}> 
         <div style={{ width:42, height:5, borderRadius:3, background:"#e2e2e2", margin:"0 auto 18px" }} />
