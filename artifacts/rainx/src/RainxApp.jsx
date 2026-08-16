@@ -6,7 +6,7 @@ import {
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
   CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet, Landmark, Gift, Trophy,
   Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle, Plus, ChevronDown,
-  BrainCircuit, Cpu,
+  BrainCircuit, Cpu, Palette,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, formatCount } from "./CommunityTab";
@@ -6489,6 +6489,18 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Trader Wallet</div>
           </div>
         </button>
+        {/* Appearance — standalone, before Settings */}
+        <button onClick={() => setMorePage("appearance")}
+          style={{ width:"100%", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
+          <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:"50%", right:14, transform:"translateY(-50%)" }} />
+          <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <Palette size={18} color={T.ink} />
+          </div>
+          <div>
+            <div style={{ width:28, height:3, borderRadius:2, background:T.gold, marginBottom:8 }} />
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Appearance</div>
+          </div>
+        </button>
         {/* Settings */}
         <button onClick={() => setMorePage("settings")}
           style={{ width:"100%", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
@@ -7041,25 +7053,54 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     </MoreSubScreen>
   );
 
+  const renderAppearancePhone = (mode) => {
+    const isLight = mode === "light";
+    const splitGrad = function(l, d) { return "linear-gradient(to right, " + l + " 50%, " + d + " 50%)"; };
+    const bg = mode === "split" ? splitGrad("#f5f5f5", "#1c1c1c") : (isLight ? "#f5f5f5" : "#1c1c1c");
+    const bar = mode === "split" ? splitGrad("#eaeaea", "#2a2a2a") : (isLight ? "#eaeaea" : "#2a2a2a");
+    const block1 = mode === "split" ? splitGrad("#ffffff", "#333333") : (isLight ? "#ffffff" : "#333333");
+    const block2 = mode === "split" ? splitGrad("#ececec", "#2e2e2e") : (isLight ? "#ececec" : "#2e2e2e");
+    const nav = mode === "split" ? splitGrad("#eaeaea", "#2a2a2a") : (isLight ? "#eaeaea" : "#2a2a2a");
+    const notch = mode === "split" ? splitGrad("#cfcfcf", "#444444") : (isLight ? "#cfcfcf" : "#444444");
+    return (
+      <div style={{ width:60, height:112, borderRadius:15, background:bg, border:"1px solid #e3e3e3", boxShadow:"0 3px 10px rgba(0,0,0,0.10)", padding:7, display:"flex", flexDirection:"column", gap:6, position:"relative", overflow:"hidden" }}> 
+        <div style={{ position:"absolute", top:6, left:"50%", transform:"translateX(-50%)", width:18, height:4, borderRadius:2, background:notch }} />
+        <div style={{ height:14, borderRadius:5, background:bar, marginTop:9 }} />
+        <div style={{ height:22, borderRadius:6, background:block1 }} />
+        <div style={{ height:13, borderRadius:5, background:block2, width:"72%" }} />
+        <div style={{ flex:1 }} />
+        <div style={{ height:12, borderRadius:6, background:nav }} />
+      </div>
+    );
+  };
+
+  if (morePage === "appearance") return (
+    <div onClick={() => setMorePage("profile-menu")} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:60, display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
+      <style>{"@keyframes rxSheetUp { from { transform:translateY(100%) } to { transform:translateY(0) } }"}</style>
+      <div onClick={(e) => e.stopPropagation()} style={{ background:"#ffffff", borderRadius:24, padding:"14px 14px 28px", animation:"rxSheetUp 0.28s cubic-bezier(0.22,1,0.36,1)" }}> 
+        <div style={{ width:42, height:5, borderRadius:3, background:"#e2e2e2", margin:"0 auto 18px" }} />
+        <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:"#2d2d2d", textAlign:"center", marginBottom:22 }}>Choose appearance</div>
+        <div style={{ display:"flex", justifyContent:"space-between", gap:10 }}>
+          {[["light","Always light"],["dark","Always dark"],["system","Device settings"]].map(([val,label]) => {
+            const selected = themeMode === val;
+            const mode = val === "system" ? "split" : val;
+            return (
+              <button key={val} onClick={() => { lsSet("rainx-theme", val); setThemeMode(val); }} style={{ flex:1, background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}> 
+                {renderAppearancePhone(mode)}
+                <div style={{ width:22, height:22, borderRadius:"50%", border: "2px solid " + (selected ? "#4a6d7c" : "#cfcfcf"), display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  {selected && <div style={{ width:12, height:12, borderRadius:"50%", background:"#4a6d7c" }} />}
+                </div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:600, fontSize:12, color:"#2d2d2d" }}>{label}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
   if (morePage === "settings") return (
     <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Settings" subtitle="Privacy &amp; account controls">
       <div style={{ padding:16 }}>
-        <MoreSection title="Appearance">
-          {[["light","Light","Sun — white background"],["dark","Dark","Moon — dark background"],["system","System","Match device setting"]].map(([val,label,desc],i)=>(
-            <React.Fragment key={val}>
-              {i>0 && <MoreRowDivider />}
-              <button onClick={()=>{ lsSet("rainx-theme",val); setThemeMode(val); }} style={{ width:"100%", background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", padding:"13px 16px", gap:12 }}>
-                <div style={{ flex:1, textAlign:"left" }}>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper }}>{label}</div>
-                  <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>{desc}</div>
-                </div>
-                <div style={{ width:20, height:20, borderRadius:"50%", border:`2px solid ${themeMode===val?T.gold:T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  {themeMode===val && <div style={{ width:10, height:10, borderRadius:"50%", background:T.gold }} />}
-                </div>
-              </button>
-            </React.Fragment>
-          ))}
-        </MoreSection>
         <MoreSection title="Post Visibility">
           {[["public","Public — everyone"],["followers","Followers only"],["premium","Subscribers only"]].map(([val,label],i,arr)=>{
             const cur = lsGet("rainx-post-visibility")||"public";
