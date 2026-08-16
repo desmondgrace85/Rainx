@@ -563,7 +563,7 @@ input, textarea, [contenteditable] {
   overflow: hidden;
   border: 1px solid rgba(227, 192, 119, 0.62);
   border-radius: 50%;
-  background: linear-gradient(135deg, #FFC300 0%, #FFC300 50%, #FFC300 100%);
+  background: linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%);
   box-shadow:
     0 0 0 3px rgba(198, 161, 91, 0.16),
     0 0 14px rgba(227, 192, 119, 0.52),
@@ -600,7 +600,7 @@ input, textarea, [contenteditable] {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #FFC300 0%, #FFC300 50%, #FFC300 100%);
+  background: linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%);
   box-shadow: 0 0 7px 2px rgba(198, 161, 91, 0.96);
 }
 
@@ -616,7 +616,7 @@ input, textarea, [contenteditable] {
 .rx-center-nav-orbit-two::after {
   top: 50%;
   left: -2px;
-  background: linear-gradient(135deg, #FFC300 0%, #FFC300 50%, #FFC300 100%);
+  background: linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%);
   box-shadow: 0 0 7px 2px rgba(227, 192, 119, 0.9);
 }
 
@@ -625,15 +625,15 @@ input, textarea, [contenteditable] {
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #FFC300 0%, #FFC300 50%, #FFC300 100%);
+  background: linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%);
   box-shadow: 0 0 6px 2px rgba(198, 161, 91, 0.8);
   animation: rx-center-particle 3.2s ease-in-out infinite;
 }
 
 .rx-center-nav-particle-one { top: 7px; left: 14px; animation-delay: -0.4s; }
-.rx-center-nav-particle-two { top: 16px; right: 5px; animation-delay: -1.5s; background: linear-gradient(135deg, #FFC300 0%, #FFC300 50%, #FFC300 100%); }
+.rx-center-nav-particle-two { top: 16px; right: 5px; animation-delay: -1.5s; background: linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%); }
 .rx-center-nav-particle-three { bottom: 7px; right: 14px; animation-delay: -2.3s; }
-.rx-center-nav-particle-four { bottom: 16px; left: 5px; animation-delay: -2.9s; background: linear-gradient(135deg, #FFC300 0%, #FFC300 50%, #FFC300 100%); }
+.rx-center-nav-particle-four { bottom: 16px; left: 5px; animation-delay: -2.9s; background: linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%); }
 
 .rx-center-nav-ripple {
   inset: 7px;
@@ -738,6 +738,6 @@ input, textarea, [contenteditable] {
 }
 
 /* Keep legacy inline SVG gold marks on the single reference gold. */
-svg path[fill="#FFC300"] {
-  fill: #FFC300 !important;
+svg path[fill="#F4D35E"] {
+  fill: #F4D35E !important;
 }

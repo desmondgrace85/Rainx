@@ -35,13 +35,13 @@ const OIL = raw(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><ci
 
 // ─── Indices ──────────────────────────────────────────────────────────────
 const NAS = raw(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#000"/><text x="24" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#00C7B2" font-family="Arial">N</text></svg>`);
-const SPX = raw(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#1a1a1a"/><text x="24" y="31" text-anchor="middle" font-size="14" font-weight="bold" fill="#FFC300" font-family="Arial">S&amp;P</text></svg>`);
+const SPX = raw(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#1a1a1a"/><text x="24" y="31" text-anchor="middle" font-size="14" font-weight="bold" fill="#F4D35E" font-family="Arial">S&amp;P</text></svg>`);
 const US30 = raw(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#1a3a5c"/><text x="24" y="30" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff" font-family="Arial">DJ</text></svg>`);
-const GER = raw(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#1a1a1a"/><path fill="#fff" d="M12 20h24v2H12zm0 5h24v2H12z"/><path fill="#FFC300" d="M20 16h8v4h-8z"/></svg>`);
+const GER = raw(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#1a1a1a"/><path fill="#fff" d="M12 20h24v2H12zm0 5h24v2H12z"/><path fill="#F4D35E" d="M20 16h8v4h-8z"/></svg>`);
 
 // ─── Default / news fallback ──────────────────────────────────────────────
-const RAINX = raw(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#0F0E0B"/><path fill="#FFC300" d="M24 13c-4 0-7 3-7 7 0 1 .2 2 .6 2.8L18 25c-2 1.5-2 4 0 5.5L24 35l6-4.5c2-1.5 2-4 0-5.5l.4-2.2c.4-.8.6-1.8.6-2.8 0-4-3-7-7-7z"/></svg>`);
-const NEWS = raw(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#1C1913"/><rect x="13" y="15" width="22" height="18" rx="2" fill="none" stroke="#FFC300" stroke-width="2"/><path fill="#FFC300" d="M16 20h10v1.8H16zm0 4h16v1.8H16zm0 4h12v1.8H16z"/></svg>`);
+const RAINX = raw(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#0F0E0B"/><path fill="#F4D35E" d="M24 13c-4 0-7 3-7 7 0 1 .2 2 .6 2.8L18 25c-2 1.5-2 4 0 5.5L24 35l6-4.5c2-1.5 2-4 0-5.5l.4-2.2c.4-.8.6-1.8.6-2.8 0-4-3-7-7-7z"/></svg>`);
+const NEWS = raw(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#1C1913"/><rect x="13" y="15" width="22" height="18" rx="2" fill="none" stroke="#F4D35E" stroke-width="2"/><path fill="#F4D35E" d="M16 20h10v1.8H16zm0 4h16v1.8H16zm0 4h12v1.8H16z"/></svg>`);
 
 // Map every instrument symbol to its logo.
 export const MARKET_LOGOS = {

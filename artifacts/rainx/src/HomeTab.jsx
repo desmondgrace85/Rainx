@@ -78,7 +78,7 @@ function CandlestickChart({ candles, overlays, inst, containerHeight = 260 }) {
       const WBEAR = isDarkCanvas ? "#9ca3af" : "#374151";
       const GRID  = isDarkCanvas ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.065)";
       const TLBL  = isDarkCanvas ? "rgba(220,225,235,0.55)" : "rgba(18,18,42,0.5)";
-      const GOLD  = T.gold || "#FFC300";
+      const GOLD  = T.gold || "#F4D35E";
 
       // ── Dashed horizontal grid lines ─────────────────────────────────────
       ctx.setLineDash([3, 4]); ctx.strokeStyle = GRID; ctx.lineWidth = 1;
@@ -155,7 +155,7 @@ function CandlestickChart({ candles, overlays, inst, containerHeight = 260 }) {
       overlays.forEach(o => {
         if (o.type !== "entry_zone") return;
         const y1 = toY(o.priceHigh), y2 = toY(o.priceLow);
-        ctx.fillStyle = "rgba(255,195,0,0.09)";
+        ctx.fillStyle = "rgba(244,211,94,0.09)";
         ctx.fillRect(pad.left, y1, cW, y2 - y1);
         [y1, y2].forEach(y => {
           ctx.beginPath(); ctx.strokeStyle = GOLD; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);

@@ -7,8 +7,8 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createChart, CrosshairMode, LineStyle } from "lightweight-charts";
 import { X, ChevronLeft, Activity, TrendingUp, TrendingDown, Minus, Maximize2, Minimize2 } from "lucide-react";
 
-const GOLD        = "#FFC300";
-const GOLD_BRIGHT = "#FFC300";
+const GOLD        = "#F4D35E";
+const GOLD_BRIGHT = "#F4D35E";
 const BULL        = "#1D6FE8";
 const BEAR        = "#131722";
 const WICK_BEAR   = "#374151";
@@ -553,7 +553,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
           const t1 = bars[Math.max(0, bars.length - 6)].time;
           addLineSeries([{ time: t0, value: o.price1 }, { time: t1, value: o.price2 }], GOLD, 1.5, LineStyle.Dashed);
           if (o.price3 != null) {
-            addLineSeries([{ time: t0, value: o.price3 }, { time: t1, value: o.price4 }], "rgba(255,195,0,0.5)", 1, LineStyle.Dashed);
+            addLineSeries([{ time: t0, value: o.price3 }, { time: t1, value: o.price4 }], "rgba(244,211,94,0.5)", 1, LineStyle.Dashed);
           }
           break;
         }
@@ -702,7 +702,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
 
         {/* Live price pill */}
         {!ohlc && price != null && (
-          <div style={{ background: `linear-gradient(135deg, #FFC300 0%, #FFC300 50%, #FFC300 100%)`, borderRadius: 8, padding: "4px 10px", fontFamily: FONT, fontWeight: 800, fontSize: 13, color: "#0F0E0B" }}>
+          <div style={{ background: `linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)`, borderRadius: 8, padding: "4px 10px", fontFamily: FONT, fontWeight: 800, fontSize: 13, color: "#0F0E0B" }}>
             {fmtPrice(price)}
           </div>
         )}
@@ -721,7 +721,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
             style={{
               flexShrink: 0, padding: "6px 14px", borderRadius: 8,
               border: `1px solid ${activeTf === tf.key ? "transparent" : TK.border}`,
-              background: activeTf === tf.key ? `linear-gradient(135deg, #FFC300 0%, #FFC300 50%, #FFC300 100%)` : "transparent",
+              background: activeTf === tf.key ? `linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)` : "transparent",
               color: activeTf === tf.key ? "#0F0E0B" : TK.muted,
               fontFamily: FONT, fontWeight: 700, fontSize: 12,
               cursor: "pointer",
