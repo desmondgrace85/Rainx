@@ -6124,6 +6124,10 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [verification, setVerification] = useState(null);
   const [showLegal, setShowLegal] = useState(false);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
+  useEffect(() => {
+    if (morePage !== "profile-menu") setAppearanceOpen(false);
+  }, [morePage]);
   // PWA install — deferred prompt + installed flag
   const [installPrompt, setInstallPrompt] = useState(null);
   const [appInstalled, setAppInstalled] = useState(() => window.matchMedia('(display-mode: standalone)').matches);
@@ -6490,7 +6494,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           </div>
         </button>
         {/* Appearance — standalone, before Settings */}
-        <button onClick={() => setMorePage("appearance")}
+        <button onClick={() => setAppearanceOpen(true)}
           style={{ width:"100%", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
           <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:"50%", right:14, transform:"translateY(-50%)" }} />
           <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
@@ -6529,6 +6533,30 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       <div style={{ padding:"24px 20px 0", textAlign:"center" }}>
         <div style={{ fontSize:10.5, color:T.muted, lineHeight:1.7 }}>RainX is an analysis tool, not a broker.<br/>AI analysis is not financial advice.</div>
       </div>
+      {appearanceOpen && (
+        <div onClick={() => setAppearanceOpen(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.16)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)", zIndex:60, display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
+          <style>{"@keyframes rxSheetUp { from { transform:translateY(100%) } to { transform:translateY(0) } }"}</style>
+          <div onClick={(e) => e.stopPropagation()} style={{ background:"#ffffff", borderRadius:24, padding:"14px 14px 28px", animation:"rxSheetUp 0.28s cubic-bezier(0.22,1,0.36,1)" }}>
+            <div style={{ width:42, height:5, borderRadius:3, background:"#e2e2e2", margin:"0 auto 18px" }} />
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:"#2d2d2d", textAlign:"center", marginBottom:22 }}>Choose appearance</div>
+            <div style={{ display:"flex", justifyContent:"space-between", gap:10 }}>
+              {[["light","Always light"],["dark","Always dark"],["system","Device settings"]].map(([val,label]) => {
+                const selected = themeMode === val;
+                const mode = val === "system" ? "split" : val;
+                return (
+                  <button key={val} onClick={() => { lsSet("rainx-theme", val); setThemeMode(val); }} style={{ flex:1, background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
+                    {renderAppearancePhone(mode)}
+                    <div style={{ width:22, height:22, borderRadius:"50%", border: "2px solid " + (selected ? "#4a6d7c" : "#cfcfcf"), display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      {selected && <div style={{ width:12, height:12, borderRadius:"50%", background:"#4a6d7c" }} />}
+                    </div>
+                    <div style={{ fontFamily:FONT_HEAD, fontWeight:600, fontSize:12, color:"#2d2d2d" }}>{label}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -7053,7 +7081,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     </MoreSubScreen>
   );
 
-  const renderAppearancePhone = (mode) => {
+  function renderAppearancePhone(mode) {
     const isLight = mode === "light";
     const splitGrad = function(l, d) { return "linear-gradient(to right, " + l + " 50%, " + d + " 50%)"; };
     const bg = mode === "split" ? splitGrad("#f5f5f5", "#1c1c1c") : (isLight ? "#f5f5f5" : "#1c1c1c");
@@ -7072,32 +7100,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <div style={{ height:12, borderRadius:6, background:nav }} />
       </div>
     );
-  };
+  }
 
-  if (morePage === "appearance") return (
-    <div onClick={() => setMorePage("profile-menu")} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.16)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)", zIndex:60, display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
-      <style>{"@keyframes rxSheetUp { from { transform:translateY(100%) } to { transform:translateY(0) } }"}</style>
-      <div onClick={(e) => e.stopPropagation()} style={{ background:"#ffffff", borderRadius:24, padding:"14px 14px 28px", animation:"rxSheetUp 0.28s cubic-bezier(0.22,1,0.36,1)" }}> 
-        <div style={{ width:42, height:5, borderRadius:3, background:"#e2e2e2", margin:"0 auto 18px" }} />
-        <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:"#2d2d2d", textAlign:"center", marginBottom:22 }}>Choose appearance</div>
-        <div style={{ display:"flex", justifyContent:"space-between", gap:10 }}>
-          {[["light","Always light"],["dark","Always dark"],["system","Device settings"]].map(([val,label]) => {
-            const selected = themeMode === val;
-            const mode = val === "system" ? "split" : val;
-            return (
-              <button key={val} onClick={() => { lsSet("rainx-theme", val); setThemeMode(val); }} style={{ flex:1, background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}> 
-                {renderAppearancePhone(mode)}
-                <div style={{ width:22, height:22, borderRadius:"50%", border: "2px solid " + (selected ? "#4a6d7c" : "#cfcfcf"), display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  {selected && <div style={{ width:12, height:12, borderRadius:"50%", background:"#4a6d7c" }} />}
-                </div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:600, fontSize:12, color:"#2d2d2d" }}>{label}</div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
   if (morePage === "settings") return (
     <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Settings" subtitle="Privacy &amp; account controls">
       <div style={{ padding:16 }}>
