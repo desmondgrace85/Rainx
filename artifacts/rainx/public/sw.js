@@ -1,7 +1,7 @@
 /* RainX Service Worker — Push Notifications + Offline Cache */
-// IMPORTANT: bump this version string on every future deploy, or users may keep
-// seeing a stale cached version of the app for a while after you ship changes.
-const CACHE_NAME = "rainx-v2026-08-16-appearance-fix-1";
+// Keep this unique for deploys, but update adoption is also enforced by
+// index.html with updateViaCache: "none" and an explicit registration.update().
+const CACHE_NAME = "rainx-v2026-08-16-update-adoption-1";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
 const presenceByClient = new Map();
 const recentPushIds = new Set();
@@ -92,7 +92,11 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(
+        keys
+          .filter((k) => k.startsWith("rainx-") && k !== CACHE_NAME)
+          .map((k) => caches.delete(k))
+      )
     ).then(() => self.clients.claim())
   );
 });

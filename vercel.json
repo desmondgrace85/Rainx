@@ -2,6 +2,35 @@
   "installCommand": "npm install -g pnpm@9 && pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm --filter @workspace/rainx run build:vercel",
   "outputDirectory": "artifacts/rainx/dist",
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/manifest.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/api/mt5/:path*",     "destination": "https://raina-ai-production-b247.up.railway.app/mt5/:path*" },
     { "source": "/api/signals/:path*", "destination": "https://raina-ai-production-b247.up.railway.app/signals/:path*" },

@@ -30,9 +30,25 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('./sw.js').catch(function(err) {
-            console.warn('SW registration failed:', err);
+          var refreshing = false;
+
+          // A new worker can take control of an already-open tab, but that tab
+          // will otherwise continue rendering the old JavaScript bundle.
+          navigator.serviceWorker.addEventListener('controllerchange', function() {
+            if (refreshing) return;
+            refreshing = true;
+            window.location.reload();
           });
+
+          navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+            .then(function(registration) {
+              // Do not wait for the browser's periodic update check. This also
+              // bypasses any intermediary cache that still has an old sw.js.
+              return registration.update();
+            })
+            .catch(function(err) {
+              console.warn('SW registration/update failed:', err);
+            });
         });
       }
     </script>
