@@ -182,7 +182,7 @@ export function lsDelete(key) {
 }
 
 // ── URL-hash routing helpers — keeps current page alive across refresh ────────
-const _ROUTE_TABS = ["home","markets","community","more","history","scalping","subscribe"];
+const _ROUTE_TABS = ["home","markets","wallet","community","more","history","scalping","subscribe"];
 export function routeRead() {
   try {
     const h = window.location.hash.slice(1);

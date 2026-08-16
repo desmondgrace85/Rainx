@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ChevronLeft, ChevronRight, X, Maximize2, Home } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Maximize2, Home, Plus, ArrowUpRight } from "lucide-react";
 import LightweightChart from "./LightweightChart";
 import FullChartView from "./FullChartView";
+import SpaceNewsSection from "./SpaceNewsSection";
+import { resolveMarketLogo } from "./MarketLogos";
+import { supabase } from "./supabaseClient";
 import {
   T, FONT_HEAD, FONT_BODY,
   ALL_ASSETS, INSTRUMENTS, ASSET_CATALOG, ANALYSIS_DURATIONS, STEP_DEFS, TIMEFRAMES,
@@ -13,6 +16,15 @@ import {
 
 let isDarkCanvas = false;
 function setIsDarkCanvas(v) { isDarkCanvas = v; }
+
+class HomeChartErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) return <div style={{ padding: 24, color: T.paper, background: T.ink, textAlign: "center" }}>Chart unavailable. Please try again.</div>;
+    return this.props.children;
+  }
+}
 
 function CandlestickChart({ candles, overlays, inst, containerHeight = 260 }) {
   const canvasRef = useRef(null);
@@ -553,7 +565,7 @@ function fmtTime(secs) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Home Tab — main redesigned screen
 // ─────────────────────────────────────────────────────────────────────────────
-function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessions, sessionSecsLeft, startAnalysisSession, seriesMap, themeMode, activeMarkets = [], addActiveMarket, removeActiveMarket, maxActiveMarkets = 3 }) {
+function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessions, sessionSecsLeft, startAnalysisSession, seriesMap, signalsMap, themeMode, activeMarkets = [], addActiveMarket, removeActiveMarket, maxActiveMarkets = 3 }) {
   const [showAddMarket, setShowAddMarket] = useState(false);
   const [showActivity, setShowActivity] = useState(false);
   const [showFullChart, setShowFullChart] = useState(false);
@@ -649,6 +661,19 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
     : T.gold;
 
   const [showSubLock, setShowSubLock] = useState(false);
+  const [todayPips, setTodayPips] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    if (!account?.id) { setTodayPips(0); return; }
+    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+    supabase.from("trade_history").select("points,result,closed_at,created_at").eq("user_id", account.id).gte("closed_at", startOfDay.toISOString()).limit(100)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const total = (data || []).filter(row => row.result === "tp" || Number(row.points) > 0).reduce((sum,row) => sum + (Number(row.points) || 0), 0);
+        setTodayPips(Math.max(0, Math.round(total)));
+      }).catch(() => { if (!cancelled) setTodayPips(0); });
+    return () => { cancelled = true; };
+  }, [account?.id]);
 
   // Called from AddMarketSheet when the user picks a NEW market to add/replace
   function handleAssetSelect(asset) {
@@ -665,274 +690,81 @@ function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setA
     setActiveSymbol(asset.symbol);
   }
 
+  const activeSignal = signalsMap?.[activeSymbol]?.["15m"] || null;
+  const signalSymbol = activeSignal ? activeSymbol : "BTCUSD";
+  const signalInst = ALL_ASSETS.find(a => a.symbol === signalSymbol) || inst;
+  const signalData = signalsMap?.[signalSymbol]?.["15m"] || null;
+  const signalBias = String(signalData?.bias || "BUY").toUpperCase();
+  const signalLabel = signalBias === "SELL" ? "SELL SIGNAL" : signalBias === "HOLD" ? "HOLD" : "BUY SIGNAL";
+  const openSignalChart = () => { setActiveSymbol(signalSymbol); setShowFullChart(true); };
+  const openMarket = (symbol) => {
+    setActiveSymbol(symbol);
+    if (!sessions?.[symbol] && addActiveMarket) {
+      const asset = ALL_ASSETS.find(a => a.symbol === symbol);
+      if (asset) startAnalysisSession(asset);
+    }
+  };
+  const marketCards = activeMarkets.slice(0,3).map(symbol => ALL_ASSETS.find(a=>a.symbol===symbol)).filter(Boolean);
+
   return (
-    <div style={{ paddingBottom: 4 }}>
-      {/* ── Asset tab bar ──────────────────────────────────────────────── */}
-      <div className="hide-scroll" style={{ display:"flex", gap:6, padding:"12px 14px 6px", overflowX:"auto", overflowY:"hidden", WebkitOverflowScrolling:"touch", position:"relative" }}>
-        {(() => {
-          const primarySym = session?.symbol || activeSymbol;
-          const primaryAsset = ALL_ASSETS.find(a => a.symbol === primarySym);
-          // Show active watched markets; fall back to defaults if none set yet
-          const watchedAssets = activeMarkets.length > 0
-            ? activeMarkets.filter(s => s !== primarySym).map(s => ALL_ASSETS.find(a => a.symbol === s)).filter(Boolean)
-            : [];
-          const tabs = [primaryAsset, ...watchedAssets].filter(Boolean).slice(0, 4);
-          return tabs.map(a => {
-            const active = a.symbol === primarySym;
-            return (
-              // Tab bar just switches the view — no dialog, no session restart
-              <button key={a.symbol} onClick={() => setActiveSymbol(a.symbol)} style={{ flexShrink:0, background:active ? T.goldGradient : T.card, color:active ? T.ink : T.paper, border:`1px solid ${active ? T.gold : T.cardBorder}`, borderRadius:20, padding:"6px 14px", fontFamily:FONT_HEAD, fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                {a.symbol}
-              </button>
-            );
-          });
-        })()}
-        <button onClick={() => setShowAddMarket(true)} style={{ flexShrink:0, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"6px 12px", fontFamily:FONT_HEAD, fontSize:14, fontWeight:700, color:T.gold, cursor:"pointer" }}>+</button>
-      </div>
-
-      {/* ── Live market mini-strip ──────────────────────────────────────── */}
-      <div className="hide-scroll" style={{ display:"flex", gap:8, padding:"10px 14px 0", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
-        {ALL_ASSETS.filter(a => ["BTCUSD","ETHUSD","XAUUSD","EURUSD","NAS100","SOLUSD"].includes(a.symbol)).map(a => {
-          const arr = seriesMap[a.symbol] || [];
-          const p  = arr.length ? arr[arr.length-1].price : a.base;
-          const p2 = arr.length > 1 ? arr[arr.length-2].price : p;
-          const up = p >= p2;
-          return (
-            <button key={a.symbol} onClick={() => handleAssetSelect(a)}
-              style={{ flexShrink:0, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", textAlign:"left" }}>
-              <div style={{ fontFamily:FONT_HEAD, fontSize:10, fontWeight:700, color:T.muted }}>{a.symbol}</div>
-              <div style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:800, color:up ? "#1D6FE8" : T.rust, fontVariantNumeric:"tabular-nums" }}>{p.toFixed(Math.min(a.digits,2))}</div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Price header ─────────────────────────────────────────────────── */}
-      <div style={{ padding:"8px 16px 0" }}>
-        <div style={{ display:"flex", alignItems:"baseline", gap:10 }}>
-          <span style={{ fontFamily:FONT_HEAD, fontSize:34, fontWeight:800, fontVariantNumeric:"tabular-nums", color:T.paper }}>{last?.toFixed(inst.digits) ?? "—"}</span>
-          <span style={{ fontSize:14, fontWeight:700, color: changePct >= 0 ? T.sage : T.rust }}>{changePct >= 0 ? "▲" : "▼"} {Math.abs(changePct || 0).toFixed(3)}%</span>
-        </div>
-        <div style={{ fontSize:12, color:T.muted, fontWeight:500, marginTop:1 }}>{inst.name} · {inst.symbol}</div>
-      </div>
-
-      {/* ── Chart preview area ────────────────────────────────────────────── */}
-      <div style={{ margin:"12px 14px 0", borderRadius:14, border:`1px solid ${T.cardBorder}`, overflow:"hidden", background:T.card, position:"relative" }}>
-        {/* AI badge + session timer */}
-        {session && session.state !== "completed" && (
-          <div style={{ position:"absolute", top:8, right:8, zIndex:5, display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:5, background:T.ink, border:`1px solid ${stateColor}44`, borderRadius:20, padding:"3px 9px" }}>
-              <div style={{ width:6, height:6, borderRadius:"50%", background:stateColor, animation:"pulse 1.5s infinite" }} />
-              <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:9.5, color:stateColor }}>{stateLabel}</span>
+    <div style={{background:"#F7F3E9",minHeight:"100%",color:T.ink}}>
+      <section style={{padding:"14px 14px 0",background:"linear-gradient(180deg,#F4D35E 0%,#F8E9A8 30%,#F7F3E9 100%)"}}>
+        <div style={{background:"#070706",border:"1px solid #2B281F",borderRadius:26,overflow:"hidden",padding:"18px 14px 12px",boxShadow:"0 18px 40px rgba(15,14,11,0.18)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"flex-start"}}>
+            <div style={{minWidth:0}}>
+              <div style={{fontFamily:FONT_HEAD,fontSize:13,fontWeight:700,color:"#F5F1E8"}}>Today’s Performance <span style={{color:"#8D887C",fontSize:12}}>ⓘ</span></div>
+              <div style={{display:"flex",alignItems:"baseline",gap:8,marginTop:8}}><span style={{fontFamily:FONT_HEAD,fontSize:42,lineHeight:1,fontWeight:800,color:T.gold,letterSpacing:-1.5}}>+{todayPips}</span><span style={{fontFamily:FONT_HEAD,fontSize:27,fontWeight:700,color:"#F5F1E8"}}>Pips</span></div>
+              <div style={{marginTop:5,fontFamily:FONT_HEAD,fontSize:11.5,fontWeight:600,color:"#D0C9B9"}}>Pips Wins Today</div>
+              <div style={{marginTop:8,fontFamily:FONT_HEAD,fontSize:11,fontWeight:700,color:"#53D769"}}>▲ {todayPips>0?`+${todayPips} pips`:"0 pips"} vs yesterday</div>
             </div>
-            {sessionSecsLeft > 0 && (
-              <div style={{ fontSize:9.5, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600 }}>{fmtTime(sessionSecsLeft)}</div>
-            )}
-          </div>
-        )}
-
-        {/* Empty state: only when zero markets selected */}
-        {activeMarkets.length === 0 && !session && (
-          <div style={{ position:"absolute", inset:0, zIndex:5, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:T.ink + "cc", borderRadius:14 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:4 }}>Select a market</div>
-            <div style={{ fontSize:12, color:T.muted, marginBottom:16, textAlign:"center", maxWidth:200 }}>You can select up to 3 markets per day.</div>
-            <button onClick={() => setShowAddMarket(true)} style={{ background:T.goldGradient, color:T.ink, border:"none", borderRadius:10, padding:"10px 22px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, cursor:"pointer" }}>+ Add Market</button>
-          </div>
-        )}
-        {/* Market Closed overlay */}
-        {!marketOpen && (activeMarkets.length > 0 || !!session) && (
-          <div style={{ position:"absolute", inset:0, zIndex:4, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"rgba(15,14,11,0.75)", borderRadius:14, pointerEvents:"none" }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.muted, marginBottom:6 }}>Market Closed</div>
-            <div style={{ fontSize:12, color:T.muted, textAlign:"center", maxWidth:220, lineHeight:1.6 }}>
-              {inst?.cls === "crypto" ? "Crypto trades 24/7 — data will resume shortly." : inst?.cls === "forex" ? "Forex is closed on weekends (Sat–Sun UTC)." : "Opens at the next market session."}
-            </div>
-          </div>
-        )}
-
-        {/* Preview chart — powered by lightweight-charts */}
-        <div style={{ height:270, flexShrink:0, minHeight:220 }}>
-          <LightweightChart
-            candles={chartCandles}
-            overlays={[
-              ...(session?.overlays || []).filter(o => !o._tf),
-              ...(session?.overlaysByTf?.[sigTf] || []),
-            ]}
-            inst={inst}
-            containerHeight={270}
-            compact={false}
-            isDark={T.ink === "#0F0E0B"}
-          />
-        </div>
-
-        {/* "Open Full Chart" button — always visible at bottom of chart */}
-        <button
-          onClick={() => setShowFullChart(true)}
-          style={{
-            width:"100%", background:T.ink, border:"none", borderTop:`1px solid ${T.cardBorder}`,
-            padding:"9px 16px", cursor:"pointer",
-            display:"flex", alignItems:"center", justifyContent:"center", gap:7,
-          }}
-        >
-          <Maximize2 size={13} color={T.gold} />
-          <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.gold }}>Open Full Chart</span>
-        </button>
-      </div>
-
-      {/* Full-screen chart overlay */}
-      {showFullChart && (
-        <FullChartView
-          inst={inst}
-          session={session}
-          themeMode={themeMode}
-          onClose={() => setShowFullChart(false)}
-          livePrice={last}
-        />
-      )}
-
-      {/* ── Timeframe selector (chart candle timeframe — M15 = 15-min candles, not AI analysis duration) ── */}
-      <div className="hide-scroll" style={{ display:"flex", gap:6, padding:"10px 14px 0", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
-        {["15m","30m","1H","2H","4H","1D"].map(tf => {
-          const active = tf === activeChartTf;
-          return (
-            <button key={tf} onClick={() => setActiveChartTf(tf)} style={{ flexShrink:0, minWidth:44, padding:"7px 0", borderRadius:8, border:`1px solid ${active ? T.gold : T.cardBorder}`, background:active ? T.goldGradient : T.card, color:active ? T.ink : T.paper, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11, cursor:"pointer" }}>
-              {tf}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Signal Timeframe Tabs ───────────────────────────────────────── */}
-      <div style={{ display:"flex", gap:0, margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:4 }}>
-        {[{key:"15m",label:"15 Minute"},{key:"1h",label:"1 Hour"}].map(({key,label})=>{
-          const active = sigTf === key;
-          return (
-            <button key={key} onClick={()=>setSigTf(key)} style={{ flex:1, background:active?T.goldGradient:"transparent", color:active?T.ink:T.muted, border:"none", borderRadius:8, padding:"9px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:"pointer", transition:"all 0.2s", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
-              {active && <span style={{ width:7, height:7, borderRadius:"50%", background:T.ink, display:"inline-block", flexShrink:0 }} />}
-              {label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Signal Card ──────────────────────────────────────────────────── */}
-      {(()=>{
-        const setup = session?.setupByTf?.[sigTf];
-        const sym = session?.symbol || activeSymbol || "—";
-        const tfLabel = sigTf === "15m" ? "15 Minute" : "1 Hour";
-        const genTime = session?.activities?.length
-          ? (session.activities[session.activities.length-1]?.time || new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"}))
-          : new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
-
-        // Market closed state
-        if (!marketOpen && (activeMarkets.length > 0 || !!session)) {
-          return (
-            <div style={{ margin:"8px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"32px 20px", textAlign:"center" }}>
-              <div style={{ fontSize:34, marginBottom:10 }}>🌙</div>
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.paper, marginBottom:6 }}>Market is closed</div>
-              <div style={{ fontSize:12, color:T.muted, lineHeight:1.6 }}>No new signals will load until trading resumes.</div>
-            </div>
-          );
-        }
-
-        // Analyzing — no setup yet
-        if (!session || (!setup && session.state === "analyzing")) {
-          return (
-            <div style={{ margin:"8px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"28px 20px", textAlign:"center" }}>
-              <div style={{ width:8, height:8, borderRadius:"50%", background:T.gold, margin:"0 auto 12px", animation:"pulse 1.5s infinite" }} />
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.gold, marginBottom:4 }}>Analyzing market…</div>
-              <div style={{ fontSize:12, color:T.muted }}>A signal will appear when a strong setup is confirmed.</div>
-            </div>
-          );
-        }
-
-        const bias = setup?.bias || "HOLD";
-        const isBuy = bias === "BUY", isSell = bias === "SELL", isHold = !isBuy && !isSell;
-        const confidence = setup?.confidence ?? 0;
-        const dotColor = isBuy ? T.sage : isSell ? T.rust : T.muted;
-        const actText = session?.activities?.[0]?.text || "";
-        const hasSlHit = actText.toLowerCase().includes("stop loss");
-        const hasTpHit = actText.toLowerCase().includes("take profit");
-        let message = null;
-        if (isHold) message = "No trade recommended right now - signals are mixed. No entry, stop loss, or take profit is being tracked for this call.";
-        else if (hasSlHit) message = "Stop Loss hit. Your capital was protected by our risk-management limits. We are analyzing the next high-probability market setup.";
-        else if (hasTpHit) message = "Take Profit hit. Well done. We are scanning for the next high-probability setup.";
-        const fmt = n => (n != null && isFinite(n)) ? Number(n).toFixed(inst?.digits ?? 2) : "—";
-        const entry = setup?.entry ?? (setup?.entryLow != null && setup?.entryHigh != null ? (setup.entryLow + setup.entryHigh) / 2 : null);
-
-        return (
-          <div style={{ margin:"8px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px" }}>
-            {/* Header: symbol + badge */}
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-              <div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.paper }}>{sym}</div>
-                <div style={{ fontSize:11.5, color:T.muted, marginTop:3 }}>{tfLabel} signal · generated {genTime}</div>
+            <button onClick={openSignalChart} style={{width:154,minHeight:104,flexShrink:0,background:"#11110F",border:"1px solid #4A432A",borderRadius:20,padding:"12px 10px",textAlign:"left",cursor:"pointer",boxShadow:"0 0 18px rgba(244,211,94,0.08)"}}>
+              <div style={{display:"flex",alignItems:"center",gap:7}}>
+                <div style={{width:32,height:32,borderRadius:"50%",background:T.gold,display:"grid",placeItems:"center",fontSize:18,color:"#0F0E0B"}}>₿</div>
+                <div><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:14,color:"#F5F1E8"}}>{signalSymbol}</div><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:11,color:signalBias==="SELL"?"#E27661":signalBias==="HOLD"?"#B4AD9D":"#4FE26E"}}>{signalLabel}</div></div>
               </div>
-              <div style={{ display:"flex", alignItems:"center", gap:6, background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, padding:"5px 10px", flexShrink:0 }}>
-                <div style={{ width:8, height:8, borderRadius:"50%", background:dotColor, flexShrink:0 }} />
-                <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, color:T.paper }}>{bias}</span>
-              </div>
-            </div>
-            {/* Confidence row */}
-            <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, padding:"6px 0", borderBottom:`1px solid ${T.cardBorder}` }}>
-              <span style={{ color:T.muted }}>Confidence</span>
-              <span style={{ color:T.paper, fontWeight:700 }}>{confidence}%</span>
-            </div>
-            {/* Message box */}
-            {message && (
-              <div style={{ background:`${T.cardBorder}40`, border:`1px solid ${T.cardBorder}`, borderRadius:10, padding:"10px 12px", margin:"8px 0" }}>
-                <div style={{ fontSize:12.5, color:T.paper, lineHeight:1.6 }}>{message}</div>
-              </div>
-            )}
-            {/* Trade rows — BUY / SELL only */}
-            {!isHold && setup && (
-              <>
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, padding:"6px 0", borderBottom:`1px solid ${T.cardBorder}` }}>
-                  <span style={{ color:T.muted }}>Entry</span>
-                  <span style={{ color:T.paper, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{fmt(entry)}</span>
-                </div>
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, padding:"6px 0", borderBottom:`1px solid ${T.cardBorder}` }}>
-                  <span style={{ color:T.muted }}>Stop Loss</span>
-                  <span style={{ color:T.rust, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{fmt(setup.stopLoss)}</span>
-                </div>
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, padding:"6px 0", borderBottom:`1px solid ${T.cardBorder}` }}>
-                  <span style={{ color:T.muted }}>Take Profit 1</span>
-                  <span style={{ color:T.sage, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{fmt(setup.tp1)}</span>
-                </div>
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, padding:"6px 0" }}>
-                  <span style={{ color:T.muted }}>Take Profit 2</span>
-                  <span style={{ color:T.sage, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{fmt(setup.tp2)}</span>
-                </div>
-              </>
-            )}
+              <div style={{marginTop:13,border:"1px solid #8E741D",borderRadius:14,padding:"8px",display:"flex",alignItems:"center",justifyContent:"center",gap:5,color:T.gold,fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800,animation:"rx-breathe 2.2s ease-in-out infinite"}}>Tap to view setup <ArrowUpRight size={12}/></div>
+            </button>
           </div>
-        );
-      })()}
-      {/* Session complete panel */}
-      {session?.state === "completed" && (
-        <div style={{ margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"20px 16px", textAlign:"center" }}>
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:6 }}>Analysis Session Complete</div>
-          <div style={{ fontSize:12, color:T.muted, marginBottom:16 }}>The selected analysis period has ended. Start a new session to continue monitoring.</div>
-            <button onClick={() => setShowAddMarket(true)} style={{ background:T.goldGradient, color:T.ink, border:"none", borderRadius:10, padding:"11px 28px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, cursor:"pointer" }}>Analyze Again</button>
+          <svg viewBox="0 0 680 185" preserveAspectRatio="none" style={{display:"block",width:"100%",height:165,marginTop:10}}>
+            <defs><linearGradient id="rxPerfFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#F4D35E" stopOpacity=".30"/><stop offset="100%" stopColor="#F4D35E" stopOpacity="0"/></linearGradient><filter id="rxPerfGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+            <path d="M0 151 C42 145 54 136 90 139 S138 133 160 120 S205 88 245 83 S292 91 330 87 S376 99 410 87 S458 75 492 68 S540 48 565 45 S615 26 680 14 L680 185 L0 185 Z" fill="url(#rxPerfFill)"/>
+            <path d="M0 151 C42 145 54 136 90 139 S138 133 160 120 S205 88 245 83 S292 91 330 87 S376 99 410 87 S458 75 492 68 S540 48 565 45 S615 26 680 14" fill="none" stroke={T.gold} strokeWidth="5" strokeLinecap="round" filter="url(#rxPerfGlow)"/>
+            <circle cx="680" cy="14" r="8" fill={T.gold}/><circle cx="680" cy="14" r="15" fill="none" stroke={T.gold} strokeOpacity=".18" strokeWidth="4"/>
+          </svg>
+          <div style={{display:"flex",justifyContent:"space-between",padding:"0 3px",color:"#6F6A5D",fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:700}}>{["1D","1W","1M","1Y","All"].map((label,i)=><span key={label} style={{color:i===0?T.gold:"#777164",background:i===0?"#2A2514":"transparent",borderRadius:18,padding:i===0?"8px 15px":"8px 10px"}}>{label}</span>)}</div>
         </div>
-      )}
+      </section>
 
-      <div style={{ margin:"10px 14px 16px", fontSize:10.5, color:T.muted, lineHeight:1.6, textAlign:"center" }}>
-        AI-generated analysis, not financial advice. No outcome is guaranteed. Always manage your risk.
-      </div>
-
-      {/* ── Modals ───────────────────────────────────────────────────────── */}
-      {showSubLock && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:90, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
-          <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:18, padding:28, width:"100%", maxWidth:340, textAlign:"center" }}>
-            <div style={{ fontSize:38, marginBottom:12 }}>🔒</div>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:8 }}>Subscription Required</div>
-            <div style={{ fontSize:13, color:T.muted, lineHeight:1.7, marginBottom:22 }}>An active subscription is required to access live market analysis, Raina AI signals, and real-time charts. Subscribe to unlock up to 3 active markets.</div>
-            <button onClick={() => { setShowSubLock(false); onSubscribe(); }} style={{ width:"100%", background:T.goldGradient, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:"pointer", marginBottom:10 }}>View Plans</button>
-            <button onClick={() => setShowSubLock(false)} style={{ width:"100%", background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"11px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.muted, cursor:"pointer" }}>Close</button>
-          </div>
+      <section style={{padding:"16px 14px 0"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8}}>
+          {marketCards.map(asset=>{
+            const logo=resolveMarketLogo({symbol:asset.symbol})?.src; const arr=seriesMap?.[asset.symbol]||[]; const price=arr.length?arr[arr.length-1].price:asset.base; const prev=arr.length>1?arr[arr.length-2].price:price; const up=price>=prev;
+            return <button key={asset.symbol} onClick={()=>openMarket(asset.symbol)} style={{minWidth:0,minHeight:126,borderRadius:18,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"12px 7px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+              {logo?<img src={logo} alt="" style={{width:36,height:36,borderRadius:"50%",objectFit:"cover",marginBottom:8}}/>:<div style={{width:36,height:36,borderRadius:"50%",background:T.gold,marginBottom:8}}/>}
+              <div style={{fontFamily:FONT_HEAD,fontSize:11,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>{asset.symbol}</div>
+              <div style={{marginTop:5,fontFamily:FONT_HEAD,fontSize:10,fontWeight:700,color:up?"#5EDB78":"#E27661",fontVariantNumeric:"tabular-nums"}}>{Number(price).toFixed(Math.min(asset.digits,2))}</div>
+            </button>;
+          })}
+          <button onClick={()=>setShowAddMarket(true)} style={{minWidth:0,minHeight:126,borderRadius:18,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"12px 7px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+            <div style={{width:36,height:36,borderRadius:"50%",border:`2px solid ${T.gold}`,display:"grid",placeItems:"center",marginBottom:8}}><Plus size={20} color={T.gold}/></div>
+            <div style={{fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800}}>Add Market</div>
+          </button>
         </div>
-      )}
-      {showAddMarket && <AddMarketSheet onClose={() => setShowAddMarket(false)} onSelect={handleAssetSelect} activeMarkets={activeMarkets} maxActiveMarkets={maxActiveMarkets} onRemoveMarket={removeActiveMarket} />}
+      </section>
+
+      <SpaceNewsSection />
+
+      {showFullChart&&<HomeChartErrorBoundary><FullChartView inst={signalInst} session={sessions?.[signalSymbol]||session} signalsMap={signalsMap} themeMode={themeMode} onClose={()=>setShowFullChart(false)} livePrice={signalSymbol===activeSymbol?last:(seriesMap?.[signalSymbol]?.slice(-1)?.[0]?.price||null)}/></HomeChartErrorBoundary>}
+
+      {showSubLock&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+        <div style={{background:T.card,border:`1px solid ${T.cardBorder}`,borderRadius:18,padding:28,width:"100%",maxWidth:340,textAlign:"center"}}>
+          <div style={{fontSize:38,marginBottom:12}}>🔒</div><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:17,color:T.paper,marginBottom:8}}>Subscription Required</div>
+          <div style={{fontSize:13,color:T.muted,lineHeight:1.7,marginBottom:22}}>An active subscription is required to access live market analysis, Raina AI signals, and real-time charts. Subscribe to unlock up to 3 active markets.</div>
+          <button onClick={()=>{setShowSubLock(false);onSubscribe();}} style={{width:"100%",background:T.goldGradient,color:T.ink,border:"none",borderRadius:12,padding:"13px 0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:14,cursor:"pointer",marginBottom:10}}>View Plans</button>
+          <button onClick={()=>setShowSubLock(false)} style={{width:"100%",background:"none",border:`1px solid ${T.cardBorder}`,borderRadius:12,padding:"11px 0",fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.muted,cursor:"pointer"}}>Close</button>
+        </div>
+      </div>}
+      {showAddMarket&&<AddMarketSheet onClose={()=>setShowAddMarket(false)} onSelect={handleAssetSelect} activeMarkets={activeMarkets} maxActiveMarkets={maxActiveMarkets} onRemoveMarket={removeActiveMarket}/>}
     </div>
   );
 }

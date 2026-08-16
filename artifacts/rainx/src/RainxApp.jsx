@@ -1539,6 +1539,18 @@ function PullToRefresh({ children }) {
   );
 }
 
+function WalletTab({ account }) {
+  return (
+    <div style={{ minHeight:"100%", background:T.ink, paddingBottom:20 }}>
+      <div style={{ padding:"18px 16px 8px" }}>
+        <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:24, color:T.paper }}>Wallet</div>
+        <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>Your trader wallet, balance and transactions</div>
+      </div>
+      <CreatorWalletScreen account={account} />
+    </div>
+  );
+}
+
 function MainAppContent({ account, onLogout }) {
   const seriesMap = useMultiPriceSeries();
   const seriesMapRef = useRef(seriesMap);
@@ -1556,9 +1568,9 @@ function MainAppContent({ account, onLogout }) {
 
   const [tab, setTab] = useState(() => {
     const { tab: urlTab } = routeRead();
-    if (urlTab && urlTab !== "space-coins") return urlTab;
+    if (urlTab && urlTab !== "space-coins") return urlTab === "markets" ? "wallet" : urlTab;
     const t = lsGet("rainx-tab");
-    return _ROUTE_TABS.includes(t) ? t : "home";
+    return t === "markets" ? "wallet" : (_ROUTE_TABS.includes(t) ? t : "home");
   });
   const [profileFromHeader, setProfileFromHeader] = useState(() => routeRead().flag === "h");
   const [communityProfileOpen, setCommunityProfileOpen] = useState(false);
@@ -1580,7 +1592,7 @@ function MainAppContent({ account, onLogout }) {
   const swipeRef   = useRef(null); // edge-swipe touch tracking
 
   const goTab = (key, forcedDir) => {
-    const ORDER = { home: 0, markets: 1, community: 2, more: 3, history: 3, scalping: 3, subscribe: 3 };
+    const ORDER = { home: 0, wallet: 1, community: 2, more: 3, history: 3, scalping: 3, subscribe: 3 };
     tabDirRef.current  = forcedDir ?? ((ORDER[key] ?? 0) >= (ORDER[prevTabRef.current] ?? 0) ? 1 : -1);
     prevTabRef.current = key;
     setTab(key);
@@ -2639,7 +2651,7 @@ function MainAppContent({ account, onLogout }) {
         @keyframes priceFlash { 0% { opacity:0.4; } 100% { opacity:1; } }
         @keyframes rx-slide-in-right { from { transform:translateX(40px); opacity:0; } to { transform:translateX(0); opacity:1; } }
         @keyframes rx-slide-in-left  { from { transform:translateX(-40px); opacity:0; } to { transform:translateX(0); opacity:1; } }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }\n        @keyframes rx-breathe { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.68; transform:scale(.985); } }
         .rx-slide-right { animation: rx-slide-in-right 0.22s cubic-bezier(0.25,0.46,0.45,0.94) backwards; }
         .rx-slide-left  { animation: rx-slide-in-left  0.22s cubic-bezier(0.25,0.46,0.45,0.94) backwards; }
         .hide-scroll::-webkit-scrollbar { display:none; }
@@ -2654,13 +2666,13 @@ function MainAppContent({ account, onLogout }) {
         onOpen={openNotificationTarget}
       />
 
-      {tab === "home" && <div style={{ background: T.card, borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
+      {tab === "home" && <div style={{ background: "linear-gradient(180deg,#F4D35E 0%,#F8E9A8 72%,rgba(247,243,233,0.98) 100%)", borderBottom: "1px solid rgba(15,14,11,0.08)", padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
         {/* ── Profile avatar trigger ── */}
           <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); routeWrite(tab, "profile-menu", "h"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
               <HeaderAvatar account={account} morePage={morePage} T={T} />
             </button>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: FONT_HEAD, fontSize: 19, fontWeight: 800, color: T.goldBright, letterSpacing: -0.3 }}>RainX</div>
+          <div style={{ fontFamily: FONT_HEAD, fontSize: 19, fontWeight: 800, color: T.ink, letterSpacing: -0.3 }}>RainX</div>
           <div style={{ fontSize: 9.5, color: T.muted, fontWeight: 600, marginTop: -2 }}>Powered by Raina AI</div>
         </div>
         <button onClick={() => {
@@ -2710,14 +2722,14 @@ function MainAppContent({ account, onLogout }) {
           const dy = Math.abs(e.changedTouches[0].clientY - swipeRef.current.y);
           swipeRef.current = null;
           if (Math.abs(dx) < 45 || dy > 100) return;
-          const tabs = ["home", "markets", "games", "community", "more"];
+          const tabs = ["home", "wallet", "community", "more"];
           const ci = tabs.indexOf(tab);
           if (dx < 0 && ci < tabs.length - 1) goTab(tabs[ci + 1]);
           else if (dx > 0 && ci > 0)          goTab(tabs[ci - 1]);
         }}
       >
-        {tab === "home" && <HomeTab inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessions={sessions} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} seriesMap={seriesMap} signalsMap={signalsMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} />}
-        {tab === "markets" && <MarketsTab seriesMap={seriesMap} signalsMap={signalsMap} activeSymbol={activeSymbol} onSelect={(s) => { setActiveSymbol(s); goTab("home", -1); }} themeMode={themeMode} />}
+        {tab === "home" && <HomeTab account={account} inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessions={sessions} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} seriesMap={seriesMap} signalsMap={signalsMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} />}
+        {tab === "wallet" && <WalletTab account={account} />}
         {tab === "history" && <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />}
         {tab === "subscribe" && <SubscribeScreen account={account} entitlement={entitlement} onBack={() => goTab("more", -1)} />}
         {tab === "more" && <MoreTabErrorBoundary><MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} activeMarkets={activeMarkets} /></MoreTabErrorBoundary>}
@@ -2924,12 +2936,11 @@ function MainAppContent({ account, onLogout }) {
                 <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z M9 21V12h6v9z"/>
               </svg>
             )},
-            { key: "markets", label: "Markets", icon: (active) => (
+            { key: "wallet", label: "Wallet", icon: (active) => (
               <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "none" : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                <rect x="4" y="13" width="3" height="7" rx="0.8"/>
-                <rect x="10.5" y="8" width="3" height="12" rx="0.8"/>
-                <rect x="17" y="4" width="3" height="16" rx="0.8"/>
-                <polyline points="5.5 10 10 6.5 14 9.5 19 5"/>
+                <path d="M3.5 7.5A2.5 2.5 0 0 1 6 5h12.5A2.5 2.5 0 0 1 21 7.5v9A2.5 2.5 0 0 1 18.5 19H6a2.5 2.5 0 0 1-2.5-2.5z"/>
+                <path d="M3.5 8h14.5a3 3 0 0 1 3 3v1.5h-5.5a2 2 0 0 0 0 4H21"/>
+                <circle cx="16.5" cy="14.5" r="0.9" fill="currentColor"/>
               </svg>
             )},
             { key: "space-coins", center: true },
@@ -6495,18 +6506,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             </button>
           ))}
         </div>
-        {/* Trader Wallet */}
-        <button onClick={() => setMorePage("wallet")}
-          style={{ width:"100%", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
-          <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:"50%", right:14, transform:"translateY(-50%)" }} />
-          <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-            <Wallet size={18} color={T.ink} />
-          </div>
-          <div>
-            <div style={{ width:28, height:3, borderRadius:2, background:T.gold, marginBottom:8 }} />
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Trader Wallet</div>
-          </div>
-        </button>
         {/* Appearance — standalone, before Settings */}
         <button onClick={() => setAppearanceOpen(true)}
           style={{ width:"100%", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
