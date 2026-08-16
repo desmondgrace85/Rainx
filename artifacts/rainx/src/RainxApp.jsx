@@ -1432,18 +1432,18 @@ function CenterNavLogo({ active, onActivate }) {
       <span
         className="rx-center-nav-stage"
         aria-hidden="true"
-        style={{ width: 86, height: 86, background: "transparent" }}
+        style={{ width: 84, height: 84, background: "transparent", transform: "translateY(5px)" }}
       >
         <span
           className="rx-center-nav-aura"
-          style={{ opacity: 0.16, filter: "blur(2px)" }}
+          style={{ opacity: 0.28, filter: "blur(9px)", boxShadow: "none" }}
         />
         <span
           className="rx-center-nav-core"
           style={{
             inset: 12,
-            borderColor: "rgba(255,255,255,0.95)",
-            boxShadow: "0 0 0 4px rgba(255,255,255,0.98), 0 0 8px rgba(244,211,94,0.22), inset 0 1px 3px rgba(255,255,255,0.38), inset 0 0 10px rgba(180,130,30,0.12)",
+            borderColor: "rgba(255,255,255,0.98)",
+            boxShadow: "0 0 0 4px rgba(255,255,255,0.98), 0 0 12px 5px rgba(244,211,94,0.28), inset 0 1px 3px rgba(255,255,255,0.38), inset 0 0 10px rgba(180,130,30,0.12)",
           }}
         >
           <img src={rainxLogoTransparent} alt="" />
