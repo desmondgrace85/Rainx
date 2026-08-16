@@ -323,20 +323,23 @@ function roundRect(ctx, x, y, w, h, r) {
 // Add Market bottom sheet — supports add, replace when full, and manage active
 // ─────────────────────────────────────────────────────────────────────────────
 function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets = [], maxActiveMarkets = 3, onRemoveMarket }) {
+  // The market picker is intentionally light, independent of the app theme.
+  const SHEET_BG = "#FFFFFF";
+  const SHEET_TEXT = "#111111";
+  const SHEET_MUTED = "#6B7280";
+  const SHEET_BORDER = "#E5E7EB";
   const [category, setCategory] = useState(null);
   // mode: null = category grid | "manage" = replace/delete active | "pick_replacement" = pick who to replace
   const [mode, setMode] = useState(null);
   const [managedAsset, setManagedAsset] = useState(null);   // asset being managed or new asset wanting a slot
   const atLimit = activeMarkets.length >= maxActiveMarkets;
-  // Market picker stays light, matching the app's light/dark theme behavior and the reference.
-  const SHEET_BG = "#FFFFFF", SHEET_TEXT = "#0F0E0B", SHEET_MUTED = "#777061", SHEET_BORDER = "#E9E4D8";
 
   // ── Manage already-active market: Replace or Delete ─────────────────────
   if (mode === "manage" && managedAsset) {
     return (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
         <div onClick={e => e.stopPropagation()} style={{ background:SHEET_BG, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
-          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:SHEET_BORDER }} /></div>
+          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:SHEET_BGBorder }} /></div>
           <div style={{ padding:"0 20px 20px" }}>
             <button onClick={() => { setMode(null); setManagedAsset(null); }} style={{ background:"none", border:"none", color:SHEET_MUTED, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
               <ChevronLeft size={16} /><span style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:700 }}>Back</span>
@@ -366,7 +369,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
       return (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
           <div onClick={e => e.stopPropagation()} style={{ background:SHEET_BG, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
-            <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:SHEET_BORDER }} /></div>
+            <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:SHEET_BGBorder }} /></div>
             <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:10 }}>
               <button onClick={() => { setMode(backMode === "pick_category_for_replace" ? "manage" : null); }} style={{ background:"none", border:"none", color:SHEET_MUTED, cursor:"pointer" }}><ChevronLeft size={20} /></button>
               <div>
@@ -392,7 +395,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
     return (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
         <div onClick={e => e.stopPropagation()} style={{ background:SHEET_BG, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
-          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:SHEET_BORDER }} /></div>
+          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:SHEET_BGBorder }} /></div>
           <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:12 }}>
             <button onClick={() => setCategory(null)} style={{ background:"none", border:"none", color:SHEET_MUTED, cursor:"pointer" }}><ChevronLeft size={20} /></button>
             <div>
@@ -440,7 +443,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
     return (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
         <div onClick={e => e.stopPropagation()} style={{ background:SHEET_BG, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
-          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:SHEET_BORDER }} /></div>
+          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:SHEET_BGBorder }} /></div>
           <div style={{ padding:"0 20px 20px" }}>
             <button onClick={() => setMode("pick_new_when_full")} style={{ background:"none", border:"none", color:SHEET_MUTED, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
               <ChevronLeft size={16} /><span style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:700 }}>Back</span>
@@ -473,7 +476,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{ background:SHEET_BG, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
         <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}>
-          <div style={{ width:36, height:4, borderRadius:2, background:SHEET_BORDER }} />
+          <div style={{ width:36, height:4, borderRadius:2, background:SHEET_BGBorder }} />
         </div>
         {!category ? (
           <>
@@ -727,34 +730,30 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
               <div style={{marginTop:13,border:"1px solid #8E741D",borderRadius:14,padding:"8px",display:"flex",alignItems:"center",justifyContent:"center",gap:5,color:T.gold,fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800,animation:"rx-breathe 2.2s ease-in-out infinite"}}>Tap to view setup <ArrowUpRight size={12}/></div>
             </button>
           </div>
-          <div style={{height:155,marginTop:10,overflow:"hidden",borderRadius:14,background:"#070706"}}>
-            <LightweightChart
-              candles={chartCandles}
-              overlays={[]}
-              inst={signalInst}
-              containerHeight={155}
-              compact
-              isDark
-              bgColor="#070706"
-            />
-          </div>
-          <div style={{display:"flex",justifyContent:"space-between",padding:"0 3px",color:"#6F6A5D",fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:700,marginTop:2}}>
-            {["1D","1W","1M","1Y","All"].map((label,i)=><span key={label} style={{color:i===0?T.gold:"#777164",background:i===0?"#2A2514":"transparent",borderRadius:18,padding:i===0?"8px 15px":"8px 10px"}}>{label}</span>)}
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8,marginTop:8}}>
-            {marketCards.map(asset=>{
-              const logo=resolveMarketLogo({symbol:asset.symbol})?.src; const arr=seriesMap?.[asset.symbol]||[]; const price=arr.length?arr[arr.length-1].price:asset.base; const prev=arr.length>1?arr[arr.length-2].price:price; const up=price>=prev;
-              return <button key={asset.symbol} onClick={()=>openMarket(asset.symbol)} style={{minWidth:0,height:108,borderRadius:16,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"10px 5px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                {logo?<img src={logo} alt="" style={{width:32,height:32,borderRadius:"50%",objectFit:"cover",marginBottom:7}}/>:<div style={{width:32,height:32,borderRadius:"50%",background:T.gold,marginBottom:7}}/>}
-                <div style={{fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>{asset.symbol}</div>
-                <div style={{marginTop:4,fontFamily:FONT_HEAD,fontSize:9.5,fontWeight:700,color:up?"#5EDB78":"#E27661",fontVariantNumeric:"tabular-nums"}}>{Number(price).toFixed(Math.min(asset.digits,2))}</div>
-              </button>;
-            })}
-            <button onClick={()=>setShowAddMarket(true)} style={{minWidth:0,height:108,borderRadius:16,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"10px 5px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-              <div style={{width:32,height:32,borderRadius:"50%",border:`2px solid ${T.gold}`,display:"grid",placeItems:"center",marginBottom:7}}><Plus size={18} color={T.gold}/></div>
-              <div style={{fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800}}>Add Market</div>
-            </button>
-          </div>
+          <svg viewBox="0 0 680 185" preserveAspectRatio="none" style={{display:"block",width:"100%",height:165,marginTop:10}}>
+            <defs><linearGradient id="rxPerfFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#F4D35E" stopOpacity=".30"/><stop offset="100%" stopColor="#F4D35E" stopOpacity="0"/></linearGradient><filter id="rxPerfGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+            <path d="M0 151 C42 145 54 136 90 139 S138 133 160 120 S205 88 245 83 S292 91 330 87 S376 99 410 87 S458 75 492 68 S540 48 565 45 S615 26 680 14 L680 185 L0 185 Z" fill="url(#rxPerfFill)"/>
+            <path d="M0 151 C42 145 54 136 90 139 S138 133 160 120 S205 88 245 83 S292 91 330 87 S376 99 410 87 S458 75 492 68 S540 48 565 45 S615 26 680 14" fill="none" stroke={T.gold} strokeWidth="5" strokeLinecap="round" filter="url(#rxPerfGlow)"/>
+            <circle cx="680" cy="14" r="8" fill={T.gold}/><circle cx="680" cy="14" r="15" fill="none" stroke={T.gold} strokeOpacity=".18" strokeWidth="4"/>
+          </svg>
+          <div style={{display:"flex",justifyContent:"space-between",padding:"0 3px",color:"#6F6A5D",fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:700}}>{["1D","1W","1M","1Y","All"].map((label,i)=><span key={label} style={{color:i===0?T.gold:"#777164",background:i===0?"#2A2514":"transparent",borderRadius:18,padding:i===0?"8px 15px":"8px 10px"}}>{label}</span>)}</div>
+        </div>
+      </section>
+
+      <section style={{padding:"16px 14px 0"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8}}>
+          {marketCards.map(asset=>{
+            const logo=resolveMarketLogo({symbol:asset.symbol})?.src; const arr=seriesMap?.[asset.symbol]||[]; const price=arr.length?arr[arr.length-1].price:asset.base; const prev=arr.length>1?arr[arr.length-2].price:price; const up=price>=prev;
+            return <button key={asset.symbol} onClick={()=>openMarket(asset.symbol)} style={{minWidth:0,minHeight:126,borderRadius:18,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"12px 7px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+              {logo?<img src={logo} alt="" style={{width:36,height:36,borderRadius:"50%",objectFit:"cover",marginBottom:8}}/>:<div style={{width:36,height:36,borderRadius:"50%",background:T.gold,marginBottom:8}}/>}
+              <div style={{fontFamily:FONT_HEAD,fontSize:11,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>{asset.symbol}</div>
+              <div style={{marginTop:5,fontFamily:FONT_HEAD,fontSize:10,fontWeight:700,color:up?"#5EDB78":"#E27661",fontVariantNumeric:"tabular-nums"}}>{Number(price).toFixed(Math.min(asset.digits,2))}</div>
+            </button>;
+          })}
+          <button onClick={()=>setShowAddMarket(true)} style={{minWidth:0,minHeight:126,borderRadius:18,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"12px 7px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+            <div style={{width:36,height:36,borderRadius:"50%",border:`2px solid ${T.gold}`,display:"grid",placeItems:"center",marginBottom:8}}><Plus size={20} color={T.gold}/></div>
+            <div style={{fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800}}>Add Market</div>
+          </button>
         </div>
       </section>
 
