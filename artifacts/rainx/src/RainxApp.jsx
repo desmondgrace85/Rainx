@@ -1429,9 +1429,23 @@ function CenterNavLogo({ active, onActivate }) {
       onClick={handleActivate}
       className={`rx-center-nav-control${active ? " is-active" : ""}${energized ? " is-energized" : ""}`}
     >
-      <span className="rx-center-nav-stage" aria-hidden="true">
-        <span className="rx-center-nav-aura" />
-        <span className="rx-center-nav-core">
+      <span
+        className="rx-center-nav-stage"
+        aria-hidden="true"
+        style={{ width: 86, height: 86, background: "transparent" }}
+      >
+        <span
+          className="rx-center-nav-aura"
+          style={{ opacity: 0.16, filter: "blur(2px)" }}
+        />
+        <span
+          className="rx-center-nav-core"
+          style={{
+            inset: 12,
+            borderColor: "rgba(255,255,255,0.95)",
+            boxShadow: "0 0 0 4px rgba(255,255,255,0.98), 0 0 8px rgba(244,211,94,0.22), inset 0 1px 3px rgba(255,255,255,0.38), inset 0 0 10px rgba(180,130,30,0.12)",
+          }}
+        >
           <img src={rainxLogoTransparent} alt="" />
         </span>
         <span className="rx-center-nav-ripple rx-center-nav-ripple-one" />
