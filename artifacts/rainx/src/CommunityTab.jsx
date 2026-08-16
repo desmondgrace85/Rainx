@@ -1087,6 +1087,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(post.text);
   const [commentCount, setCommentCount] = useState(Number(post.comments_count) || 0);
+  useEffect(() => { setCommentCount(Number(post.comments_count) || 0); }, [post.comments_count]);
   const isOwn = post.user_id === account.id;
   const ld = likeData[post.id] || { count: 0, likedByMe: false };
 

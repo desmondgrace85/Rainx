@@ -2076,12 +2076,13 @@ function MainAppContent({ account, onLogout }) {
         // generic trading/home notification list: doing so made it appear in
         // the wrong area and then disappear after refresh because that list is
         // rehydrated from `user_notifications`.
-        if (kind === "community" || category === "community") {
+        const COMMUNITY_KINDS = new Set(["chat", "like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention"]);
+        if (COMMUNITY_KINDS.has(kind) || category === "community") {
           window.dispatchEvent(new CustomEvent("rainx:community-notification-received"));
           return;
         }
         if (document.visibilityState === "visible") enqueueInAppNotification({
-          id: data.notificationId || data.messageId || (Date.now() + Math.random()),
+          id: data.notificationId || data.messageId || `${payload.title || ""}::${payload.body || ""}`,
           title: payload.title || "RainX",
           body: payload.body || "",
           type: kind === "chat" ? "community" : (data.kind || "update"),
@@ -2235,7 +2236,11 @@ function MainAppContent({ account, onLogout }) {
         }));
         loaded.forEach((row) => seenNotificationIdsRef.current.add(String(row.id)));
         persistSeenNotificationIds();
-        setNotifications(loaded);
+        setNotifications((current) => {
+          const loadedIds = new Set(loaded.map((n) => String(n.id)));
+          const localOnly = current.filter((n) => !loadedIds.has(String(n.id)));
+          return [...localOnly, ...loaded].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0, 50);
+        });
       } catch { /* keep starting empty if this fails */ }
       finally {
         notificationsHydratedRef.current = true;
