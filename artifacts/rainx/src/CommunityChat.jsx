@@ -50,9 +50,9 @@ function playSendTick() {
 
 const buildT = (tokens) => ({
   ink: "#0F0E0B", card: "#1C1913", cardBorder: "#332C1F",
-  gold: "#FFBE0B", goldBright: "#FFBE0B", paper: "#F2EDE0", muted: "#9C947F",
-  goldGradient: "linear-gradient(135deg, #FFBE0B 0%, #F0A800 50%, #D89E00 100%)",
-  goldShine: "linear-gradient(180deg, #FFBE0B 0%, #F0A800 48%, #D89E00 100%)",
+  gold: "#FFC300", goldBright: "#FFC300", paper: "#F2EDE0", muted: "#9C947F",
+  goldGradient: "linear-gradient(135deg, #FFC300 0%, #FFC300 50%, #FFC300 100%)",
+  goldShine: "linear-gradient(180deg, #FFC300 0%, #FFC300 48%, #FFC300 100%)",
   ...(tokens || {}),
 });
 
@@ -123,7 +123,7 @@ function savePinnedMessages(convId, arr) { try { localStorage.setItem("rainx_pin
 // ── Avatar ─────────────────────────────────────────────────────────────────
 function Avatar({ name, avatarUrl, size, T }) {
   size = size || 40;
-  const bg = (T && T.goldGradient) || "linear-gradient(135deg,#FFBE0B 0%,#F0A800 50%,#D89E00 100%)";
+  const bg = (T && T.goldGradient) || "linear-gradient(135deg,#FFC300 0%,#FFC300 50%,#FFC300 100%)";
   return (
     <div style={{ width: size, height: size, borderRadius: "50%", background: bg, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: size * 0.38, color: "#0F0E0B", flexShrink: 0, overflow: "hidden" }}>
       {avatarUrl
@@ -167,7 +167,7 @@ function getTickStatus(msg, otherOnline, readReceiptsEnabled) {
 
 // ── ConfirmDialog ──────────────────────────────────────────────────────────
 function ConfirmDialog({ title, body, confirmLabel, danger, onConfirm, onCancel, T }) {
-  const goldGrad = (T && T.goldGradient) || "linear-gradient(135deg,#FFBE0B 0%,#F0A800 50%,#D89E00 100%)";
+  const goldGrad = (T && T.goldGradient) || "linear-gradient(135deg,#FFC300 0%,#FFC300 50%,#FFC300 100%)";
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 20px" }} onClick={onCancel}>
       <div onClick={e => e.stopPropagation()} style={{ background: "#1C1913", border: "1px solid #332C1F", borderRadius: 18, padding: "26px 22px 22px", width: "100%", maxWidth: 360 }}>
@@ -330,7 +330,7 @@ function PinnedBar({ pins, onViewPins, T }) {
   if (!pins || !pins.length) return null;
   const latest = pins[pins.length - 1];
   return (
-    <div style={{ background: "rgba(255,190,11,0.1)", borderBottom: "1px solid rgba(255,190,11,0.2)", padding: "8px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flexShrink: 0 }} onClick={onViewPins}>
+    <div style={{ background: "rgba(255,195,0,0.1)", borderBottom: "1px solid rgba(255,195,0,0.2)", padding: "8px 14px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flexShrink: 0 }} onClick={onViewPins}>
       <Pin size={13} color={T.gold} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 10, color: T.gold, fontWeight: 700, marginBottom: 1 }}>
@@ -404,7 +404,7 @@ function MiniChatSettings({ userId, userName, isPro, onClose, T }) {
           <SettingRow label="Show online status" sublabel="Let this user see when you're currently online" value={settings.showOnline} onChange={v => update("showOnline", v)} gated isPro={isPro} T={T} />
         </div>
         {!isPro && (
-          <div style={{ margin: "12px 12px 0", background: "rgba(255,190,11,0.08)", border: "1px solid rgba(255,190,11,0.22)", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ margin: "12px 12px 0", background: "rgba(255,195,0,0.08)", border: "1px solid rgba(255,195,0,0.22)", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
             <Lock size={14} color={T.gold} />
             <span style={{ fontSize: 12, color: T.muted }}>Upgrade to <strong style={{ color: T.gold }}>Subscriber</strong> or <strong style={{ color: T.gold }}>Premium</strong> to enable per-chat privacy controls.</span>
           </div>
@@ -462,7 +462,7 @@ function GeneralChatSettings({ account, isPro, onClose, T }) {
         </div>
 
         {!isPro && (
-          <div style={{ margin: "0 12px 12px", background: "rgba(255,190,11,0.08)", border: "1px solid rgba(255,190,11,0.22)", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ margin: "0 12px 12px", background: "rgba(255,195,0,0.08)", border: "1px solid rgba(255,195,0,0.22)", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
             <Lock size={14} color={T.gold} />
             <span style={{ fontSize: 12, color: T.muted }}>Last seen &amp; online status controls require <strong style={{ color: T.gold }}>Subscriber</strong> or <strong style={{ color: T.gold }}>Premium</strong>.</span>
           </div>
@@ -1404,7 +1404,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
               refreshPins();
               onOpenDM(profile);
             }}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: isPinned ? "rgba(255,190,11,0.06)" : "none", border: "none", cursor: "pointer", borderBottom: "1px solid " + T.cardBorder }}>
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: isPinned ? "rgba(255,195,0,0.06)" : "none", border: "none", cursor: "pointer", borderBottom: "1px solid " + T.cardBorder }}>
               <div style={{ position: "relative", flexShrink: 0 }}>
                 <Avatar name={profile && profile.display_name} avatarUrl={profile && profile.avatar_url} size={46} T={T} />
                 {isOnline(profile && profile.last_seen) && (

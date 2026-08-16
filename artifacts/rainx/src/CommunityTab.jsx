@@ -10,9 +10,9 @@ import { supabase } from "./supabaseClient";
 
 const T = {
   ink: "#0F0E0B", card: "#1C1913", cardBorder: "#332C1F",
-  gold: "#FFBE0B", goldBright: "#FFBE0B",
-  goldGradient: "linear-gradient(135deg, #FFBE0B 0%, #F0A800 50%, #D89E00 100%)",
-  goldShine: "linear-gradient(180deg, #FFBE0B 0%, #F0A800 48%, #D89E00 100%)",
+  gold: "#FFC300", goldBright: "#FFC300",
+  goldGradient: "linear-gradient(135deg, #FFC300 0%, #FFC300 50%, #FFC300 100%)",
+  goldShine: "linear-gradient(180deg, #FFC300 0%, #FFC300 48%, #FFC300 100%)",
   sage: "#7A9E86", rust: "#B0604A",
   paper: "#F2EDE0", muted: "#9C947F",
 };
@@ -128,7 +128,7 @@ function MentionTextarea({ value, onChange, placeholder, rows, style, textareaRe
               onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
             >
               <div style={{
-                width: 28, height: 28, borderRadius: "50%", background: "#FFBE0B",
+                width: 28, height: 28, borderRadius: "50%", background: "#FFC300",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 11, fontWeight: 800, color: "#0F0E0B", flexShrink: 0,
                 overflow: "hidden",
@@ -137,7 +137,7 @@ function MentionTextarea({ value, onChange, placeholder, rows, style, textareaRe
                   ? <img src={s.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   : (s.display_name?.[0] || "?").toUpperCase()}
               </div>
-              <span style={{ color: "#FFBE0B", fontWeight: 700, fontSize: 13, fontFamily: "'Montserrat', sans-serif" }}>
+              <span style={{ color: "#FFC300", fontWeight: 700, fontSize: 13, fontFamily: "'Montserrat', sans-serif" }}>
                 @{s.display_name}
               </span>
             </div>
@@ -285,7 +285,7 @@ function BlueBadge({ size = 17 }) {
 function GoldenBadge({ size = 17 }) {
   return (
     <svg width={size} height={size} viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }} title="Golden Verified">
-      <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D89E00" />
+      <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#FFC300" />
     </svg>
   );
 }
@@ -615,7 +615,7 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
 
   // ── Location chip (shared between both modes) ──
   const locationChip = location && (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(198,161,91,0.12)", border: `1px solid ${T.gold}44`, borderRadius: 20, padding: "4px 11px", marginTop: 8, cursor: "pointer" }} onClick={() => setLocation(null)}>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(255,195,0,0.12)", border: `1px solid ${T.gold}44`, borderRadius: 20, padding: "4px 11px", marginTop: 8, cursor: "pointer" }} onClick={() => setLocation(null)}>
       <svg width="11" height="11" viewBox="0 0 24 24" fill={T.gold}><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
       <span style={{ fontSize: 12, color: T.gold, fontWeight: 600 }}>{location.label}</span>
       <span style={{ fontSize: 13, color: T.muted, marginLeft: 2 }}>×</span>
@@ -1050,7 +1050,7 @@ function PollWidget({ pollId, account }) {
         const isWinner = myVote && count === maxVotes;
         return (
           <button key={opt.id} onClick={() => castVote(opt.id)} disabled={!!myVote} style={{ position: "relative", width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", background: "none", border: "none", borderBottom: i < options.length - 1 ? `1px solid ${T.cardBorder}` : "none", cursor: myVote ? "default" : "pointer", overflow: "hidden", textAlign: "left" }}>
-            {myVote && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: isChosen ? "rgba(198,161,91,0.22)" : "rgba(242,237,224,0.07)", transition: "width 0.5s ease", borderRadius: i === 0 ? "13px 0 0 0" : i === options.length - 1 ? "0 0 0 13px" : 0 }} />}
+            {myVote && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: isChosen ? "rgba(255,195,0,0.22)" : "rgba(242,237,224,0.07)", transition: "width 0.5s ease", borderRadius: i === 0 ? "13px 0 0 0" : i === options.length - 1 ? "0 0 0 13px" : 0 }} />}
             <span style={{ flex: 1, fontSize: 14, color: T.paper, fontWeight: isChosen ? 700 : 400, position: "relative" }}>{opt.text}</span>
             {myVote && <span style={{ fontSize: 12, color: isChosen ? T.gold : T.muted, fontWeight: 600, position: "relative", minWidth: 30, textAlign: "right" }}>{pct}%</span>}
           </button>
@@ -1390,7 +1390,7 @@ function GiftModal({ profile, onClose, senderAccount }) {
                 <div style={{ display:"flex", gap:8, marginBottom:10 }}>
                   {["1","5","10","20","50"].map(v => (
                     <button key={v} onClick={() => setAmount(v)}
-                      style={{ flex:1, padding:"8px 0", borderRadius:10, border:`1px solid ${amount===v?T.gold:T.cardBorder}`, background:amount===v?"rgba(198,161,91,0.15)":"none", color:amount===v?T.gold:T.paper, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, cursor:"pointer" }}>
+                      style={{ flex:1, padding:"8px 0", borderRadius:10, border:`1px solid ${amount===v?T.gold:T.cardBorder}`, background:amount===v?"rgba(255,195,0,0.15)":"none", color:amount===v?T.gold:T.paper, fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, cursor:"pointer" }}>
                       ${v}
                     </button>
                   ))}

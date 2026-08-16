@@ -67,7 +67,7 @@ export default function SpaceCoinsIntro({ T, onExplore, onBack }) {
         .sc-back { width:40px; height:40px; display:grid; place-items:center; border:1px solid var(--sc-border); border-radius:13px; background:var(--sc-card); color:var(--sc-paper); cursor:pointer; }
         .sc-kicker { margin:28px 0 8px; color:var(--sc-gold-bright); font-size:16px; letter-spacing:.01em; }
         .sc-title { margin:0; color:var(--sc-gold-bright); font-size:clamp(36px, 10vw, 54px); line-height:1.02; letter-spacing:-.055em; font-weight:800; text-shadow:0 0 24px var(--sc-gold-shadow); }
-         .sc-title-gold { color:#FFBE0B; }
+         .sc-title-gold { color:#FFC300; }
         .sc-tagline { margin:22px 0 0; font-size:17px; color:var(--sc-paper); font-weight:600; }
         .sc-subtext { max-width:230px; margin:8px 0 0; color:var(--sc-muted); font-size:14px; line-height:1.55; }
         .sc-primary { margin-top:22px; align-self:flex-start; display:flex; align-items:center; gap:16px; border:0; border-radius:999px; padding:13px 16px 13px 20px; color:var(--sc-ink); background:var(--sc-gold-gradient); font:700 13px 'Montserrat',sans-serif; cursor:pointer; box-shadow:0 10px 28px var(--sc-gold-shadow); }
@@ -76,8 +76,8 @@ export default function SpaceCoinsIntro({ T, onExplore, onBack }) {
         .sc-scene-glow { position:absolute; left:50%; bottom:35px; width:330px; height:220px; border-radius:50%; transform:translateX(-50%); filter:blur(12px); opacity:.7; pointer-events:none; }
         .sc-platform-art { position:absolute; z-index:2; left:50%; bottom:-52px; width:370px; height:370px; object-fit:contain; transform:translateX(-50%); pointer-events:none; }
         .sc-rocket-art { position:absolute; z-index:4; left:50%; top:12px; width:245px; height:245px; object-fit:contain; transform:translateX(-50%); filter:drop-shadow(0 16px 12px rgba(0,0,0,.28)); animation:sc-rocket-hover 3.8s ease-in-out infinite; pointer-events:none; }
-        .sc-coin-art { position:absolute; z-index:5; left:68px; top:88px; width:56px; height:56px; object-fit:contain; filter:drop-shadow(0 6px 9px rgba(212,152,24,.18)); animation:sc-coin-drift 4.8s ease-in-out infinite; pointer-events:none; }
-        .sc-orbit-art { position:absolute; z-index:5; right:4px; top:45px; width:100px; height:160px; object-fit:contain; filter:drop-shadow(0 6px 10px rgba(212,152,24,.18)); animation:sc-orbit-drift 5.6s ease-in-out infinite; pointer-events:none; }
+        .sc-coin-art { position:absolute; z-index:5; left:68px; top:88px; width:56px; height:56px; object-fit:contain; filter:drop-shadow(0 6px 9px rgba(255,195,0,.18)); animation:sc-coin-drift 4.8s ease-in-out infinite; pointer-events:none; }
+        .sc-orbit-art { position:absolute; z-index:5; right:4px; top:45px; width:100px; height:160px; object-fit:contain; filter:drop-shadow(0 6px 10px rgba(255,195,0,.18)); animation:sc-orbit-drift 5.6s ease-in-out infinite; pointer-events:none; }
         @keyframes sc-rocket-hover { 0%,100% { transform:translate(-50%,0) rotate(-4deg); } 50% { transform:translate(-50%,-12px) rotate(1deg); } }
         @keyframes sc-coin-drift { 0%,100% { transform:translate3d(0,0,0) rotate(-2deg); } 50% { transform:translate3d(-5px,-7px,0) rotate(2deg); } }
         @keyframes sc-orbit-drift { 0%,100% { transform:translate3d(0,0,0) rotate(-2deg); } 50% { transform:translate3d(-10px,-11px,0) rotate(4deg); } }

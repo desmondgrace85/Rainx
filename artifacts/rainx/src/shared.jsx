@@ -13,10 +13,10 @@ export const T = {
   ink: "#0F0E0B",
   card: "#1C1913",
   cardBorder: "#332C1F",
-  gold: "#FFBE0B",
-  goldBright: "#FFBE0B",
-  goldGradient: "linear-gradient(135deg, #FFBE0B 0%, #F0A800 50%, #D89E00 100%)",
-  goldShine: "linear-gradient(180deg, #FFBE0B 0%, #F0A800 48%, #D89E00 100%)",
+  gold: "#FFC300",
+  goldBright: "#FFC300",
+  goldGradient: "linear-gradient(135deg, #FFC300 0%, #FFC300 50%, #FFC300 100%)",
+  goldShine: "linear-gradient(180deg, #FFC300 0%, #FFC300 48%, #FFC300 100%)",
   sage: "#7A9E86",
   rust: "#B0604A",
   paper: "#F2EDE0",
@@ -28,8 +28,8 @@ export let _avatarRefreshTick = 0;
 export const _avatarRefreshListeners = new Set();
 export function notifyAvatarRefresh() { _avatarRefreshTick++; _avatarRefreshListeners.forEach(fn => fn(_avatarRefreshTick)); }
 
-export const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#FFBE0B", goldBright:"#FFBE0B", goldGradient:"linear-gradient(135deg, #FFBE0B 0%, #F0A800 50%, #D89E00 100%)", goldShine:"linear-gradient(180deg, #FFBE0B 0%, #F0A800 48%, #D89E00 100%)", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
-export const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#FFBE0B", goldBright:"#FFBE0B", goldGradient:"linear-gradient(135deg, #FFBE0B 0%, #F0A800 50%, #D89E00 100%)", goldShine:"linear-gradient(180deg, #FFBE0B 0%, #F0A800 48%, #D89E00 100%)", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
+export const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#FFC300", goldBright:"#FFC300", goldGradient:"linear-gradient(135deg, #FFC300 0%, #FFC300 50%, #FFC300 100%)", goldShine:"linear-gradient(180deg, #FFC300 0%, #FFC300 48%, #FFC300 100%)", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
+export const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#FFC300", goldBright:"#FFC300", goldGradient:"linear-gradient(135deg, #FFC300 0%, #FFC300 50%, #FFC300 100%)", goldShine:"linear-gradient(180deg, #FFC300 0%, #FFC300 48%, #FFC300 100%)", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
 export const FONT_HEAD = "'Montserrat', sans-serif";
 export const FONT_BODY = "'Montserrat', sans-serif";
 export const COUNTRIES = ["Afghanistan","Albania","Algeria","Angola","Argentina","Armenia","Australia","Austria","Azerbaijan","Bahrain","Bangladesh","Belarus","Belgium","Bolivia","Bosnia and Herzegovina","Botswana","Brazil","Bulgaria","Cameroon","Canada","Chile","China","Colombia","Costa Rica","Croatia","Cuba","Czech Republic","Denmark","Ecuador","Egypt","Ethiopia","Finland","France","Georgia","Germany","Ghana","Greece","Guatemala","Hungary","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kuwait","Lebanon","Libya","Malaysia","Mexico","Morocco","Mozambique","Myanmar","Nepal","Netherlands","New Zealand","Nicaragua","Nigeria","Norway","Oman","Pakistan","Panama","Peru","Philippines","Poland","Portugal","Qatar","Romania","Russia","Rwanda","Saudi Arabia","Senegal","Serbia","Singapore","Somalia","South Africa","South Korea","Spain","Sudan","Sweden","Switzerland","Taiwan","Tanzania","Thailand","Tunisia","Turkey","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States","Uruguay","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe"];
@@ -113,7 +113,7 @@ export function CoverCropModal({ file, onConfirm, onCancel, T, FONT_HEAD }) {
     <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.88)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}
       onPointerMove={onPM} onPointerUp={onPU} onPointerLeave={onPU}>
       <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:15, color:'#fff', marginBottom:14 }}>Drag to position</div>
-      <div style={{ width:DISPLAY_W, height:DISPLAY_H, overflow:'hidden', borderRadius:8, border:'2px solid #FFBE0B', cursor:dragging?'grabbing':'grab', position:'relative', userSelect:'none', touchAction:'none' }}
+      <div style={{ width:DISPLAY_W, height:DISPLAY_H, overflow:'hidden', borderRadius:8, border:'2px solid #FFC300', cursor:dragging?'grabbing':'grab', position:'relative', userSelect:'none', touchAction:'none' }}
         onPointerDown={onPD}>
         {imgSrc && <img src={imgSrc} style={{ width:DISPLAY_W, height:'auto', position:'absolute', top:offsetY, left:0, pointerEvents:'none', userSelect:'none', draggable:false }} alt='' />}
       </div>
