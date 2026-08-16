@@ -17,6 +17,11 @@ import {
 let isDarkCanvas = false;
 function setIsDarkCanvas(v) { isDarkCanvas = v; }
 
+const PLAN_TIER_RANK = { none: 0, weekly: 1, monthly: 2, yearly: 3 };
+function hasAccess(tier, required) {
+  return (PLAN_TIER_RANK[tier] || 0) >= (PLAN_TIER_RANK[required] || 0);
+}
+
 class HomeChartErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false }; }
   static getDerivedStateFromError() { return { hasError: true }; }
