@@ -14,7 +14,6 @@ import FullChartView from "./FullChartView";
 import LightweightChart from "./LightweightChart";
 import SpaceCoinsIntro from "./SpaceCoinsIntro";
 import SpaceCoinsDashboard from "./SpaceCoinsDashboard";
-import RedesignedHomeTab from "./HomeTab";
 
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
 import { resolveMarketLogo, resolveMarketDirection, isMarketNotification, FALLBACK_NEWS_LOGO, FALLBACK_RAINX_LOGO, MARKET_NAMES } from "./MarketLogos";
@@ -2729,7 +2728,7 @@ function MainAppContent({ account, onLogout }) {
           else if (dx > 0 && ci > 0)          goTab(tabs[ci - 1]);
         }}
       >
-        {tab === "home" && <RedesignedHomeTab account={account} inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessions={sessions} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} seriesMap={seriesMap} signalsMap={signalsMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} />}
+        {tab === "home" && <HomeTab account={account} inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessions={sessions} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} seriesMap={seriesMap} signalsMap={signalsMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} />}
         {tab === "wallet" && <WalletTab account={account} />}
         {tab === "history" && <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />}
         {tab === "subscribe" && <SubscribeScreen account={account} entitlement={entitlement} onBack={() => goTab("more", -1)} />}
@@ -2955,9 +2954,10 @@ function MainAppContent({ account, onLogout }) {
             )},
             { key: "more", label: "More", icon: (active) => (
               <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "none" : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="5" cy="12" r="1.4"/>
-                <circle cx="12" cy="12" r="1.4"/>
-                <circle cx="19" cy="12" r="1.4"/>
+                <rect x="4" y="4" width="6" height="6" rx="1.2"/>
+                <rect x="14" y="4" width="6" height="6" rx="1.2"/>
+                <rect x="4" y="14" width="6" height="6" rx="1.2"/>
+                <rect x="14" y="14" width="6" height="6" rx="1.2"/>
               </svg>
             )},
           ].map(({ key, label, icon, center }) => {
@@ -3753,7 +3753,7 @@ function GamesTab() {
 // ─────────────────────────────────────────────────────────────────────────────
   */
 }
-function LegacyHomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessions, sessionSecsLeft, startAnalysisSession, seriesMap, signalsMap, themeMode, activeMarkets = [], addActiveMarket, removeActiveMarket, maxActiveMarkets = 3 }) {
+function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessions, sessionSecsLeft, startAnalysisSession, seriesMap, signalsMap, themeMode, activeMarkets = [], addActiveMarket, removeActiveMarket, maxActiveMarkets = 3 }) {
   const [showAddMarket, setShowAddMarket] = useState(false);
   const [showActivity, setShowActivity] = useState(false);
   const [showFullChart, setShowFullChart] = useState(false);
