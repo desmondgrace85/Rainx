@@ -323,11 +323,6 @@ function roundRect(ctx, x, y, w, h, r) {
 // Add Market bottom sheet — supports add, replace when full, and manage active
 // ─────────────────────────────────────────────────────────────────────────────
 function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets = [], maxActiveMarkets = 3, onRemoveMarket }) {
-  // The market picker is intentionally light, independent of the app theme.
-  const SHEET_BG = "#FFFFFF";
-  const SHEET_TEXT = "#111111";
-  const SHEET_MUTED = "#6B7280";
-  const SHEET_BORDER = "#E5E7EB";
   const [category, setCategory] = useState(null);
   // mode: null = category grid | "manage" = replace/delete active | "pick_replacement" = pick who to replace
   const [mode, setMode] = useState(null);
@@ -338,22 +333,22 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
   if (mode === "manage" && managedAsset) {
     return (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} style={{ background:SHEET_BG, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
-          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:SHEET_BGBorder }} /></div>
+        <div onClick={e => e.stopPropagation()} style={{ background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
+          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
           <div style={{ padding:"0 20px 20px" }}>
-            <button onClick={() => { setMode(null); setManagedAsset(null); }} style={{ background:"none", border:"none", color:SHEET_MUTED, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
+            <button onClick={() => { setMode(null); setManagedAsset(null); }} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
               <ChevronLeft size={16} /><span style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:700 }}>Back</span>
             </button>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:SHEET_TEXT, marginBottom:3 }}>{managedAsset.symbol}</div>
-            <div style={{ fontSize:12, color:SHEET_MUTED, marginBottom:22 }}>{managedAsset.name} · Currently active</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:"#0F0E0B", marginBottom:3 }}>{managedAsset.symbol}</div>
+            <div style={{ fontSize:12, color:T.muted, marginBottom:22 }}>{managedAsset.name} · Currently active</div>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              <button onClick={() => { setMode("pick_category_for_replace"); setCategory(null); }} style={{ background:SHEET_BG, border:`1px solid ${SHEET_BORDER}`, borderRadius:12, padding:"16px", textAlign:"left", cursor:"pointer" }}>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:SHEET_TEXT }}>Replace with another market</div>
-                <div style={{ fontSize:12, color:SHEET_MUTED, marginTop:3 }}>Swap {managedAsset.symbol} with a different market</div>
+              <button onClick={() => { setMode("pick_category_for_replace"); setCategory(null); }} style={{ background:"#FFFFFF", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"16px", textAlign:"left", cursor:"pointer" }}>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>Replace with another market</div>
+                <div style={{ fontSize:12, color:T.muted, marginTop:3 }}>Swap {managedAsset.symbol} with a different market</div>
               </button>
               <button onClick={() => { onRemoveMarket(managedAsset.symbol); onClose(); }} style={{ background:`${T.rust}12`, border:`1px solid ${T.rust}44`, borderRadius:12, padding:"16px", textAlign:"left", cursor:"pointer" }}>
                 <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.rust }}>Remove market</div>
-                <div style={{ fontSize:12, color:SHEET_MUTED, marginTop:3 }}>Stop analyzing {managedAsset.symbol}</div>
+                <div style={{ fontSize:12, color:T.muted, marginTop:3 }}>Stop analyzing {managedAsset.symbol}</div>
               </button>
             </div>
           </div>
@@ -368,23 +363,23 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
     if (!category) {
       return (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-          <div onClick={e => e.stopPropagation()} style={{ background:SHEET_BG, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
-            <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:SHEET_BGBorder }} /></div>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
+            <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
             <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:10 }}>
-              <button onClick={() => { setMode(backMode === "pick_category_for_replace" ? "manage" : null); }} style={{ background:"none", border:"none", color:SHEET_MUTED, cursor:"pointer" }}><ChevronLeft size={20} /></button>
+              <button onClick={() => { setMode(backMode === "pick_category_for_replace" ? "manage" : null); }} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
               <div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:SHEET_TEXT }}>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:"#0F0E0B" }}>
                   {backMode === "pick_category_for_replace" ? `Replace ${managedAsset?.symbol}` : "Select replacement market"}
                 </div>
-                <div style={{ fontSize:12, color:SHEET_MUTED, marginTop:2 }}>Choose a category</div>
+                <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Choose a category</div>
               </div>
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 16px" }}>
               {ASSET_CATALOG.map(cat => (
-                <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:SHEET_BG, border:`1px solid ${SHEET_BORDER}`, borderRadius:14, padding:"18px 14px", textAlign:"left", cursor:"pointer" }}>
+                <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:"#FFFFFF", border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"18px 14px", textAlign:"left", cursor:"pointer" }}>
                   <div style={{ fontSize:22, marginBottom:8 }}>{cat.emoji}</div>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:SHEET_TEXT }}>{cat.label}</div>
-                  <div style={{ fontSize:11, color:SHEET_MUTED, marginTop:3 }}>{cat.assets.length} markets</div>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>{cat.label}</div>
+                  <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>{cat.assets.length} markets</div>
                 </button>
               ))}
             </div>
@@ -394,13 +389,13 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
     }
     return (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} style={{ background:SHEET_BG, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
-          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:SHEET_BGBorder }} /></div>
+        <div onClick={e => e.stopPropagation()} style={{ background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
+          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
           <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:12 }}>
-            <button onClick={() => setCategory(null)} style={{ background:"none", border:"none", color:SHEET_MUTED, cursor:"pointer" }}><ChevronLeft size={20} /></button>
+            <button onClick={() => setCategory(null)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
             <div>
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:SHEET_TEXT }}>{category.label}</div>
-              <div style={{ fontSize:12, color:SHEET_MUTED }}>
+              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:"#0F0E0B" }}>{category.label}</div>
+              <div style={{ fontSize:12, color:T.muted }}>
                 {backMode === "pick_category_for_replace" ? `Replacing ${managedAsset?.symbol}` : "Pick market to add"}
               </div>
             </div>
@@ -421,14 +416,14 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
                     setMode("pick_who_to_replace");
                     setCategory(null);
                   }
-                }} style={{ background:SHEET_BG, border:`1px solid ${alreadyActive ? T.gold : SHEET_BORDER}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:alreadyActive ? "default" : "pointer", opacity:alreadyActive ? 0.45 : 1 }}>
+                }} style={{ background:"#FFFFFF", border:`1px solid ${alreadyActive ? T.gold : T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:alreadyActive ? "default" : "pointer", opacity:alreadyActive ? 0.45 : 1 }}>
                   <div style={{ textAlign:"left" }}>
-                    <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:SHEET_TEXT }}>{asset.symbol}</div>
-                    <div style={{ fontSize:12, color:SHEET_MUTED, marginTop:2 }}>{asset.name}</div>
+                    <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>{asset.symbol}</div>
+                    <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{asset.name}</div>
                   </div>
                   {alreadyActive
                     ? <div style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.gold}22`, borderRadius:6, padding:"3px 8px" }}>Active</div>
-                    : <ChevronRight size={16} color={SHEET_MUTED} />}
+                    : <ChevronRight size={16} color={T.muted} />}
                 </button>
               );
             })}
@@ -442,23 +437,23 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
   if (mode === "pick_who_to_replace" && managedAsset) {
     return (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} style={{ background:SHEET_BG, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
-          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:SHEET_BGBorder }} /></div>
+        <div onClick={e => e.stopPropagation()} style={{ background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
+          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
           <div style={{ padding:"0 20px 20px" }}>
-            <button onClick={() => setMode("pick_new_when_full")} style={{ background:"none", border:"none", color:SHEET_MUTED, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
+            <button onClick={() => setMode("pick_new_when_full")} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
               <ChevronLeft size={16} /><span style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:700 }}>Back</span>
             </button>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:SHEET_TEXT, marginBottom:3 }}>Replace a Market</div>
-            <div style={{ fontSize:12, color:SHEET_MUTED, marginBottom:18 }}>Choose which market to replace with <strong style={{ color:SHEET_TEXT }}>{managedAsset.symbol}</strong></div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:"#0F0E0B", marginBottom:3 }}>Replace a Market</div>
+            <div style={{ fontSize:12, color:T.muted, marginBottom:18 }}>Choose which market to replace with <strong style={{ color:"#0F0E0B" }}>{managedAsset.symbol}</strong></div>
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               {activeMarkets.map(sym => {
                 const a = ALL_ASSETS.find(x => x.symbol === sym);
                 if (!a) return null;
                 return (
-                  <button key={sym} onClick={() => { onRemoveMarket(sym); onSelect(managedAsset); }} style={{ background:SHEET_BG, border:`1px solid ${SHEET_BORDER}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
+                  <button key={sym} onClick={() => { onRemoveMarket(sym); onSelect(managedAsset); }} style={{ background:"#FFFFFF", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
                     <div style={{ textAlign:"left" }}>
-                      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:SHEET_TEXT }}>{a.symbol}</div>
-                      <div style={{ fontSize:12, color:SHEET_MUTED, marginTop:2 }}>{a.name}</div>
+                      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>{a.symbol}</div>
+                      <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{a.name}</div>
                     </div>
                     <div style={{ fontSize:10, color:T.rust, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.rust}22`, borderRadius:6, padding:"3px 8px" }}>Replace</div>
                   </button>
@@ -474,18 +469,18 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
   // ── Default: category grid + asset list ─────────────────────────────────
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background:SHEET_BG, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
         <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}>
-          <div style={{ width:36, height:4, borderRadius:2, background:SHEET_BGBorder }} />
+          <div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} />
         </div>
         {!category ? (
           <>
             <div style={{ padding:"0 20px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:SHEET_TEXT }}>Add Market</div>
-                <div style={{ fontSize:12, color:SHEET_MUTED, marginTop:2 }}>Choose a market · {activeMarkets.length}/{maxActiveMarkets} active</div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:"#0F0E0B" }}>Add Market</div>
+                <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Choose a market · {activeMarkets.length}/{maxActiveMarkets} active</div>
               </div>
-              <button onClick={onClose} style={{ background:"none", border:"none", color:SHEET_MUTED, cursor:"pointer" }}><X size={20} /></button>
+              <button onClick={onClose} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><X size={20} /></button>
             </div>
             {atLimit && (
               <div style={{ margin:"0 16px 14px", background:`${T.gold}11`, border:`1px solid ${T.gold}44`, borderRadius:10, padding:"10px 14px", fontSize:12, color:T.gold, fontFamily:FONT_HEAD, fontWeight:600 }}>
@@ -494,10 +489,10 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
             )}
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 16px" }}>
               {ASSET_CATALOG.map(cat => (
-                <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:SHEET_BG, border:`1px solid ${SHEET_BORDER}`, borderRadius:14, padding:"18px 14px", textAlign:"left", cursor:"pointer" }}>
+                <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:"#FFFFFF", border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"18px 14px", textAlign:"left", cursor:"pointer" }}>
                   <div style={{ fontSize:22, marginBottom:8 }}>{cat.emoji}</div>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:SHEET_TEXT }}>{cat.label}</div>
-                  <div style={{ fontSize:11, color:SHEET_MUTED, marginTop:3 }}>{cat.assets.length} markets</div>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>{cat.label}</div>
+                  <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>{cat.assets.length} markets</div>
                 </button>
               ))}
             </div>
@@ -505,10 +500,10 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
         ) : (
           <>
             <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:12 }}>
-              <button onClick={() => setCategory(null)} style={{ background:"none", border:"none", color:SHEET_MUTED, cursor:"pointer" }}><ChevronLeft size={20} /></button>
+              <button onClick={() => setCategory(null)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
               <div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:SHEET_TEXT }}>{category.label}</div>
-                <div style={{ fontSize:12, color:SHEET_MUTED }}>Select a market</div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:"#0F0E0B" }}>{category.label}</div>
+                <div style={{ fontSize:12, color:T.muted }}>Select a market</div>
               </div>
             </div>
             <div style={{ padding:"0 16px", display:"flex", flexDirection:"column", gap:8 }}>
@@ -525,16 +520,16 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
                     } else {
                       onSelect(asset);
                     }
-                  }} style={{ background:SHEET_BG, border:`1px solid ${alreadyActive ? T.gold : SHEET_BORDER}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
+                  }} style={{ background:"#FFFFFF", border:`1px solid ${alreadyActive ? T.gold : T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
                     <div style={{ textAlign:"left" }}>
-                      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:SHEET_TEXT }}>{asset.symbol}</div>
-                      <div style={{ fontSize:12, color:SHEET_MUTED, marginTop:2 }}>{asset.name}</div>
+                      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>{asset.symbol}</div>
+                      <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{asset.name}</div>
                     </div>
                     {alreadyActive
                       ? <div style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.gold}22`, borderRadius:6, padding:"3px 8px" }}>Active ›</div>
                       : (atLimit
-                        ? <div style={{ fontSize:10, color:SHEET_MUTED, fontFamily:FONT_HEAD, fontWeight:600, background:`${SHEET_BORDER}`, borderRadius:6, padding:"3px 8px" }}>Replace</div>
-                        : <ChevronRight size={16} color={SHEET_MUTED} />)}
+                        ? <div style={{ fontSize:10, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600, background:`${T.cardBorder}`, borderRadius:6, padding:"3px 8px" }}>Replace</div>
+                        : <ChevronRight size={16} color={T.muted} />)}
                   </button>
                 );
               })}
@@ -583,19 +578,29 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
   // OHLCV candles from tick series (fallback while real candles load)
   const candles = React.useMemo(() => ticksToCandles(series || [], 70), [series]);
 
-  // Local live price with micro-jitter so the chart always animates even when API is slow
+  // Smooth the real live price into the existing gold line chart.
+  // No synthetic jitter: the chart only moves toward prices supplied by the app.
   const [localLast, setLocalLast] = React.useState(last);
-  React.useEffect(() => { if (last) setLocalLast(last); }, [last]);
+  const animationRef = React.useRef(null);
   React.useEffect(() => {
-    const id = setInterval(() => {
-      setLocalLast(prev => {
-        if (!prev || !inst) return prev;
-        const jitter = (Math.random() - 0.5) * (inst.vol || 1) * 0.03;
-        return Number(Math.max((inst.base || 1) * 0.5, prev + jitter).toFixed(inst.digits ?? 2));
-      });
-    }, 400);
-    return () => clearInterval(id);
-  }, [inst]);
+    const target = Number(last);
+    if (!Number.isFinite(target)) return;
+    const from = Number(localLast);
+    if (!Number.isFinite(from)) { setLocalLast(target); return; }
+    if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    const start = performance.now();
+    const duration = 650;
+    const tick = (now) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setLocalLast(from + (target - from) * eased);
+      if (progress < 1) animationRef.current = requestAnimationFrame(tick);
+    };
+    animationRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    };
+  }, [last]);
 
   // Real candles from Raina AI backend — keyed to selected timeframe
   const BASE_URL_H = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
@@ -665,6 +670,38 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
     : session?.state === "completed" ? T.muted
     : T.gold;
 
+  // Live performance line: use the real candle closes already feeding the chart.
+  // The last point follows the live price, so the homepage visualization is not a static mock.
+  const performanceSeries = React.useMemo(() => {
+    const candleSource = (chartCandles || []).map(c => Number(c.close)).filter(Number.isFinite).slice(-56);
+    const tickSource = (series || []).map(p => Number(p.price ?? p.close ?? p.value)).filter(Number.isFinite).slice(-56);
+    const source = candleSource.length >= 2 ? candleSource : tickSource;
+    const live = Number(localLast || last);
+    if (source.length >= 2) {
+      const next = source.slice();
+      if (Number.isFinite(live)) next[next.length - 1] = live;
+      return next;
+    }
+    const fallback = Number(live || inst?.base || 1);
+    return Array.from({ length: 24 }, () => fallback);
+  }, [chartCandles, series, localLast, last, inst?.base]);
+
+  const performanceGeometry = React.useMemo(() => {
+    const min = Math.min(...performanceSeries);
+    const max = Math.max(...performanceSeries);
+    const range = max - min || Math.max(Math.abs(max) * 0.002, 1);
+    const padX = 3, top = 14, bottom = 176, width = 674;
+    const points = performanceSeries.map((value, index) => {
+      const x = padX + (index / Math.max(1, performanceSeries.length - 1)) * width;
+      const y = bottom - ((value - min) / range) * (bottom - top);
+      return [x, y];
+    });
+    const line = points.map(([x, y], index) => `${index ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+    const fill = `${line} L 677 185 L 3 185 Z`;
+    const lastPoint = points[points.length - 1] || [677, bottom];
+    return { line, fill, lastX: lastPoint[0], lastY: lastPoint[1] };
+  }, [performanceSeries]);
+
   const [showSubLock, setShowSubLock] = useState(false);
   const [todayPips, setTodayPips] = useState(0);
   useEffect(() => {
@@ -730,34 +767,39 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
               <div style={{marginTop:13,border:"1px solid #8E741D",borderRadius:14,padding:"8px",display:"flex",alignItems:"center",justifyContent:"center",gap:5,color:T.gold,fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800,animation:"rx-breathe 2.2s ease-in-out infinite"}}>Tap to view setup <ArrowUpRight size={12}/></div>
             </button>
           </div>
-          <svg viewBox="0 0 680 185" preserveAspectRatio="none" style={{display:"block",width:"100%",height:165,marginTop:10}}>
-            <defs><linearGradient id="rxPerfFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#F4D35E" stopOpacity=".30"/><stop offset="100%" stopColor="#F4D35E" stopOpacity="0"/></linearGradient><filter id="rxPerfGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-            <path d="M0 151 C42 145 54 136 90 139 S138 133 160 120 S205 88 245 83 S292 91 330 87 S376 99 410 87 S458 75 492 68 S540 48 565 45 S615 26 680 14 L680 185 L0 185 Z" fill="url(#rxPerfFill)"/>
-            <path d="M0 151 C42 145 54 136 90 139 S138 133 160 120 S205 88 245 83 S292 91 330 87 S376 99 410 87 S458 75 492 68 S540 48 565 45 S615 26 680 14" fill="none" stroke={T.gold} strokeWidth="5" strokeLinecap="round" filter="url(#rxPerfGlow)"/>
-            <circle cx="680" cy="14" r="8" fill={T.gold}/><circle cx="680" cy="14" r="15" fill="none" stroke={T.gold} strokeOpacity=".18" strokeWidth="4"/>
+          <svg viewBox="0 0 680 185" preserveAspectRatio="none" style={{display:"block",width:"100%",height:165,marginTop:10,overflow:"visible"}}>
+            <defs>
+              <linearGradient id="rxPerfFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#F4D35E" stopOpacity=".30"/>
+                <stop offset="100%" stopColor="#F4D35E" stopOpacity="0"/>
+              </linearGradient>
+              <filter id="rxPerfGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <path d={performanceGeometry.fill} fill="url(#rxPerfFill)"/>
+            <path d={performanceGeometry.line} fill="none" stroke={T.gold} strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#rxPerfGlow)"/>
+            <circle cx={performanceGeometry.lastX} cy={performanceGeometry.lastY} r="8" fill={T.gold}/>
+            <circle cx={performanceGeometry.lastX} cy={performanceGeometry.lastY} r="15" fill="none" stroke={T.gold} strokeOpacity=".18" strokeWidth="4">
+              <animate attributeName="r" values="11;17;11" dur="1.8s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values=".28;.05;.28" dur="1.8s" repeatCount="indefinite"/>
+            </circle>
           </svg>
           <div style={{display:"flex",justifyContent:"space-between",padding:"0 3px",color:"#6F6A5D",fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:700}}>{["1D","1W","1M","1Y","All"].map((label,i)=><span key={label} style={{color:i===0?T.gold:"#777164",background:i===0?"#2A2514":"transparent",borderRadius:18,padding:i===0?"8px 15px":"8px 10px"}}>{label}</span>)}</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8,marginTop:10}}>
+                            {marketCards.map(asset=>{
+                              const logo=resolveMarketLogo({symbol:asset.symbol})?.src; const arr=seriesMap?.[asset.symbol]||[]; const price=arr.length?arr[arr.length-1].price:asset.base; const prev=arr.length>1?arr[arr.length-2].price:price; const up=price>=prev;
+                              return <button key={asset.symbol} onClick={()=>openMarket(asset.symbol)} style={{minWidth:0,minHeight:126,borderRadius:18,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"12px 7px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                                {logo?<img src={logo} alt="" style={{width:36,height:36,borderRadius:"50%",objectFit:"cover",marginBottom:8}}/>:<div style={{width:36,height:36,borderRadius:"50%",background:T.gold,marginBottom:8}}/>}
+                                <div style={{fontFamily:FONT_HEAD,fontSize:11,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>{asset.symbol}</div>
+                                <div style={{marginTop:5,fontFamily:FONT_HEAD,fontSize:10,fontWeight:700,color:up?"#5EDB78":"#E27661",fontVariantNumeric:"tabular-nums"}}>{Number(price).toFixed(Math.min(asset.digits,2))}</div>
+                              </button>;
+                            })}
+                            <button onClick={()=>setShowAddMarket(true)} style={{minWidth:0,minHeight:126,borderRadius:18,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"12px 7px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                              <div style={{width:36,height:36,borderRadius:"50%",border:`2px solid ${T.gold}`,display:"grid",placeItems:"center",marginBottom:8}}><Plus size={20} color={T.gold}/></div>
+                              <div style={{fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800}}>Add Market</div>
+                            </button>
+                          </div>
         </div>
-      </section>
-
-      <section style={{padding:"16px 14px 0"}}>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8}}>
-          {marketCards.map(asset=>{
-            const logo=resolveMarketLogo({symbol:asset.symbol})?.src; const arr=seriesMap?.[asset.symbol]||[]; const price=arr.length?arr[arr.length-1].price:asset.base; const prev=arr.length>1?arr[arr.length-2].price:price; const up=price>=prev;
-            return <button key={asset.symbol} onClick={()=>openMarket(asset.symbol)} style={{minWidth:0,minHeight:126,borderRadius:18,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"12px 7px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-              {logo?<img src={logo} alt="" style={{width:36,height:36,borderRadius:"50%",objectFit:"cover",marginBottom:8}}/>:<div style={{width:36,height:36,borderRadius:"50%",background:T.gold,marginBottom:8}}/>}
-              <div style={{fontFamily:FONT_HEAD,fontSize:11,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>{asset.symbol}</div>
-              <div style={{marginTop:5,fontFamily:FONT_HEAD,fontSize:10,fontWeight:700,color:up?"#5EDB78":"#E27661",fontVariantNumeric:"tabular-nums"}}>{Number(price).toFixed(Math.min(asset.digits,2))}</div>
-            </button>;
-          })}
-          <button onClick={()=>setShowAddMarket(true)} style={{minWidth:0,minHeight:126,borderRadius:18,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"12px 7px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-            <div style={{width:36,height:36,borderRadius:"50%",border:`2px solid ${T.gold}`,display:"grid",placeItems:"center",marginBottom:8}}><Plus size={20} color={T.gold}/></div>
-            <div style={{fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800}}>Add Market</div>
-          </button>
-        </div>
-      </section>
-
-      <SpaceNewsSection />
+      </section>\n\n      <SpaceNewsSection />
 
       {showFullChart&&<HomeChartErrorBoundary><FullChartView inst={signalInst} session={sessions?.[signalSymbol]||session} signalsMap={signalsMap} themeMode={themeMode} onClose={()=>setShowFullChart(false)} livePrice={signalSymbol===activeSymbol?last:(seriesMap?.[signalSymbol]?.slice(-1)?.[0]?.price||null)}/></HomeChartErrorBoundary>}
 
