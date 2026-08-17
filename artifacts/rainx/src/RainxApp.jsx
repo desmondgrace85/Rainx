@@ -3749,6 +3749,8 @@ function GamesTab() {
     </div>
   );
 }
+*/
+}
 
 // Homepage is maintained in ./HomeTab.jsx. Keep a single source of truth so the legacy inline HomeTab cannot reappear.
 function Row({ label, value, color }) {
