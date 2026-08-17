@@ -6,7 +6,7 @@ import {
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
   CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet, Landmark, Gift, Trophy,
   Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle, Plus, ChevronDown,
-  BrainCircuit, Cpu, Palette, Globe,
+  BrainCircuit, Cpu, Palette, Globe, Trash2, UserX, Download, FileCheck, Cookie, Database,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, formatCount } from "./CommunityTab";
@@ -2642,7 +2642,7 @@ function MainAppContent({ account, onLogout }) {
 
   return (
     <PullToRefresh>
-      <div style={{ minHeight: "100dvh", background: tab === "home" ? "radial-gradient(ellipse 42% 32% at 0% 22%,rgba(255,252,240,.72) 0%,rgba(255,248,225,.32) 52%,transparent 100%),radial-gradient(ellipse 42% 32% at 100% 22%,rgba(255,252,240,.72) 0%,rgba(255,248,225,.32) 52%,transparent 100%),linear-gradient(180deg,#F4D35E 0%,#FDC432 8%,#FDD46F 22%,#FDE7A8 36%,#F7F3E9 50%,#F7F3E9 100%)" : T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative", isolation: "isolate" }}>
+      <div style={{ minHeight: "100dvh", background: tab === "home" ? "#F8F9FA" : T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative", isolation: "isolate" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
@@ -5262,6 +5262,17 @@ function GoldBarsIcon() {
   );
 }
 
+function StableLightSheet({ children, onClose }) {
+  return (
+    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(15,20,25,.20)", backdropFilter:"blur(7px)", WebkitBackdropFilter:"blur(7px)", zIndex:100, display:"flex", alignItems:"flex-end" }}>
+      <div onClick={e=>e.stopPropagation()} style={{ width:"100%", maxWidth:480, margin:"0 auto", background:"#FFFFFF", border:"1px solid #E7E9EC", borderBottom:0, borderRadius:"22px 22px 0 0", padding:"11px 18px 28px", boxShadow:"0 -10px 35px rgba(15,20,25,.12)", transform:"translateY(0)", willChange:"transform", animation:"rxLightSheetUp .26s cubic-bezier(.22,1,.36,1)" }}>
+        <div style={{ width:42, height:5, borderRadius:3, background:"#D9DDE1", margin:"0 auto 18px" }} />
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function MoreSubScreen({ onBack, title, subtitle, rightElement, children }) {
   const lightPrefScreen = title === "Settings" || title === "Security" || title === "Notifications";
   const prefBg = "#F2F3F5";
@@ -5269,7 +5280,7 @@ function MoreSubScreen({ onBack, title, subtitle, rightElement, children }) {
   const prefBorder = "#E7E9EC";
   return (
     <div style={{ minHeight: "100%", animation: "slideInRight 0.2s ease", background: lightPrefScreen ? prefBg : T.card }}>
-      <style>{"@keyframes slideInRight { from { transform: translateX(24px); opacity:0; } to { transform: translateX(0); opacity:1; } }"}</style>
+      <style>{"@keyframes slideInRight { from { transform: translateX(24px); opacity:0; } to { transform: translateX(0); opacity:1; } } @keyframes rxLightSheetUp { from { transform:translateY(100%); opacity:.7 } to { transform:translateY(0); opacity:1 } }"}</style>
       <div style={{ display: "flex", alignItems: "center", padding: "10px 16px 10px", borderBottom: `1px solid ${lightPrefScreen ? prefBorder : T.cardBorder}`, background: lightPrefScreen ? prefBg : T.card }}>
         <button onClick={onBack} style={{ background: "none", border: "none", color: lightPrefScreen ? prefText : T.paper, cursor: "pointer", display: "flex", alignItems: "center", padding: "4px", borderRadius: 8, flexShrink: 0 }}>
           <ChevronLeft size={22} />
@@ -6759,13 +6770,13 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const PREF_MUTED = "#737B85";
   const PREF_YELLOW = T.gold;
 
-  const LightToggle = ({ on, onChange, disabled=false }) => (
+  const LightToggle = ({ on, onChange, disabled=false, danger=false }) => (
     <button
       type="button"
       aria-pressed={on}
       onClick={e=>{ e.stopPropagation(); onChange(); }}
       disabled={disabled}
-      style={{ width:44, height:25, padding:0, border:0, borderRadius:13, background:on ? PREF_YELLOW : "#D7DBE0", position:"relative", cursor:disabled?"not-allowed":"pointer", transition:"background .18s", flexShrink:0, opacity:disabled?.55:1 }}
+      style={{ width:44, height:25, padding:0, border:0, borderRadius:13, background:on ? (danger ? "#C0392B" : PREF_YELLOW) : "#D7DBE0", position:"relative", cursor:disabled?"not-allowed":"pointer", transition:"background .18s", flexShrink:0, opacity:disabled?.55:1 }}
     >
       <span style={{ position:"absolute", top:3, left:on?22:3, width:19, height:19, borderRadius:"50%", background:"#fff", boxShadow:"0 1px 3px rgba(0,0,0,.18)", transition:"left .18s" }} />
     </button>
@@ -6807,15 +6818,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     return <LightRow icon={ShieldCheck} title={title} subtitle={subtitle} onPress={()=>persistSecurity({[prefKey]:!on})} right={<LightToggle on={on} onChange={()=>persistSecurity({[prefKey]:!on})} />} />;
   };
 
-  const LightSheet = ({ children, onClose }) => (
-    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(15,20,25,.20)", backdropFilter:"blur(7px)", WebkitBackdropFilter:"blur(7px)", zIndex:100, display:"flex", alignItems:"flex-end" }}>
-      <style>{"@keyframes rxLightSheetUp { from { transform:translateY(100%); opacity:.7 } to { transform:translateY(0); opacity:1 } }"}</style>
-      <div onClick={e=>e.stopPropagation()} style={{ width:"100%", maxWidth:480, margin:"0 auto", background:PREF_CARD, border:`1px solid ${PREF_BORDER}`, borderBottom:0, borderRadius:"22px 22px 0 0", padding:"11px 18px 28px", boxShadow:"0 -10px 35px rgba(15,20,25,.12)", animation:"rxLightSheetUp .26s cubic-bezier(.22,1,.36,1)" }}>
-        <div style={{ width:42, height:5, borderRadius:3, background:"#D9DDE1", margin:"0 auto 18px" }} />
-        {children}
-      </div>
-    </div>
-  );
+  const LightSheet = StableLightSheet;
 
   const LightSheetTitle = ({ title, desc }) => <>
     <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, color:PREF_TEXT, marginBottom:5 }}>{title}</div>
@@ -6877,7 +6880,17 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           <LightDivider />
           <LightRow icon={ScrollText} title="Data & storage" subtitle="Cache, downloads and local data" onPress={()=>setSettingsSheet("dataStorage")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
           <LightDivider />
-          <LightRow icon={Globe} title="Language & region" subtitle={settingsPrefs.region || "English · Ghana"} onPress={()=>setSettingsSheet("region")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+          <LightRow icon={Globe} title="Language & region" subtitle={settingsPrefs.language ? `${settingsPrefs.language} · ${settingsPrefs.region || "Ghana"}` : "English · Ghana"} onPress={()=>setSettingsSheet("region")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+        </LightSection>
+
+        <LightSection title="Legal, privacy & data">
+          <LightRow icon={FileCheck} title="Privacy policy" subtitle="Review how RainX handles personal information" onPress={()=>alert("Privacy policy can be opened from the RainX legal centre.")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+          <LightDivider />
+          <LightRow icon={FileCheck} title="Terms of service" subtitle="Review the rules that apply to your account" onPress={()=>alert("Terms of service can be opened from the RainX legal centre.")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+          <LightDivider />
+          <LightRow icon={Cookie} title="Cookie & tracking preferences" subtitle="Control optional analytics and personalization" onPress={()=>setSettingsSheet("cookies")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+          <LightDivider />
+          <LightRow icon={Download} title="Download your data" subtitle="Request a copy of information associated with your account" onPress={()=>setSettingsSheet("downloadData")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
         </LightSection>
 
         <LightSection title="Notifications">
@@ -6900,8 +6913,20 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <LightRow icon={ScrollText} title="Clear local preferences" subtitle="Remove locally saved RainX preferences on this device" onPress={()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('rainx-')).forEach(k=>localStorage.removeItem(k));}catch{} setSettingsPrefs({}); setSettingsSheet(null); alert('Local RainX preferences were cleared.');}} right={<ChevronRight size={18} color={PREF_MUTED} />} />
           </>}
           {settingsSheet === "region" && <>
-            <LightSheetTitle title="Language & region" desc="Choose your preferred app region." />
-            {["English · Ghana","English · Nigeria","English · International"].map(v=><LightChoice key={v} value={v} current={settingsPrefs.region||"English · Ghana"} title={v} onSelect={x=>{persistSettings({region:x});setSettingsSheet(null)}} />)}
+            <LightSheetTitle title="Language & region" desc="Choose your preferred app language and region." />
+            <div style={{maxHeight:"52vh",overflowY:"auto",paddingRight:4}}>
+              {["English","French","Spanish","Portuguese","Arabic","German","Italian","Dutch","Chinese (Simplified)","Chinese (Traditional)","Japanese","Korean","Hindi","Bengali","Urdu","Indonesian","Malay","Thai","Vietnamese","Turkish","Swahili","Hausa","Yoruba","Amharic","Hebrew","Russian","Ukrainian","Polish","Romanian","Greek","Czech","Hungarian","Swedish","Norwegian","Danish","Finnish"].map(v=><LightChoice key={v} value={v} current={settingsPrefs.language||"English"} title={v} onSelect={x=>{persistSettings({language:x,region:x==="English"?"Ghana":x});setSettingsSheet(null)}} />)}
+            </div>
+          </>}
+          {settingsSheet === "cookies" && <>
+            <LightSheetTitle title="Cookie & tracking preferences" desc="Optional controls. Essential security and session storage remain enabled." />
+            <LightToggleRow icon={Activity} title="Analytics" subtitle="Help RainX understand how features are used" prefKey="analyticsCookies" />
+            <LightToggleRow icon={Users2} title="Personalized recommendations" subtitle="Use activity to improve content and market suggestions" prefKey="personalizationCookies" />
+            <LightToggleRow icon={Bell} title="Marketing notifications" subtitle="Allow promotional product and creator updates" prefKey="marketingNotifications" defaultValue={false} />
+          </>}
+          {settingsSheet === "downloadData" && <>
+            <LightSheetTitle title="Download your data" desc="Create a local copy of the preferences currently stored on this device." />
+            <LightRow icon={Download} title="Export local preferences" subtitle="Save your RainX settings as a JSON file" onPress={()=>{try{const payload={exportedAt:new Date().toISOString(),settings:settingsPrefs,security:{...securityPrefs,pinHash:undefined,biometricCredentialId:undefined}};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="rainx-settings.json";a.click();URL.revokeObjectURL(url);setSettingsSheet(null)}catch{alert("Unable to export local preferences on this device.")}}} right={<ChevronRight size={18} color={PREF_MUTED} />} />
           </>}
         </LightSheet>}
       </div>
@@ -6951,7 +6976,13 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           <LightRow icon={ShieldCheck} title="Security checkup" subtitle="Review your account protection settings" onPress={()=>setSecuritySheet("checkup")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
         </LightSection>
 
-        <button onClick={()=>{if(window.confirm("Are you sure you want to delete your account? This cannot be undone.")){alert("Please contact support to delete your account.");}}} style={{width:"100%",background:PREF_CARD,border:`1px solid ${T.rust}55`,borderRadius:15,padding:"13px 0",fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.rust,cursor:"pointer"}}>Delete Account</button>
+        <LightSection title="Account status & control">
+          <LightRow icon={UserX} title="Deactivate account" subtitle="Temporarily hide your account and sign you out" right={<LightToggle danger on={!!securityPrefs.deactivated} onChange={()=>{if(securityPrefs.deactivated){persistSecurity({deactivated:false});return;}if(window.confirm("Deactivate your RainX account on this device? You can reactivate later.")){persistSecurity({deactivated:true});onLogout?.();}}} />} />
+          <LightDivider />
+          <LightRow icon={Database} title="Account data" subtitle="Review your account data and privacy controls" onPress={()=>setSecuritySheet("accountData")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={Trash2} title="Delete account" subtitle="Permanently request account deletion" right={<LightToggle danger on={!!securityPrefs.deleteArmed} onChange={()=>{if(securityPrefs.deleteArmed){persistSecurity({deleteArmed:false});return;}if(window.confirm("Arm permanent account deletion? You will still need to confirm on the next screen.")){persistSecurity({deleteArmed:true});setSecuritySheet("deleteAccount");}}} />} />
+        </LightSection>
 
         {securitySheet && <LightSheet onClose={()=>setSecuritySheet(null)}>
           {securitySheet === "pin" && <>
@@ -6964,6 +6995,23 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           {securitySheet === "sessions" && <>
             <LightSheetTitle title="Active Sessions" desc="Review devices currently signed in to RainX." />
             <div style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:14,padding:"13px 14px",display:"flex",alignItems:"center",gap:12}}><LightIcon Icon={Smartphone}/><div style={{flex:1}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>This device</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>Current RainX session</div></div><span style={{fontSize:10,color:"#1A7A50",fontWeight:800}}>ACTIVE</span></div>
+          </>}
+          {securitySheet === "appLockSetup" && <>
+            <LightSheetTitle title="Set up App Lock" desc="RainX needs a PIN or device biometric before App Lock can be enabled." />
+            <LightRow icon={Key} title="Set up PIN" subtitle="Create a 4–6 digit RainX PIN" onPress={()=>{setPinValue("");setPinConfirm("");setPinError("");setSecuritySheet("pin")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+            <LightDivider />
+            <LightRow icon={Smartphone} title="Set up Face ID / device passkey" subtitle="Use your device biometric when supported" onPress={setupPasskey} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          </>}
+          {securitySheet === "accountData" && <>
+            <LightSheetTitle title="Account data" desc="Manage the privacy and account-data actions available from this device." />
+            <LightRow icon={Download} title="Export local settings" subtitle="Download your RainX preferences as JSON" onPress={()=>{setSecuritySheet(null);setMorePage("settings");setSettingsSheet("downloadData")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+            <LightDivider />
+            <LightRow icon={FileCheck} title="Privacy controls" subtitle="Review discovery, messaging and personalization settings" onPress={()=>{setSecuritySheet(null);setMorePage("settings")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          </>}
+          {securitySheet === "deleteAccount" && <>
+            <LightSheetTitle title="Delete account" desc="Account deletion is permanent. Real deletion should require re-authentication and a trusted server-side deletion flow." />
+            <div style={{background:"#FFF4F4",border:"1px solid #F2B8B8",borderRadius:13,padding:"12px 13px",fontSize:11,color:"#8E2A2A",lineHeight:1.5,marginBottom:12}}>This client screen does not delete server data by itself. Connect it to your authenticated account-deletion endpoint before enabling permanent deletion.</div>
+            <button onClick={()=>{setSecuritySheet(null);alert("Deletion was not performed. A secure server-side account-deletion flow is required.")}} style={{width:"100%",background:"#C0392B",color:"#FFFFFF",border:0,borderRadius:12,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:13,cursor:"pointer"}}>Continue</button>
           </>}
           {securitySheet === "checkup" && <>
             <LightSheetTitle title="Security checkup" desc="A quick view of your current protection." />
