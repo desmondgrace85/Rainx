@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { ChevronRight, ExternalLink } from "lucide-react";
+import { ChevronRight, ExternalLink, RefreshCw } from "lucide-react";
 
 const GOOGLE_NEWS_URL = "https://news.google.com/rss/search?q=(crypto%20OR%20bitcoin%20OR%20ethereum%20OR%20solana%20OR%20forex%20OR%20gold)&hl=en-US&gl=US&ceid=US:en";
 const RSS_PROXY = "https://api.rss2json.com/v1/api.json?rss_url=";
@@ -128,17 +128,24 @@ export default function SpaceNewsSection() {
     <section style={{ margin: "18px 14px 26px" }}>
       <div style={{ background: "#fff", border: "1px solid #EEE9DD", borderRadius: 18, overflow: "hidden", boxShadow: "0 4px 18px rgba(15,14,11,.05)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 14px 10px", marginBottom: 0 }}>
-        <div style={{ fontFamily: "Montserrat,sans-serif", fontWeight: 700, fontSize: 20, color: "#0F0E0B", letterSpacing: -0.3 }}>
-          Crypto News
+        <div style={{ fontFamily: "Montserrat,sans-serif", fontWeight: 800, fontSize: 22, color: "#0F0E0B", letterSpacing: -0.4 }}>
+          Space News
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <button
+            onClick={load}
+            aria-label="Refresh space news"
+            style={{ width: 34, height: 34, borderRadius: 11, border: "1px solid #E9E4D8", background: "#fff", color: "#8B8476", display: "grid", placeItems: "center", cursor: "pointer" }}
+          >
+            <RefreshCw size={14} style={{ animation: status === "refreshing" ? "rx-news-spin .9s linear infinite" : "none" }} />
+          </button>
           <a
             href={GOOGLE_NEWS_URL}
             target="_blank"
             rel="noreferrer"
-            style={{ display: "flex", alignItems: "center", gap: 2, textDecoration: "none", color: "#C4931A", fontFamily: "Montserrat,sans-serif", fontSize: 12, fontWeight: 600 }}
+            style={{ display: "flex", alignItems: "center", gap: 2, textDecoration: "none", color: "#C4931A", fontFamily: "Montserrat,sans-serif", fontSize: 12, fontWeight: 800 }}
           >
-            See all <ChevronRight size={14} />
+            See all <ChevronRight size={16} />
           </a>
         </div>
       </div>
