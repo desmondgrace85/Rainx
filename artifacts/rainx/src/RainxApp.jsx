@@ -6,7 +6,7 @@ import {
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
   CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet, Landmark, Gift, Trophy,
   Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle, Plus, ChevronDown,
-  BrainCircuit, Cpu, Palette,
+  BrainCircuit, Cpu, Palette, Globe,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, formatCount } from "./CommunityTab";
@@ -5182,82 +5182,33 @@ function NotificationSettingsScreen({ account, activeMarkets = [] }) {
       return next;
     });
   };
+  const bg = "#F2F3F5", card = "#FFFFFF", border = "#E7E9EC", text = "#111418", muted = "#737B85", yellow = T.gold;
   const SwitchToggle = ({ on, onChange }) => (
-    <div onClick={onChange} style={{ width: 44, height: 24, borderRadius: 12, background: on ? T.sage : T.cardBorder, position: "relative", cursor: "pointer", transition: "background 0.2s", flexShrink: 0 }}>
-      <div style={{ position: "absolute", top: 3, left: on ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
-    </div>
+    <button type="button" aria-pressed={on} onClick={e=>{e.stopPropagation();onChange();}} style={{ width:44,height:25,padding:0,border:0,borderRadius:13,background:on?yellow:"#D7DBE0",position:"relative",cursor:"pointer",transition:"background .18s",flexShrink:0 }}>
+      <span style={{position:"absolute",top:3,left:on?22:3,width:19,height:19,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 3px rgba(0,0,0,.18)",transition:"left .18s"}} />
+    </button>
   );
   return (
-    <div style={{ padding: 16 }}>
-      {/* Master toggle */}
-      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>All Notifications</div>
-            <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2 }}>Master on/off for all alerts</div>
-          </div>
-          <SwitchToggle on={masterOn} onChange={() => toggle("master")} />
+    <div style={{ background:bg, padding:"16px 16px 28px", minHeight:"100%" }}>
+      <div style={{ background:card, border:`1px solid ${border}`, borderRadius:17, padding:"15px 16px", marginBottom:16, boxShadow:"0 1px 2px rgba(15,20,25,.03)" }}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+          <div><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:14,color:text}}>All Notifications</div><div style={{fontSize:11.2,color:muted,marginTop:3}}>Master control for all alerts</div></div>
+          <SwitchToggle on={masterOn} onChange={()=>toggle("master")} />
         </div>
       </div>
-      {/* Category toggles */}
-      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, overflow: "hidden" }}>
-        {NOTIF_CATEGORIES.map((cat, i) => {
+      <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:12.5,color:muted,margin:"0 0 8px 4px",textTransform:"uppercase"}}>Categories</div>
+      <div style={{ background:card,border:`1px solid ${border}`,borderRadius:17,overflow:"hidden",boxShadow:"0 1px 2px rgba(15,20,25,.03)" }}>
+        {NOTIF_CATEGORIES.map((cat,i)=>{
           const catOn = masterOn && prefs[cat.key] !== false;
-          return (
-            <div key={cat.key} style={{ padding: "14px 16px", borderBottom: i < NOTIF_CATEGORIES.length - 1 ? `1px solid ${T.cardBorder}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center", opacity: masterOn ? 1 : 0.5 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 13, color: T.paper }}>{cat.label}</div>
-                <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{cat.desc}</div>
-              </div>
-              <SwitchToggle on={catOn} onChange={() => masterOn && toggle(cat.key)} />
+          return <React.Fragment key={cat.key}>
+            {i>0&&<div style={{height:1,background:border,marginLeft:16}}/>}
+            <div onClick={()=>masterOn&&toggle(cat.key)} style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,opacity:masterOn?1:.5,cursor:masterOn?"pointer":"default"}}>
+              <div style={{flex:1,minWidth:0}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:text}}>{cat.label}</div><div style={{fontSize:11,color:muted,marginTop:3,lineHeight:1.35}}>{cat.desc}</div></div>
+              <SwitchToggle on={catOn} onChange={()=>toggle(cat.key)} />
             </div>
-          );
+          </React.Fragment>;
         })}
       </div>
-      {/* Push notifications */}
-      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginTop: 16 }}>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 8 }}>Push Notifications</div>
-        <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.7, marginBottom: 12 }}>Enable push notifications to receive trading signals and alerts even when RainX is not open.</div>
-        <button onClick={async () => {
-          if (!("Notification" in window)) { alert("Notifications are not supported in this browser."); return; }
-          const permission = await Notification.requestPermission();
-          if (permission !== "granted") { alert("Permission denied. Enable notifications in your browser settings."); return; }
-          if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-            alert("Push notifications are not supported in your browser. You will still receive in-app alerts."); return;
-          }
-          try {
-            const reg = await navigator.serviceWorker.ready;
-            const existing = await reg.pushManager.getSubscription();
-            if (existing) { alert("Push notifications are already enabled!"); return; }
-            // Fetch VAPID public key from backend
-            let vapidKey;
-            try {
-              const apiBase = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
-              const keyRes = await fetch(`${apiBase}/api/push/keys`);
-              if (keyRes.ok) { const kd = await keyRes.json(); vapidKey = kd.publicKey; }
-            } catch {}
-            if (!vapidKey) { alert("Push server not configured yet. You will receive in-app alerts instead."); return; }
-            // Convert VAPID key
-            const urlBase64ToUint8Array = (base64String) => {
-              const padding = "=".repeat((4 - base64String.length % 4) % 4);
-              const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-              const rawData = window.atob(base64);
-              return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
-            };
-            const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidKey) });
-            const apiBase = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
-            await fetch(`${apiBase}/api/push/subscribe`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ subscription: sub.toJSON(), userId: account?.id, activeMarkets }),
-            });
-            alert("Push notifications enabled! You will now receive trading signals even when RainX is closed.");
-          } catch (e) { alert("Could not enable push notifications: " + e.message); }
-        }} style={{ width: "100%", background: T.gold, color: T.ink, border: "none", borderRadius: 10, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-          Enable Push Notifications
-        </button>
-      </div>
-      {/* Sound Picker — 7 categories with Preview buttons */}
       <SoundPickerCard />
     </div>
   );
@@ -5312,16 +5263,20 @@ function GoldBarsIcon() {
 }
 
 function MoreSubScreen({ onBack, title, subtitle, rightElement, children }) {
+  const lightPrefScreen = title === "Settings" || title === "Security" || title === "Notifications";
+  const prefBg = "#F2F3F5";
+  const prefText = "#111418";
+  const prefBorder = "#E7E9EC";
   return (
-    <div style={{ minHeight: "100%", animation: "slideInRight 0.2s ease", background: T.card }}>
+    <div style={{ minHeight: "100%", animation: "slideInRight 0.2s ease", background: lightPrefScreen ? prefBg : T.card }}>
       <style>{"@keyframes slideInRight { from { transform: translateX(24px); opacity:0; } to { transform: translateX(0); opacity:1; } }"}</style>
-      <div style={{ display: "flex", alignItems: "center", padding: "10px 16px 10px", borderBottom: `1px solid ${T.cardBorder}` }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", color: T.paper, cursor: "pointer", display: "flex", alignItems: "center", padding: "4px", borderRadius: 8, flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", padding: "10px 16px 10px", borderBottom: `1px solid ${lightPrefScreen ? prefBorder : T.cardBorder}`, background: lightPrefScreen ? prefBg : T.card }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: lightPrefScreen ? prefText : T.paper, cursor: "pointer", display: "flex", alignItems: "center", padding: "4px", borderRadius: 8, flexShrink: 0 }}>
           <ChevronLeft size={22} />
         </button>
         <div style={{ flex: 1, textAlign: "center" }}>
-          {title && <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, lineHeight: 1.2 }}>{title}</div>}
-          {subtitle && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{subtitle}</div>}
+          {title && <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: lightPrefScreen ? prefText : T.paper, lineHeight: 1.2 }}>{title}</div>}
+          {subtitle && <div style={{ fontSize: 11, color: lightPrefScreen ? "#737B85" : T.muted, marginTop: 2 }}>{subtitle}</div>}
         </div>
         <div style={{ flexShrink: 0, width: 30, display: "flex", justifyContent: "flex-end" }}>
           {rightElement || null}
@@ -5764,6 +5719,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     try { return JSON.parse(lsGet("rainx-settings-prefs") || "{}"); } catch { return {}; }
   });
   const [settingsSheet, setSettingsSheet] = useState(null);
+  const [postVisibility, setPostVisibility] = useState(() => lsGet("rainx-post-visibility") || "public");
 
   const persistSecurity = (patch) => {
     setSecurityPrefs(prev => {
@@ -6791,251 +6747,229 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     );
   }
 
+  // ── Settings / Security visual system ─────────────────────────────────────
+  // These screens intentionally use a light ash page, white grouped cards,
+  // dark icons and the existing RainX yellow accent without changing the rest
+  // of the application theme.
+  const PREF_BG = "#F2F3F5";
+  const PREF_CARD = "#FFFFFF";
+  const PREF_BORDER = "#E7E9EC";
+  const PREF_ICON = "#18202A";
+  const PREF_TEXT = "#111418";
+  const PREF_MUTED = "#737B85";
+  const PREF_YELLOW = T.gold;
+
+  const LightToggle = ({ on, onChange, disabled=false }) => (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={e=>{ e.stopPropagation(); onChange(); }}
+      disabled={disabled}
+      style={{ width:44, height:25, padding:0, border:0, borderRadius:13, background:on ? PREF_YELLOW : "#D7DBE0", position:"relative", cursor:disabled?"not-allowed":"pointer", transition:"background .18s", flexShrink:0, opacity:disabled?.55:1 }}
+    >
+      <span style={{ position:"absolute", top:3, left:on?22:3, width:19, height:19, borderRadius:"50%", background:"#fff", boxShadow:"0 1px 3px rgba(0,0,0,.18)", transition:"left .18s" }} />
+    </button>
+  );
+
+  const LightSection = ({ title, children }) => (
+    <section style={{ marginBottom:22 }}>
+      <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, letterSpacing:.15, color:PREF_MUTED, margin:"0 0 8px 4px", textTransform:"uppercase" }}>{title}</div>
+      <div style={{ background:PREF_CARD, border:`1px solid ${PREF_BORDER}`, borderRadius:17, overflow:"hidden", boxShadow:"0 1px 2px rgba(15,20,25,.03)" }}>{children}</div>
+    </section>
+  );
+
+  const LightDivider = () => <div style={{ height:1, background:PREF_BORDER, marginLeft:66 }} />;
+
+  const LightIcon = ({ Icon }) => (
+    <div style={{ width:38, height:38, borderRadius:11, background:"#F1F3F5", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+      <Icon size={19} color={PREF_ICON} strokeWidth={2.1} />
+    </div>
+  );
+
+  const LightRow = ({ icon:Icon, title, subtitle, onPress, right, disabled=false }) => (
+    <div role={onPress?"button":undefined} tabIndex={onPress?0:undefined} onClick={onPress} onKeyDown={e=>{if(onPress&&(e.key==="Enter"||e.key===" ")){e.preventDefault();onPress();}}} style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"14px 16px", background:"transparent", border:0, textAlign:"left", cursor:disabled?"not-allowed":onPress?"pointer":"default", opacity:disabled?.55:1, boxSizing:"border-box" }}>
+      {Icon && <LightIcon Icon={Icon} />}
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:PREF_TEXT }}>{title}</div>
+        {subtitle && <div style={{ fontFamily:FONT_BODY, fontSize:11.2, color:PREF_MUTED, marginTop:3, lineHeight:1.4 }}>{subtitle}</div>}
+      </div>
+      {right}
+    </div>
+  );
+
+  const LightToggleRow = ({ icon:Icon, title, subtitle, prefKey, defaultValue=true }) => {
+    const on = settingsPrefs[prefKey] ?? defaultValue;
+    return <LightRow icon={Icon} title={title} subtitle={subtitle} onPress={()=>persistSettings({[prefKey]:!on})} right={<LightToggle on={on} onChange={()=>persistSettings({[prefKey]:!on})} />} />;
+  };
+
+  const LightSecurityToggleRow = ({ title, subtitle, prefKey, defaultValue=true }) => {
+    const on = securityPrefs[prefKey] ?? defaultValue;
+    return <LightRow icon={ShieldCheck} title={title} subtitle={subtitle} onPress={()=>persistSecurity({[prefKey]:!on})} right={<LightToggle on={on} onChange={()=>persistSecurity({[prefKey]:!on})} />} />;
+  };
+
+  const LightSheet = ({ children, onClose }) => (
+    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(15,20,25,.20)", backdropFilter:"blur(7px)", WebkitBackdropFilter:"blur(7px)", zIndex:100, display:"flex", alignItems:"flex-end" }}>
+      <style>{"@keyframes rxLightSheetUp { from { transform:translateY(100%); opacity:.7 } to { transform:translateY(0); opacity:1 } }"}</style>
+      <div onClick={e=>e.stopPropagation()} style={{ width:"100%", maxWidth:480, margin:"0 auto", background:PREF_CARD, border:`1px solid ${PREF_BORDER}`, borderBottom:0, borderRadius:"22px 22px 0 0", padding:"11px 18px 28px", boxShadow:"0 -10px 35px rgba(15,20,25,.12)", animation:"rxLightSheetUp .26s cubic-bezier(.22,1,.36,1)" }}>
+        <div style={{ width:42, height:5, borderRadius:3, background:"#D9DDE1", margin:"0 auto 18px" }} />
+        {children}
+      </div>
+    </div>
+  );
+
+  const LightSheetTitle = ({ title, desc }) => <>
+    <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, color:PREF_TEXT, marginBottom:5 }}>{title}</div>
+    {desc && <div style={{ fontSize:11.5, color:PREF_MUTED, lineHeight:1.55, marginBottom:16 }}>{desc}</div>}
+  </>;
+
+  const LightChoice = ({ value, current, title, desc, onSelect }) => (
+    <button type="button" onClick={()=>onSelect(value)} style={{ width:"100%", background:"transparent", border:0, padding:"13px 0", display:"flex", alignItems:"center", gap:12, textAlign:"left", cursor:"pointer" }}>
+      <div style={{ flex:1 }}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:PREF_TEXT}}>{title}</div>{desc&&<div style={{fontSize:11,color:PREF_MUTED,marginTop:2}}>{desc}</div>}</div>
+      <div style={{ width:20, height:20, borderRadius:"50%", border:`2px solid ${current===value?PREF_YELLOW:"#C9CED4"}`, display:"flex", alignItems:"center", justifyContent:"center" }}>{current===value&&<div style={{width:10,height:10,borderRadius:"50%",background:PREF_YELLOW}}/>}</div>
+    </button>
+  );
+
   if (morePage === "settings") return (
-    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Settings" subtitle="Privacy &amp; account controls">
-      <div style={{ padding:16 }}>
-        <MoreSection title="Post Visibility">
-          {[["public","Public — everyone"],["followers","Followers only"],["premium","Subscribers only"]].map(([val,label],i,arr)=>{
-            const cur = lsGet("rainx-post-visibility")||"public";
-            return (
-              <React.Fragment key={val}>
-                {i>0 && <MoreRowDivider />}
-                <button onClick={()=>lsSet("rainx-post-visibility",val)} style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"13px 16px", background:"none", border:"none", cursor:"pointer" }}>
-                  <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper }}>{label}</span>
-                  <div style={{ width:20, height:20, borderRadius:"50%", border:`2px solid ${cur===val?T.gold:T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    {cur===val && <div style={{ width:10, height:10, borderRadius:"50%", background:T.gold }} />}
-                  </div>
-                </button>
-              </React.Fragment>
-            );
+    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Settings" subtitle="Privacy & account controls">
+      <div style={{ background:PREF_BG, minHeight:"100%", padding:"16px 16px 28px" }}>
+        <LightSection title="Privacy & discovery">
+          <LightToggleRow icon={Eye} title="Profile discoverable" subtitle="Allow your profile to appear in search and suggestions" prefKey="profileDiscoverable" />
+          <LightDivider />
+          <LightToggleRow icon={Eye} title="Activity status" subtitle="Let people you follow see when you are active" prefKey="activityStatus" />
+          <LightDivider />
+          <LightToggleRow icon={MessageCircle} title="Read receipts" subtitle="Show when direct messages have been read" prefKey="readReceipts" />
+          <LightDivider />
+          <LightToggleRow icon={Users2} title="Personalized suggestions" subtitle="Use your activity to improve people and market suggestions" prefKey="personalizedSuggestions" />
+        </LightSection>
+
+        <LightSection title="Your posts">
+          {[["public","Public — everyone","Anyone can view your posts"],["followers","Followers only","Only your followers can view your posts"],["premium","Subscribers only","Only eligible subscribers can view your posts"]].map(([value,title,desc],i)=>{
+            return <React.Fragment key={value}>{i>0&&<LightDivider/>}<LightRow icon={FileText} title={title} subtitle={desc} onPress={()=>{setPostVisibility(value);lsSet("rainx-post-visibility",value)}} right={<div style={{width:20,height:20,borderRadius:"50%",border:`2px solid ${postVisibility===value?PREF_YELLOW:"#C9CED4"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{postVisibility===value&&<div style={{width:10,height:10,borderRadius:"50%",background:PREF_YELLOW}}/>}</div>} /></React.Fragment>;
           })}
-        </MoreSection>
+        </LightSection>
 
-        <MoreSection title="PRIVACY & DISCOVERY">
-          {[
-            ["profileDiscoverable","Profile discoverable","Allow your profile to appear in search and suggestions",true],
-            ["activityStatus","Activity status","Let people you follow see when you are active",true],
-            ["readReceipts","Read receipts","Show when direct messages have been read",true],
-            ["personalizedSuggestions","Personalized suggestions","Use your activity to improve people and market suggestions",true],
-          ].map(([key,title,desc,def],i,arr)=>(
-            <React.Fragment key={key}>
-              {i>0 && <MoreRowDivider />}
-              <button onClick={()=>persistSettings({[key]:!(settingsPrefs[key] ?? def)})} style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"13px 16px", background:"none", border:"none", cursor:"pointer", textAlign:"left" }}>
-                <div style={{ flex:1 }}><div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper }}>{title}</div><div style={{ fontSize:11, color:T.muted, marginTop:2 }}>{desc}</div></div>
-                <div style={{ width:44, height:24, borderRadius:12, background:(settingsPrefs[key] ?? def)?T.sage:T.cardBorder, position:"relative", transition:"background 0.2s", flexShrink:0 }}><div style={{ position:"absolute", top:3, left:(settingsPrefs[key] ?? def)?23:3, width:18, height:18, borderRadius:"50%", background:"#fff", transition:"left 0.2s" }} /></div>
-              </button>
-            </React.Fragment>
-          ))}
-        </MoreSection>
+        <LightSection title="Trading & signals">
+          <LightToggleRow icon={Bell} title="Trading signal alerts" subtitle="Receive new BUY / SELL signal notifications" prefKey="signalAlerts" />
+          <LightDivider />
+          <LightToggleRow icon={ShieldCheck} title="Risk & trade alerts" subtitle="Get TP, SL and important risk notifications" prefKey="riskAlerts" />
+          <LightDivider />
+          <LightToggleRow icon={Bell} title="Signal sounds" subtitle="Play alert sounds for important trading events" prefKey="signalSounds" />
+          <LightDivider />
+          <LightToggleRow icon={Activity} title="Live market refresh" subtitle="Keep market and signal data refreshed automatically" prefKey="autoRefresh" />
+          <LightDivider />
+          <LightRow icon={ChevronDown} title="Signal delivery" subtitle={settingsPrefs.signalDelivery || "All signals"} onPress={()=>setSettingsSheet("signalDelivery")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+        </LightSection>
 
-        <MoreSection title="TRADING & SIGNALS">
-          {[
-            ["signalAlerts","Trading signal alerts","Receive new BUY / SELL signal notifications",true],
-            ["riskAlerts","Risk & trade alerts","Get TP, SL and important risk notifications",true],
-            ["signalSounds","Signal sounds","Play alert sounds for important trading events",true],
-            ["autoRefresh","Live market refresh","Keep market and signal data refreshed automatically",true],
-          ].map(([key,title,desc,def],i)=>(
-            <React.Fragment key={key}>
-              {i>0 && <MoreRowDivider />}
-              <button onClick={()=>persistSettings({[key]:!(settingsPrefs[key] ?? def)})} style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"13px 16px", background:"none", border:"none", cursor:"pointer", textAlign:"left" }}>
-                <div style={{ flex:1 }}><div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper }}>{title}</div><div style={{ fontSize:11, color:T.muted, marginTop:2 }}>{desc}</div></div>
-                <div style={{ width:44, height:24, borderRadius:12, background:(settingsPrefs[key] ?? def)?T.sage:T.cardBorder, position:"relative", transition:"background 0.2s", flexShrink:0 }}><div style={{ position:"absolute", top:3, left:(settingsPrefs[key] ?? def)?23:3, width:18, height:18, borderRadius:"50%", background:"#fff", transition:"left 0.2s" }} /></div>
-              </button>
-            </React.Fragment>
-          ))}
-          <MoreRowDivider />
-          <MoreRow icon={ChevronDown} title="Signal delivery" subtitle={settingsPrefs.signalDelivery || "All signals"} onPress={()=>setSettingsSheet("signalDelivery")} />
-        </MoreSection>
+        <LightSection title="Community & messaging">
+          <LightToggleRow icon={Bell} title="Community notifications" subtitle="Likes, replies, follows and mentions" prefKey="communityNotifications" />
+          <LightDivider />
+          <LightToggleRow icon={MessageCircle} title="Message requests" subtitle="Allow new people to send you a message request" prefKey="messageRequests" />
+          <LightDivider />
+          <LightToggleRow icon={Users2} title="Creator updates" subtitle="Updates from creators and Space Coins you follow" prefKey="creatorUpdates" />
+          <LightDivider />
+          <LightToggleRow icon={TrendingUp} title="Space Coin launch alerts" subtitle="Notify me when followed creators launch a new mini token" prefKey="launchAlerts" />
+          <LightDivider />
+          <LightRow icon={Lock} title="Who can message you" subtitle={settingsPrefs.messageWho || "Followers and people you follow"} onPress={()=>setSettingsSheet("messageWho")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+        </LightSection>
 
-        <MoreSection title="COMMUNITY & MESSAGING">
-          {[
-            ["communityNotifications","Community notifications","Likes, replies, follows and mentions",true],
-            ["messageRequests","Message requests","Allow new people to send you a message request",true],
-            ["creatorUpdates","Creator updates","Updates from creators and Space Coins you follow",true],
-            ["launchAlerts","Space Coin launch alerts","Notify me when followed creators launch a new mini token",true],
-          ].map(([key,title,desc,def],i)=>(
-            <React.Fragment key={key}>
-              {i>0 && <MoreRowDivider />}
-              <button onClick={()=>persistSettings({[key]:!(settingsPrefs[key] ?? def)})} style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"13px 16px", background:"none", border:"none", cursor:"pointer", textAlign:"left" }}>
-                <div style={{ flex:1 }}><div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper }}>{title}</div><div style={{ fontSize:11, color:T.muted, marginTop:2 }}>{desc}</div></div>
-                <div style={{ width:44, height:24, borderRadius:12, background:(settingsPrefs[key] ?? def)?T.sage:T.cardBorder, position:"relative", transition:"background 0.2s", flexShrink:0 }}><div style={{ position:"absolute", top:3, left:(settingsPrefs[key] ?? def)?23:3, width:18, height:18, borderRadius:"50%", background:"#fff", transition:"left 0.2s" }} /></div>
-              </button>
-            </React.Fragment>
-          ))}
-          <MoreRowDivider />
-          <MoreRow icon={Lock} title="Who can message you" subtitle={settingsPrefs.messageWho || "Followers and people you follow"} onPress={()=>setSettingsSheet("messageWho")} />
-        </MoreSection>
+        <LightSection title="Data & account">
+          <LightToggleRow icon={EyeOff} title="Hide balances" subtitle="Hide wallet and account balances until tapped" prefKey="hideBalances" defaultValue={false} />
+          <LightDivider />
+          <LightRow icon={ScrollText} title="Data & storage" subtitle="Cache, downloads and local data" onPress={()=>setSettingsSheet("dataStorage")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+          <LightDivider />
+          <LightRow icon={Globe} title="Language & region" subtitle={settingsPrefs.region || "English · Ghana"} onPress={()=>setSettingsSheet("region")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+        </LightSection>
 
-        <MoreSection title="DATA & ACCOUNT">
-          <MoreRow icon={EyeOff} title="Hide balances" subtitle="Hide wallet and account balances until tapped" onPress={()=>persistSettings({hideBalances:!(settingsPrefs.hideBalances ?? false)})} badge={(settingsPrefs.hideBalances ?? false)?"On":"Off"} badgeColor={(settingsPrefs.hideBalances ?? false)?T.sage:T.muted} />
-          <MoreRowDivider />
-          <MoreRow icon={ScrollText} title="Data & storage" subtitle="Cache, downloads and local data" onPress={()=>setSettingsSheet("dataStorage")} />
-          <MoreRowDivider />
-          <MoreRow icon={Mail} title="Language & region" subtitle={settingsPrefs.region || "English · Ghana"} onPress={()=>setSettingsSheet("region")} />
-          <MoreRowDivider />
-          <MoreRow icon={FileText} title="Terms & risk disclosure" subtitle="Review RainX terms and risk information" onPress={()=>setShowLegal(true)} />
-        </MoreSection>
+        <LightSection title="Notifications">
+          <LightRow icon={Bell} title="Notification preferences" subtitle="Manage in-app and push alerts by category" onPress={()=>setMorePage("notifications")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+        </LightSection>
 
-        {settingsSheet && (
-          <div onClick={()=>setSettingsSheet(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.18)", backdropFilter:"blur(7px)", WebkitBackdropFilter:"blur(7px)", zIndex:100, display:"flex", alignItems:"flex-end" }}>
-            <style>{"@keyframes rxSettingsSheetUp { from { transform:translateY(100%); opacity:0.7 } to { transform:translateY(0); opacity:1 } }"}</style>
-            <div onClick={e=>e.stopPropagation()} style={{ width:"100%", maxWidth:480, margin:"0 auto", background:T.card, border:`1px solid ${T.cardBorder}`, borderBottom:"none", borderRadius:"22px 22px 0 0", padding:"12px 16px 28px", animation:"rxSettingsSheetUp 0.26s cubic-bezier(0.22,1,0.36,1)" }}>
-              <div style={{ width:42, height:5, borderRadius:3, background:T.cardBorder, margin:"0 auto 18px" }} />
-              {settingsSheet === "signalDelivery" && <>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, color:T.paper, marginBottom:5 }}>Signal delivery</div>
-                <div style={{ fontSize:11.5, color:T.muted, marginBottom:16 }}>Choose how much signal activity you want to receive.</div>
-                {[["all","All signals","BUY, SELL and watchlist updates"],["high","High confidence only","Only stronger-confidence setups"],["followed","Followed markets only","Only markets in your watchlist"]].map(([v,t,d])=><button key={v} onClick={()=>{persistSettings({signalDelivery:v});setSettingsSheet(null)}} style={{ width:"100%", background:"none", border:"none", padding:"13px 0", display:"flex", alignItems:"center", textAlign:"left", cursor:"pointer" }}><div style={{flex:1}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.paper}}>{t}</div><div style={{fontSize:11,color:T.muted,marginTop:2}}>{d}</div></div><div style={{width:20,height:20,borderRadius:"50%",border:`2px solid ${(settingsPrefs.signalDelivery||"all")===v?T.gold:T.cardBorder}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{(settingsPrefs.signalDelivery||"all")===v&&<div style={{width:10,height:10,borderRadius:"50%",background:T.gold}}/>}</div></button>)}
-              </>}
-              {settingsSheet === "messageWho" && <>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, color:T.paper, marginBottom:5 }}>Who can message you</div>
-                <div style={{ fontSize:11.5, color:T.muted, marginBottom:16 }}>Control who can start a new conversation.</div>
-                {[["followers","Followers and people you follow"],["everyone","Anyone on RainX"],["nobody","Nobody"]].map(([v,t])=><button key={v} onClick={()=>{persistSettings({messageWho:t});setSettingsSheet(null)}} style={{width:"100%",background:"none",border:"none",padding:"13px 0",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.paper}}>{t}<div style={{width:20,height:20,borderRadius:"50%",border:`2px solid ${(settingsPrefs.messageWho||"Followers and people you follow")===(t)?T.gold:T.cardBorder}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{(settingsPrefs.messageWho||"Followers and people you follow")===(t)&&<div style={{width:10,height:10,borderRadius:"50%",background:T.gold}}/>}</div></button>)}
-              </>}
-              {settingsSheet === "dataStorage" && <>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, color:T.paper, marginBottom:5 }}>Data & storage</div>
-                <div style={{ fontSize:11.5, color:T.muted, lineHeight:1.6, marginBottom:16 }}>Manage local app data without changing your account.</div>
-                <button onClick={()=>{try{Object.keys(localStorage).filter(k=>k.startsWith("rainx-")).forEach(k=>localStorage.removeItem(k));}catch{} setSettingsPrefs({}); setSettingsSheet(null); alert("Local RainX preferences and cache were cleared.");}} style={{width:"100%",background:"none",border:`1px solid ${T.cardBorder}`,borderRadius:12,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.paper,cursor:"pointer"}}>Clear local preferences</button>
-              </>}
-              {settingsSheet === "region" && <>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, color:T.paper, marginBottom:5 }}>Language & region</div>
-                <div style={{ fontSize:11.5, color:T.muted, marginBottom:16 }}>Choose your preferred app region.</div>
-                {[["English · Ghana","English · Ghana"],["English · Nigeria","English · Nigeria"],["English · International","English · International"]].map(([v,t])=><button key={v} onClick={()=>{persistSettings({region:v});setSettingsSheet(null)}} style={{width:"100%",background:"none",border:"none",padding:"13px 0",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.paper}}>{t}<div style={{width:20,height:20,borderRadius:"50%",border:`2px solid ${(settingsPrefs.region||"English · Ghana")===v?T.gold:T.cardBorder}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{(settingsPrefs.region||"English · Ghana")===(v)&&<div style={{width:10,height:10,borderRadius:"50%",background:T.gold}}/>}</div></button>)}
-              </>}
-            </div>
-          </div>
-        )}
+        {settingsSheet && <LightSheet onClose={()=>setSettingsSheet(null)}>
+          {settingsSheet === "signalDelivery" && <>
+            <LightSheetTitle title="Signal delivery" desc="Choose which trading signals reach you." />
+            <LightChoice value="all" current={settingsPrefs.signalDelivery||"all"} title="All signals" desc="BUY, SELL and watchlist updates" onSelect={v=>{persistSettings({signalDelivery:v});setSettingsSheet(null)}} />
+            <LightChoice value="high" current={settingsPrefs.signalDelivery||"all"} title="High confidence only" desc="Only stronger-confidence setups" onSelect={v=>{persistSettings({signalDelivery:v});setSettingsSheet(null)}} />
+            <LightChoice value="followed" current={settingsPrefs.signalDelivery||"all"} title="Followed markets only" desc="Only markets in your watchlist" onSelect={v=>{persistSettings({signalDelivery:v});setSettingsSheet(null)}} />
+          </>}
+          {settingsSheet === "messageWho" && <>
+            <LightSheetTitle title="Who can message you" desc="Choose who can start a conversation." />
+            {[['followers','Followers and people you follow'],['everyone','Anyone on RainX'],['nobody','Nobody']].map(([v,t])=><LightChoice key={v} value={v} current={settingsPrefs.messageWhoKey||'followers'} title={t} onSelect={x=>{persistSettings({messageWho:t,messageWhoKey:x});setSettingsSheet(null)}} />)}
+          </>}
+          {settingsSheet === "dataStorage" && <>
+            <LightSheetTitle title="Data & storage" desc="Manage local app data without changing your account." />
+            <LightRow icon={ScrollText} title="Clear local preferences" subtitle="Remove locally saved RainX preferences on this device" onPress={()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('rainx-')).forEach(k=>localStorage.removeItem(k));}catch{} setSettingsPrefs({}); setSettingsSheet(null); alert('Local RainX preferences were cleared.');}} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+          </>}
+          {settingsSheet === "region" && <>
+            <LightSheetTitle title="Language & region" desc="Choose your preferred app region." />
+            {["English · Ghana","English · Nigeria","English · International"].map(v=><LightChoice key={v} value={v} current={settingsPrefs.region||"English · Ghana"} title={v} onSelect={x=>{persistSettings({region:x});setSettingsSheet(null)}} />)}
+          </>}
+        </LightSheet>}
       </div>
     </MoreSubScreen>
   );
 
   if (morePage === "notifications") return (
-    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Notifications" subtitle="Alert preferences &amp; push settings">
-      <NotificationSettingsScreen account={account} activeMarkets={activeMarkets} />
+    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Notifications" subtitle="Alert preferences & push settings">
+      <div style={{ background:PREF_BG, minHeight:"100%" }}><NotificationSettingsScreen account={account} activeMarkets={activeMarkets} /></div>
     </MoreSubScreen>
   );
 
   if (morePage === "security") return (
     <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Security" subtitle="Protect your account & device">
-      <div style={{ padding:16 }}>
-        <MoreSection title="SIGN-IN SECURITY">
-          <SecuritySection
-            icon={Key}
-            title="Change Password"
-            desc="Update your account password"
-            onPress={async () => {
-              const { error } = await supabase.auth.resetPasswordForEmail(account?.email || "");
-              if (!error) alert("Password reset link sent to your email.");
-              else alert("Could not send reset email. Try again.");
-            }}
-            label="Reset"
-          />
-          <SecuritySection
-            icon={ShieldCheck}
-            title="Two-Step Authentication"
-            desc="Add an extra layer of protection to your account"
-            onPress={() => alert("2FA setup is coming soon. Check back for updates.")}
-            label="Set Up"
-            comingSoon
-          />
-          <SecuritySection
-            icon={Smartphone}
-            title="Phone Number"
-            desc="Add a phone number for account recovery"
-            onPress={() => alert("Phone verification is coming soon.")}
-            label="Add Phone"
-            comingSoon
-          />
-        </MoreSection>
+      <div style={{ background:PREF_BG, minHeight:"100%", padding:"16px 16px 28px" }}>
+        <LightSection title="Sign-in security">
+          <LightRow icon={Key} title="Change Password" subtitle="Update your account password" onPress={async()=>{const {error}=await supabase.auth.resetPasswordForEmail(account?.email||""); if(!error) alert("Password reset link sent to your email."); else alert("Could not send reset email. Try again.");}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={ShieldCheck} title="Two-Step Authentication" subtitle="Add an extra layer of protection to your account" onPress={()=>alert("2FA setup is coming soon. Check back for updates.")} right={<span style={{fontSize:10.5,fontWeight:800,color:PREF_MUTED,border:`1px solid ${PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>SOON</span>} />
+          <LightDivider />
+          <LightRow icon={Smartphone} title="Phone Number" subtitle="Add a phone number for account recovery" onPress={()=>alert("Phone verification is coming soon.")} right={<span style={{fontSize:10.5,fontWeight:800,color:PREF_MUTED,border:`1px solid ${PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>SOON</span>} />
+        </LightSection>
 
-        <MoreSection title="DEVICE SECURITY">
-          <div style={{ padding:"14px 16px", display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ flex:1 }}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:13.5,color:T.paper}}>App Lock</div><div style={{fontSize:11,color:T.muted,marginTop:2}}>Require device authentication before opening RainX</div></div>
-            <div onClick={()=>{ if (!(securityPrefs.pinEnabled || securityPrefs.biometricEnabled)) { setSecuritySheet("appLockSetup"); return; } persistSecurity({appLock:!(securityPrefs.appLock ?? false)}); }} style={{width:44,height:24,borderRadius:12,background:(securityPrefs.appLock ?? false)?T.sage:T.cardBorder,position:"relative",cursor:"pointer",transition:"background 0.2s",flexShrink:0}}><div style={{position:"absolute",top:3,left:(securityPrefs.appLock ?? false)?23:3,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/></div>
-          </div>
-          <MoreRowDivider />
-          <SecuritySection
-            icon={Lock}
-            title="PIN Lock"
-            desc={securityPrefs.pinEnabled ? "A device PIN is set for RainX" : "Create a 4–6 digit RainX device PIN"}
-            onPress={() => { setPinValue(""); setPinConfirm(""); setPinError(""); setSecuritySheet("pin"); }}
-            label={securityPrefs.pinEnabled ? "Change" : "Set Up"}
-          />
-          <SecuritySection
-            icon={Eye}
-            title="Face ID / Device Passkey"
-            desc={securityPrefs.biometricEnabled ? "Biometric sign-in is enabled on this device" : "Use Face ID, fingerprint or device biometrics"}
-            onPress={setupPasskey}
-            label={securityPrefs.biometricEnabled ? "Enabled" : "Set Up"}
-          />
-        </MoreSection>
+        <LightSection title="Device security">
+          <LightRow icon={Lock} title="App Lock" subtitle="Require device authentication before opening RainX" onPress={()=>{ if (!(securityPrefs.pinEnabled || securityPrefs.biometricEnabled)) { setSecuritySheet("appLockSetup"); return; } persistSecurity({appLock:!(securityPrefs.appLock ?? false)}); }} right={<LightToggle on={securityPrefs.appLock ?? false} onChange={()=>{ if (!(securityPrefs.pinEnabled || securityPrefs.biometricEnabled)) { setSecuritySheet("appLockSetup"); return; } persistSecurity({appLock:!(securityPrefs.appLock ?? false)}); }} />} />
+          <LightDivider />
+          <LightRow icon={Key} title="PIN Lock" subtitle={securityPrefs.pinEnabled ? "A RainX device PIN is set" : "Create a 4–6 digit RainX device PIN"} onPress={()=>{setPinValue("");setPinConfirm("");setPinError("");setSecuritySheet("pin")}} right={<span style={{fontSize:10.5,fontWeight:800,color:securityPrefs.pinEnabled?PREF_YELLOW:PREF_MUTED,border:`1px solid ${securityPrefs.pinEnabled?PREF_YELLOW:PREF_BORDER}`,borderRadius:20,padding:"4px 9px"}}>{securityPrefs.pinEnabled?"ENABLED":"SET UP"}</span>} />
+          <LightDivider />
+          <LightRow icon={Smartphone} title="Face ID / Device Passkey" subtitle={securityPrefs.biometricEnabled?"Biometric sign-in is enabled on this device":"Use Face ID, fingerprint or device biometrics"} onPress={setupPasskey} right={<span style={{fontSize:10.5,fontWeight:800,color:securityPrefs.biometricEnabled?PREF_YELLOW:PREF_MUTED,border:`1px solid ${securityPrefs.biometricEnabled?PREF_YELLOW:PREF_BORDER}`,borderRadius:20,padding:"4px 9px"}}>{securityPrefs.biometricEnabled?"ENABLED":"SET UP"}</span>} />
+        </LightSection>
 
-        <MoreSection title="ACCOUNT PROTECTION">
-          {[
-            ["loginAlerts","New login alerts","Notify me when a new device signs in",true],
-            ["tradeConfirmations","Trade confirmations","Confirm sensitive trading actions before they are submitted",true],
-            ["withdrawConfirmations","Withdrawal confirmations","Require an extra confirmation before wallet withdrawals",true],
-            ["securityEmails","Security emails","Receive important security and account notices",true],
-          ].map(([key,title,desc,def],i)=>(
-            <React.Fragment key={key}>
-              {i>0 && <MoreRowDivider />}
-              <button onClick={()=>persistSecurity({[key]:!(securityPrefs[key] ?? def)})} style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"13px 16px", background:"none", border:"none", cursor:"pointer", textAlign:"left" }}>
-                <div style={{ flex:1 }}><div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper }}>{title}</div><div style={{ fontSize:11, color:T.muted, marginTop:2 }}>{desc}</div></div>
-                <div style={{ width:44, height:24, borderRadius:12, background:(securityPrefs[key] ?? def)?T.sage:T.cardBorder, position:"relative", transition:"background 0.2s", flexShrink:0 }}><div style={{ position:"absolute", top:3, left:(securityPrefs[key] ?? def)?23:3, width:18, height:18, borderRadius:"50%", background:"#fff", transition:"left 0.2s" }} /></div>
-              </button>
-            </React.Fragment>
-          ))}
-        </MoreSection>
+        <LightSection title="Account protection">
+          <LightSecurityToggleRow title="New login alerts" subtitle="Notify me when a new device signs in" prefKey="loginAlerts" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Trade confirmations" subtitle="Confirm sensitive trading actions before they are submitted" prefKey="tradeConfirmations" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Withdrawal confirmations" subtitle="Require an extra confirmation before wallet withdrawals" prefKey="withdrawConfirmations" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Security emails" subtitle="Receive important security and account notices" prefKey="securityEmails" />
+        </LightSection>
 
-        <MoreSection title="SESSIONS & RECOVERY">
-          <MoreRow icon={Eye} title="Active Sessions" subtitle="View and manage devices signed in to RainX" onPress={()=>setSecuritySheet("sessions")} />
-          <MoreRowDivider />
-          <MoreRow icon={Mail} title="Recovery email" subtitle={account?.email ? "Your account email is set" : "Add a recovery email"} onPress={()=>alert(account?.email ? "Your RainX account email is the current recovery email." : "Add a recovery email from your account profile.")} />
-          <MoreRowDivider />
-          <MoreRow icon={ShieldCheck} title="Security checkup" subtitle="Review your account protection settings" onPress={()=>setSecuritySheet("checkup")} />
-        </MoreSection>
+        <LightSection title="Sessions & recovery">
+          <LightRow icon={Smartphone} title="Active Sessions" subtitle="View and manage devices signed in to RainX" onPress={()=>setSecuritySheet("sessions")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={Mail} title="Recovery email" subtitle={account?.email?"Your account email is set":"Add a recovery email"} onPress={()=>alert(account?.email?"Your RainX account email is the current recovery email.":"Add a recovery email from your account profile.")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={ShieldCheck} title="Security checkup" subtitle="Review your account protection settings" onPress={()=>setSecuritySheet("checkup")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+        </LightSection>
 
-        <div style={{ marginTop: 8 }}>
-          <button onClick={() => {
-            if (window.confirm("Are you sure you want to delete your account? This cannot be undone.")) {
-              alert("Please contact support to delete your account.");
-            }
-          }} style={{ width: "100%", background: "none", border: `1px solid ${T.rust}44`, borderRadius: 13, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.rust, cursor: "pointer" }}>
-            Delete Account
-          </button>
-        </div>
+        <button onClick={()=>{if(window.confirm("Are you sure you want to delete your account? This cannot be undone.")){alert("Please contact support to delete your account.");}}} style={{width:"100%",background:PREF_CARD,border:`1px solid ${T.rust}55`,borderRadius:15,padding:"13px 0",fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.rust,cursor:"pointer"}}>Delete Account</button>
 
-        {securitySheet && (
-          <div onClick={()=>setSecuritySheet(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.18)", backdropFilter:"blur(7px)", WebkitBackdropFilter:"blur(7px)", zIndex:100, display:"flex", alignItems:"flex-end" }}>
-            <style>{"@keyframes rxSecuritySheetUp { from { transform:translateY(100%); opacity:0.7 } to { transform:translateY(0); opacity:1 } }"}</style>
-            <div onClick={e=>e.stopPropagation()} style={{ width:"100%", maxWidth:480, margin:"0 auto", background:T.card, border:`1px solid ${T.cardBorder}`, borderBottom:"none", borderRadius:"22px 22px 0 0", padding:"12px 16px 28px", animation:"rxSecuritySheetUp 0.26s cubic-bezier(0.22,1,0.36,1)" }}>
-              <div style={{ width:42, height:5, borderRadius:3, background:T.cardBorder, margin:"0 auto 18px" }} />
-              {securitySheet === "pin" && <>
-                <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:18,color:T.paper,marginBottom:5}}>{securityPrefs.pinEnabled ? "Change RainX PIN" : "Set up RainX PIN"}</div>
-                <div style={{fontSize:11.5,color:T.muted,lineHeight:1.6,marginBottom:16}}>Your PIN is hashed before it is stored on this device.</div>
-                <input value={pinValue} onChange={e=>setPinValue(e.target.value.replace(/\\D/g,"").slice(0,6))} inputMode="numeric" type="password" placeholder="New PIN" style={{width:"100%",boxSizing:"border-box",background:"none",border:`1px solid ${T.cardBorder}`,borderRadius:11,padding:"12px 13px",color:T.paper,fontFamily:FONT_HEAD,fontSize:15,outline:"none",marginBottom:10}} />
-                <input value={pinConfirm} onChange={e=>setPinConfirm(e.target.value.replace(/\\D/g,"").slice(0,6))} inputMode="numeric" type="password" placeholder="Confirm PIN" style={{width:"100%",boxSizing:"border-box",background:"none",border:`1px solid ${T.cardBorder}`,borderRadius:11,padding:"12px 13px",color:T.paper,fontFamily:FONT_HEAD,fontSize:15,outline:"none",marginBottom:6}} />
-                {pinError && <div style={{fontSize:11,color:T.rust,margin:"5px 0 10px"}}>{pinError}</div>}
-                <button onClick={setupPin} style={{width:"100%",background:T.goldGradient,color:T.ink,border:"none",borderRadius:11,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:13,cursor:"pointer",marginTop:8}}>Save PIN</button>
-              </>}
-              {securitySheet === "appLockSetup" && <>
-                <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:18,color:T.paper,marginBottom:5}}>Set up App Lock</div>
-                <div style={{fontSize:11.5,color:T.muted,lineHeight:1.6,marginBottom:16}}>Choose a device protection method first. RainX can use your PIN or supported device biometrics.</div>
-                <button onClick={()=>{setSecuritySheet("pin")}} style={{width:"100%",background:"none",border:`1px solid ${T.cardBorder}`,borderRadius:11,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.paper,cursor:"pointer",marginBottom:9}}>Set up PIN</button>
-                <button onClick={async()=>{setSecuritySheet(null);await setupPasskey();}} style={{width:"100%",background:T.goldGradient,border:"none",borderRadius:11,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:13,color:T.ink,cursor:"pointer"}}>Set up Face ID / Passkey</button>
-              </>}
-              {securitySheet === "sessions" && <>
-                <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:18,color:T.paper,marginBottom:5}}>Active Sessions</div>
-                <div style={{fontSize:11.5,color:T.muted,lineHeight:1.6,marginBottom:16}}>Session management is ready for a connected device/session backend. For now, this account is protected by your current authentication session.</div>
-                <div style={{background:T.ink,border:`1px solid ${T.cardBorder}`,borderRadius:12,padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}><div style={{width:36,height:36,borderRadius:10,background:"rgba(244,211,94,0.12)",display:"flex",alignItems:"center",justifyContent:"center"}}><Smartphone size={18} color={T.gold}/></div><div style={{flex:1}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:T.paper}}>This device</div><div style={{fontSize:10.5,color:T.muted,marginTop:2}}>Current RainX session</div></div><span style={{fontSize:10,color:T.sage,fontWeight:700}}>ACTIVE</span></div>
-              </>}
-              {securitySheet === "checkup" && <>
-                <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:18,color:T.paper,marginBottom:5}}>Security checkup</div>
-                <div style={{fontSize:11.5,color:T.muted,lineHeight:1.6,marginBottom:16}}>A quick view of your current protection.</div>
-                {[["Password","Managed by RainX account authentication",true],["PIN lock",securityPrefs.pinEnabled?"Enabled on this device":"Not set",!!securityPrefs.pinEnabled],["Face ID / Passkey",securityPrefs.biometricEnabled?"Enabled on this device":"Not set",!!securityPrefs.biometricEnabled],["Login alerts",securityPrefs.loginAlerts!==false?"Enabled":"Disabled",securityPrefs.loginAlerts!==false],["Withdrawal confirmations",securityPrefs.withdrawConfirmations!==false?"Enabled":"Disabled",securityPrefs.withdrawConfirmations!==false]].map(([t,d,on])=><div key={t} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:`1px solid ${T.cardBorder}`}}><div style={{flex:1}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:T.paper}}>{t}</div><div style={{fontSize:10.5,color:T.muted,marginTop:2}}>{d}</div></div><span style={{fontSize:10,fontWeight:800,color:on?T.sage:T.muted}}>{on?"ON":"OFF"}</span></div>)}
-              </>}
-            </div>
-          </div>
-        )}
+        {securitySheet && <LightSheet onClose={()=>setSecuritySheet(null)}>
+          {securitySheet === "pin" && <>
+            <LightSheetTitle title={securityPrefs.pinEnabled?"Change RainX PIN":"Set up RainX PIN"} desc="Your PIN is hashed before it is stored on this device." />
+            <input value={pinValue} onChange={e=>setPinValue(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" type="password" placeholder="New PIN" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",color:PREF_TEXT,fontFamily:FONT_HEAD,fontSize:15,outline:"none",marginBottom:10}} />
+            <input value={pinConfirm} onChange={e=>setPinConfirm(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" type="password" placeholder="Confirm PIN" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",color:PREF_TEXT,fontFamily:FONT_HEAD,fontSize:15,outline:"none",marginBottom:6}} />
+            {pinError&&<div style={{fontSize:11,color:T.rust,margin:"5px 0 10px"}}>{pinError}</div>}
+            <button onClick={setupPin} style={{width:"100%",background:PREF_YELLOW,color:T.ink,border:0,borderRadius:12,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:13,cursor:"pointer",marginTop:8}}>Save PIN</button>
+          </>}
+          {securitySheet === "sessions" && <>
+            <LightSheetTitle title="Active Sessions" desc="Review devices currently signed in to RainX." />
+            <div style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:14,padding:"13px 14px",display:"flex",alignItems:"center",gap:12}}><LightIcon Icon={Smartphone}/><div style={{flex:1}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>This device</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>Current RainX session</div></div><span style={{fontSize:10,color:"#1A7A50",fontWeight:800}}>ACTIVE</span></div>
+          </>}
+          {securitySheet === "checkup" && <>
+            <LightSheetTitle title="Security checkup" desc="A quick view of your current protection." />
+            {[['Password','Managed by RainX account authentication',true],['PIN lock',securityPrefs.pinEnabled?'Enabled on this device':'Not set',!!securityPrefs.pinEnabled],['Face ID / Passkey',securityPrefs.biometricEnabled?'Enabled on this device':'Not set',!!securityPrefs.biometricEnabled],['Login alerts',securityPrefs.loginAlerts!==false?'Enabled':'Disabled',securityPrefs.loginAlerts!==false],['Withdrawal confirmations',securityPrefs.withdrawConfirmations!==false?'Enabled':'Disabled',securityPrefs.withdrawConfirmations!==false]].map(([t,d,on])=><div key={t} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 0",borderBottom:`1px solid ${PREF_BORDER}`}}><div style={{flex:1}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>{t}</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>{d}</div></div><span style={{fontSize:10,fontWeight:800,color:on?"#1A7A50":PREF_MUTED}}>{on?"ON":"OFF"}</span></div>)}
+          </>}
+        </LightSheet>}
       </div>
     </MoreSubScreen>
   );
