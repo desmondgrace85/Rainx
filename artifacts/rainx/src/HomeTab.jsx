@@ -753,7 +753,7 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
   return (
     <div style={{background:"#F7F3E9",minHeight:"100%",color:T.ink}}>
        <section style={{padding:"14px 14px 0",background:"linear-gradient(180deg,#F4D35E 0%,#F8E9A8 30%,#F7F3E9 100%)"}}>
-        <div style={{background:"#070706",border:"1px solid #2B281F",borderRadius:26,overflow:"hidden",padding:"14px 10px 10px",boxShadow:"0 7px 0 rgba(244,211,94,0.14),0 16px 30px rgba(15,14,11,0.14)"}}>
+        <div style={{background:"#070706",border:"1px solid #2B281F",borderRadius:26,overflow:"hidden",padding:"14px 10px 10px",boxShadow:"0 18px 40px rgba(15,14,11,0.22)"}}>
           <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"flex-start"}}>
             <div style={{minWidth:0}}>
               <div style={{fontFamily:FONT_HEAD,fontSize:13,fontWeight:700,color:"#F5F1E8"}}>Today’s Performance <span style={{color:"#8D887C",fontSize:12}}>ⓘ</span></div>
@@ -789,14 +789,14 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
          <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:6,marginTop:8}}>
                             {marketCards.map(asset=>{
                               const logo=resolveMarketLogo({symbol:asset.symbol})?.src; const arr=seriesMap?.[asset.symbol]||[]; const price=arr.length?arr[arr.length-1].price:asset.base; const prev=arr.length>1?arr[arr.length-2].price:price; const up=price>=prev;
-                               return <button key={asset.symbol} onClick={()=>openMarket(asset.symbol)} style={{minWidth:0,minHeight:108,borderRadius:15,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"8px 5px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                                 {logo?<img src={logo} alt="" style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",marginBottom:6}}/>:<div style={{width:30,height:30,borderRadius:"50%",background:T.gold,marginBottom:6}}/>}
+                               return <button key={asset.symbol} onClick={()=>openMarket(asset.symbol)} style={{minWidth:0,minHeight:100,borderRadius:14,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"7px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                                 {logo?<img src={logo} alt="" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",marginBottom:5}}/>:<div style={{width:28,height:28,borderRadius:"50%",background:T.gold,marginBottom:5}}/>}
                                 <div style={{fontFamily:FONT_HEAD,fontSize:11,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>{asset.symbol}</div>
                                 <div style={{marginTop:5,fontFamily:FONT_HEAD,fontSize:10,fontWeight:700,color:up?"#5EDB78":"#E27661",fontVariantNumeric:"tabular-nums"}}>{Number(price).toFixed(Math.min(asset.digits,2))}</div>
                               </button>;
                             })}
-                             <button onClick={()=>setShowAddMarket(true)} style={{minWidth:0,minHeight:108,borderRadius:15,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"8px 5px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                               <div style={{width:30,height:30,borderRadius:"50%",border:`2px solid ${T.gold}`,display:"grid",placeItems:"center",marginBottom:6}}><Plus size={17} color={T.gold}/></div>
+                             <button onClick={()=>setShowAddMarket(true)} style={{minWidth:0,minHeight:100,borderRadius:14,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"7px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                               <div style={{width:28,height:28,borderRadius:"50%",border:`2px solid ${T.gold}`,display:"grid",placeItems:"center",marginBottom:5}}><Plus size={16} color={T.gold}/></div>
                               <div style={{fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800}}>Add Market</div>
                             </button>
                           </div>
