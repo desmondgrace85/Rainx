@@ -751,8 +751,8 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
   const marketCards = activeMarkets.slice(0,3).map(symbol => ALL_ASSETS.find(a=>a.symbol===symbol)).filter(Boolean);
 
   return (
-    <div style={{background:"#F7F3E9",minHeight:"100%",color:T.ink}}>
-       <section style={{padding:"12px 14px 0",background:"linear-gradient(180deg,#F8E9A8 0%,#F8E9A8 45%,#F7F3E9 68%,#F7F3E9 100%)"}}>
+    <div style={{background:"transparent",minHeight:"100%",color:T.ink}}>
+       <section style={{padding:"12px 14px 0",background:"transparent"}}>
         <div style={{background:"#070706",border:"1px solid #2B281F",borderRadius:24,overflow:"hidden",padding:"12px 10px 8px",boxShadow:"0 18px 40px rgba(15,14,11,0.22)"}}>
           <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"flex-start"}}>
             <div style={{minWidth:0}}>
