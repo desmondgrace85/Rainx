@@ -752,24 +752,24 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
 
   return (
     <div style={{background:"#F7F3E9",minHeight:"100%",color:T.ink}}>
-       <section style={{padding:"14px 14px 0",background:"linear-gradient(180deg,#F4D35E 0%,#F8E9A8 30%,#F7F3E9 100%)"}}>
-        <div style={{background:"#070706",border:"1px solid #2B281F",borderRadius:26,overflow:"hidden",padding:"14px 10px 10px",boxShadow:"0 18px 40px rgba(15,14,11,0.22)"}}>
-          <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"flex-start"}}>
+       <section style={{padding:"12px 14px 0",background:"linear-gradient(180deg,#F8E9A8 0%,#F7F3E9 24%,#F7F3E9 100%)"}}>
+        <div style={{background:"#070706",border:"1px solid #2B281F",borderRadius:24,overflow:"hidden",padding:"12px 10px 8px",boxShadow:"0 18px 40px rgba(15,14,11,0.22)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"flex-start"}}>
             <div style={{minWidth:0}}>
               <div style={{fontFamily:FONT_HEAD,fontSize:13,fontWeight:700,color:"#F5F1E8"}}>Today’s Performance <span style={{color:"#8D887C",fontSize:12}}>ⓘ</span></div>
-              <div style={{display:"flex",alignItems:"baseline",gap:8,marginTop:8}}><span style={{fontFamily:FONT_HEAD,fontSize:42,lineHeight:1,fontWeight:800,color:T.gold,letterSpacing:-1.5}}>+{todayPips}</span><span style={{fontFamily:FONT_HEAD,fontSize:27,fontWeight:700,color:"#F5F1E8"}}>Pips</span></div>
-              <div style={{marginTop:5,fontFamily:FONT_HEAD,fontSize:11.5,fontWeight:600,color:"#D0C9B9"}}>Pips Wins Today</div>
-              <div style={{marginTop:8,fontFamily:FONT_HEAD,fontSize:11,fontWeight:700,color:"#53D769"}}>▲ {todayPips>0?`+${todayPips} pips`:"0 pips"} vs yesterday</div>
+              <div style={{display:"flex",alignItems:"baseline",gap:8,marginTop:6}}><span style={{fontFamily:FONT_HEAD,fontSize:42,lineHeight:1,fontWeight:800,color:T.gold,letterSpacing:-1.5}}>+{todayPips}</span><span style={{fontFamily:FONT_HEAD,fontSize:27,fontWeight:700,color:"#F5F1E8"}}>Pips</span></div>
+              <div style={{marginTop:4,fontFamily:FONT_HEAD,fontSize:11.5,fontWeight:600,color:"#D0C9B9"}}>Pips Wins Today</div>
+              <div style={{marginTop:7,fontFamily:FONT_HEAD,fontSize:11,fontWeight:700,color:"#53D769"}}>▲ {todayPips>0?`+${todayPips} pips`:"0 pips"} vs yesterday</div>
             </div>
-            <button onClick={openSignalChart} style={{width:154,minHeight:104,flexShrink:0,background:"#11110F",border:"1px solid #4A432A",borderRadius:20,padding:"12px 10px",textAlign:"left",cursor:"pointer",boxShadow:"0 0 18px rgba(244,211,94,0.08)"}}>
+            <button onClick={openSignalChart} style={{width:150,minHeight:92,flexShrink:0,background:"#11110F",border:"1px solid #4A432A",borderRadius:18,padding:"10px 9px",textAlign:"left",cursor:"pointer",boxShadow:"0 0 18px rgba(244,211,94,0.08)"}}>
               <div style={{display:"flex",alignItems:"center",gap:7}}>
-                <div style={{width:32,height:32,borderRadius:"50%",background:T.gold,display:"grid",placeItems:"center",fontSize:18,color:"#0F0E0B"}}>₿</div>
+                <div style={{width:30,height:30,borderRadius:"50%",background:T.gold,display:"grid",placeItems:"center",fontSize:17,color:"#0F0E0B"}}>₿</div>
                 <div><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:14,color:"#F5F1E8"}}>{signalSymbol}</div><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:11,color:signalBias==="SELL"?"#E27661":signalBias==="HOLD"?"#B4AD9D":"#4FE26E"}}>{signalLabel}</div></div>
               </div>
-              <div style={{marginTop:13,border:"1px solid #8E741D",borderRadius:14,padding:"8px",display:"flex",alignItems:"center",justifyContent:"center",gap:5,color:T.gold,fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800,animation:"rx-breathe 2.2s ease-in-out infinite"}}>Tap to view setup <ArrowUpRight size={12}/></div>
+              <div style={{marginTop:10,border:"1px solid #8E741D",borderRadius:13,padding:"7px",display:"flex",alignItems:"center",justifyContent:"center",gap:5,color:T.gold,fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800,animation:"rx-breathe 2.2s ease-in-out infinite"}}>Tap to view setup <ArrowUpRight size={12}/></div>
             </button>
           </div>
-           <svg viewBox="0 0 680 185" preserveAspectRatio="none" style={{display:"block",width:"100%",height:128,marginTop:6,overflow:"visible"}}>
+           <svg viewBox="0 0 680 185" preserveAspectRatio="none" style={{display:"block",width:"100%",height:108,marginTop:4,overflow:"visible"}}>
             <defs>
               <linearGradient id="rxPerfFill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#F4D35E" stopOpacity=".30"/>
@@ -785,18 +785,18 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
               <animate attributeName="opacity" values=".28;.05;.28" dur="1.8s" repeatCount="indefinite"/>
             </circle>
           </svg>
-          <div style={{display:"flex",justifyContent:"space-between",padding:"0 3px",color:"#6F6A5D",fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:700}}>{["1D","1W","1M","1Y","All"].map((label,i)=><span key={label} style={{color:i===0?T.gold:"#777164",background:i===0?"#2A2514":"transparent",borderRadius:18,padding:i===0?"8px 15px":"8px 10px"}}>{label}</span>)}</div>
-         <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:6,marginTop:8}}>
+          <div style={{display:"flex",justifyContent:"space-between",padding:"0 3px",color:"#6F6A5D",fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:700}}>{["1D","1W","1M","1Y","All"].map((label,i)=><span key={label} style={{color:i===0?T.gold:"#777164",background:i===0?"#2A2514":"transparent",borderRadius:18,padding:i===0?"7px 13px":"7px 8px"}}>{label}</span>)}</div>
+         <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:6,marginTop:6}}>
                             {marketCards.map(asset=>{
                               const logo=resolveMarketLogo({symbol:asset.symbol})?.src; const arr=seriesMap?.[asset.symbol]||[]; const price=arr.length?arr[arr.length-1].price:asset.base; const prev=arr.length>1?arr[arr.length-2].price:price; const up=price>=prev;
-                               return <button key={asset.symbol} onClick={()=>openMarket(asset.symbol)} style={{minWidth:0,minHeight:100,borderRadius:14,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"7px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                                 {logo?<img src={logo} alt="" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",marginBottom:5}}/>:<div style={{width:28,height:28,borderRadius:"50%",background:T.gold,marginBottom:5}}/>}
+                               return <button key={asset.symbol} onClick={()=>openMarket(asset.symbol)} style={{minWidth:0,minHeight:86,borderRadius:13,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"5px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                                 {logo?<img src={logo} alt="" style={{width:25,height:25,borderRadius:"50%",objectFit:"cover",marginBottom:4}}/>:<div style={{width:25,height:25,borderRadius:"50%",background:T.gold,marginBottom:4}}/>}
                                 <div style={{fontFamily:FONT_HEAD,fontSize:11,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>{asset.symbol}</div>
-                                <div style={{marginTop:5,fontFamily:FONT_HEAD,fontSize:10,fontWeight:700,color:up?"#5EDB78":"#E27661",fontVariantNumeric:"tabular-nums"}}>{Number(price).toFixed(Math.min(asset.digits,2))}</div>
+                                <div style={{marginTop:4,fontFamily:FONT_HEAD,fontSize:10,fontWeight:700,color:up?"#5EDB78":"#E27661",fontVariantNumeric:"tabular-nums"}}>{Number(price).toFixed(Math.min(asset.digits,2))}</div>
                               </button>;
                             })}
-                             <button onClick={()=>setShowAddMarket(true)} style={{minWidth:0,minHeight:100,borderRadius:14,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"7px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                               <div style={{width:28,height:28,borderRadius:"50%",border:`2px solid ${T.gold}`,display:"grid",placeItems:"center",marginBottom:5}}><Plus size={16} color={T.gold}/></div>
+                             <button onClick={()=>setShowAddMarket(true)} style={{minWidth:0,minHeight:86,borderRadius:13,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"5px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                               <div style={{width:25,height:25,borderRadius:"50%",border:`2px solid ${T.gold}`,display:"grid",placeItems:"center",marginBottom:4}}><Plus size={15} color={T.gold}/></div>
                               <div style={{fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800}}>Add Market</div>
                             </button>
                           </div>

@@ -1,9 +1,13 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { ChevronRight, ExternalLink, Newspaper, RefreshCw } from "lucide-react";
+import { ChevronRight, ExternalLink, RefreshCw } from "lucide-react";
 
 const GOOGLE_NEWS_URL = "https://news.google.com/rss/search?q=(crypto%20OR%20bitcoin%20OR%20ethereum%20OR%20solana%20OR%20forex%20OR%20gold)&hl=en-US&gl=US&ceid=US:en";
 const RSS_PROXY = "https://api.rss2json.com/v1/api.json?rss_url=";
 const CRYPTOCOMPARE_URL = "https://min-api.cryptocompare.com/data/v2/news/?lang=EN&sortOrder=latest";
+const FALLBACK_NEWS_IMAGES = [
+  "https://images.unsplash.com/photo-1518546305927-5a555bb7020d?auto=format&fit=crop&w=240&q=80",
+  "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=240&q=80",
+];
 
 function timeAgo(value) {
   const raw = value instanceof Date ? value.getTime() : Number(value);
@@ -25,11 +29,11 @@ function normaliseCryptoCompare(items) {
   return (Array.isArray(items) ? items : [])
     .filter(item => item?.title)
     .slice(0, 8)
-    .map(item => ({
+    .map((item, index) => ({
       id: item.id || item.url || item.title,
       title: stripHtml(item.title),
       description: stripHtml(item.body || item.description || ""),
-      image: item.imageurl || "",
+      image: item.imageurl || FALLBACK_NEWS_IMAGES[index % FALLBACK_NEWS_IMAGES.length],
       publishedAt: item.published_on,
       url: item.url || "#",
       source: item.source_info?.name || item.source || "Space News",
@@ -44,7 +48,7 @@ function normaliseRss(items) {
       id: item.guid || item.link || `${item.title}-${index}`,
       title: stripHtml(item.title),
       description: stripHtml(item.description || ""),
-      image: item.thumbnail || item.enclosure?.link || "",
+      image: item.thumbnail || item.enclosure?.link || FALLBACK_NEWS_IMAGES[index % FALLBACK_NEWS_IMAGES.length],
       publishedAt: item.pubDate,
       url: item.link || "#",
       source: item.author || "Space News",
@@ -179,11 +183,13 @@ export default function SpaceNewsSection() {
               style={{ display: "flex", gap: 12, alignItems: "center", textDecoration: "none", background: "#fff", border: "1px solid #EEE9DD", borderRadius: 18, padding: 10, boxShadow: "0 4px 18px rgba(15,14,11,.05)" }}
             >
               <div style={{ width: 82, height: 76, flexShrink: 0, borderRadius: 14, overflow: "hidden", background: "linear-gradient(135deg,#F4D35E,#F5F0E4)", display: "grid", placeItems: "center" }}>
-                {item.image ? (
-                  <img src={item.image} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                ) : (
-                  <Newspaper size={24} color="#8B6F22" />
-                )}
+                <img
+                  src={item.image || FALLBACK_NEWS_IMAGES[0]}
+                  alt=""
+                  loading="lazy"
+                  onError={event => { event.currentTarget.src = FALLBACK_NEWS_IMAGES[0]; }}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
