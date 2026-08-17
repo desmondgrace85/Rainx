@@ -2642,7 +2642,7 @@ function MainAppContent({ account, onLogout }) {
 
   return (
     <PullToRefresh>
-      <div style={{ minHeight: "100dvh", background: tab === "home" ? "#F2F3F5" : T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative", isolation: "isolate" }}>
+      <div style={{ minHeight: "100dvh", background: tab === "home" ? "radial-gradient(ellipse 42% 32% at 0% 22%,rgba(255,252,240,.72) 0%,rgba(255,248,225,.32) 52%,transparent 100%),radial-gradient(ellipse 42% 32% at 100% 22%,rgba(255,252,240,.72) 0%,rgba(255,248,225,.32) 52%,transparent 100%),linear-gradient(180deg,#F4D35E 0%,#FDC432 8%,#FDD46F 22%,#FDE7A8 36%,#F7F3E9 50%,#F7F3E9 100%)" : T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative", isolation: "isolate" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
@@ -5749,6 +5749,83 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [showLegal, setShowLegal] = useState(false);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
+
+  // Security + Settings preferences are intentionally local to this app shell so
+  // these controls can be added without changing the existing community, signal,
+  // wallet, creator-space or home implementations.
+  const [securityPrefs, setSecurityPrefs] = useState(() => {
+    try { return JSON.parse(lsGet("rainx-security-prefs") || "{}"); } catch { return {}; }
+  });
+  const [securitySheet, setSecuritySheet] = useState(null);
+  const [pinValue, setPinValue] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [settingsPrefs, setSettingsPrefs] = useState(() => {
+    try { return JSON.parse(lsGet("rainx-settings-prefs") || "{}"); } catch { return {}; }
+  });
+  const [settingsSheet, setSettingsSheet] = useState(null);
+
+  const persistSecurity = (patch) => {
+    setSecurityPrefs(prev => {
+      const next = { ...prev, ...patch };
+      lsSet("rainx-security-prefs", JSON.stringify(next));
+      return next;
+    });
+  };
+  const persistSettings = (patch) => {
+    setSettingsPrefs(prev => {
+      const next = { ...prev, ...patch };
+      lsSet("rainx-settings-prefs", JSON.stringify(next));
+      return next;
+    });
+  };
+  const hashPin = async (pin) => {
+    const bytes = new TextEncoder().encode(pin);
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
+  };
+  const setupPin = async () => {
+    setPinError("");
+    if (!/^\d{4,6}$/.test(pinValue)) { setPinError("Enter a 4–6 digit PIN."); return; }
+    if (pinValue !== pinConfirm) { setPinError("PINs do not match."); return; }
+    try {
+      const hash = await hashPin(pinValue);
+      persistSecurity({ pinEnabled: true, pinHash: hash });
+      setPinValue(""); setPinConfirm(""); setSecuritySheet(null);
+    } catch { setPinError("Unable to save PIN on this device."); }
+  };
+  const setupPasskey = async () => {
+    try {
+      if (!("PublicKeyCredential" in window) || !navigator.credentials?.create) {
+        alert("Face ID / device passkeys are not supported on this device or browser.");
+        return;
+      }
+      const platformReady = typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === "function"
+        ? await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(() => false)
+        : true;
+      if (platformReady === false) {
+        alert("A device biometric authenticator is not available. You can use a PIN instead.");
+        return;
+      }
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const userId = crypto.getRandomValues(new Uint8Array(16));
+      const credential = await navigator.credentials.create({ publicKey: {
+        challenge,
+        rp: { name: "RainX" },
+        user: { id: userId, name: account?.email || "rainx-user", displayName: fullName || username || "RainX User" },
+        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "preferred" },
+        timeout: 60000,
+        attestation: "none",
+      }});
+      if (credential?.rawId) {
+        const id = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+        persistSecurity({ biometricEnabled: true, biometricCredentialId: id });
+      }
+    } catch (e) {
+      if (e?.name !== "NotAllowedError") alert("Face ID / passkey setup could not be completed.");
+    }
+  };
   useEffect(() => {
     if (morePage !== "profile-menu") setAppearanceOpen(false);
   }, [morePage]);
@@ -6733,6 +6810,100 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             );
           })}
         </MoreSection>
+
+        <MoreSection title="PRIVACY & DISCOVERY">
+          {[
+            ["profileDiscoverable","Profile discoverable","Allow your profile to appear in search and suggestions",true],
+            ["activityStatus","Activity status","Let people you follow see when you are active",true],
+            ["readReceipts","Read receipts","Show when direct messages have been read",true],
+            ["personalizedSuggestions","Personalized suggestions","Use your activity to improve people and market suggestions",true],
+          ].map(([key,title,desc,def],i,arr)=>(
+            <React.Fragment key={key}>
+              {i>0 && <MoreRowDivider />}
+              <button onClick={()=>persistSettings({[key]:!(settingsPrefs[key] ?? def)})} style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"13px 16px", background:"none", border:"none", cursor:"pointer", textAlign:"left" }}>
+                <div style={{ flex:1 }}><div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper }}>{title}</div><div style={{ fontSize:11, color:T.muted, marginTop:2 }}>{desc}</div></div>
+                <div style={{ width:44, height:24, borderRadius:12, background:(settingsPrefs[key] ?? def)?T.sage:T.cardBorder, position:"relative", transition:"background 0.2s", flexShrink:0 }}><div style={{ position:"absolute", top:3, left:(settingsPrefs[key] ?? def)?23:3, width:18, height:18, borderRadius:"50%", background:"#fff", transition:"left 0.2s" }} /></div>
+              </button>
+            </React.Fragment>
+          ))}
+        </MoreSection>
+
+        <MoreSection title="TRADING & SIGNALS">
+          {[
+            ["signalAlerts","Trading signal alerts","Receive new BUY / SELL signal notifications",true],
+            ["riskAlerts","Risk & trade alerts","Get TP, SL and important risk notifications",true],
+            ["signalSounds","Signal sounds","Play alert sounds for important trading events",true],
+            ["autoRefresh","Live market refresh","Keep market and signal data refreshed automatically",true],
+          ].map(([key,title,desc,def],i)=>(
+            <React.Fragment key={key}>
+              {i>0 && <MoreRowDivider />}
+              <button onClick={()=>persistSettings({[key]:!(settingsPrefs[key] ?? def)})} style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"13px 16px", background:"none", border:"none", cursor:"pointer", textAlign:"left" }}>
+                <div style={{ flex:1 }}><div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper }}>{title}</div><div style={{ fontSize:11, color:T.muted, marginTop:2 }}>{desc}</div></div>
+                <div style={{ width:44, height:24, borderRadius:12, background:(settingsPrefs[key] ?? def)?T.sage:T.cardBorder, position:"relative", transition:"background 0.2s", flexShrink:0 }}><div style={{ position:"absolute", top:3, left:(settingsPrefs[key] ?? def)?23:3, width:18, height:18, borderRadius:"50%", background:"#fff", transition:"left 0.2s" }} /></div>
+              </button>
+            </React.Fragment>
+          ))}
+          <MoreRowDivider />
+          <MoreRow icon={ChevronDown} title="Signal delivery" subtitle={settingsPrefs.signalDelivery || "All signals"} onPress={()=>setSettingsSheet("signalDelivery")} />
+        </MoreSection>
+
+        <MoreSection title="COMMUNITY & MESSAGING">
+          {[
+            ["communityNotifications","Community notifications","Likes, replies, follows and mentions",true],
+            ["messageRequests","Message requests","Allow new people to send you a message request",true],
+            ["creatorUpdates","Creator updates","Updates from creators and Space Coins you follow",true],
+            ["launchAlerts","Space Coin launch alerts","Notify me when followed creators launch a new mini token",true],
+          ].map(([key,title,desc,def],i)=>(
+            <React.Fragment key={key}>
+              {i>0 && <MoreRowDivider />}
+              <button onClick={()=>persistSettings({[key]:!(settingsPrefs[key] ?? def)})} style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"13px 16px", background:"none", border:"none", cursor:"pointer", textAlign:"left" }}>
+                <div style={{ flex:1 }}><div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper }}>{title}</div><div style={{ fontSize:11, color:T.muted, marginTop:2 }}>{desc}</div></div>
+                <div style={{ width:44, height:24, borderRadius:12, background:(settingsPrefs[key] ?? def)?T.sage:T.cardBorder, position:"relative", transition:"background 0.2s", flexShrink:0 }}><div style={{ position:"absolute", top:3, left:(settingsPrefs[key] ?? def)?23:3, width:18, height:18, borderRadius:"50%", background:"#fff", transition:"left 0.2s" }} /></div>
+              </button>
+            </React.Fragment>
+          ))}
+          <MoreRowDivider />
+          <MoreRow icon={Lock} title="Who can message you" subtitle={settingsPrefs.messageWho || "Followers and people you follow"} onPress={()=>setSettingsSheet("messageWho")} />
+        </MoreSection>
+
+        <MoreSection title="DATA & ACCOUNT">
+          <MoreRow icon={EyeOff} title="Hide balances" subtitle="Hide wallet and account balances until tapped" onPress={()=>persistSettings({hideBalances:!(settingsPrefs.hideBalances ?? false)})} badge={(settingsPrefs.hideBalances ?? false)?"On":"Off"} badgeColor={(settingsPrefs.hideBalances ?? false)?T.sage:T.muted} />
+          <MoreRowDivider />
+          <MoreRow icon={ScrollText} title="Data & storage" subtitle="Cache, downloads and local data" onPress={()=>setSettingsSheet("dataStorage")} />
+          <MoreRowDivider />
+          <MoreRow icon={Mail} title="Language & region" subtitle={settingsPrefs.region || "English · Ghana"} onPress={()=>setSettingsSheet("region")} />
+          <MoreRowDivider />
+          <MoreRow icon={FileText} title="Terms & risk disclosure" subtitle="Review RainX terms and risk information" onPress={()=>setShowLegal(true)} />
+        </MoreSection>
+
+        {settingsSheet && (
+          <div onClick={()=>setSettingsSheet(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.18)", backdropFilter:"blur(7px)", WebkitBackdropFilter:"blur(7px)", zIndex:100, display:"flex", alignItems:"flex-end" }}>
+            <style>{"@keyframes rxSettingsSheetUp { from { transform:translateY(100%); opacity:0.7 } to { transform:translateY(0); opacity:1 } }"}</style>
+            <div onClick={e=>e.stopPropagation()} style={{ width:"100%", maxWidth:480, margin:"0 auto", background:T.card, border:`1px solid ${T.cardBorder}`, borderBottom:"none", borderRadius:"22px 22px 0 0", padding:"12px 16px 28px", animation:"rxSettingsSheetUp 0.26s cubic-bezier(0.22,1,0.36,1)" }}>
+              <div style={{ width:42, height:5, borderRadius:3, background:T.cardBorder, margin:"0 auto 18px" }} />
+              {settingsSheet === "signalDelivery" && <>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, color:T.paper, marginBottom:5 }}>Signal delivery</div>
+                <div style={{ fontSize:11.5, color:T.muted, marginBottom:16 }}>Choose how much signal activity you want to receive.</div>
+                {[["all","All signals","BUY, SELL and watchlist updates"],["high","High confidence only","Only stronger-confidence setups"],["followed","Followed markets only","Only markets in your watchlist"]].map(([v,t,d])=><button key={v} onClick={()=>{persistSettings({signalDelivery:v});setSettingsSheet(null)}} style={{ width:"100%", background:"none", border:"none", padding:"13px 0", display:"flex", alignItems:"center", textAlign:"left", cursor:"pointer" }}><div style={{flex:1}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.paper}}>{t}</div><div style={{fontSize:11,color:T.muted,marginTop:2}}>{d}</div></div><div style={{width:20,height:20,borderRadius:"50%",border:`2px solid ${(settingsPrefs.signalDelivery||"all")===v?T.gold:T.cardBorder}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{(settingsPrefs.signalDelivery||"all")===v&&<div style={{width:10,height:10,borderRadius:"50%",background:T.gold}}/>}</div></button>)}
+              </>}
+              {settingsSheet === "messageWho" && <>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, color:T.paper, marginBottom:5 }}>Who can message you</div>
+                <div style={{ fontSize:11.5, color:T.muted, marginBottom:16 }}>Control who can start a new conversation.</div>
+                {[["followers","Followers and people you follow"],["everyone","Anyone on RainX"],["nobody","Nobody"]].map(([v,t])=><button key={v} onClick={()=>{persistSettings({messageWho:t});setSettingsSheet(null)}} style={{width:"100%",background:"none",border:"none",padding:"13px 0",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.paper}}>{t}<div style={{width:20,height:20,borderRadius:"50%",border:`2px solid ${(settingsPrefs.messageWho||"Followers and people you follow")===(t)?T.gold:T.cardBorder}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{(settingsPrefs.messageWho||"Followers and people you follow")===(t)&&<div style={{width:10,height:10,borderRadius:"50%",background:T.gold}}/>}</div></button>)}
+              </>}
+              {settingsSheet === "dataStorage" && <>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, color:T.paper, marginBottom:5 }}>Data & storage</div>
+                <div style={{ fontSize:11.5, color:T.muted, lineHeight:1.6, marginBottom:16 }}>Manage local app data without changing your account.</div>
+                <button onClick={()=>{try{Object.keys(localStorage).filter(k=>k.startsWith("rainx-")).forEach(k=>localStorage.removeItem(k));}catch{} setSettingsPrefs({}); setSettingsSheet(null); alert("Local RainX preferences and cache were cleared.");}} style={{width:"100%",background:"none",border:`1px solid ${T.cardBorder}`,borderRadius:12,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.paper,cursor:"pointer"}}>Clear local preferences</button>
+              </>}
+              {settingsSheet === "region" && <>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, color:T.paper, marginBottom:5 }}>Language & region</div>
+                <div style={{ fontSize:11.5, color:T.muted, marginBottom:16 }}>Choose your preferred app region.</div>
+                {[["English · Ghana","English · Ghana"],["English · Nigeria","English · Nigeria"],["English · International","English · International"]].map(([v,t])=><button key={v} onClick={()=>{persistSettings({region:v});setSettingsSheet(null)}} style={{width:"100%",background:"none",border:"none",padding:"13px 0",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.paper}}>{t}<div style={{width:20,height:20,borderRadius:"50%",border:`2px solid ${(settingsPrefs.region||"English · Ghana")===v?T.gold:T.cardBorder}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{(settingsPrefs.region||"English · Ghana")===(v)&&<div style={{width:10,height:10,borderRadius:"50%",background:T.gold}}/>}</div></button>)}
+              </>}
+            </div>
+          </div>
+        )}
       </div>
     </MoreSubScreen>
   );
@@ -6744,49 +6915,86 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   );
 
   if (morePage === "security") return (
-    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Security" subtitle="Protect your account">
-      <div style={{ padding: 16 }}>
-        {/* Reset password */}
-        <SecuritySection
-          icon={Key}
-          title="Change Password"
-          desc="Update your account password"
-          onPress={async () => {
-            const { error } = await supabase.auth.resetPasswordForEmail(account?.email || "");
-            if (!error) alert("Password reset link sent to your email.");
-            else alert("Could not send reset email. Try again.");
-          }}
-          label="Send Reset Email"
-        />
-        {/* 2FA */}
-        <SecuritySection
-          icon={Smartphone}
-          title="Two-Step Authentication"
-          desc="Add an extra layer of protection to your account"
-          onPress={() => alert("2FA setup is coming soon. Check back for updates.")}
-          label="Set Up 2FA"
-          comingSoon
-        />
-        {/* Phone number */}
-        <SecuritySection
-          icon={Smartphone}
-          title="Phone Number"
-          desc="Add a phone number for account recovery"
-          onPress={() => alert("Phone verification is coming soon.")}
-          label="Add Phone"
-          comingSoon
-        />
-        {/* Active sessions */}
-        <SecuritySection
-          icon={Eye}
-          title="Active Sessions"
-          desc="View and manage your active login sessions"
-          onPress={() => alert("Session management coming soon.")}
-          label="View Sessions"
-          comingSoon
-        />
-        {/* Delete account */}
-        <div style={{ marginTop: 24 }}>
+    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Security" subtitle="Protect your account & device">
+      <div style={{ padding:16 }}>
+        <MoreSection title="SIGN-IN SECURITY">
+          <SecuritySection
+            icon={Key}
+            title="Change Password"
+            desc="Update your account password"
+            onPress={async () => {
+              const { error } = await supabase.auth.resetPasswordForEmail(account?.email || "");
+              if (!error) alert("Password reset link sent to your email.");
+              else alert("Could not send reset email. Try again.");
+            }}
+            label="Reset"
+          />
+          <SecuritySection
+            icon={ShieldCheck}
+            title="Two-Step Authentication"
+            desc="Add an extra layer of protection to your account"
+            onPress={() => alert("2FA setup is coming soon. Check back for updates.")}
+            label="Set Up"
+            comingSoon
+          />
+          <SecuritySection
+            icon={Smartphone}
+            title="Phone Number"
+            desc="Add a phone number for account recovery"
+            onPress={() => alert("Phone verification is coming soon.")}
+            label="Add Phone"
+            comingSoon
+          />
+        </MoreSection>
+
+        <MoreSection title="DEVICE SECURITY">
+          <div style={{ padding:"14px 16px", display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ flex:1 }}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:13.5,color:T.paper}}>App Lock</div><div style={{fontSize:11,color:T.muted,marginTop:2}}>Require device authentication before opening RainX</div></div>
+            <div onClick={()=>{ if (!(securityPrefs.pinEnabled || securityPrefs.biometricEnabled)) { setSecuritySheet("appLockSetup"); return; } persistSecurity({appLock:!(securityPrefs.appLock ?? false)}); }} style={{width:44,height:24,borderRadius:12,background:(securityPrefs.appLock ?? false)?T.sage:T.cardBorder,position:"relative",cursor:"pointer",transition:"background 0.2s",flexShrink:0}}><div style={{position:"absolute",top:3,left:(securityPrefs.appLock ?? false)?23:3,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/></div>
+          </div>
+          <MoreRowDivider />
+          <SecuritySection
+            icon={Lock}
+            title="PIN Lock"
+            desc={securityPrefs.pinEnabled ? "A device PIN is set for RainX" : "Create a 4–6 digit RainX device PIN"}
+            onPress={() => { setPinValue(""); setPinConfirm(""); setPinError(""); setSecuritySheet("pin"); }}
+            label={securityPrefs.pinEnabled ? "Change" : "Set Up"}
+          />
+          <SecuritySection
+            icon={Eye}
+            title="Face ID / Device Passkey"
+            desc={securityPrefs.biometricEnabled ? "Biometric sign-in is enabled on this device" : "Use Face ID, fingerprint or device biometrics"}
+            onPress={setupPasskey}
+            label={securityPrefs.biometricEnabled ? "Enabled" : "Set Up"}
+          />
+        </MoreSection>
+
+        <MoreSection title="ACCOUNT PROTECTION">
+          {[
+            ["loginAlerts","New login alerts","Notify me when a new device signs in",true],
+            ["tradeConfirmations","Trade confirmations","Confirm sensitive trading actions before they are submitted",true],
+            ["withdrawConfirmations","Withdrawal confirmations","Require an extra confirmation before wallet withdrawals",true],
+            ["securityEmails","Security emails","Receive important security and account notices",true],
+          ].map(([key,title,desc,def],i)=>(
+            <React.Fragment key={key}>
+              {i>0 && <MoreRowDivider />}
+              <button onClick={()=>persistSecurity({[key]:!(securityPrefs[key] ?? def)})} style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"13px 16px", background:"none", border:"none", cursor:"pointer", textAlign:"left" }}>
+                <div style={{ flex:1 }}><div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper }}>{title}</div><div style={{ fontSize:11, color:T.muted, marginTop:2 }}>{desc}</div></div>
+                <div style={{ width:44, height:24, borderRadius:12, background:(securityPrefs[key] ?? def)?T.sage:T.cardBorder, position:"relative", transition:"background 0.2s", flexShrink:0 }}><div style={{ position:"absolute", top:3, left:(securityPrefs[key] ?? def)?23:3, width:18, height:18, borderRadius:"50%", background:"#fff", transition:"left 0.2s" }} /></div>
+              </button>
+            </React.Fragment>
+          ))}
+        </MoreSection>
+
+        <MoreSection title="SESSIONS & RECOVERY">
+          <MoreRow icon={Eye} title="Active Sessions" subtitle="View and manage devices signed in to RainX" onPress={()=>setSecuritySheet("sessions")} />
+          <MoreRowDivider />
+          <MoreRow icon={Mail} title="Recovery email" subtitle={account?.email ? "Your account email is set" : "Add a recovery email"} onPress={()=>alert(account?.email ? "Your RainX account email is the current recovery email." : "Add a recovery email from your account profile.")} />
+          <MoreRowDivider />
+          <MoreRow icon={ShieldCheck} title="Security checkup" subtitle="Review your account protection settings" onPress={()=>setSecuritySheet("checkup")} />
+        </MoreSection>
+
+        <div style={{ marginTop: 8 }}>
           <button onClick={() => {
             if (window.confirm("Are you sure you want to delete your account? This cannot be undone.")) {
               alert("Please contact support to delete your account.");
@@ -6795,6 +7003,39 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             Delete Account
           </button>
         </div>
+
+        {securitySheet && (
+          <div onClick={()=>setSecuritySheet(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.18)", backdropFilter:"blur(7px)", WebkitBackdropFilter:"blur(7px)", zIndex:100, display:"flex", alignItems:"flex-end" }}>
+            <style>{"@keyframes rxSecuritySheetUp { from { transform:translateY(100%); opacity:0.7 } to { transform:translateY(0); opacity:1 } }"}</style>
+            <div onClick={e=>e.stopPropagation()} style={{ width:"100%", maxWidth:480, margin:"0 auto", background:T.card, border:`1px solid ${T.cardBorder}`, borderBottom:"none", borderRadius:"22px 22px 0 0", padding:"12px 16px 28px", animation:"rxSecuritySheetUp 0.26s cubic-bezier(0.22,1,0.36,1)" }}>
+              <div style={{ width:42, height:5, borderRadius:3, background:T.cardBorder, margin:"0 auto 18px" }} />
+              {securitySheet === "pin" && <>
+                <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:18,color:T.paper,marginBottom:5}}>{securityPrefs.pinEnabled ? "Change RainX PIN" : "Set up RainX PIN"}</div>
+                <div style={{fontSize:11.5,color:T.muted,lineHeight:1.6,marginBottom:16}}>Your PIN is hashed before it is stored on this device.</div>
+                <input value={pinValue} onChange={e=>setPinValue(e.target.value.replace(/\\D/g,"").slice(0,6))} inputMode="numeric" type="password" placeholder="New PIN" style={{width:"100%",boxSizing:"border-box",background:"none",border:`1px solid ${T.cardBorder}`,borderRadius:11,padding:"12px 13px",color:T.paper,fontFamily:FONT_HEAD,fontSize:15,outline:"none",marginBottom:10}} />
+                <input value={pinConfirm} onChange={e=>setPinConfirm(e.target.value.replace(/\\D/g,"").slice(0,6))} inputMode="numeric" type="password" placeholder="Confirm PIN" style={{width:"100%",boxSizing:"border-box",background:"none",border:`1px solid ${T.cardBorder}`,borderRadius:11,padding:"12px 13px",color:T.paper,fontFamily:FONT_HEAD,fontSize:15,outline:"none",marginBottom:6}} />
+                {pinError && <div style={{fontSize:11,color:T.rust,margin:"5px 0 10px"}}>{pinError}</div>}
+                <button onClick={setupPin} style={{width:"100%",background:T.goldGradient,color:T.ink,border:"none",borderRadius:11,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:13,cursor:"pointer",marginTop:8}}>Save PIN</button>
+              </>}
+              {securitySheet === "appLockSetup" && <>
+                <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:18,color:T.paper,marginBottom:5}}>Set up App Lock</div>
+                <div style={{fontSize:11.5,color:T.muted,lineHeight:1.6,marginBottom:16}}>Choose a device protection method first. RainX can use your PIN or supported device biometrics.</div>
+                <button onClick={()=>{setSecuritySheet("pin")}} style={{width:"100%",background:"none",border:`1px solid ${T.cardBorder}`,borderRadius:11,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.paper,cursor:"pointer",marginBottom:9}}>Set up PIN</button>
+                <button onClick={async()=>{setSecuritySheet(null);await setupPasskey();}} style={{width:"100%",background:T.goldGradient,border:"none",borderRadius:11,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:13,color:T.ink,cursor:"pointer"}}>Set up Face ID / Passkey</button>
+              </>}
+              {securitySheet === "sessions" && <>
+                <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:18,color:T.paper,marginBottom:5}}>Active Sessions</div>
+                <div style={{fontSize:11.5,color:T.muted,lineHeight:1.6,marginBottom:16}}>Session management is ready for a connected device/session backend. For now, this account is protected by your current authentication session.</div>
+                <div style={{background:T.ink,border:`1px solid ${T.cardBorder}`,borderRadius:12,padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}><div style={{width:36,height:36,borderRadius:10,background:"rgba(244,211,94,0.12)",display:"flex",alignItems:"center",justifyContent:"center"}}><Smartphone size={18} color={T.gold}/></div><div style={{flex:1}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:T.paper}}>This device</div><div style={{fontSize:10.5,color:T.muted,marginTop:2}}>Current RainX session</div></div><span style={{fontSize:10,color:T.sage,fontWeight:700}}>ACTIVE</span></div>
+              </>}
+              {securitySheet === "checkup" && <>
+                <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:18,color:T.paper,marginBottom:5}}>Security checkup</div>
+                <div style={{fontSize:11.5,color:T.muted,lineHeight:1.6,marginBottom:16}}>A quick view of your current protection.</div>
+                {[["Password","Managed by RainX account authentication",true],["PIN lock",securityPrefs.pinEnabled?"Enabled on this device":"Not set",!!securityPrefs.pinEnabled],["Face ID / Passkey",securityPrefs.biometricEnabled?"Enabled on this device":"Not set",!!securityPrefs.biometricEnabled],["Login alerts",securityPrefs.loginAlerts!==false?"Enabled":"Disabled",securityPrefs.loginAlerts!==false],["Withdrawal confirmations",securityPrefs.withdrawConfirmations!==false?"Enabled":"Disabled",securityPrefs.withdrawConfirmations!==false]].map(([t,d,on])=><div key={t} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:`1px solid ${T.cardBorder}`}}><div style={{flex:1}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:T.paper}}>{t}</div><div style={{fontSize:10.5,color:T.muted,marginTop:2}}>{d}</div></div><span style={{fontSize:10,fontWeight:800,color:on?T.sage:T.muted}}>{on?"ON":"OFF"}</span></div>)}
+              </>}
+            </div>
+          </div>
+        )}
       </div>
     </MoreSubScreen>
   );
