@@ -2642,7 +2642,7 @@ function MainAppContent({ account, onLogout }) {
 
   return (
     <PullToRefresh>
-      <div style={{ minHeight: "100dvh", background: tab === "home" ? "linear-gradient(180deg,#F4C13A 0%,#F7CF5B 12%,#F8E6A8 26%,#F7F3E9 40%,#F7F3E9 100%)" : T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative", isolation: "isolate" }}>
+      <div style={{ minHeight: "100dvh", background: tab === "home" ? "radial-gradient(ellipse 38% 34% at 0% 38%,rgba(255,253,246,.62) 0%,rgba(255,247,218,.24) 42%,transparent 100%),radial-gradient(ellipse 38% 34% at 100% 38%,rgba(255,253,246,.62) 0%,rgba(255,247,218,.24) 42%,transparent 100%),linear-gradient(180deg,#FDC432 0%,#FDD46F 18%,#FDE7A8 32%,#F7F3E9 48%,#F7F3E9 100%)" : T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative", isolation: "isolate" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
