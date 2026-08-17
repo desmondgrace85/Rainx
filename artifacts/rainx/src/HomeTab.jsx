@@ -753,7 +753,7 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
   return (
     <div style={{background:"transparent",minHeight:"100%",color:T.ink}}>
        <section style={{padding:"12px 14px 0",background:"transparent"}}>
-        <div style={{background:"#000000",border:"1px solid #2B281F",borderRadius:24,overflow:"hidden",padding:"12px 10px 8px",boxShadow:"0 18px 40px rgba(15,14,11,0.22)"}}>
+        <div style={{background:"#000000",border:"1px solid #2B281F",borderRadius:24,overflow:"hidden",padding:"12px 10px 8px",boxShadow:"0 10px 24px rgba(0,0,0,0.24)"}}>
           <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"flex-start"}}>
             <div style={{minWidth:0}}>
               <div style={{fontFamily:FONT_HEAD,fontSize:13,fontWeight:700,color:"#F5F1E8"}}>Today’s Performance <span style={{color:"#8D887C",fontSize:12}}>ⓘ</span></div>
