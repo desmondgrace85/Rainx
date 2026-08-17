@@ -2667,15 +2667,11 @@ function MainAppContent({ account, onLogout }) {
         onOpen={openNotificationTarget}
       />
 
-      {tab === "home" && <div style={{ background: "linear-gradient(180deg,#F4D35E 0%,#F8E9A8 72%,rgba(247,243,233,0.98) 100%)", borderBottom: "1px solid rgba(15,14,11,0.08)", padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
+      {tab === "home" && <div style={{ background: "linear-gradient(180deg,#F4D35E 0%,#F8E9A8 72%,rgba(247,243,233,0.98) 100%)", borderBottom: "none", padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
         {/* ── Profile avatar trigger ── */}
           <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); routeWrite(tab, "profile-menu", "h"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
               <HeaderAvatar account={account} morePage={morePage} T={T} />
             </button>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: FONT_HEAD, fontSize: 19, fontWeight: 800, color: T.ink, letterSpacing: -0.3 }}>RainX</div>
-          <div style={{ fontSize: 9.5, color: T.muted, fontWeight: 600, marginTop: -2 }}>Powered by Raina AI</div>
-        </div>
         <button onClick={() => {
           setShowNotifPanel(true);
           const unreadIds = notifications.filter((n) => !n.read).map((n) => n.id);
@@ -5731,11 +5727,11 @@ function HeaderAvatar({ account, morePage, T }) {
       .catch(() => { setLoaded(true); });
   }, [account?.id, tick]);
   // Show neutral circle while fetching — no email-derived initial during load
-  if (!loaded) return <div style={{ width:34, height:34, borderRadius:"50%", background:T.cardBorder }} />;
+  if (!loaded) return <div style={{ width:42, height:42, borderRadius:"50%", background:T.cardBorder }} />;
   const initial = (account?.email || "?")[0].toUpperCase();
   return url
-    ? <img src={url} alt="me" style={{ width:34, height:34, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} />
-    : <div style={{ width:34, height:34, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.ink }}>{initial}</div>;
+    ? <img src={url} alt="me" style={{ width:42, height:42, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} />
+    : <div style={{ width:42, height:42, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink }}>{initial}</div>;
 }
 
 function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, onLogoutConfirm, setTab, entitlement, themeMode, setThemeMode, morePage, setMorePage, setProfileFromHeader, activeMarkets = [] }) {
