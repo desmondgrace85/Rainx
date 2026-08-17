@@ -675,7 +675,9 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
   const performanceSeries = React.useMemo(() => {
     const candleSource = (chartCandles || []).map(c => Number(c.close)).filter(Number.isFinite).slice(-56);
     const tickSource = (series || []).map(p => Number(p.price ?? p.close ?? p.value)).filter(Number.isFinite).slice(-56);
-    const source = candleSource.length >= 2 ? candleSource : tickSource;
+    // Prefer the live tick stream so the gold line keeps moving between
+    // candle refreshes; candles remain the fallback when ticks are unavailable.
+    const source = tickSource.length >= 2 ? tickSource : candleSource;
     const live = Number(localLast || last);
     if (source.length >= 2) {
       const next = source.slice();
@@ -750,8 +752,8 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
 
   return (
     <div style={{background:"#F7F3E9",minHeight:"100%",color:T.ink}}>
-      <section style={{padding:"14px 14px 0",background:"linear-gradient(180deg,#F4D35E 0%,#F8E9A8 30%,#F7F3E9 100%)"}}>
-        <div style={{background:"#070706",border:"1px solid #2B281F",borderRadius:26,overflow:"hidden",padding:"18px 14px 12px",boxShadow:"0 18px 40px rgba(15,14,11,0.18)"}}>
+       <section style={{padding:"14px 14px 0",background:"linear-gradient(180deg,#F4D35E 0%,#F8E9A8 30%,#F7F3E9 100%)"}}>
+        <div style={{background:"#070706",border:"1px solid #2B281F",borderRadius:26,overflow:"hidden",padding:"14px 10px 10px",boxShadow:"0 7px 0 rgba(244,211,94,0.14),0 16px 30px rgba(15,14,11,0.14)"}}>
           <div style={{display:"flex",justifyContent:"space-between",gap:12,alignItems:"flex-start"}}>
             <div style={{minWidth:0}}>
               <div style={{fontFamily:FONT_HEAD,fontSize:13,fontWeight:700,color:"#F5F1E8"}}>Today’s Performance <span style={{color:"#8D887C",fontSize:12}}>ⓘ</span></div>
@@ -767,39 +769,40 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
               <div style={{marginTop:13,border:"1px solid #8E741D",borderRadius:14,padding:"8px",display:"flex",alignItems:"center",justifyContent:"center",gap:5,color:T.gold,fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800,animation:"rx-breathe 2.2s ease-in-out infinite"}}>Tap to view setup <ArrowUpRight size={12}/></div>
             </button>
           </div>
-          <svg viewBox="0 0 680 185" preserveAspectRatio="none" style={{display:"block",width:"100%",height:165,marginTop:10,overflow:"visible"}}>
+           <svg viewBox="0 0 680 185" preserveAspectRatio="none" style={{display:"block",width:"100%",height:128,marginTop:6,overflow:"visible"}}>
             <defs>
               <linearGradient id="rxPerfFill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#F4D35E" stopOpacity=".30"/>
                 <stop offset="100%" stopColor="#F4D35E" stopOpacity="0"/>
               </linearGradient>
-              <filter id="rxPerfGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+               <filter id="rxPerfGlow"><feGaussianBlur stdDeviation="2.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
             </defs>
             <path d={performanceGeometry.fill} fill="url(#rxPerfFill)"/>
-            <path d={performanceGeometry.line} fill="none" stroke={T.gold} strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#rxPerfGlow)"/>
-            <circle cx={performanceGeometry.lastX} cy={performanceGeometry.lastY} r="8" fill={T.gold}/>
-            <circle cx={performanceGeometry.lastX} cy={performanceGeometry.lastY} r="15" fill="none" stroke={T.gold} strokeOpacity=".18" strokeWidth="4">
-              <animate attributeName="r" values="11;17;11" dur="1.8s" repeatCount="indefinite"/>
+             <path d={performanceGeometry.line} fill="none" stroke={T.gold} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" filter="url(#rxPerfGlow)"/>
+             <circle cx={performanceGeometry.lastX} cy={performanceGeometry.lastY} r="5" fill={T.gold}/>
+             <circle cx={performanceGeometry.lastX} cy={performanceGeometry.lastY} r="11" fill="none" stroke={T.gold} strokeOpacity=".18" strokeWidth="2">
+               <animate attributeName="r" values="8;14;8" dur="1.8s" repeatCount="indefinite"/>
               <animate attributeName="opacity" values=".28;.05;.28" dur="1.8s" repeatCount="indefinite"/>
             </circle>
           </svg>
           <div style={{display:"flex",justifyContent:"space-between",padding:"0 3px",color:"#6F6A5D",fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:700}}>{["1D","1W","1M","1Y","All"].map((label,i)=><span key={label} style={{color:i===0?T.gold:"#777164",background:i===0?"#2A2514":"transparent",borderRadius:18,padding:i===0?"8px 15px":"8px 10px"}}>{label}</span>)}</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8,marginTop:10}}>
+         <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:6,marginTop:8}}>
                             {marketCards.map(asset=>{
                               const logo=resolveMarketLogo({symbol:asset.symbol})?.src; const arr=seriesMap?.[asset.symbol]||[]; const price=arr.length?arr[arr.length-1].price:asset.base; const prev=arr.length>1?arr[arr.length-2].price:price; const up=price>=prev;
-                              return <button key={asset.symbol} onClick={()=>openMarket(asset.symbol)} style={{minWidth:0,minHeight:126,borderRadius:18,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"12px 7px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                                {logo?<img src={logo} alt="" style={{width:36,height:36,borderRadius:"50%",objectFit:"cover",marginBottom:8}}/>:<div style={{width:36,height:36,borderRadius:"50%",background:T.gold,marginBottom:8}}/>}
+                               return <button key={asset.symbol} onClick={()=>openMarket(asset.symbol)} style={{minWidth:0,minHeight:108,borderRadius:15,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"8px 5px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                                 {logo?<img src={logo} alt="" style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",marginBottom:6}}/>:<div style={{width:30,height:30,borderRadius:"50%",background:T.gold,marginBottom:6}}/>}
                                 <div style={{fontFamily:FONT_HEAD,fontSize:11,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>{asset.symbol}</div>
                                 <div style={{marginTop:5,fontFamily:FONT_HEAD,fontSize:10,fontWeight:700,color:up?"#5EDB78":"#E27661",fontVariantNumeric:"tabular-nums"}}>{Number(price).toFixed(Math.min(asset.digits,2))}</div>
                               </button>;
                             })}
-                            <button onClick={()=>setShowAddMarket(true)} style={{minWidth:0,minHeight:126,borderRadius:18,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"12px 7px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                              <div style={{width:36,height:36,borderRadius:"50%",border:`2px solid ${T.gold}`,display:"grid",placeItems:"center",marginBottom:8}}><Plus size={20} color={T.gold}/></div>
+                             <button onClick={()=>setShowAddMarket(true)} style={{minWidth:0,minHeight:108,borderRadius:15,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"8px 5px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                               <div style={{width:30,height:30,borderRadius:"50%",border:`2px solid ${T.gold}`,display:"grid",placeItems:"center",marginBottom:6}}><Plus size={17} color={T.gold}/></div>
                               <div style={{fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800}}>Add Market</div>
                             </button>
                           </div>
         </div>
-      </section>\n\n      <SpaceNewsSection />
+       </section>
+       <SpaceNewsSection />
 
       {showFullChart&&<HomeChartErrorBoundary><FullChartView inst={signalInst} session={sessions?.[signalSymbol]||session} signalsMap={signalsMap} themeMode={themeMode} onClose={()=>setShowFullChart(false)} livePrice={signalSymbol===activeSymbol?last:(seriesMap?.[signalSymbol]?.slice(-1)?.[0]?.price||null)}/></HomeChartErrorBoundary>}
 
