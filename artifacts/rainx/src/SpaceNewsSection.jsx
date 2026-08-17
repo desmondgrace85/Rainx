@@ -126,7 +126,8 @@ export default function SpaceNewsSection() {
 
   return (
     <section style={{ margin: "18px 14px 26px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+      <div style={{ background: "#fff", border: "1px solid #EEE9DD", borderRadius: 18, overflow: "hidden", boxShadow: "0 4px 18px rgba(15,14,11,.05)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 14px 10px", marginBottom: 0 }}>
         <div style={{ fontFamily: "Montserrat,sans-serif", fontWeight: 800, fontSize: 22, color: "#0F0E0B", letterSpacing: -0.4 }}>
           Space News
         </div>
@@ -150,15 +151,15 @@ export default function SpaceNewsSection() {
       </div>
 
       {status === "loading" && (
-        <div style={{ display: "grid", gap: 10 }}>
+        <div style={{ display: "grid" }}>
           {[0, 1].map(i => (
-            <div key={i} style={{ height: 96, borderRadius: 18, background: "linear-gradient(90deg,#fff,#f4f1e8,#fff)", border: "1px solid #EEE9DD" }} />
+            <div key={i} style={{ height: 96, margin: "0 10px", background: "linear-gradient(90deg,#fff,#f4f1e8,#fff)", borderBottom: i === 0 ? "1px solid #EEE9DD" : "none" }} />
           ))}
         </div>
       )}
 
       {status === "error" && (
-        <div style={{ background: "#fff", border: "1px solid #E9E4D8", borderRadius: 18, padding: "20px 16px", textAlign: "center" }}>
+        <div style={{ background: "transparent", padding: "20px 16px", textAlign: "center" }}>
           <Newspaper size={22} color="#B9AD93" />
           <div style={{ fontFamily: "Montserrat,sans-serif", fontWeight: 700, fontSize: 13, color: "#0F0E0B", marginTop: 7 }}>
             Space News is temporarily unavailable.
@@ -173,14 +174,14 @@ export default function SpaceNewsSection() {
       )}
 
       {status !== "loading" && items.length > 0 && (
-        <div style={{ display: "grid", gap: 10 }}>
-          {items.slice(0, 5).map(item => (
+        <div style={{ display: "grid" }}>
+          {items.slice(0, 5).map((item, index) => (
             <a
               key={item.id}
               href={item.url}
               target="_blank"
               rel="noreferrer"
-              style={{ display: "flex", gap: 12, alignItems: "center", textDecoration: "none", background: "#fff", border: "1px solid #EEE9DD", borderRadius: 18, padding: 10, boxShadow: "0 4px 18px rgba(15,14,11,.05)" }}
+              style={{ display: "flex", gap: 12, alignItems: "center", textDecoration: "none", background: "transparent", borderBottom: index < Math.min(items.length, 5) - 1 ? "1px solid #EEE9DD" : "none", padding: "10px 14px" }}
             >
               <div style={{ width: 82, height: 76, flexShrink: 0, borderRadius: 14, overflow: "hidden", background: "linear-gradient(135deg,#F4D35E,#F5F0E4)", display: "grid", placeItems: "center" }}>
                 <img
@@ -214,6 +215,7 @@ export default function SpaceNewsSection() {
       )}
 
       <style>{`@keyframes rx-news-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+      </div>
     </section>
   );
 }

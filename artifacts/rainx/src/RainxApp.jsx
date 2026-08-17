@@ -2667,7 +2667,7 @@ function MainAppContent({ account, onLogout }) {
         onOpen={openNotificationTarget}
       />
 
-      {tab === "home" && <div style={{ background: "linear-gradient(180deg,#F4D35E 0%,#F8E9A8 55%,#F7F3E9 100%)", borderBottom: "none", padding: "16px 18px 14px", minHeight: 82, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20, boxShadow: "none" }}>
+      {tab === "home" && <div style={{ background: "linear-gradient(180deg,#F4D35E 0%,#F8E9A8 55%,#F8E9A8 100%)", borderBottom: "none", padding: "16px 18px 14px", minHeight: 82, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20, boxShadow: "none" }}>
         {/* ── Profile avatar trigger ── */}
           <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); routeWrite(tab, "profile-menu", "h"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
               <HeaderAvatar account={account} morePage={morePage} T={T} />
@@ -2680,7 +2680,7 @@ function MainAppContent({ account, onLogout }) {
             supabase.from("user_notifications").update({ read: true }).eq("user_id", account.id).in("id", unreadIds).then(() => {}, () => {});
           }
         }} style={{ position: "relative", background: "none", border: "none", color: "#0F0E0B", cursor: "pointer", padding: 4 }}>
-          <Bell size={24} strokeWidth={2.6} color="#0F0E0B" />
+          <Bell size={24} strokeWidth={1.8} fill="#0F0E0B" color="#0F0E0B" />
           {unreadCount > 0 && (
             <span style={{ position: "absolute", top: -6, right: -8, background: T.rust, color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 10, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>
               {unreadCount > 99 ? "99+" : unreadCount}
