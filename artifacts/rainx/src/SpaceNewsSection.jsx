@@ -126,7 +126,7 @@ export default function SpaceNewsSection() {
 
   return (
     <section style={{ margin: "18px 14px 26px" }}>
-      <div style={{ background: "#fff", border: "1px solid #EEE9DD", borderRadius: 18, overflow: "hidden", boxShadow: "0 4px 18px rgba(15,14,11,.05)" }}>
+      <div style={{ background: "#FFFFFF", border: "1px solid #FFFFFF", borderRadius: 18, overflow: "hidden", boxShadow: "0 4px 18px rgba(15,14,11,.05)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 14px 10px", marginBottom: 0 }}>
         <div style={{ fontFamily: "Montserrat,sans-serif", fontWeight: 800, fontSize: 22, color: "#0F0E0B", letterSpacing: -0.4 }}>
           Space News
