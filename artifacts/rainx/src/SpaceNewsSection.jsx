@@ -32,7 +32,7 @@ function normaliseCryptoCompare(items) {
       image: item.imageurl || "",
       publishedAt: item.published_on,
       url: item.url || "#",
-      source: item.source_info?.name || item.source || "Crypto News",
+      source: item.source_info?.name || item.source || "Space News",
     }));
 }
 
@@ -47,7 +47,7 @@ function normaliseRss(items) {
       image: item.thumbnail || item.enclosure?.link || "",
       publishedAt: item.pubDate,
       url: item.link || "#",
-      source: item.author || "Crypto News",
+      source: item.author || "Space News",
     }));
 }
 
@@ -124,12 +124,12 @@ export default function SpaceNewsSection() {
     <section style={{ margin: "18px 14px 26px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <div style={{ fontFamily: "Montserrat,sans-serif", fontWeight: 800, fontSize: 22, color: "#0F0E0B", letterSpacing: -0.4 }}>
-          Crypto News
+          Space News
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <button
             onClick={load}
-            aria-label="Refresh crypto news"
+            aria-label="Refresh space news"
             style={{ width: 34, height: 34, borderRadius: 11, border: "1px solid #E9E4D8", background: "#fff", color: "#8B8476", display: "grid", placeItems: "center", cursor: "pointer" }}
           >
             <RefreshCw size={14} style={{ animation: status === "refreshing" ? "rx-news-spin .9s linear infinite" : "none" }} />
@@ -157,7 +157,7 @@ export default function SpaceNewsSection() {
         <div style={{ background: "#fff", border: "1px solid #E9E4D8", borderRadius: 18, padding: "20px 16px", textAlign: "center" }}>
           <Newspaper size={22} color="#B9AD93" />
           <div style={{ fontFamily: "Montserrat,sans-serif", fontWeight: 700, fontSize: 13, color: "#0F0E0B", marginTop: 7 }}>
-            Crypto News is temporarily unavailable.
+            Space News is temporarily unavailable.
           </div>
           <div style={{ fontFamily: "Montserrat,sans-serif", fontSize: 11, color: "#8B8476", margin: "5px 0 12px" }}>
             The live feed could not be reached. Try again in a moment.
