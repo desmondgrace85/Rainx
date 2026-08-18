@@ -11,6 +11,7 @@ import {
   Edit2, Trash2, Share, Copy, FileText, ChevronDown,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
+import chatWallpaper from "./assets/chat-wallpaper.jpg";
 const BASE_URL = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
 const PRESENCE_EVENT = "RAINX_PRESENCE";
 
@@ -134,12 +135,12 @@ function Avatar({ name, avatarUrl, size, T }) {
 }
 
 // ── Ticks ──────────────────────────────────────────────────────────────────
-// sent=1 black tick, delivered=2 black ticks (same color as sent), read=2 white ticks
+// sent=1 black tick, delivered=2 black ticks, read=2 blue ticks
 function Ticks({ status }) {
   if (status === "read") {
     // two white ticks — recipient has actually opened and read the message
     return (
-      <span style={{ display: "inline-flex", alignItems: "center", color: "#ffffff" }}>
+      <span style={{ display: "inline-flex", alignItems: "center", color: "#34B7F1" }}>
         <Check size={10} strokeWidth={3.5} />
         <Check size={10} strokeWidth={3.5} style={{ marginLeft: -6 }} />
       </span>
@@ -1053,7 +1054,11 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
       <PinnedBar pins={pinnedMessages} onViewPins={() => setShowPinnedView(true)} T={T} />
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "12px 10px 4px", display: "flex", flexDirection: "column", gap: 2 }}>
+      <div style={{
+        flex: 1, overflowY: "auto", padding: "12px 10px 4px", display: "flex", flexDirection: "column", gap: 2,
+        backgroundColor: "#F4F0E8", backgroundImage: `url(${chatWallpaper})`, backgroundRepeat: "repeat",
+        backgroundSize: "432px 768px", backgroundPosition: "top center",
+      }}>
         {loading && <div style={{ textAlign: "center", color: T.muted, fontSize: 13, paddingTop: 40 }}>Loading messages…</div>}
         {error && <div style={{ textAlign: "center", padding: "32px 16px" }}><AlertCircle size={32} color={T.muted} style={{ margin: "0 auto 12px", display: "block" }} /><div style={{ color: T.muted, fontSize: 13 }}>{error}</div></div>}
         {!loading && !error && messages.length === 0 && (
@@ -1097,8 +1102,8 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
                 onContextMenu={e => { e.preventDefault(); if (!deleted) setContextMenu({ msg }); }}
                 style={{
                   maxWidth: "78%",
-                  background: isMe ? T.goldGradient : "#1C1913",
-                  color: isMe ? "#0F0E0B" : "#F2EDE0",
+                  background: isMe ? "#FFFFFF" : "#1C1913",
+                  color: isMe ? "#111111" : "#F2EDE0",
                   borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                   padding: "8px 12px 6px",
                   fontSize: 14.5,

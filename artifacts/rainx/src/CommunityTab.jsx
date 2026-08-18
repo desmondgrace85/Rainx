@@ -1193,15 +1193,23 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
   const [editText, setEditText] = useState(post.text);
   const [commentCount, setCommentCount] = useState(Number(post.comments_count) || 0);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [detailFollowing, setDetailFollowing] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [originalPost, setOriginalPost] = useState(post._originalPost || null);
   const [originalProfile, setOriginalProfile] = useState(post._originalProfile || null);
-  const [originalDetailOpen, setOriginalDetailOpen] = useState(false);
   const [originalLikeData, setOriginalLikeData] = useState({});
   const [originalRepostData, setOriginalRepostData] = useState({});
-  useEffect(() => { setCommentCount(Number(post.comments_count) || 0); }, [post.comments_count]);
+  const displayPost = post.repost_of_post_id && originalPost ? originalPost : post;
+  const displayProfile = post.repost_of_post_id && originalProfile ? originalProfile : profile;
+  const displayPostId = displayPost.id;
+  const displayAuthorId = displayPost.user_id;
+  const displayIsOwn = displayAuthorId === account.id;
+
+  useEffect(() => {
+    setCommentCount(Number(displayPost.comments_count) || 0);
+  }, [post.comments_count, originalPost?.comments_count, displayPostId]);
   useEffect(() => {
     let cancelled = false;
     if (!post.repost_of_post_id || originalPost?.id === post.repost_of_post_id) return;
@@ -1217,15 +1225,15 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           .eq("id", data.user_id).maybeSingle();
         if (!cancelled) setOriginalProfile(p || null);
       }
-      const [{ data: likes }, { data: myLike }, { data: reposts }, { data: myRepost }] = await Promise.all([
-        supabase.from("post_likes").select("post_id").eq("post_id", data.id),
+      const [{ data: myLike }, { data: myRepost }] = await Promise.all([
         supabase.from("post_likes").select("post_id").eq("post_id", data.id).eq("user_id", account.id).maybeSingle(),
-        supabase.from("post_reposts").select("post_id").eq("post_id", data.id),
         supabase.from("post_reposts").select("post_id").eq("post_id", data.id).eq("user_id", account.id).maybeSingle(),
       ]);
       if (!cancelled) {
-        setOriginalLikeData({ [data.id]: { count: likes?.length || Number(data.likes_count) || 0, likedByMe: !!myLike } });
-        setOriginalRepostData({ [data.id]: { count: reposts?.length || Number(data.reposts_count) || 0, repostedByMe: !!myRepost } });
+        // community_posts is the authoritative source for totals; do not count
+        // relation rows here because Supabase row limits can truncate large posts.
+        setOriginalLikeData({ [data.id]: { count: Number(data.likes_count) || 0, likedByMe: !!myLike } });
+        setOriginalRepostData({ [data.id]: { count: Number(data.reposts_count) || 0, repostedByMe: !!myRepost } });
       }
     })();
     return () => { cancelled = true; };
@@ -1242,6 +1250,36 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       setIsFollowing(!!f); setIsMuted(!!m); setIsBlocked(!!b);
     })();
   }, [account?.id, post.user_id, isOwn]);
+
+  useEffect(() => {
+    if (!showComments || !account?.id || displayIsOwn) {
+      setDetailFollowing(false);
+      return;
+    }
+    if (displayAuthorId === post.user_id) {
+      setDetailFollowing(isFollowing);
+      return;
+    }
+    let cancelled = false;
+    supabase.from("follows").select("followed_id").eq("follower_id", account.id).eq("followed_id", displayAuthorId).maybeSingle()
+      .then(({ data }) => { if (!cancelled) setDetailFollowing(!!data); });
+    return () => { cancelled = true; };
+  }, [showComments, account?.id, displayAuthorId, displayIsOwn, post.user_id, isFollowing]);
+
+  const toggleDetailFollow = async () => {
+    if (!displayAuthorId || displayIsOwn) return;
+    if (detailFollowing) {
+      await supabase.from("follows").delete().eq("follower_id", account.id).eq("followed_id", displayAuthorId);
+      setDetailFollowing(false);
+    } else {
+      const { error } = await supabase.from("follows").insert({ follower_id: account.id, followed_id: displayAuthorId });
+      if (!error) {
+        setDetailFollowing(true);
+        notify(displayAuthorId, account.id, "follow", null);
+      }
+    }
+  };
+
   const toggleFollowUser = async () => {
     if (isFollowing) { await supabase.from("follows").delete().eq("follower_id", account.id).eq("followed_id", post.user_id); setIsFollowing(false); }
     else { const { error } = await supabase.from("follows").insert({ follower_id: account.id, followed_id: post.user_id }); if (!error) { setIsFollowing(true); notify(post.user_id, account.id, "follow", null); } }
@@ -1254,7 +1292,10 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
     if (isBlocked) { await supabase.from("user_blocks").delete().eq("blocker_id", account.id).eq("blocked_id", post.user_id); setIsBlocked(false); }
     else { const { error } = await supabase.from("user_blocks").insert({ blocker_id: account.id, blocked_id: post.user_id }); if (!error) { await supabase.from("follows").delete().eq("follower_id", account.id).eq("followed_id", post.user_id); setIsBlocked(true); setIsFollowing(false); onHidePost?.(post.id); setShowComments(false); } }
   };
-  const ld = likeData[post.id] || { count: 0, likedByMe: false };
+  const ld = (post.repost_of_post_id ? originalLikeData[displayPostId] : likeData[post.id]) || {
+    count: Number(displayPost.likes_count) || 0,
+    likedByMe: false,
+  };
 
   // Auto-open the post detail when a notification targets this post.
   useEffect(() => {
@@ -1263,7 +1304,10 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       if (typeof onOpened === "function") onOpened();
     }
   }, [forceOpen]); // eslint-disable-line react-hooks/exhaustive-deps
-  const rd = repostData[post.id] || { count: 0, repostedByMe: false };
+  const rd = (post.repost_of_post_id ? originalRepostData[displayPostId] : repostData[post.id]) || {
+    count: Number(displayPost.reposts_count ?? displayPost.repost_count) || 0,
+    repostedByMe: false,
+  };
   const ash = engAsh();
 
   const saveEdit = async () => {
@@ -1335,7 +1379,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       {post.repost_of_post_id ? (
         <button
           type="button"
-          onClick={() => originalPost?.id && setOriginalDetailOpen(true)}
+          onClick={() => originalPost?.id && setShowComments(true)}
           style={{ width:"100%", marginTop:10, padding:0, textAlign:"left", background:"none", border:"none", cursor:originalPost?.id ? "pointer" : "default" }}
         >
           <div style={{ border:`1px solid ${T.cardBorder}`, borderRadius:18, padding:"14px 14px 12px", overflow:"hidden", background:T.card }}>
@@ -1384,7 +1428,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
               </div>
             </div>
           ) : (
-            <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 6, lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
+            <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 6, lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(displayPost.text, onOpenProfile)}</div>
           )}
 
           {post.images && post.images.length > 0 && (
@@ -1408,7 +1452,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       {post.poll_id && <PollWidget pollId={post.poll_id} account={account} />}
 
       <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 10 }}>
-        <button onClick={() => onToggleLike(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : ash }}>
+        <button onClick={() => onToggleLike(displayPostId, displayAuthorId)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : ash }}>
           <Heart size={16} strokeWidth={2} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(ld.count)}</span>
         </button>
         <button onClick={() => setShowComments(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ash }}>
@@ -1417,13 +1461,13 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
         <button onClick={() => setShowRepostSheet(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: rd.repostedByMe ? T.sage : ash }}>
           <Repeat2 size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(rd.count)}</span>
         </button>
-        <button onClick={() => isOwn && onActivityOpen && onActivityOpen(post)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: isOwn ? "pointer" : "default", color: isOwn ? T.gold : ash }}>
-          <AnalyticsBarIcon size={16} color={isOwn ? T.gold : ash} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(post.views || 0)}</span>
+        <button onClick={() => displayIsOwn && onActivityOpen && onActivityOpen(displayPost)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: displayIsOwn ? "pointer" : "default", color: displayIsOwn ? T.gold : ash }}>
+          <AnalyticsBarIcon size={16} color={displayIsOwn ? T.gold : ash} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(displayPost.views || 0)}</span>
         </button>
         <button onClick={() => setBookmarked(v => !v)} style={{ display:"flex", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:bookmarked ? T.gold : ash, padding:0 }} title="Bookmark">
           <Bookmark size={16} fill={bookmarked ? T.gold : "none"} />
         </button>
-        <button onClick={() => { try { navigator.share?.({ title:"Rain X post", text:post.text, url:window.location.href }); } catch(_) {} }} style={{ display:"flex", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:ash, padding:0 }} title="Share">
+        <button onClick={() => { try { navigator.share?.({ title:"Rain X post", text:displayPost.text, url:window.location.href }); } catch(_) {} }} style={{ display:"flex", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:ash, padding:0 }} title="Share">
           <Share2 size={16} />
         </button>
         {profile?.isPro && post.user_id !== account.id && (
@@ -1435,7 +1479,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
         <RepostSheet
           alreadyReposted={rd.repostedByMe}
           onClose={() => setShowRepostSheet(false)}
-          onRepost={() => onToggleRepost(post._originalPostId || post.id, post.user_id)}
+          onRepost={() => onToggleRepost(displayPostId, displayAuthorId)}
           onAddPost={() => window.dispatchEvent(new CustomEvent("rainx:community-compose"))}
         />
       )}
@@ -1446,35 +1490,35 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: `1px solid ${T.cardBorder}`, flexShrink: 0 }}>
             <button onClick={() => setShowComments(false)} style={{ background: "none", border: "none", color: T.paper, cursor: "pointer", display: "flex", padding:2 }}><ArrowLeft size={21} /></button>
             <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, flex:1 }}>Post</span>
-            {!isOwn && (
-              <button onClick={toggleFollowUser} style={{ border:`1px solid ${isFollowing ? T.cardBorder : T.gold}`, background:isFollowing ? "transparent" : T.gold, color:isFollowing ? T.paper : T.ink, borderRadius:999, padding:"7px 14px", fontSize:11, fontWeight:800, cursor:"pointer" }}>{isFollowing ? "Following" : "Follow"}</button>
+            {!displayIsOwn && (
+              <button onClick={toggleDetailFollow} style={{ border:`1px solid ${detailFollowing ? T.cardBorder : T.gold}`, background:detailFollowing ? "transparent" : T.gold, color:detailFollowing ? T.paper : T.ink, borderRadius:999, padding:"7px 14px", fontSize:11, fontWeight:800, cursor:"pointer" }}>{detailFollowing ? "Following" : "Follow"}</button>
             )}
             <button onClick={() => setMenuOpen(true)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", padding:4 }}><MoreHorizontal size={20} /></button>
           </div>
           {/* Scrollable body: post + comments */}
           <div style={{ flex: 1, overflowY: "auto" }}>
             <div style={{ padding: "14px 16px", borderBottom: `1px solid ${T.cardBorder}`, display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <button onClick={() => onOpenProfile(post.user_id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
-                <Avatar name={profile?.display_name} avatarUrl={profile?.avatar_url} size={44} />
+              <button onClick={() => onOpenProfile(displayPost.user_id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
+                <Avatar name={displayProfile?.display_name} avatarUrl={displayProfile?.avatar_url} size={44} />
               </button>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: T.paper }}>{profile?.full_name || profile?.display_name}</span>
-                  <Badge isAdmin={profile?.is_admin} badge={profile?.badge} isPro={profile?.isPro} />
+                  <span style={{ fontSize: 15, fontWeight: 700, color: T.paper }}>{displayProfile?.full_name || displayProfile?.display_name}</span>
+                  <Badge isAdmin={displayProfile?.is_admin} badge={displayProfile?.badge} isPro={displayProfile?.isPro} />
                 </div>
-                {(profile?.username || profile?.display_name) && <span style={{ fontSize: 12, color: T.muted }}>@{profile?.username || profile?.display_name}</span>}
-                <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 10, lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
-                {post.images?.length > 0 && (
+                {(displayProfile?.username || displayProfile?.display_name) && <span style={{ fontSize: 12, color: T.muted }}>@{displayProfile?.username || displayProfile?.display_name}</span>}
+                <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 10, lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(displayPost.text, onOpenProfile)}</div>
+                {displayPost.images?.length > 0 && (
                   <div style={{ marginTop: 10, borderRadius: 14, overflow: "hidden" }}>
-                    <img src={post.images[0]} alt="" style={{ width: "100%", display: "block" }} />
+                    <img src={displayPost.images[0]} alt="" style={{ width: "100%", display: "block" }} />
                   </div>
                 )}
-                <div style={{ fontSize: 12, color: T.muted, marginTop: 10 }}>{timeAgo(post.created_at)}{post.location ? ` · ${post.location}` : ""}</div>
+                <div style={{ fontSize: 12, color: T.muted, marginTop: 10 }}>{timeAgo(displayPost.created_at)}{displayPost.location ? ` · ${displayPost.location}` : ""}</div>
               </div>
             </div>
             <div style={{ padding:"8px 16px 10px", borderBottom:`1px solid ${T.cardBorder}` }}>
               <div style={{ display:"flex", alignItems:"center", gap:22 }}>
-                <button onClick={() => onToggleLike(post.id, post.user_id)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:"pointer", color:ld.likedByMe ? T.rust : ash }}>
+                <button onClick={() => onToggleLike(displayPostId, displayAuthorId)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:"pointer", color:ld.likedByMe ? T.rust : ash }}>
                   <Heart size={18} strokeWidth={2} fill={ld.likedByMe ? T.rust : "none"} /> <span style={{ fontSize:12, fontWeight:700 }}>{formatCount(ld.count)}</span>
                 </button>
                 <button onClick={() => setShowRepostSheet(true)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:"pointer", color:rd.repostedByMe ? T.sage : ash }}>
@@ -1483,47 +1527,21 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
                 <button onClick={() => { try { document.querySelector('[data-rainx-comment-input]')?.focus(); } catch(_){} }} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:"pointer", color:ash }}>
                   <MessageCircle size={18} strokeWidth={2} /> <span style={{ fontSize:12, fontWeight:700 }}>{formatCount(commentCount)}</span>
                 </button>
-                <button onClick={() => isOwn && onActivityOpen && onActivityOpen(post)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:isOwn ? "pointer" : "default", color:isOwn ? T.gold : ash }}>
-                  <AnalyticsBarIcon size={18} color={isOwn ? T.gold : ash} /> <span style={{ fontSize:12, fontWeight:700 }}>{formatCount(post.views || 0)}</span>
+                <button onClick={() => displayIsOwn && onActivityOpen && onActivityOpen(displayPost)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:displayIsOwn ? "pointer" : "default", color:displayIsOwn ? T.gold : ash }}>
+                  <AnalyticsBarIcon size={18} color={displayIsOwn ? T.gold : ash} /> <span style={{ fontSize:12, fontWeight:700 }}>{formatCount(displayPost.views || 0)}</span>
                 </button>
                 <button onClick={() => setBookmarked(v => !v)} style={{ display:"flex", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:bookmarked ? T.gold : ash, padding:0 }}><Bookmark size={19} fill={bookmarked ? T.gold : "none"} /></button>
-                <button onClick={() => { try { navigator.share?.({ title:"Rain X post", text:post.text, url:window.location.href }); } catch(_) {} }} style={{ display:"flex", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:ash, padding:0 }}><Share2 size={19} /></button>
+                <button onClick={() => { try { navigator.share?.({ title:"Rain X post", text:displayPost.text, url:window.location.href }); } catch(_) {} }} style={{ display:"flex", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:ash, padding:0 }}><Share2 size={19} /></button>
               </div>
             </div>
             <div style={{ padding: "0 16px" }}>
-              <CommentsSection postId={post.id} postAuthorId={post.user_id} account={account} profilesMap={profilesMap} onProfilesNeeded={onProfilesNeeded} onOpenProfile={onOpenProfile} onCommentsChange={setCommentCount} />
+              <CommentsSection postId={displayPostId} postAuthorId={displayAuthorId} account={account} profilesMap={profilesMap} onProfilesNeeded={onProfilesNeeded} onOpenProfile={onOpenProfile} onCommentsChange={setCommentCount} />
             </div>
           </div>
         </div>
       )}
 
-      {originalDetailOpen && originalPost && (
-        <div style={{ position:"fixed", inset:0, zIndex:700, background:T.ink, overflowY:"auto" }}>
-          <PostCard
-            post={originalPost}
-            profile={originalProfile}
-            account={account}
-            profilesMap={{ ...profilesMap, ...(originalProfile?.id ? { [originalProfile.id]: originalProfile } : {}) }}
-            onProfilesNeeded={onProfilesNeeded}
-            likeData={originalLikeData}
-            onToggleLike={(postId, authorId) => togglePostLike(postId, authorId, account.id, originalLikeData, setOriginalLikeData)}
-            repostData={originalRepostData}
-            onToggleRepost={(postId, authorId) => togglePostRepost(postId, authorId, account.id, originalRepostData, setOriginalRepostData)}
-            onOpenProfile={onOpenProfile}
-            onDelete={() => {}}
-            onHidePost={() => {}}
-            onEdit={() => {}}
-            onReport={() => {}}
-            onDmUser={onDmUser}
-            forceOpen={true}
-            onOpened={() => {}}
-          />
-          <button type="button" onClick={() => setOriginalDetailOpen(false)}
-            style={{ position:"fixed", top:12, left:12, zIndex:720, width:38, height:38, borderRadius:"50%", background:"rgba(0,0,0,.7)", border:`1px solid ${T.cardBorder}`, color:T.paper, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
-            <ArrowLeft size={19} />
-          </button>
-        </div>
-      )}
+
 
       </div>{/* end content column */}
       </div>{/* end post card */}
@@ -2200,8 +2218,13 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onOpenPost, 
 
       const { data: reposts } = await supabase.from("post_reposts").select("post_id, user_id").in("post_id", ids);
       const rd = {};
-      ids.forEach(id => { rd[id] = { count: 0, repostedByMe: false }; });
-      (reposts || []).forEach(r => { if (rd[r.post_id]) { rd[r.post_id].count += 1; if (r.user_id === account.id) rd[r.post_id].repostedByMe = true; } });
+      ids.forEach((id) => {
+        const post = posts.find((item) => item.id === id);
+        rd[id] = { count: Number(post?.reposts_count ?? post?.repost_count) || 0, repostedByMe: false };
+      });
+      (reposts || []).forEach((r) => {
+        if (rd[r.post_id] && r.user_id === account.id) rd[r.post_id].repostedByMe = true;
+      });
       setRepostData(rd);
     })();
   }, [posts, account.id]);
