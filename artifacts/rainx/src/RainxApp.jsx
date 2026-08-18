@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Area, ComposedChart, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import {
-  Bell, Home, Briefcase, MessageCircle, MoreHorizontal, Settings, X,
+  Bell, Home, Briefcase, MessageCircle, MoreHorizontal, Settings, X, Repeat2,
   TrendingUp, TrendingDown, Minus, Activity, Send, Calendar as CalendarIcon,
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
   CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet, Landmark, Gift, Trophy,
@@ -9,7 +9,7 @@ import {
   BrainCircuit, Cpu, Palette, Globe, Trash2, UserX, Download, FileCheck, Cookie, Database,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, formatCount } from "./CommunityTab";
+import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, Badge as CommunityBadge, formatCount } from "./CommunityTab";
 import FullChartView from "./FullChartView";
 import LightweightChart from "./LightweightChart";
 import SpaceCoinsIntro from "./SpaceCoinsIntro";
@@ -5975,20 +5975,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     verification === "golden" ? T.goldBright :
     verification === "blue"   ? BLUE         : T.muted;
 
-  // Inline verified badge — same circular checkmark shape as community, colour-coded by tier
-  const VerifBadgeIcon = ({ size = 16 }) =>
-    verification === "official" || verification === "golden" ? (
-      <svg width={size} height={size} viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
-        <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#F4D35E" />
-      </svg>
-    ) : verification === "blue" ? (
-      <svg width={size} height={size} viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
-        <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1d9bf0" />
-      </svg>
-    ) : (
-      <ShieldCheck size={size} color={T.muted} />
-    );
-
   // Don't expose email as initial before profile loads — show neutral "?" until username resolves
   const profileInitial = (username || (profileLoaded ? account?.email : null) || "?")[0]?.toUpperCase();
 
@@ -6006,29 +5992,22 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [cropFile, setCropFile] = useState(null);
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [profilePosts, setProfilePosts] = useState([]);
+  const [profileTab, setProfileTab] = useState("posts");
   const [profilePostsLoading, setProfilePostsLoading] = useState(false);
   const [profileComposerText, setProfileComposerText] = useState("");
   const [profileComposerPosting, setProfileComposerPosting] = useState(false);
   const [showProfileFabModal, setShowProfileFabModal] = useState(false);
   const [showYearPicker, setShowYearPicker] = useState(false);
-  const [profileTab, setProfileTab] = useState("posts");
   useEffect(() => {
     if (!account?.id || morePage !== "profile") return;
     supabase.from("profiles").select("full_name,location,date_of_birth,cover_url").eq("id",account.id).single().then(({data})=>{
       if(data){ setFullName(data.full_name||""); setLocation(data.location||""); setDob(data.date_of_birth||""); if(data.cover_url) setCoverUrl(data.cover_url); }
     }).catch(()=>{});
     setProfilePostsLoading(true);
-    // Bug 1 fix: compute comment_count from actual post_comments rows (same way Community does it)
     (async () => {
       try {
         const { data } = await supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false});
-        let rows = data || [];
-        if (rows.length) {
-          const { data: allComments } = await supabase.from("post_comments").select("post_id").in("post_id", rows.map(r => r.id));
-          const cCounts = {};
-          (allComments || []).forEach(c => { cCounts[c.post_id] = (cCounts[c.post_id] || 0) + 1; });
-          rows = rows.map(r => ({ ...r, comments_count: cCounts[r.id] || 0 }));
-        }
+        const rows = data || [];
         setProfilePosts(rows);
         setProfilePostsLoading(false);
       } catch { setProfilePostsLoading(false); }
@@ -6356,7 +6335,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <div style={{ padding:"0 16px 8px" }}>
           <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
             <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.paper, lineHeight:1.2 }}>{fullName || username || (profileLoaded ? account?.email : "")}</span>
-            <VerifBadgeIcon size={18} />
+            <CommunityBadge isAdmin={false} badge={verification || "none"} isPro={false} />
           </div>
           {username && <div style={{ fontSize:13.5, color:T.muted, marginBottom:7 }}>@{username}</div>}
           {bio && <div style={{ fontSize:13.5, color:T.paper, marginBottom:9, lineHeight:1.65 }}>{bio}</div>}
@@ -6396,14 +6375,15 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           )}
         </div>
 
-        {/* ── Posts / Reposts ── */}
+        {/* ── Posts / Reposts — same interaction model as Community profiles ── */}
         <div style={{ borderTop:`1px solid ${T.cardBorder}`, display:"grid", gridTemplateColumns:"1fr 1fr" }}>
           {[
-            { key:"posts", label:"Posts" },
-            { key:"reposts", label:"Reposts" },
-          ].map(({ key, label }) => (
+            { key:"posts", label:"Posts", icon:null },
+            { key:"reposts", label:"Reposts", icon:Repeat2 },
+          ].map(({ key, label, icon:Icon }) => (
             <button key={key} onClick={() => setProfileTab(key)}
-              style={{ background:"none", border:"none", color:profileTab === key ? T.paper : T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, padding:"13px 8px 11px", cursor:"pointer", borderBottom:profileTab === key ? `2px solid ${T.gold}` : "2px solid transparent" }}>
+              style={{ background:"none", border:"none", color:profileTab === key ? T.paper : T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, padding:"13px 8px 11px", cursor:"pointer", borderBottom:profileTab === key ? `2px solid ${T.gold}` : "2px solid transparent", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              {Icon && <Icon size={16} strokeWidth={2.2} />}
               {label}
             </button>
           ))}
@@ -6433,12 +6413,13 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         {/* ── Profile posts feed ── */}
         {profilePostsLoading ? (
           <div style={{ fontSize:13, color:T.muted, padding:"28px 0", textAlign:"center" }}>Loading…</div>
-        ) : profilePosts.length === 0 ? (
-          <div style={{ fontSize:13, color:T.muted, padding:"28px 0", textAlign:"center" }}>No posts yet.</div>
-        ) : (
-          <CommunityProfileFeed
-            posts={profilePosts.filter(p => profileTab === "reposts" ? !!p.repost_of_post_id : !p.repost_of_post_id)}
-            account={account}
+        ) : (() => {
+          const tabPosts = profileTab === "reposts" ? profilePosts.filter(p => !!p.repost_of_post_id) : profilePosts.filter(p => !p.repost_of_post_id);
+          if (!tabPosts.length) return <div style={{ fontSize:13, color:T.muted, padding:"32px 0", textAlign:"center" }}>{profileTab === "reposts" ? "No reposts yet." : "No posts yet."}</div>;
+          return (
+            <CommunityProfileFeed
+              posts={tabPosts}
+              account={account}
             themeTokens={T}
             profileEntry={{
               id: account.id,
@@ -6453,11 +6434,12 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               await supabase.from("community_posts").delete().eq("id", id);
               setProfilePosts(posts => posts.filter(p => p.id !== id));
             }}
-            onRefresh={() => {
-              supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false}).then(({data})=>setProfilePosts(data||[]));
-            }}
-          />
-        )}
+              onRefresh={() => {
+                supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false}).then(({data})=>setProfilePosts(data||[]));
+              }}
+            />
+          );
+        })()}
       </div>
     );
   }
@@ -6662,7 +6644,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               {isVerif ? verificationLabel : "Not Verified"}
             </div>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: badgeBg, border: `1px solid ${badgeBorder}`, borderRadius: 20, padding: "7px 18px" }}>
-              <VerifBadgeIcon size={13} />
+              <CommunityBadge isAdmin={false} badge={verification || "none"} isPro={false} />
               <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: verificationColor }}>{verificationLabel}</span>
             </div>
             {isVerif && (

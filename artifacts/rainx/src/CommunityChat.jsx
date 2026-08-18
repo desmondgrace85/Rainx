@@ -1056,10 +1056,8 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
       {/* Messages */}
       <div style={{
         flex: 1, overflowY: "auto", padding: "12px 10px 4px", display: "flex", flexDirection: "column", gap: 2,
-        backgroundColor: "#F4F0E8",
-        // Keep the original wallpaper sharp; the foreground tint simply lowers its visual opacity.
-        backgroundImage: `linear-gradient(rgba(244,240,232,0.72), rgba(244,240,232,0.72)), url(${chatWallpaper})`,
-        backgroundRepeat: "repeat", backgroundSize: "432px 768px", backgroundPosition: "top center",
+        backgroundColor: "#F4F0E8", backgroundImage: `linear-gradient(rgba(244,240,232,0.16), rgba(244,240,232,0.16)), url(${chatWallpaper})`, backgroundRepeat: "repeat",
+        backgroundSize: "432px 768px", backgroundPosition: "top center",
       }}>
         {loading && <div style={{ textAlign: "center", color: T.muted, fontSize: 13, paddingTop: 40 }}>Loading messages…</div>}
         {error && <div style={{ textAlign: "center", padding: "32px 16px" }}><AlertCircle size={32} color={T.muted} style={{ margin: "0 auto 12px", display: "block" }} /><div style={{ color: T.muted, fontSize: 13 }}>{error}</div></div>}

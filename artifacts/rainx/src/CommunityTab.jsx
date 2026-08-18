@@ -4,7 +4,7 @@ import CommunityChat from "./CommunityChat";
 const BASE_URL = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
 import {
   Send, Trash2, Edit3, X, BadgeCheck, Heart, Eye, MessageCircle, Repeat2, MessageSquareDashed,
-  UserPlus, UserCheck, ArrowLeft, Bell, MoreHorizontal, Plus, Hash, AtSign, Flag, ChevronRight, MessageSquare, Search, Bookmark, Share2,
+  UserPlus, UserCheck, ArrowLeft, Bell, MoreHorizontal, Plus, Hash, AtSign, Flag, ChevronRight, ChevronDown, MessageSquare, Search, Bookmark, Share2,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 
@@ -24,8 +24,7 @@ const FONT_BODY = "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Robot
 // Neutral medium grey on dark theme; X-style grey on light theme.
 const engAsh = () => (T.ink && T.ink.toUpperCase() === "#FFFFFF") ? "#536471" : "#8E8E8E";
 
-const fadeIn = "@keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }";
-const pulse = "@keyframes likePulse { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }";
+const pulse = "@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }";
 const slideIn = "@keyframes slideInPanel { from { transform: translateX(100%); } to { transform: translateX(0); } }";
 const slideUp = "@keyframes slideUpSheet { from { transform: translateY(100%); } to { transform: translateY(0); } }";
 
@@ -317,7 +316,7 @@ function AnalyticsBarIcon({ size = 14, color }) {
   );
 }
 
-function Badge({ isAdmin, badge, isPro }) {
+export function Badge({ isAdmin, badge, isPro }) {
   if (badge === "official") return <OfficialBadge />;
   if (isAdmin) return <GoldBadge />;
   if (badge === "golden") return <GoldenBadge />;
@@ -359,23 +358,36 @@ async function compressToWebP(file) {
 }
 
 // ---------- Shared post-like toggle (used by CommunityTab and ProfileFeed) ----------
+// Mutations are serialized per user/post. The database row is the source of truth;
+// the UI is updated from the persisted count so rapid taps and realtime events cannot
+// make the same like appear twice or temporarily disappear.
+const postLikeLocks = new Set();
 async function togglePostLike(postId, authorId, accountId, likeData, setLikeData) {
-  const cur = likeData[postId] || { count: 0, likedByMe: false };
-  if (cur.likedByMe) {
-    const newCount = Math.max(0, cur.count - 1);
-    setLikeData((d) => ({ ...d, [postId]: { count: newCount, likedByMe: false } }));
-    const { error } = await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", accountId);
-    if (error) { setLikeData((d) => ({ ...d, [postId]: cur })); return; }
-  } else {
-    const newCount = cur.count + 1;
-    setLikeData((d) => ({ ...d, [postId]: { count: newCount, likedByMe: true } }));
-    const { error } = await supabase.from("post_likes").insert({ post_id: postId, user_id: accountId });
-    if (error) {
-      if (error.code === "23505") return; // duplicate — already liked
-      setLikeData((d) => ({ ...d, [postId]: cur }));
-      return;
-    }
-    notify(authorId, accountId, "like", postId);
+  const lockKey = `${accountId}:${postId}`;
+  if (postLikeLocks.has(lockKey)) return;
+  postLikeLocks.add(lockKey);
+  try {
+    const { data: existing, error: readError } = await supabase
+      .from("post_likes")
+      .select("post_id")
+      .eq("post_id", postId)
+      .eq("user_id", accountId)
+      .maybeSingle();
+    if (readError) return;
+
+    const { error } = existing
+      ? await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", accountId)
+      : await supabase.from("post_likes").insert({ post_id: postId, user_id: accountId });
+    if (error) return;
+
+    const { count } = await supabase
+      .from("post_likes")
+      .select("post_id", { count: "exact", head: true })
+      .eq("post_id", postId);
+    setLikeData((d) => ({ ...d, [postId]: { count: count || 0, likedByMe: !existing } }));
+    if (!existing) notify(authorId, accountId, "like", postId);
+  } finally {
+    postLikeLocks.delete(lockKey);
   }
 }
 
@@ -966,7 +978,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
     const ld = likeData[c.id] || { count: 0, likedByMe: false };
     const childReplies = repliesByParent[c.id] || [];
     return (
-      <div key={c.id} style={{ display: "flex", gap: 8, marginBottom: 0, paddingTop: (!isReply && !isFirstTopLevel) ? 14 : 0, paddingBottom: 14, paddingLeft: isReply ? 12 : 0, marginLeft: isReply ? 12 : 0, borderTop: (!isReply && !isFirstTopLevel) ? `1px solid ${T.cardBorder}` : "none", borderLeft: isReply ? `1px solid ${T.cardBorder}` : "none" }}>
+      <div key={c.id} style={{ display: "flex", gap: 9, marginBottom: isReply ? 6 : 10, padding: isReply ? "9px 10px 9px 12px" : "11px 12px", background: isReply ? `${T.ink}55` : T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, boxSizing: "border-box", marginLeft: isReply ? 10 : 0, borderLeft: isReply ? `2px solid ${T.gold}66` : `1px solid ${T.cardBorder}` }}>
         <button onClick={() => onOpenProfile(c.user_id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
           <Avatar name={p?.display_name} size={isReply ? 22 : 24} avatarUrl={p?.avatar_url} />
         </button>
@@ -981,7 +993,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
           <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 2, lineHeight: 1.5, fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(c.text, onOpenProfile)}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 6 }}>
             <button onClick={() => toggleCommentLike(c.id, c.user_id, postId, account.id, likeData, setLikeData)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : engAsh() }}>
-              <Heart size={16} strokeWidth={2} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{ld.count}</span>
+              <Heart size={16} strokeWidth={2} fill={ld.likedByMe ? T.rust : "none"}  /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{ld.count}</span>
             </button>
             <button onClick={() => startReply(c.id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: engAsh() }}>
               <MessageCircle size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>Reply</span>
@@ -1010,11 +1022,11 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
   });
 
   return (
-    <div style={{ marginTop: 10, paddingTop: 0, borderTop: `1px solid ${T.cardBorder}` }}>
+    <div style={{ marginTop: 0, paddingTop: 0 }}>
       <div style={{ position:"relative", display:"flex", alignItems:"center", padding:"10px 2px 9px", borderBottom:`1px solid ${T.cardBorder}` }}>
         <button onClick={() => setShowCommentSort(v => !v)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", color:T.paper, fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, cursor:"pointer", padding:0 }}>
           <span>{commentSort === "recent" ? "Most recent" : commentSort === "oldest" ? "Oldest" : "Most relevant"}</span>
-          <span style={{ fontSize:16, lineHeight:1, transform:showCommentSort ? "rotate(180deg)" : "none", transition:"transform .18s" }}>⌄</span>
+          <ChevronDown size={15} strokeWidth={2.4} style={{ transform:showCommentSort ? "rotate(180deg)" : "none", transition:"transform .18s" }} />
         </button>
         {showCommentSort && (
           <div style={{ position:"absolute", top:"calc(100% + 5px)", left:0, zIndex:30, minWidth:170, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, boxShadow:"0 12px 30px rgba(0,0,0,.24)", overflow:"hidden" }}>
@@ -1025,7 +1037,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
         )}
       </div>
       {sortedTopLevel.map((c, i) => renderCommentBlock(c, false, i === 0))}
-      <div style={{ position: "sticky", bottom: 0, background: T.card, padding: "10px 0", marginTop: 8, borderTop: `1px solid ${T.cardBorder}` }}>
+      <div style={{ position: "sticky", bottom: 0, background: T.card, padding: "10px 0 12px", marginTop: 8 }}>
         {replyTo && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 2px 8px" }}>
             <span style={{ fontSize: 12.5, color: T.muted }}>
@@ -1044,10 +1056,10 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
               rows={1}
               maxLength={300}
               data-rainx-comment-input="true"
-              style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: "8px 10px", fontFamily: FONT_BODY, fontSize: 13, resize: "none" }}
+              style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 16, color: T.paper, padding: "10px 13px", fontFamily: FONT_BODY, fontSize: 13, resize: "none", boxSizing: "border-box", minHeight: 40 }}
             />
           </div>
-          <button onClick={handleSubmit} disabled={!text.trim()} style={{ background: T.goldGradient, color: T.ink, border: "none", borderRadius: 8, padding: "8px 14px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, cursor: "pointer", flexShrink: 0, opacity: text.trim() ? 1 : 0.5 }}>{replyTo ? "Reply" : "Post"}</button>
+          <button onClick={handleSubmit} disabled={!text.trim()} style={{ background: T.goldGradient, color: T.ink, border: "none", borderRadius: 14, padding: "10px 15px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 11.5, cursor: "pointer", flexShrink: 0, opacity: text.trim() ? 1 : 0.5, minHeight: 40 }}>{replyTo ? "Reply" : "Post"}</button>
         </div>
       </div>
     </div>
@@ -1187,10 +1199,7 @@ function GiftIconButton({ profile, account }) {
 
 function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeData, onToggleLike, repostData, onToggleRepost, onOpenProfile, onOpenPost, onDelete, onHidePost, onEdit, onReport, onActivityOpen, onDmUser, forceOpen, onOpened }) {
   const [showComments, setShowComments] = useState(false);
-  // The feed item and the post whose comments are open are separate concepts.
-  // For a repost, comments belong to the repost wrapper; the quoted original
-  // is only opened when the quoted post itself is tapped.
-  const [detailPostId, setDetailPostId] = useState(post.id);
+  const [detailTarget, setDetailTarget] = useState("post"); // "post" = visible wrapper/post, "original" = quoted original
   const [showRepostSheet, setShowRepostSheet] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -1205,11 +1214,10 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
   const [originalProfile, setOriginalProfile] = useState(post._originalProfile || null);
   const [originalLikeData, setOriginalLikeData] = useState({});
   const [originalRepostData, setOriginalRepostData] = useState({});
-  const showingQuotedOriginal = Boolean(
-    post.repost_of_post_id && detailPostId === post.repost_of_post_id && originalPost
-  );
-  const displayPost = showingQuotedOriginal ? originalPost : post;
-  const displayProfile = showingQuotedOriginal ? originalProfile : profile;
+  const detailPost = detailTarget === "original" && originalPost ? originalPost : post;
+  const detailProfile = detailTarget === "original" && originalProfile ? originalProfile : profile;
+  const displayPost = detailPost;
+  const displayProfile = detailProfile;
   const displayPostId = displayPost.id;
   const displayAuthorId = displayPost.user_id;
   const displayIsOwn = displayAuthorId === account.id;
@@ -1302,11 +1310,11 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
   // Feed metrics belong to the visible post itself. For a repost wrapper,
   // these are the repost's own likes/reposts/views/comments — never the original's.
   const feedLikeData = likeData[post.id] || { count: Number(post.likes_count) || 0, likedByMe: false };
-  const feedRepostData = repostData[post.id] || { count: Number(post.reposts_count ?? post.repost_count) || 0, repostedByMe: false };
+  const feedRepostData = repostData[post.id] || { count: Number(post.reposts_count) || 0, repostedByMe: false };
   const feedCommentCount = Number(post.comments_count) || 0;
 
   // Detail metrics belong to the original post when a repost is opened.
-  const ld = (post.repost_of_post_id ? originalLikeData[displayPostId] : likeData[post.id]) || {
+  const ld = (detailTarget === "original" ? originalLikeData[displayPostId] : likeData[displayPostId]) || {
     count: Number(displayPost.likes_count) || 0,
     likedByMe: false,
   };
@@ -1314,13 +1322,13 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
   // Auto-open the post detail when a notification targets this post.
   useEffect(() => {
     if (forceOpen && !showComments) {
-      setDetailPostId(post.id);
+      setDetailTarget("post");
       setShowComments(true);
       if (typeof onOpened === "function") onOpened();
     }
   }, [forceOpen]); // eslint-disable-line react-hooks/exhaustive-deps
-  const rd = (post.repost_of_post_id ? originalRepostData[displayPostId] : repostData[post.id]) || {
-    count: Number(displayPost.reposts_count ?? displayPost.repost_count) || 0,
+  const rd = (detailTarget === "original" ? originalRepostData[displayPostId] : repostData[displayPostId]) || {
+    count: Number(displayPost.reposts_count) || 0,
     repostedByMe: false,
   };
   const ash = engAsh();
@@ -1333,16 +1341,16 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
   };
 
   return (
-    <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.cardBorder}` }}>
+    <div onClick={() => { if (!menuOpen && !editing) { setDetailTarget("post"); setShowComments(true); } }} style={{ padding: "12px 16px", borderBottom: `1px solid ${T.cardBorder}`, animation: "none", cursor: "pointer" }}>
       <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
       {/* Avatar column */}
-      <button onClick={() => onOpenProfile(post.user_id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
+      <button onClick={(e) => { e.stopPropagation(); onOpenProfile(post.user_id); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
         <Avatar name={profile?.display_name} avatarUrl={profile?.avatar_url} size={40} />
       </button>
       {/* Content column */}
       <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <button onClick={() => onOpenProfile(post.user_id)} style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "none", border: "none", cursor: "pointer", padding: 0, flex: 1 }}>
+        <button onClick={(e) => { e.stopPropagation(); onOpenProfile(post.user_id); }} style={{ display: "flex", alignItems: "flex-start", gap: 6, background: "none", border: "none", cursor: "pointer", padding: 0, flex: 1 }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <span style={{ fontSize: 15, fontWeight: 700, color: T.paper }}>{profile?.full_name || profile?.display_name || null}</span>
@@ -1355,7 +1363,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           </div>
         </button>
         <div style={{ display:"flex", alignItems:"center", gap:6, position:"relative" }}>
-          <button onClick={() => setMenuOpen(true)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><MoreHorizontal size={16} /></button>
+          <button onClick={(e) => { e.stopPropagation(); setMenuOpen(true); }} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><MoreHorizontal size={16} /></button>
           {menuOpen && (
             <PostMenuSheet
               isOwn={isOwn}
@@ -1394,12 +1402,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       {post.repost_of_post_id ? (
         <button
           type="button"
-          onClick={() => {
-            if (originalPost?.id) {
-              setDetailPostId(originalPost.id);
-              setShowComments(true);
-            }
-          }}
+          onClick={(e) => { e.stopPropagation(); if (originalPost?.id) { setDetailTarget("original"); setShowComments(true); } }}
           style={{ width:"100%", marginTop:10, padding:0, textAlign:"left", background:"none", border:"none", cursor:originalPost?.id ? "pointer" : "default" }}
         >
           <div style={{ border:`1px solid ${T.cardBorder}`, borderRadius:18, padding:"14px 14px 12px", overflow:"hidden", background:T.card }}>
@@ -1472,22 +1475,22 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       {post.poll_id && <PollWidget pollId={post.poll_id} account={account} />}
 
       <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 10 }}>
-        <button onClick={() => onToggleLike(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: feedLikeData.likedByMe ? T.rust : ash }}>
-          <Heart size={16} strokeWidth={2} fill={feedLikeData.likedByMe ? T.rust : "none"} style={feedLikeData.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(feedLikeData.count)}</span>
+        <button onClick={(e) => { e.stopPropagation(); onToggleLike(post.id, post.user_id); }} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: feedLikeData.likedByMe === true ? T.rust : ash }}>
+          <Heart size={16} strokeWidth={2} fill={feedLikeData.likedByMe === true ? T.rust : "none"}  /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(feedLikeData.count)}</span>
         </button>
-        <button onClick={() => { setDetailPostId(post.id); setShowComments(true); }} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ash }}>
+        <button onClick={(e) => { e.stopPropagation(); setDetailTarget("post"); setShowComments(true); }} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ash }}>
           <MessageCircle size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(feedCommentCount)}</span>
         </button>
-        <button onClick={() => setShowRepostSheet(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: feedRepostData.repostedByMe ? T.sage : ash }}>
+        <button onClick={(e) => { e.stopPropagation(); setShowRepostSheet(true); }} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: feedRepostData.repostedByMe === true ? T.sage : ash }}>
           <Repeat2 size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(feedRepostData.count)}</span>
         </button>
-        <button onClick={() => post.user_id === account.id && onActivityOpen && onActivityOpen(post)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: post.user_id === account.id ? "pointer" : "default", color: post.user_id === account.id ? T.gold : ash }}>
+        <button onClick={(e) => { e.stopPropagation(); post.user_id === account.id && onActivityOpen && onActivityOpen(post); }} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: post.user_id === account.id ? "pointer" : "default", color: post.user_id === account.id ? T.gold : ash }}>
           <AnalyticsBarIcon size={16} color={post.user_id === account.id ? T.gold : ash} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(post.views || 0)}</span>
         </button>
-        <button onClick={() => setBookmarked(v => !v)} style={{ display:"flex", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:bookmarked ? T.gold : ash, padding:0 }} title="Bookmark">
+        <button onClick={(e) => { e.stopPropagation(); setBookmarked(v => !v); }} style={{ display:"flex", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:bookmarked ? T.gold : ash, padding:0 }} title="Bookmark">
           <Bookmark size={16} fill={bookmarked ? T.gold : "none"} />
         </button>
-        <button onClick={() => { try { navigator.share?.({ title:"Rain X post", text:displayPost.text, url:window.location.href }); } catch(_) {} }} style={{ display:"flex", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:ash, padding:0 }} title="Share">
+        <button onClick={(e) => { e.stopPropagation(); try { navigator.share?.({ title:"Rain X post", text:displayPost.text, url:window.location.href }); } catch(_) {} }} style={{ display:"flex", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:ash, padding:0 }} title="Share">
           <Share2 size={16} />
         </button>
         {profile?.isPro && post.user_id !== account.id && (
@@ -1517,7 +1520,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           </div>
           {/* Scrollable body: post + comments */}
           <div style={{ flex: 1, overflowY: "auto" }}>
-            <div style={{ padding: "14px 16px", borderBottom: `1px solid ${T.cardBorder}`, display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <div style={{ margin:"10px 12px 0", padding:"14px", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:18, display:"flex", gap:10, alignItems:"flex-start", boxSizing:"border-box" }}>
               <button onClick={() => onOpenProfile(displayPost.user_id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
                 <Avatar name={displayProfile?.display_name} avatarUrl={displayProfile?.avatar_url} size={44} />
               </button>
@@ -1527,39 +1530,27 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
                   <Badge isAdmin={displayProfile?.is_admin} badge={displayProfile?.badge} isPro={displayProfile?.isPro} />
                 </div>
                 {(displayProfile?.username || displayProfile?.display_name) && <span style={{ fontSize: 12, color: T.muted }}>@{displayProfile?.username || displayProfile?.display_name}</span>}
-                {post.repost_of_post_id && !showingQuotedOriginal ? (
+                {post.repost_of_post_id && detailTarget === "post" ? (
                   <div style={{ marginTop: 10 }}>
-                    <div style={{ fontSize: 12, color: T.muted, marginBottom: 7 }}>Reposted</div>
-                    <button
-                      type="button"
-                      onClick={() => originalPost?.id && setDetailPostId(originalPost.id)}
-                      style={{ width: "100%", textAlign: "left", background: "transparent", border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 12, cursor: originalPost?.id ? "pointer" : "default" }}
-                    >
-                      {originalPost ? (
-                        <>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                            <Avatar name={originalProfile?.display_name || originalProfile?.full_name || originalProfile?.username} avatarUrl={originalProfile?.avatar_url} size={30} />
-                            <div style={{ minWidth: 0 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                <span style={{ fontSize: 12.5, fontWeight: 800, color: T.paper, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{originalProfile?.full_name || originalProfile?.display_name || originalProfile?.username || "User"}</span>
-                                <Badge isAdmin={originalProfile?.is_admin} badge={originalProfile?.badge} isPro={originalProfile?.isPro} />
+                    <div style={{ fontSize: 12, color: T.muted, fontWeight: 700, marginBottom: 8 }}>Reposted this post</div>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); if (originalPost?.id) setDetailTarget("original"); }} style={{ width:"100%", background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:16, padding:0, textAlign:"left", cursor:originalPost?.id ? "pointer" : "default", overflow:"hidden" }}>
+                      <div style={{ padding:"12px" }}>
+                        {originalPost ? (
+                          <>
+                            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:7 }}>
+                              <Avatar name={originalProfile?.display_name || originalProfile?.full_name} avatarUrl={originalProfile?.avatar_url} size={28} />
+                              <div style={{ minWidth:0 }}>
+                                <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                                  <span style={{ fontSize:12.5, fontWeight:800, color:T.paper }}>{originalProfile?.full_name || originalProfile?.display_name || "User"}</span>
+                                  <Badge isAdmin={originalProfile?.is_admin} badge={originalProfile?.badge} isPro={originalProfile?.isPro} />
+                                </div>
+                                <div style={{ fontSize:10.5, color:T.muted }}>@{originalProfile?.username || originalProfile?.display_name || "user"}</div>
                               </div>
-                              <div style={{ fontSize: 10.5, color: T.muted }}>@{originalProfile?.username || originalProfile?.display_name || "user"}</div>
                             </div>
-                          </div>
-                          <div style={{ fontSize: 14, fontWeight: 500, color: T.paper, lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif" }}>
-                            {renderTextWithTags(originalPost.text || "", onOpenProfile)}
-                          </div>
-                          {originalPost.images?.length > 0 && (
-                            <div style={{ marginTop: 9, borderRadius: 10, overflow: "hidden" }}>
-                              <img src={originalPost.images[0]} alt="" style={{ width: "100%", maxHeight: 220, objectFit: "cover", display: "block" }} />
-                            </div>
-                          )}
-                          <div style={{ fontSize: 10.5, color: T.muted, marginTop: 8 }}>Tap to open original post</div>
-                        </>
-                      ) : (
-                        <div style={{ color: T.muted, fontSize: 12 }}>Loading original post…</div>
-                      )}
+                            <div style={{ fontSize:13.5, color:T.paper, lineHeight:1.5, whiteSpace:"pre-wrap" }}>{renderTextWithTags(originalPost.text || "", onOpenProfile)}</div>
+                          </>
+                        ) : <div style={{ fontSize:12, color:T.muted }}>Loading original post…</div>}
+                      </div>
                     </button>
                   </div>
                 ) : (
@@ -1577,20 +1568,20 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
             </div>
             <div style={{ padding:"8px 16px 10px", borderBottom:`1px solid ${T.cardBorder}` }}>
               <div style={{ display:"flex", alignItems:"center", gap:22 }}>
-                <button onClick={() => onToggleLike(displayPostId, displayAuthorId)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:"pointer", color:ld.likedByMe ? T.rust : ash }}>
+                <button onClick={(e) => { e.stopPropagation(); onToggleLike(displayPostId, displayAuthorId); }} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:"pointer", color:ld.likedByMe ? T.rust : ash }}>
                   <Heart size={18} strokeWidth={2} fill={ld.likedByMe ? T.rust : "none"} /> <span style={{ fontSize:12, fontWeight:700 }}>{formatCount(ld.count)}</span>
                 </button>
-                <button onClick={() => setShowRepostSheet(true)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:"pointer", color:rd.repostedByMe ? T.sage : ash }}>
+                <button onClick={(e) => { e.stopPropagation(); setShowRepostSheet(true); }} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:"pointer", color:rd.repostedByMe ? T.sage : ash }}>
                   <Repeat2 size={18} strokeWidth={2} /> <span style={{ fontSize:12, fontWeight:700 }}>{formatCount(rd.count)}</span>
                 </button>
-                <button onClick={() => { try { document.querySelector('[data-rainx-comment-input]')?.focus(); } catch(_){} }} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:"pointer", color:ash }}>
+                <button onClick={(e) => { e.stopPropagation(); try { document.querySelector('[data-rainx-comment-input]')?.focus(); } catch(_){} }} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:"pointer", color:ash }}>
                   <MessageCircle size={18} strokeWidth={2} /> <span style={{ fontSize:12, fontWeight:700 }}>{formatCount(commentCount)}</span>
                 </button>
-                <button onClick={() => displayIsOwn && onActivityOpen && onActivityOpen(displayPost)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:displayIsOwn ? "pointer" : "default", color:displayIsOwn ? T.gold : ash }}>
+                <button onClick={(e) => { e.stopPropagation(); displayIsOwn && onActivityOpen && onActivityOpen(displayPost); }} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:displayIsOwn ? "pointer" : "default", color:displayIsOwn ? T.gold : ash }}>
                   <AnalyticsBarIcon size={18} color={displayIsOwn ? T.gold : ash} /> <span style={{ fontSize:12, fontWeight:700 }}>{formatCount(displayPost.views || 0)}</span>
                 </button>
-                <button onClick={() => setBookmarked(v => !v)} style={{ display:"flex", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:bookmarked ? T.gold : ash, padding:0 }}><Bookmark size={19} fill={bookmarked ? T.gold : "none"} /></button>
-                <button onClick={() => { try { navigator.share?.({ title:"Rain X post", text:displayPost.text, url:window.location.href }); } catch(_) {} }} style={{ display:"flex", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:ash, padding:0 }}><Share2 size={19} /></button>
+                <button onClick={(e) => { e.stopPropagation(); setBookmarked(v => !v); }} style={{ display:"flex", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:bookmarked ? T.gold : ash, padding:0 }}><Bookmark size={19} fill={bookmarked ? T.gold : "none"} /></button>
+                <button onClick={(e) => { e.stopPropagation(); try { navigator.share?.({ title:"Rain X post", text:displayPost.text, url:window.location.href }); } catch(_) {} }} style={{ display:"flex", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:ash, padding:0 }}><Share2 size={19} /></button>
               </div>
             </div>
             <div style={{ padding: "0 16px" }}>
@@ -2127,7 +2118,7 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
       <div style={{ padding:"0 16px 8px" }}>
         <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:2, flexWrap:"wrap" }}>
           <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.paper, lineHeight:1.25 }}>{profile.full_name || profile.display_name}</span>
-          <Badge isAdmin={profile.is_admin} badge={profile.badge} />
+          <Badge isAdmin={profile.is_admin} badge={profile.badge} isPro={false} />
         </div>
         <div style={{ fontSize:13.5, color:T.muted, marginBottom:8 }}>@{handle}</div>
         {profile.bio && <div style={{ fontSize:13.5, color:T.paper, marginBottom:10, lineHeight:1.65 }}>{profile.bio}</div>}
@@ -2246,14 +2237,8 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onOpenPost, 
     const initialLikeData = {};
     const initialRepostData = {};
     posts.forEach((post) => {
-      initialLikeData[post.id] = {
-        count: Number(post.likes_count) || 0,
-        likedByMe: false,
-      };
-      initialRepostData[post.id] = {
-        count: Number(post.reposts_count ?? post.repost_count) || 0,
-        repostedByMe: false,
-      };
+      initialLikeData[post.id] = { count: Number(post.likes_count) || 0, likedByMe: null };
+      initialRepostData[post.id] = { count: Number(post.reposts_count) || 0, repostedByMe: null };
     });
     setLikeData(initialLikeData);
     setRepostData(initialRepostData);
@@ -2279,7 +2264,7 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onOpenPost, 
       const rd = {};
       ids.forEach((id) => {
         const post = posts.find((item) => item.id === id);
-        rd[id] = { count: Number(post?.reposts_count ?? post?.repost_count) || 0, repostedByMe: false };
+        rd[id] = { count: Number(post?.reposts_count) || 0, repostedByMe: false };
       });
       (reposts || []).forEach((r) => {
         if (rd[r.post_id] && r.user_id === account.id) rd[r.post_id].repostedByMe = true;
@@ -2709,7 +2694,7 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
         likedByMe: false,
       };
       initialRepostData[post.id] = {
-        count: Number(post.reposts_count ?? post.repost_count) || 0,
+        count: Number(post.reposts_count) || 0,
         repostedByMe: false,
       };
     });
@@ -2788,7 +2773,7 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
     const rd = {};
     postIds.forEach((id) => {
       const post = rows.find((item) => item.id === id);
-      rd[id] = { count: Number(post?.reposts_count ?? post?.repost_count) || 0, repostedByMe: false };
+      rd[id] = { count: Number(post?.reposts_count) || 0, repostedByMe: false };
     });
     (repostsResult?.data || []).forEach((r) => { if (rd[r.post_id] && r.user_id === account.id) rd[r.post_id].repostedByMe = true; });
     setRepostData(rd);
@@ -2797,31 +2782,13 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
   }, [account.id]);
 
   useEffect(() => {
-    const channel = supabase.channel("community-post-counts")
-      .on("postgres_changes", { event:"*", schema:"public", table:"post_comments" }, (payload) => {
-        const postId = payload.new?.post_id || payload.old?.post_id;
-        if (!postId) return;
-        setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: Math.max(0, Number(p.comments_count || 0) + (payload.eventType === "INSERT" ? 1 : -1)) } : p));
-      })
-      .on("postgres_changes", { event:"*", schema:"public", table:"post_likes" }, (payload) => {
-        const postId = payload.new?.post_id || payload.old?.post_id;
-        if (!postId) return;
-        setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes_count: Math.max(0, Number(p.likes_count || 0) + (payload.eventType === "INSERT" ? 1 : -1)) } : p));
-        setLikeData(prev => {
-          const current = prev[postId];
-          if (!current) return prev;
-          return { ...prev, [postId]: { ...current, count: Math.max(0, Number(current.count || 0) + (payload.eventType === "INSERT" ? 1 : -1)) } };
-        });
-      })
-      .on("postgres_changes", { event:"*", schema:"public", table:"post_reposts" }, (payload) => {
-        const postId = payload.new?.post_id || payload.old?.post_id;
-        if (!postId) return;
-        setPosts(prev => prev.map(p => p.id === postId ? { ...p, reposts_count: Math.max(0, Number(p.reposts_count || 0) + (payload.eventType === "INSERT" ? 1 : -1)) } : p));
-        setRepostData(prev => {
-          const current = prev[postId];
-          if (!current) return prev;
-          return { ...prev, [postId]: { ...current, count: Math.max(0, Number(current.count || 0) + (payload.eventType === "INSERT" ? 1 : -1)) } };
-        });
+    const channel = supabase.channel("community-post-authoritative-counts")
+      .on("postgres_changes", { event:"UPDATE", schema:"public", table:"community_posts" }, (payload) => {
+        const row = payload.new;
+        if (!row?.id) return;
+        setPosts(prev => prev.map(p => p.id === row.id ? { ...p, likes_count: Number(row.likes_count) || 0, comments_count: Number(row.comments_count) || 0, reposts_count: Number(row.reposts_count) || 0 } : p));
+        setLikeData(prev => prev[row.id] ? { ...prev, [row.id]: { ...prev[row.id], count: Number(row.likes_count) || 0 } } : prev);
+        setRepostData(prev => prev[row.id] ? { ...prev, [row.id]: { ...prev[row.id], count: Number(row.reposts_count) || 0 } } : prev);
       })
       .subscribe();
     return () => { try { supabase.removeChannel(channel); } catch(_){} };
@@ -2865,7 +2832,7 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
 
   return (
     <div style={{ position: "relative", minHeight: "100%", background: T.ink }}>
-      <style>{`${fadeIn} ${pulse} ${slideIn}`}</style>
+      <style>{`${pulse} ${slideIn}`}</style>
 
       {/* Chat overlay */}
       {chatOpen && (
