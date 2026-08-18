@@ -16,13 +16,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+          run_install: false
+
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: '24'
-
-      - name: Install pnpm
-        run: npm install -g pnpm@10.15.1
+          cache: pnpm
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -30,17 +34,31 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: Verify toolchain
+        run: |
+          node --version
+          pnpm --version
+          java -version
+
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
       - name: Build RainX only
         run: pnpm --filter @workspace/rainx build
 
-      - name: Verify RainX build
+      - name: Verify RainX web build
         run: test -f artifacts/rainx/dist/public/index.html
 
-      - name: Prepare Capacitor Android
-        run: pnpm --filter @workspace/rainx cap:prepare
+      - name: Add Android platform if needed
+        working-directory: artifacts/rainx
+        run: |
+          if [ ! -d android ]; then
+            pnpm exec cap add android
+          fi
+
+      - name: Sync Capacitor Android
+        working-directory: artifacts/rainx
+        run: pnpm exec cap sync android
 
       - name: Verify Android project
         run: |
@@ -53,6 +71,9 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Verify APK
+        run: test -f artifacts/rainx/android/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
