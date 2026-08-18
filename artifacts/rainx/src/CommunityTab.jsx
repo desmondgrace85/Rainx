@@ -4,7 +4,7 @@ import CommunityChat from "./CommunityChat";
 const BASE_URL = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
 import {
   Send, Trash2, Edit3, X, BadgeCheck, Heart, Eye, MessageCircle, Repeat2, MessageSquareDashed,
-  UserPlus, UserCheck, ArrowLeft, Bell, MoreHorizontal, Plus, Hash, AtSign, Flag, ChevronRight, MessageSquare, Search, Bookmark, Share2,
+  UserPlus, UserCheck, ArrowLeft, Bell, MoreHorizontal, Plus, Hash, AtSign, Flag, ChevronRight, MessageSquare, Search, Bookmark, Share2, ChevronDown,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 
@@ -393,59 +393,18 @@ async function toggleCommentLike(commentId, authorId, postId, accountId, likeDat
 }
 
 // ---------- Shared post-repost toggle (used by CommunityTab and ProfileFeed) ----------
-async function togglePostRepost(postId, authorId, accountId, repostData, setRepostData, onChanged) {
+async function togglePostRepost(postId, authorId, accountId, repostData, setRepostData) {
   const cur = repostData[postId] || { count: 0, repostedByMe: false };
   if (cur.repostedByMe) {
-    // A repost is a real community_posts row. Its likes/comments/views belong
-    // to that repost, while repost_of_post_id points back to the original.
-    const { data: repostPost } = await supabase
-      .from("community_posts")
-      .select("id")
-      .eq("user_id", accountId)
-      .eq("repost_of_post_id", postId)
-      .maybeSingle();
     const { error } = await supabase.from("post_reposts").delete().eq("post_id", postId).eq("user_id", accountId);
     if (error) { if (process.env.NODE_ENV !== "production") console.error("Unrepost failed:", error.message); return; }
-    if (repostPost?.id) {
-      const { error: deletePostError } = await supabase.from("community_posts").delete().eq("id", repostPost.id).eq("user_id", accountId);
-      if (deletePostError && process.env.NODE_ENV !== "production") console.error("Repost post cleanup failed:", deletePostError.message);
-    }
     setRepostData((d) => ({ ...d, [postId]: { count: Math.max(0, cur.count - 1), repostedByMe: false } }));
-    if (onChanged) onChanged();
-    return;
+  } else {
+    const { error } = await supabase.from("post_reposts").insert({ post_id: postId, user_id: accountId });
+    if (error) { if (process.env.NODE_ENV !== "production") console.error("Repost failed:", error.message); return; }
+    setRepostData((d) => ({ ...d, [postId]: { count: cur.count + 1, repostedByMe: true } }));
+    notify(authorId, accountId, "repost", postId);
   }
-
-  // Keep the existing association table for fast repost counts/profile queries,
-  // but also create the visible repost as its own post so its engagement is independent.
-  const { data: repostPost, error: postError } = await supabase
-    .from("community_posts")
-    .insert({
-      user_id: accountId,
-      text: "",
-      images: [],
-      repost_of_post_id: postId,
-      views: 0,
-      likes_count: 0,
-      comments_count: 0,
-      reposts_count: 0,
-    })
-    .select("id")
-    .single();
-  if (postError || !repostPost?.id) {
-    if (process.env.NODE_ENV !== "production") console.error("Repost post creation failed:", postError?.message);
-    return;
-  }
-
-  const { error } = await supabase.from("post_reposts").insert({ post_id: postId, user_id: accountId });
-  if (error) {
-    await supabase.from("community_posts").delete().eq("id", repostPost.id).eq("user_id", accountId);
-    if (process.env.NODE_ENV !== "production") console.error("Repost failed:", error.message);
-    return;
-  }
-
-  setRepostData((d) => ({ ...d, [postId]: { count: cur.count + 1, repostedByMe: true } }));
-  notify(authorId, accountId, "repost", postId);
-  if (onChanged) onChanged();
 }
 
 // ---------- Composer — inline card (no onClose) or full-screen modal (with onClose) ----------
@@ -995,7 +954,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
       <div style={{ position:"relative", display:"flex", alignItems:"center", padding:"10px 2px 9px", borderBottom:`1px solid ${T.cardBorder}` }}>
         <button onClick={() => setShowCommentSort(v => !v)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", color:T.paper, fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, cursor:"pointer", padding:0 }}>
           <span>{commentSort === "recent" ? "Most recent" : commentSort === "oldest" ? "Oldest" : "Most relevant"}</span>
-          <span style={{ fontSize:16, lineHeight:1, transform:showCommentSort ? "rotate(180deg)" : "none", transition:"transform .18s" }}>⌄</span>
+          <ChevronDown size={15} strokeWidth={2.4} style={{ transform:showCommentSort ? "rotate(180deg)" : "none", transition:"transform .18s" }} />
         </button>
         {showCommentSort && (
           <div style={{ position:"absolute", top:"calc(100% + 5px)", left:0, zIndex:30, minWidth:170, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, boxShadow:"0 12px 30px rgba(0,0,0,.24)", overflow:"hidden" }}>
@@ -1025,10 +984,10 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
               rows={1}
               maxLength={300}
               data-rainx-comment-input="true"
-              style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: "8px 10px", fontFamily: FONT_BODY, fontSize: 13, resize: "none" }}
+              style={{ width: "100%", minHeight: 40, boxSizing: "border-box", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 20, color: T.paper, padding: "10px 14px", fontFamily: FONT_BODY, fontSize: 13, lineHeight: 1.35, resize: "none", outline: "none", transition: "border-color .18s ease, box-shadow .18s ease, background .18s ease" }}
             />
           </div>
-          <button onClick={handleSubmit} disabled={!text.trim()} style={{ background: T.goldGradient, color: T.ink, border: "none", borderRadius: 8, padding: "8px 14px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, cursor: "pointer", flexShrink: 0, opacity: text.trim() ? 1 : 0.5 }}>{replyTo ? "Reply" : "Post"}</button>
+          <button onClick={handleSubmit} disabled={!text.trim()} style={{ minWidth: 58, height: 40, background: T.goldGradient, color: T.ink, border: "none", borderRadius: 20, padding: "0 15px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 11.5, cursor: text.trim() ? "pointer" : "default", flexShrink: 0, opacity: text.trim() ? 1 : 0.45, transform: "translateZ(0)", boxShadow: text.trim() ? "0 4px 12px rgba(0,0,0,.16)" : "none", transition: "transform .12s ease, box-shadow .18s ease, opacity .18s ease" }} onPointerDown={(e) => { if (text.trim()) e.currentTarget.style.transform = "scale(.96)"; }} onPointerUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }} onPointerCancel={(e) => { e.currentTarget.style.transform = "scale(1)"; }}>{replyTo ? "Reply" : "Post"}</button>
         </div>
       </div>
     </div>
@@ -1166,62 +1125,7 @@ function GiftIconButton({ profile, account }) {
   );
 }
 
-function RepostPreview({ original, originalProfile, onOpenPost, onOpenProfile }) {
-  const [expanded, setExpanded] = useState(false);
-  if (!original) return null;
-  const text = original.text || "";
-  const limit = 190;
-  const long = text.length > limit;
-  const shownText = expanded || !long ? text : `${text.slice(0, limit).trimEnd()}…`;
-  return (
-    <button
-      type="button"
-      onClick={(e) => { e.stopPropagation(); onOpenPost?.(original.id); }}
-      style={{
-        width:"100%", marginTop:9, padding:0, textAlign:"left", background:"none", color:"inherit",
-        border:`1px solid ${T.cardBorder}`, borderRadius:15, overflow:"hidden", cursor:"pointer", display:"block",
-      }}
-    >
-      <div style={{ padding:"10px 11px 9px" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-          <span onClick={(e) => { e.stopPropagation(); onOpenProfile?.(original.user_id); }} style={{ display:"inline-flex", flexShrink:0 }}>
-            <Avatar name={originalProfile?.display_name} avatarUrl={originalProfile?.avatar_url} size={28} />
-          </span>
-          <div style={{ minWidth:0, flex:1 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:4, minWidth:0 }}>
-              <span style={{ fontSize:13.5, fontWeight:800, color:T.paper, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                {originalProfile?.full_name || originalProfile?.display_name || "User"}
-              </span>
-              <Badge isAdmin={originalProfile?.is_admin} badge={originalProfile?.badge} isPro={originalProfile?.isPro} />
-              <span style={{ fontSize:10.5, color:T.muted, flexShrink:0 }}>· {timeAgo(original.created_at)}</span>
-            </div>
-            <div style={{ fontSize:10.5, color:T.muted, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-              @{originalProfile?.username || originalProfile?.display_name || "user"}
-            </div>
-          </div>
-        </div>
-        {text && (
-          <div style={{ marginTop:9, fontSize:14, lineHeight:1.48, color:T.paper, whiteSpace:"pre-wrap", overflowWrap:"anywhere" }}>
-            {shownText}
-            {long && !expanded && (
-              <span
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpanded(true); }}
-                style={{ color:T.gold, fontWeight:800, marginLeft:5, cursor:"pointer" }}
-              >See more</span>
-            )}
-          </div>
-        )}
-      </div>
-      {original.images?.length > 0 && (
-        <div style={{ maxHeight:180, overflow:"hidden", borderTop:`1px solid ${T.cardBorder}` }}>
-          <img src={original.images[0]} alt="" style={{ width:"100%", maxHeight:180, objectFit:"cover", display:"block" }} />
-        </div>
-      )}
-    </button>
-  );
-}
-
-function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeData, onToggleLike, repostData, onToggleRepost, onOpenProfile, onDelete, onHidePost, onEdit, onReport, onActivityOpen, onDmUser, forceOpen, onOpened, onOpenPost }) {
+function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeData, onToggleLike, repostData, onToggleRepost, onOpenProfile, onDelete, onHidePost, onEdit, onReport, onActivityOpen, onDmUser, forceOpen, onOpened }) {
   const [showComments, setShowComments] = useState(false);
   const [showRepostSheet, setShowRepostSheet] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1279,11 +1183,12 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
   return (
     <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.cardBorder}`, animation: "fadeInUp 0.25s ease" }}>
       {post._isRepost && (
-        <div style={{ display:"flex", alignItems:"center", gap:6, margin:"0 0 7px 50px", color:T.muted, fontSize:11.5, fontWeight:600 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:6, margin:"0 0 8px 50px", color:T.muted, fontSize:11.5, fontWeight:600 }}>
           <Repeat2 size={14} color={T.sage} />
-          <span><strong style={{ color:T.paper }}>{post.user_id === account.id ? "You" : (profile?.full_name || profile?.display_name || profile?.username || "Someone")}</strong> reposted</span>
+          <span><strong style={{ color:T.paper }}>{post._repostActorProfile?.full_name || post._repostActorProfile?.display_name || post._repostActorProfile?.username || "Someone"}</strong> reposted</span>
         </div>
       )}
+      <div style={post._isRepost ? { border:`1px solid ${T.cardBorder}`, borderRadius:16, padding:"12px", background:`${T.card}88` } : undefined}>
       <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
       {/* Avatar column */}
       <button onClick={() => onOpenProfile(post.user_id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
@@ -1354,18 +1259,11 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
             <button onClick={() => setEditing(false)} style={{ background: "none", border: `1px solid ${T.cardBorder}`, color: T.muted, borderRadius: 6, padding: "5px 12px", fontSize: 11, cursor: "pointer" }}>Cancel</button>
           </div>
         </div>
-      ) : post._isRepost ? (
-        <RepostPreview
-          original={post._originalPost}
-          originalProfile={post._originalPostProfile}
-          onOpenPost={onOpenPost}
-          onOpenProfile={onOpenProfile}
-        />
       ) : (
         <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 6, lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
       )}
 
-      {!post._isRepost && post.images && post.images.length > 0 && (
+      {post.images && post.images.length > 0 && (
         <div style={{ marginTop: 10, borderRadius: 12, overflow: "hidden", display: "grid", gap: 2,
           gridTemplateColumns: post.images.length === 1 ? "1fr" : "1fr 1fr",
           gridTemplateRows: post.images.length === 3 ? "auto auto" : "auto"
@@ -1381,7 +1279,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       )}
 
       {/* Poll */}
-      {!post._isRepost && post.poll_id && <PollWidget pollId={post.poll_id} account={account} />}
+      {post.poll_id && <PollWidget pollId={post.poll_id} account={account} />}
 
       <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 10 }}>
         <button onClick={() => onToggleLike(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : ash }}>
@@ -1411,7 +1309,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
         <RepostSheet
           alreadyReposted={rd.repostedByMe}
           onClose={() => setShowRepostSheet(false)}
-          onRepost={() => onToggleRepost(post.id, post.user_id)}
+          onRepost={() => onToggleRepost(post._originalPostId || post.id, post.user_id)}
           onAddPost={() => window.dispatchEvent(new CustomEvent("rainx:community-compose"))}
         />
       )}
@@ -1422,10 +1320,6 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: `1px solid ${T.cardBorder}`, flexShrink: 0 }}>
             <button onClick={() => setShowComments(false)} style={{ background: "none", border: "none", color: T.paper, cursor: "pointer", display: "flex", padding:2 }}><ArrowLeft size={21} /></button>
             <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, flex:1 }}>Post</span>
-            {!isOwn && (
-              <button onClick={toggleFollowUser} style={{ border:`1px solid ${isFollowing ? T.cardBorder : T.gold}`, background:isFollowing ? "transparent" : T.gold, color:isFollowing ? T.paper : T.ink, borderRadius:999, padding:"7px 14px", fontSize:11, fontWeight:800, cursor:"pointer" }}>{isFollowing ? "Following" : "Follow"}</button>
-            )}
-            <button onClick={() => setMenuOpen(true)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", padding:4 }}><MoreHorizontal size={20} /></button>
           </div>
           {/* Scrollable body: post + comments */}
           <div style={{ flex: 1, overflowY: "auto" }}>
@@ -1434,9 +1328,16 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
                 <Avatar name={profile?.display_name} avatarUrl={profile?.avatar_url} size={44} />
               </button>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: T.paper }}>{profile?.full_name || profile?.display_name}</span>
-                  <Badge isAdmin={profile?.is_admin} badge={profile?.badge} isPro={profile?.isPro} />
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:5, minWidth:0, flex:1 }}>
+                    <span style={{ fontSize:15, fontWeight:700, color:T.paper, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{profile?.full_name || profile?.display_name}</span>
+                    <Badge isAdmin={profile?.is_admin} badge={profile?.badge} isPro={profile?.isPro} />
+                    <span style={{ fontSize:11, color:T.muted, whiteSpace:"nowrap" }}>{timeAgo(post.created_at)}</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:5, flexShrink:0 }}>
+                    {!isOwn && <button onClick={toggleFollowUser} style={{ border:`1px solid ${isFollowing ? T.cardBorder : T.gold}`, background:isFollowing ? "transparent" : T.gold, color:isFollowing ? T.paper : T.ink, borderRadius:999, padding:"5px 11px", fontSize:10.5, fontWeight:800, cursor:"pointer", transition:"transform .12s ease, opacity .18s ease" }}>{isFollowing ? "Following" : "Follow"}</button>}
+                    <button onClick={() => setMenuOpen(true)} aria-label="Post options" style={{ width:30, height:30, display:"flex", alignItems:"center", justifyContent:"center", background:"transparent", border:"none", color:T.muted, cursor:"pointer", borderRadius:"50%" }}><MoreHorizontal size={18} /></button>
+                  </div>
                 </div>
                 {(profile?.username || profile?.display_name) && <span style={{ fontSize: 12, color: T.muted }}>@{profile?.username || profile?.display_name}</span>}
                 <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 10, lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
@@ -1474,7 +1375,8 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       )}
 
       </div>{/* end content column */}
-      </div>{/* end post card */}
+      </div>{/* end post row */}
+      </div>{/* end repost frame / post row */}
     </div>
   );
 }
@@ -1751,28 +1653,23 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
         }
         if (process.env.NODE_ENV !== "production") console.error("Profile API fallback used:", apiErr?.message);
       }
-      // A repost is its own community post. Keep it out of the normal Posts tab
-      // and show those rows in the dedicated Reposts tab.
       const { data: postRows } = await supabase.from("community_posts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
-      const profilePosts = (postRows || []).filter(p => !p.repost_of_post_id);
-      const repostPostRows = (postRows || []).filter(p => !!p.repost_of_post_id);
-      const originalIds = [...new Set(repostPostRows.map(p => p.repost_of_post_id).filter(Boolean))];
-      let profileReposts = repostPostRows;
-      if (originalIds.length) {
-        const { data: originals } = await supabase.from("community_posts").select("*").in("id", originalIds);
+      const { data: repostRows } = await supabase.from("post_reposts").select("post_id, created_at").eq("user_id", userId).order("created_at", { ascending: false });
+      const ownPosts = postRows || [];
+      setPosts(ownPosts);
+      if ((repostRows || []).length) {
+        const repostIds = [...new Set(repostRows.map(r => r.post_id))];
+        const { data: originals } = await supabase.from("community_posts").select("*").in("id", repostIds);
         const byId = Object.fromEntries((originals || []).map(p => [p.id, p]));
-        const originalAuthorIds = [...new Set((originals || []).map(p => p.user_id).filter(Boolean))];
-        const originalProfiles = originalAuthorIds.length ? await fetchProfilesMap(originalAuthorIds) : {};
-        profileReposts = repostPostRows.map(p => ({
-          ...p,
-          _isRepost: true,
-          _originalPostId: p.repost_of_post_id,
-          _originalPost: byId[p.repost_of_post_id] || null,
-          _originalPostProfile: originalProfiles[byId[p.repost_of_post_id]?.user_id] || null,
-        }));
+        const reposted = (repostRows || []).map(r => {
+          const original = byId[r.post_id];
+          if (!original) return null;
+          return { ...original, _isRepost:true, _originalPostId:original.id, _repostedAt:r.created_at, _repostActorId:userId, _repostActorProfile:null, _feedKey:`repost-${userId}-${original.id}-${r.created_at}` };
+        }).filter(Boolean);
+        setReposts(reposted);
+      } else {
+        setReposts([]);
       }
-      setPosts(profilePosts);
-      setReposts(profileReposts);
       const { count: followers } = await supabase.from("follows").select("*", { count: "exact", head: true }).eq("followed_id", userId);
       const { count: following } = await supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", userId);
       setCounts({ followers: followers || 0, following: following || 0 });
@@ -2067,26 +1964,19 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
 
       {/* ── Posts / Reposts tabs ── */}
       <div style={{ borderTop:`1px solid ${T.cardBorder}`, display:"flex", alignItems:"stretch" }}>
-        <button type="button" onClick={() => setProfileTab("posts")} style={{ flex:1, height:52, border:0, borderBottom:`2px solid ${profileTab === "posts" ? T.gold : "transparent"}`, background:"none", color:profileTab === "posts" ? T.paper : T.muted, fontFamily:FONT_HEAD, fontWeight:800, fontSize:13.5, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:7 }}>
-          <MessageSquare size={17} strokeWidth={2.2} /> Posts
-        </button>
-        <button type="button" onClick={() => setProfileTab("reposts")} style={{ flex:1, height:52, border:0, borderBottom:`2px solid ${profileTab === "reposts" ? T.gold : "transparent"}`, background:"none", color:profileTab === "reposts" ? T.paper : T.muted, fontFamily:FONT_HEAD, fontWeight:800, fontSize:13.5, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:7 }}>
-          <Repeat2 size={18} strokeWidth={2.2} /> Reposts
-          {reposts.length > 0 && <span style={{ fontSize:10.5, minWidth:18, height:18, padding:"0 5px", borderRadius:999, background:`${T.gold}18`, color:T.gold, display:"inline-flex", alignItems:"center", justifyContent:"center" }}>{formatCount(reposts.length)}</span>}
-        </button>
+        {[{key:"posts",label:"Posts",Icon:MessageSquare},{key:"reposts",label:"Reposts",Icon:Repeat2}].map(({key,label,Icon}) => (
+          <button key={key} onClick={() => setProfileTab(key)} style={{ flex:1, position:"relative", display:"flex", alignItems:"center", justifyContent:"center", gap:7, padding:"13px 12px 12px", background:"none", border:"none", color:profileTab===key ? T.paper : T.muted, fontFamily:FONT_HEAD, fontWeight:profileTab===key ? 800 : 600, fontSize:13, cursor:"pointer" }}>
+            <Icon size={16} strokeWidth={profileTab===key ? 2.4 : 2} /> {label}
+            {profileTab===key && <span style={{ position:"absolute", left:"25%", right:"25%", bottom:0, height:2.5, borderRadius:3, background:T.gold }} />}
+          </button>
+        ))}
       </div>
       {profileTab === "posts" ? (
-        posts.length === 0 ? (
-          <div style={{ fontSize:13, color:T.muted, padding:"32px 0", textAlign:"center" }}>No posts yet.</div>
-        ) : (
-          <ProfileFeed posts={posts} account={account} profileEntry={profile} onOpenProfile={onOpenProfile} onDmUser={onDmUser} />
-        )
+        posts.length === 0 ? <div style={{ fontSize:13, color:T.muted, padding:"32px 0", textAlign:"center" }}>No posts yet.</div> :
+        <ProfileFeed posts={posts} account={account} profileEntry={profile} onOpenProfile={onOpenProfile} onDmUser={onDmUser} />
       ) : (
-        reposts.length === 0 ? (
-          <div style={{ fontSize:13, color:T.muted, padding:"32px 0", textAlign:"center" }}>No reposts yet.</div>
-        ) : (
-          <ProfileFeed posts={reposts} account={account} profileEntry={profile} onOpenProfile={onOpenProfile} onDmUser={onDmUser} />
-        )
+        reposts.length === 0 ? <div style={{ fontSize:13, color:T.muted, padding:"32px 0", textAlign:"center" }}>No reposts yet.</div> :
+        <ProfileFeed posts={reposts} account={account} profileEntry={profile} onOpenProfile={onOpenProfile} onDmUser={onDmUser} />
       )}
     </div>
   );
@@ -2098,11 +1988,10 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
   const [likeData, setLikeData] = useState({});
   const [repostData, setRepostData] = useState({});
   const [profilesMap, setProfilesMap] = useState({ [profileEntry.id]: profileEntry });
-  const [openedOriginalPost, setOpenedOriginalPost] = useState(null);
 
   useEffect(() => {
     setProfilesMap((m) => ({ ...m, [profileEntry.id]: profileEntry }));
-    const ids = [...new Set(posts.flatMap(p => [p.user_id, p._originalPost?.user_id]).filter(Boolean))];
+    const ids = [...new Set(posts.map(p => p.user_id).filter(Boolean))];
     const missing = ids.filter(id => id !== profileEntry.id);
     if (!missing.length) return;
     supabase.from("public_profiles").select("id,display_name,full_name,username,avatar_url,is_admin,badge").in("id", missing)
@@ -2175,33 +2064,8 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
           onEdit={onRefresh || (() => {})}
           onReport={() => {}}
           onDmUser={onDmUser}
-          onOpenPost={(postId) => {
-            const original = p._originalPost?.id === postId ? p._originalPost : null;
-            if (original) setOpenedOriginalPost(original);
-          }}
         />
       ))}
-      {openedOriginalPost && (
-        <PostCard
-          key={`opened-original-${openedOriginalPost.id}`}
-          post={openedOriginalPost}
-          profile={profilesMap[openedOriginalPost.user_id]}
-          account={account}
-          profilesMap={profilesMap}
-          onProfilesNeeded={() => {}}
-          likeData={likeData}
-          onToggleLike={(postId, authorId) => togglePostLike(postId, authorId, account.id, likeData, setLikeData)}
-          repostData={repostData}
-          onToggleRepost={(postId, authorId) => togglePostRepost(postId, authorId, account.id, repostData, setRepostData, onRefresh)}
-          onOpenProfile={onOpenProfile}
-          onDelete={onDelete || (() => {})}
-          onEdit={onRefresh || (() => {})}
-          onReport={() => {}}
-          onDmUser={onDmUser}
-          forceOpen
-          onOpened={() => setOpenedOriginalPost(null)}
-        />
-      )}
     </div>
   );
 }
@@ -2576,25 +2440,23 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
     const excludedPosts = new Set((notInterested || []).map(n => n.post_id));
     let rows = (data || []).filter(p => !excludedUsers.has(p.user_id) && !excludedPosts.has(p.id));
 
-    // Reposts are real community_posts rows. Attach their original post for the
-    // compact nested preview; the outer row remains the reposter's post and owns
-    // its own likes/comments/views.
-    const repostRows = rows.filter(p => p.repost_of_post_id);
-    const originalIds = [...new Set(repostRows.map(p => p.repost_of_post_id).filter(Boolean))];
-    if (originalIds.length) {
-      const { data: originalRows } = await supabase.from("community_posts").select("*").in("id", originalIds);
-      const originalById = Object.fromEntries((originalRows || []).map(p => [p.id, p]));
-      const originalAuthorIds = [...new Set((originalRows || []).map(p => p.user_id).filter(Boolean))];
-      const originalProfiles = originalAuthorIds.length ? await fetchProfilesMap(originalAuthorIds) : {};
-      rows = rows.map(p => p.repost_of_post_id ? {
-        ...p,
-        _isRepost: true,
-        _originalPostId: p.repost_of_post_id,
-        _originalPost: originalById[p.repost_of_post_id] || null,
-        _originalPostProfile: originalProfiles[originalById[p.repost_of_post_id]?.user_id] || null,
-      } : p);
+    // Build real repost feed entries so reposts appear in Community as normal posts with a repost indicator.
+    const { data: recentReposts } = await supabase.from("post_reposts").select("post_id,user_id,created_at").order("created_at", { ascending:false }).limit(50);
+    const repostIds = [...new Set((recentReposts || []).map(r => r.post_id))];
+    if (repostIds.length) {
+      const missingIds = repostIds.filter(id => !rows.some(p => p.id === id));
+      let originals = [];
+      if (missingIds.length) { const { data: originalRows } = await supabase.from("community_posts").select("*").in("id", missingIds); originals = originalRows || []; }
+      const byId = Object.fromEntries([...rows, ...originals].map(p => [p.id, p]));
+      const actorIds = [...new Set((recentReposts || []).map(r => r.user_id))];
+      const actorProfiles = actorIds.length ? await fetchProfilesMap(actorIds) : {};
+      const repostEntries = (recentReposts || []).map(r => {
+        const original = byId[r.post_id];
+        if (!original || excludedUsers.has(original.user_id) || excludedUsers.has(r.user_id) || excludedPosts.has(original.id)) return null;
+        return { ...original, _isRepost:true, _originalPostId:original.id, _repostedAt:r.created_at, _repostActorId:r.user_id, _repostActorProfile:actorProfiles[r.user_id], _feedKey:`repost-${r.user_id}-${original.id}-${r.created_at}` };
+      }).filter(Boolean);
+      rows = [...rows, ...repostEntries].sort((a,b) => new Date(b._isRepost ? b._repostedAt : b.created_at) - new Date(a._isRepost ? a._repostedAt : a.created_at));
     }
-    rows = rows.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
 
     const initialLikeData = {};
     const initialRepostData = {};
@@ -2618,7 +2480,7 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
     }
 
     const postIds = rows.map((r) => r.id);
-    const userIds = [...new Set(rows.flatMap((r) => [r.user_id, r._repostActorId, r._originalPost?.user_id]).filter(Boolean))];
+    const userIds = [...new Set(rows.flatMap((r) => [r.user_id, r._repostActorId]).filter(Boolean))];
 
     // Compute hashtags synchronously (cheap CPU work, no network)
     setHashtags((() => {
@@ -2713,7 +2575,7 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
 
 
   const toggleLike = (postId, authorId) => togglePostLike(postId, authorId, account.id, likeData, setLikeData);
-  const toggleRepost = (postId, authorId) => togglePostRepost(postId, authorId, account.id, repostData, setRepostData, loadPosts);
+  const toggleRepost = (postId, authorId) => togglePostRepost(postId, authorId, account.id, repostData, setRepostData);
   const deletePost = async (id) => { await supabase.from("community_posts").delete().eq("id", id); loadPosts(); };
   const reportPost = async (id) => { await supabase.from("post_reports").insert({ post_id: id, reported_by: account.id }); alert("Reported. Thanks for flagging this."); };
 
@@ -2824,7 +2686,6 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
           onDmUser={(profile) => { setChatInitUser(profile); setChatOpen(true); }}
           forceOpen={openPostId === p.id}
           onOpened={() => setOpenPostId(null)}
-          onOpenPost={(postId) => setOpenPostId(postId)}
         />
       ))}
 
@@ -2851,5 +2712,3 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
   );
 }
 export { PostCard, ProfileFeed, Composer, FollowListModal, formatCount };
-
-// RAINX COMMUNITY REPOST UX — FINAL REQUESTED IMPLEMENTATION
