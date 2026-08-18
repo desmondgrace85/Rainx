@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "797728843349",
+    "project_id": "rainx-app",
+    "storage_bucket": "rainx-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:797728843349:android:d851caae5a4ed2447cd6dc",
+        "android_client_info": {
+          "package_name": "com.rainx.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJ6ZlrglkjWLE4NjMG6SS64ozU3hzWVsA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
