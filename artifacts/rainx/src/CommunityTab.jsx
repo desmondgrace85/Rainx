@@ -249,21 +249,42 @@ async function notify(userId, actorId, type, postId) {
   }
 }
 async function fetchProfilesMap(ids) {
-  if (!ids.length) return {};
-  // Use service-key API endpoint so full_name/username/display_name are not blocked by RLS
+  const uniqueIds = [...new Set((ids || []).filter(Boolean))];
+  if (!uniqueIds.length) return {};
+
+  // Resolve identity from the same canonical source everywhere.  The API can
+  // legitimately return a partial set (for example while a profile is being
+  // created), so never return early with missing users.
+  const map = {};
   try {
-    const r = await fetch(`${BASE_URL}/api/public-profiles?ids=${ids.join(",")}`);
+    const r = await fetch(`${BASE_URL}/api/public-profiles?ids=${uniqueIds.join(",")}`);
     if (r.ok) {
-      const rows = await r.json();
-      const map = {};
-      (rows || []).forEach((p) => { map[p.id] = p; });
-      return map;
+      const apiRows = await r.json();
+      (apiRows || []).forEach((p) => { if (p?.id) map[p.id] = { ...p }; });
     }
   } catch (_) {}
-  // Fallback: public_profiles view only
-  const { data: pub } = await supabase.from("public_profiles").select("*").in("id", ids);
-  const map = {};
-  (pub || []).forEach((p) => { map[p.id] = { ...p }; });
+
+  const missingIds = uniqueIds.filter((id) => !map[id]);
+  if (missingIds.length) {
+    try {
+      const { data: pub } = await supabase.from("public_profiles").select("*").in("id", missingIds);
+      (pub || []).forEach((p) => { if (p?.id) map[p.id] = { ...p }; });
+    } catch (_) {}
+  }
+
+  // Last identity fallback. This prevents comments/follower rows from ever
+  // becoming a permanent generic “User / ?” just because the public view is
+  // temporarily incomplete.
+  const stillMissing = uniqueIds.filter((id) => !map[id]);
+  if (stillMissing.length) {
+    try {
+      const { data: direct } = await supabase
+        .from("profiles")
+        .select("id,display_name,full_name,username,avatar_url,badge,is_admin,isPro")
+        .in("id", stillMissing);
+      (direct || []).forEach((p) => { if (p?.id) map[p.id] = { ...p }; });
+    } catch (_) {}
+  }
   return map;
 }
 
@@ -2333,7 +2354,7 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onOpenPost, 
     });
     setLikeData((prev) => {
       const next = {};
-      rows.forEach((post) => {
+      posts.forEach((post) => {
         next[post.id] = {
           count: Number(post.likes_count) || 0,
           likedByMe: prev[post.id]?.likedByMe ?? false,
@@ -2343,7 +2364,7 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onOpenPost, 
     });
     setRepostData((prev) => {
       const next = {};
-      rows.forEach((post) => {
+      posts.forEach((post) => {
         next[post.id] = {
           count: Number(post.reposts_count) || 0,
           repostedByMe: prev[post.id]?.repostedByMe ?? false,
@@ -2809,14 +2830,14 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
     });
     setLikeData((prev) => {
       const next = {};
-      rows.forEach((post) => {
+      posts.forEach((post) => {
         next[post.id] = { count: Number(post.likes_count) || 0, likedByMe: prev[post.id]?.likedByMe ?? false };
       });
       return next;
     });
     setRepostData((prev) => {
       const next = {};
-      rows.forEach((post) => {
+      posts.forEach((post) => {
         next[post.id] = { count: Number(post.reposts_count) || 0, repostedByMe: prev[post.id]?.repostedByMe ?? false };
       });
       return next;
