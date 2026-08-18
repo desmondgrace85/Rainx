@@ -1292,6 +1292,13 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
     if (isBlocked) { await supabase.from("user_blocks").delete().eq("blocker_id", account.id).eq("blocked_id", post.user_id); setIsBlocked(false); }
     else { const { error } = await supabase.from("user_blocks").insert({ blocker_id: account.id, blocked_id: post.user_id }); if (!error) { await supabase.from("follows").delete().eq("follower_id", account.id).eq("followed_id", post.user_id); setIsBlocked(true); setIsFollowing(false); onHidePost?.(post.id); setShowComments(false); } }
   };
+  // Feed metrics belong to the visible post itself. For a repost wrapper,
+  // these are the repost's own likes/reposts/views/comments — never the original's.
+  const feedLikeData = likeData[post.id] || { count: Number(post.likes_count) || 0, likedByMe: false };
+  const feedRepostData = repostData[post.id] || { count: Number(post.reposts_count ?? post.repost_count) || 0, repostedByMe: false };
+  const feedCommentCount = Number(post.comments_count) || 0;
+
+  // Detail metrics belong to the original post when a repost is opened.
   const ld = (post.repost_of_post_id ? originalLikeData[displayPostId] : likeData[post.id]) || {
     count: Number(displayPost.likes_count) || 0,
     likedByMe: false,
@@ -1452,17 +1459,17 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       {post.poll_id && <PollWidget pollId={post.poll_id} account={account} />}
 
       <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 10 }}>
-        <button onClick={() => onToggleLike(displayPostId, displayAuthorId)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : ash }}>
-          <Heart size={16} strokeWidth={2} fill={ld.likedByMe ? T.rust : "none"} style={ld.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(ld.count)}</span>
+        <button onClick={() => onToggleLike(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: feedLikeData.likedByMe ? T.rust : ash }}>
+          <Heart size={16} strokeWidth={2} fill={feedLikeData.likedByMe ? T.rust : "none"} style={feedLikeData.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(feedLikeData.count)}</span>
         </button>
         <button onClick={() => setShowComments(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ash }}>
-          <MessageCircle size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(commentCount)}</span>
+          <MessageCircle size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(feedCommentCount)}</span>
         </button>
-        <button onClick={() => setShowRepostSheet(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: rd.repostedByMe ? T.sage : ash }}>
-          <Repeat2 size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(rd.count)}</span>
+        <button onClick={() => setShowRepostSheet(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: feedRepostData.repostedByMe ? T.sage : ash }}>
+          <Repeat2 size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(feedRepostData.count)}</span>
         </button>
-        <button onClick={() => displayIsOwn && onActivityOpen && onActivityOpen(displayPost)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: displayIsOwn ? "pointer" : "default", color: displayIsOwn ? T.gold : ash }}>
-          <AnalyticsBarIcon size={16} color={displayIsOwn ? T.gold : ash} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(displayPost.views || 0)}</span>
+        <button onClick={() => post.user_id === account.id && onActivityOpen && onActivityOpen(post)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: post.user_id === account.id ? "pointer" : "default", color: post.user_id === account.id ? T.gold : ash }}>
+          <AnalyticsBarIcon size={16} color={post.user_id === account.id ? T.gold : ash} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(post.views || 0)}</span>
         </button>
         <button onClick={() => setBookmarked(v => !v)} style={{ display:"flex", alignItems:"center", background:"none", border:"none", cursor:"pointer", color:bookmarked ? T.gold : ash, padding:0 }} title="Bookmark">
           <Bookmark size={16} fill={bookmarked ? T.gold : "none"} />
@@ -1477,9 +1484,9 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
 
       {showRepostSheet && (
         <RepostSheet
-          alreadyReposted={rd.repostedByMe}
+          alreadyReposted={showComments ? rd.repostedByMe : feedRepostData.repostedByMe}
           onClose={() => setShowRepostSheet(false)}
-          onRepost={() => onToggleRepost(displayPostId, displayAuthorId)}
+          onRepost={() => showComments ? onToggleRepost(displayPostId, displayAuthorId) : onToggleRepost(post.id, post.user_id)}
           onAddPost={() => window.dispatchEvent(new CustomEvent("rainx:community-compose"))}
         />
       )}
@@ -2675,6 +2682,16 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
 
     // View counting — fire-and-forget, does not block UI
     const newlyVisible = postIds.filter((id) => !viewedPostIdsRef.current.has(id));
+    if (newlyVisible.length) {
+      const newlyVisibleSet = new Set(newlyVisible);
+      // The RPC persists the view, but it is intentionally fire-and-forget.
+      // Update the local rows too so the newly recorded view is visible immediately
+      // instead of appearing only after a manual refresh.
+      rows = rows.map((post) => newlyVisibleSet.has(post.id)
+        ? { ...post, views: (Number(post.views) || 0) + 1 }
+        : post
+      );
+    }
     newlyVisible.forEach((id) => {
       viewedPostIdsRef.current.add(id);
       supabase.rpc("increment_post_views", { post_id: id }).then(() => {}, () => {});
@@ -2733,6 +2750,26 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
         const postId = payload.new?.post_id || payload.old?.post_id;
         if (!postId) return;
         setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: Math.max(0, Number(p.comments_count || 0) + (payload.eventType === "INSERT" ? 1 : -1)) } : p));
+      })
+      .on("postgres_changes", { event:"*", schema:"public", table:"post_likes" }, (payload) => {
+        const postId = payload.new?.post_id || payload.old?.post_id;
+        if (!postId) return;
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes_count: Math.max(0, Number(p.likes_count || 0) + (payload.eventType === "INSERT" ? 1 : -1)) } : p));
+        setLikeData(prev => {
+          const current = prev[postId];
+          if (!current) return prev;
+          return { ...prev, [postId]: { ...current, count: Math.max(0, Number(current.count || 0) + (payload.eventType === "INSERT" ? 1 : -1)) } };
+        });
+      })
+      .on("postgres_changes", { event:"*", schema:"public", table:"post_reposts" }, (payload) => {
+        const postId = payload.new?.post_id || payload.old?.post_id;
+        if (!postId) return;
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, reposts_count: Math.max(0, Number(p.reposts_count || 0) + (payload.eventType === "INSERT" ? 1 : -1)) } : p));
+        setRepostData(prev => {
+          const current = prev[postId];
+          if (!current) return prev;
+          return { ...prev, [postId]: { ...current, count: Math.max(0, Number(current.count || 0) + (payload.eventType === "INSERT" ? 1 : -1)) } };
+        });
       })
       .subscribe();
     return () => { try { supabase.removeChannel(channel); } catch(_){} };

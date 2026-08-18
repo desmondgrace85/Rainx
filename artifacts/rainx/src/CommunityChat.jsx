@@ -138,7 +138,7 @@ function Avatar({ name, avatarUrl, size, T }) {
 // sent=1 black tick, delivered=2 black ticks, read=2 blue ticks
 function Ticks({ status }) {
   if (status === "read") {
-    // two white ticks — recipient has actually opened and read the message
+    // two blue ticks — recipient has actually opened and read the message
     return (
       <span style={{ display: "inline-flex", alignItems: "center", color: "#34B7F1" }}>
         <Check size={10} strokeWidth={3.5} />
@@ -1102,8 +1102,8 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
                 onContextMenu={e => { e.preventDefault(); if (!deleted) setContextMenu({ msg }); }}
                 style={{
                   maxWidth: "78%",
-                  background: isMe ? "#FFFFFF" : "#1C1913",
-                  color: isMe ? "#111111" : "#F2EDE0",
+                  background: isMe ? T.goldGradient : "#FFFFFF",
+                  color: isMe ? "#111111" : "#111111",
                   borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                   padding: "8px 12px 6px",
                   fontSize: 14.5,
