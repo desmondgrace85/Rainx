@@ -6173,6 +6173,42 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Settings</div>
           </div>
         </button>
+        {/* Account activity & history */}
+        <button onClick={() => setMorePage("history")}
+          style={{ width:"100%", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
+          <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:"50%", right:14, transform:"translateY(-50%)" }} />
+          <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <Activity size={18} color={T.ink} />
+          </div>
+          <div>
+            <div style={{ width:28, height:3, borderRadius:2, background:T.gold, marginBottom:8 }} />
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Activity & History</div>
+          </div>
+        </button>
+        {/* Privacy & data center */}
+        <button onClick={() => setMorePage("privacy-center")}
+          style={{ width:"100%", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
+          <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:"50%", right:14, transform:"translateY(-50%)" }} />
+          <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <Eye size={18} color={T.ink} />
+          </div>
+          <div>
+            <div style={{ width:28, height:3, borderRadius:2, background:T.gold, marginBottom:8 }} />
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Privacy & Data</div>
+          </div>
+        </button>
+        {/* Creator & token safety */}
+        <button onClick={() => setMorePage("creator-safety")}
+          style={{ width:"100%", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
+          <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:"50%", right:14, transform:"translateY(-50%)" }} />
+          <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <ShieldCheck size={18} color={T.ink} />
+          </div>
+          <div>
+            <div style={{ width:28, height:3, borderRadius:2, background:T.gold, marginBottom:8 }} />
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Creator & Token Safety</div>
+          </div>
+        </button>
         {/* Logout */}
         <button onClick={() => onLogoutConfirm && onLogoutConfirm()}
           style={{ width:"100%", background:"rgba(176,96,74,0.08)", border:"1px solid rgba(176,96,74,0.25)", borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
@@ -6832,6 +6868,73 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     </button>
   );
 
+  if (morePage === "privacy-center") return (
+    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Privacy & Data" subtitle="Control how RainX uses, stores and exposes your information">
+      <div style={{ background:PREF_BG, minHeight:"100%", padding:"16px 16px 28px" }}>
+        <LightSection title="Privacy controls">
+          <LightToggleRow icon={Eye} title="Profile discoverable" subtitle="Allow your profile to appear in search and suggestions" prefKey="profileDiscoverable" />
+          <LightDivider />
+          <LightToggleRow icon={EyeOff} title="Activity status" subtitle="Hide your active status from other users" prefKey="activityStatus" defaultValue={false} />
+          <LightDivider />
+          <LightToggleRow icon={MessageCircle} title="Read receipts" subtitle="Control whether message read status is shared" prefKey="readReceipts" />
+          <LightDivider />
+          <LightRow icon={Users2} title="Blocked & muted users" subtitle="Manage accounts you no longer want to interact with" onPress={()=>setSettingsSheet("blockedUsers")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={Lock} title="Messaging privacy" subtitle="Choose who can message you and send requests" onPress={()=>setSettingsSheet("messageWho")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+        </LightSection>
+        <LightSection title="Data & personalization">
+          <LightToggleRow icon={Users2} title="Personalized recommendations" subtitle="Use activity to improve people, market and creator suggestions" prefKey="personalizedSuggestions" />
+          <LightDivider />
+          <LightToggleRow icon={Activity} title="Analytics" subtitle="Allow optional product analytics" prefKey="analyticsCookies" defaultValue={false} />
+          <LightDivider />
+          <LightToggleRow icon={Bell} title="Marketing updates" subtitle="Allow optional promotional and creator updates" prefKey="marketingNotifications" defaultValue={false} />
+          <LightDivider />
+          <LightRow icon={Download} title="Download your data" subtitle="Export available local preferences now; full account export needs backend support" onPress={()=>setSettingsSheet("downloadData")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+        </LightSection>
+        <LightSection title="Data lifecycle">
+          <LightRow icon={Database} title="Data deletion request" subtitle="Request deletion of eligible account data" onPress={()=>alert("Backend required: authenticated data-deletion request and retention workflow.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED,border:`1px solid ${PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>BACKEND</span>} />
+          <LightDivider />
+          <LightRow icon={Trash2} title="Clear local RainX data" subtitle="Remove locally stored preferences on this device" onPress={()=>{try{Object.keys(localStorage).filter(k=>k.startsWith("rainx-")).forEach(k=>localStorage.removeItem(k));}catch{} setSettingsPrefs({}); setSecurityPrefs({}); alert("Local RainX data cleared.");}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+        </LightSection>
+        <LightSection title="Legal & preferences">
+          <LightRow icon={FileCheck} title="Privacy Policy" subtitle="Review how personal information is handled" onPress={()=>alert("Open the RainX Privacy Policy from the legal centre.")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={FileCheck} title="Terms of Service" subtitle="Review the rules governing RainX use" onPress={()=>alert("Open the RainX Terms from the legal centre.")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={Cookie} title="Cookie & data preferences" subtitle="Manage optional analytics, personalization and marketing" onPress={()=>setSettingsSheet("cookies")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+        </LightSection>
+      </div>
+    </MoreSubScreen>
+  );
+
+  if (morePage === "creator-safety") return (
+    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Creator & Token Safety" subtitle="Security, reporting, moderation and creator controls">
+      <div style={{ background:PREF_BG, minHeight:"100%", padding:"16px 16px 28px" }}>
+        <LightSection title="Creator protection">
+          <LightSecurityToggleRow title="Creator security alerts" subtitle="Permission, payout and creator-account security events" prefKey="creatorSecurityAlerts" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Payout change confirmations" subtitle="Require an extra confirmation before changing payout destinations" prefKey="creatorPayoutConfirmations" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Moderation notifications" subtitle="Notify me about reports, takedowns and review outcomes" prefKey="moderationNotifications" />
+        </LightSection>
+        <LightSection title="Token safety">
+          <LightSecurityToggleRow title="Show token reporting controls" subtitle="Keep report, mute and moderation actions visible on token surfaces" prefKey="tokenReporting" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Risk acknowledgement" subtitle="Require acknowledgement before high-risk creator-token actions" prefKey="tokenRiskAcknowledgement" />
+          <LightDivider />
+          <LightRow icon={ShieldCheck} title="Internal-token risk & disclosure" subtitle="Review the risk language used around creator tokens" onPress={()=>setSecuritySheet("tokenRisk")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={FileCheck} title="Report a token" subtitle="Flag suspected scams, impersonation, manipulation or policy violations" onPress={()=>alert("Backend required: token-report submission and moderation queue.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED,border:`1px solid ${PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>BACKEND</span>} />
+        </LightSection>
+        <LightSection title="Premium creator controls">
+          <LightRow icon={Lock} title="Creator permissions" subtitle="Role-based publishing, moderation and payout permissions" onPress={()=>alert("Backend required: creator role/permission API.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+          <LightDivider />
+          <LightRow icon={Activity} title="Creator activity log" subtitle="Audit creator actions and security events" onPress={()=>alert("Backend required: creator audit-log endpoint.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+        </LightSection>
+      </div>
+    </MoreSubScreen>
+  );
+
   if (morePage === "settings") return (
     <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Settings" subtitle="Privacy & account controls">
       <div style={{ background:PREF_BG, minHeight:"100%", padding:"16px 16px 28px" }}>
@@ -6908,6 +7011,12 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <LightSheetTitle title="Who can message you" desc="Choose who can start a conversation." />
             {[['followers','Followers and people you follow'],['everyone','Anyone on RainX'],['nobody','Nobody']].map(([v,t])=><LightChoice key={v} value={v} current={settingsPrefs.messageWhoKey||'followers'} title={t} onSelect={x=>{persistSettings({messageWho:t,messageWhoKey:x});setSettingsSheet(null)}} />)}
           </>}
+          {settingsSheet === "blockedUsers" && <>
+            <LightSheetTitle title="Blocked & muted users" desc="This local control is ready for the account-level block/mute API." />
+            <LightRow icon={Users2} title="Blocked users" subtitle="Add, remove or review blocked accounts" onPress={()=>alert("Backend required: blocked-users list and mutation endpoints.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+            <LightDivider />
+            <LightRow icon={Bell} title="Muted users" subtitle="Manage accounts whose notifications you no longer want" onPress={()=>alert("Backend required: muted-users list and mutation endpoints.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+          </>}
           {settingsSheet === "dataStorage" && <>
             <LightSheetTitle title="Data & storage" desc="Manage local app data without changing your account." />
             <LightRow icon={ScrollText} title="Clear local preferences" subtitle="Remove locally saved RainX preferences on this device" onPress={()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('rainx-')).forEach(k=>localStorage.removeItem(k));}catch{} setSettingsPrefs({}); setSettingsSheet(null); alert('Local RainX preferences were cleared.');}} right={<ChevronRight size={18} color={PREF_MUTED} />} />
@@ -6942,12 +7051,41 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   if (morePage === "security") return (
     <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Security" subtitle="Protect your account & device">
       <div style={{ background:PREF_BG, minHeight:"100%", padding:"16px 16px 28px" }}>
+        {(() => {
+          const checks = [
+            securityPrefs.pinEnabled,
+            securityPrefs.biometricEnabled,
+            securityPrefs.loginAlerts !== false,
+            securityPrefs.tradeConfirmations !== false,
+            securityPrefs.withdrawConfirmations !== false,
+            securityPrefs.securityEmails !== false,
+          ];
+          const score = Math.round((checks.filter(Boolean).length / checks.length) * 100);
+          const scoreLabel = score >= 85 ? "Strong" : score >= 60 ? "Good" : "Needs attention";
+          return (
+            <div style={{ background:"#FFFFFF", border:`1px solid ${PREF_BORDER}`, borderRadius:16, padding:"15px 16px", marginBottom:16 }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+                <div>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:PREF_TEXT }}>Security Center</div>
+                  <div style={{ fontSize:11, color:PREF_MUTED, marginTop:3 }}>Account protection score · {scoreLabel}</div>
+                </div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:900, fontSize:20, color:score >= 85 ? "#1A7A50" : score >= 60 ? "#A87500" : "#C0392B" }}>{score}%</div>
+              </div>
+              <div style={{ height:7, borderRadius:8, background:"#EEF1F3", overflow:"hidden", marginTop:12 }}>
+                <div style={{ height:"100%", width:`${score}%`, background:PREF_YELLOW, borderRadius:8 }} />
+              </div>
+              <button onClick={()=>setSecuritySheet("checkup")} style={{ marginTop:12, width:"100%", border:`1px solid ${PREF_BORDER}`, background:"#FFFFFF", borderRadius:10, padding:"9px 12px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:11.5, color:PREF_TEXT, cursor:"pointer" }}>Run security checkup</button>
+            </div>
+          );
+        })()}
         <LightSection title="Sign-in security">
           <LightRow icon={Key} title="Change Password" subtitle="Update your account password" onPress={async()=>{const {error}=await supabase.auth.resetPasswordForEmail(account?.email||""); if(!error) alert("Password reset link sent to your email."); else alert("Could not send reset email. Try again.");}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
           <LightDivider />
-          <LightRow icon={ShieldCheck} title="Two-Step Authentication" subtitle="Add an extra layer of protection to your account" onPress={()=>alert("2FA setup is coming soon. Check back for updates.")} right={<span style={{fontSize:10.5,fontWeight:800,color:PREF_MUTED,border:`1px solid ${PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>SOON</span>} />
+          <LightRow icon={ShieldCheck} title="Two-Step Authentication (2FA)" subtitle={securityPrefs.twoFactorEnabled ? "2FA is enabled for this account" : "Add an authenticator app or verified factor"} onPress={()=>setSecuritySheet("twoFactor")} right={<span style={{fontSize:10.5,fontWeight:800,color:securityPrefs.twoFactorEnabled?"#1A7A50":PREF_MUTED,border:`1px solid ${securityPrefs.twoFactorEnabled?"#B9DCCB":PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>{securityPrefs.twoFactorEnabled?"ENABLED":"BACKEND"}</span>} />
           <LightDivider />
-          <LightRow icon={Smartphone} title="Phone Number" subtitle="Add a phone number for account recovery" onPress={()=>alert("Phone verification is coming soon.")} right={<span style={{fontSize:10.5,fontWeight:800,color:PREF_MUTED,border:`1px solid ${PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>SOON</span>} />
+          <LightRow icon={Smartphone} title="Phone & recovery methods" subtitle="Manage verified phone numbers and recovery factors" onPress={()=>setSecuritySheet("recovery")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={Activity} title="Login history" subtitle="Review sign-ins, devices, locations and security events" onPress={()=>setSecuritySheet("loginHistory")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
         </LightSection>
 
         <LightSection title="Device security">
@@ -6976,6 +7114,24 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           <LightRow icon={ShieldCheck} title="Security checkup" subtitle="Review your account protection settings" onPress={()=>setSecuritySheet("checkup")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
         </LightSection>
 
+        <LightSection title="Suspicious activity & protection">
+          <LightSecurityToggleRow title="Suspicious activity alerts" subtitle="Warn me about unusual sign-ins and high-risk account activity" prefKey="suspiciousActivityAlerts" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Require confirmation for sensitive actions" subtitle="Add an extra confirmation before security or wallet changes" prefKey="sensitiveActionConfirmations" />
+          <LightDivider />
+          <LightRow icon={ShieldCheck} title="Report a security issue" subtitle="Open the security-report flow for a suspected compromise" onPress={()=>setSecuritySheet("reportSecurity")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+        </LightSection>
+
+        <LightSection title="Creator Space security">
+          <LightSecurityToggleRow title="Creator security alerts" subtitle="Notify me about creator-space permission and payout changes" prefKey="creatorSecurityAlerts" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Token reporting reminders" subtitle="Show reporting and moderation actions on token pages" prefKey="tokenReporting" />
+          <LightDivider />
+          <LightRow icon={ShieldCheck} title="Token risk & disclosure" subtitle="Review internal-token risk warnings before creator actions" onPress={()=>setSecuritySheet("tokenRisk")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={Lock} title="Premium creator controls" subtitle="Creator permissions, payout protection and moderation access" onPress={()=>setSecuritySheet("creatorControls")} right={<span style={{fontSize:10.5,fontWeight:800,color:PREF_MUTED,border:`1px solid ${PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>BACKEND</span>} />
+        </LightSection>
+
         <LightSection title="Account status & control">
           <LightRow icon={UserX} title="Deactivate account" subtitle="Temporarily hide your account and sign you out" right={<LightToggle danger on={!!securityPrefs.deactivated} onChange={()=>{if(securityPrefs.deactivated){persistSecurity({deactivated:false});return;}if(window.confirm("Deactivate your RainX account on this device? You can reactivate later.")){persistSecurity({deactivated:true});onLogout?.();}}} />} />
           <LightDivider />
@@ -6985,6 +7141,49 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         </LightSection>
 
         {securitySheet && <LightSheet onClose={()=>setSecuritySheet(null)}>
+          {securitySheet === "twoFactor" && <>
+            <LightSheetTitle title="Two-Step Authentication" desc="Backend registration is required before 2FA can protect the account. This screen is ready for the authenticated setup flow." />
+            <div style={{background:"#FFF8E5",border:"1px solid #EAD28A",borderRadius:12,padding:"12px 13px",fontSize:11,color:"#765B00",lineHeight:1.5,marginBottom:12}}>UI is ready; the server must issue and verify the authenticator secret, recovery codes and challenge before enabling the account flag.</div>
+            <LightRow icon={ShieldCheck} title="Authenticator app" subtitle="Register TOTP and verify a one-time code" onPress={()=>alert("Backend required: TOTP enrollment endpoint and verification.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+            <LightDivider />
+            <LightRow icon={FileText} title="Recovery codes" subtitle="Generate and rotate one-time recovery codes" onPress={()=>alert("Backend required: secure recovery-code generation.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+          </>}
+          {securitySheet === "recovery" && <>
+            <LightSheetTitle title="Recovery methods" desc="Keep at least two trusted ways to regain access." />
+            <LightRow icon={Mail} title="Account email" subtitle={account?.email || "Not available"} right={<span style={{fontSize:10,fontWeight:800,color:"#1A7A50"}}>VERIFIED</span>} />
+            <LightDivider />
+            <LightRow icon={Smartphone} title="Verified phone" subtitle="Add and verify a recovery phone number" onPress={()=>alert("Backend required: phone verification and recovery-factor storage.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+            <LightDivider />
+            <LightRow icon={Key} title="Recovery codes" subtitle="One-time codes for account recovery" onPress={()=>alert("Backend required: recovery-code generation.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+          </>}
+          {securitySheet === "loginHistory" && <>
+            <LightSheetTitle title="Login history" desc="Recent authentication events should be loaded from the server for a complete audit trail." />
+            <div style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:14,padding:"13px 14px",display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+              <LightIcon Icon={Smartphone}/>
+              <div style={{flex:1}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>Current session</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>This device · active now</div></div>
+              <span style={{fontSize:10,color:"#1A7A50",fontWeight:800}}>ACTIVE</span>
+            </div>
+            <div style={{background:"#FFF8E5",border:"1px solid #EAD28A",borderRadius:12,padding:"11px 12px",fontSize:10.8,color:"#765B00",lineHeight:1.5}}>Backend required for IP, approximate location, device fingerprint, timestamp, sign-in method and revoke-session history.</div>
+          </>}
+          {securitySheet === "reportSecurity" && <>
+            <LightSheetTitle title="Report a security issue" desc="Use the authenticated security-report endpoint when this flow is wired to the backend." />
+            <LightRow icon={ShieldCheck} title="Account may be compromised" subtitle="Start an urgent account-security review" onPress={()=>alert("Backend required: authenticated security incident/report endpoint.")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+            <LightDivider />
+            <LightRow icon={Mail} title="Contact security support" subtitle="Send a protected security report with account context" onPress={()=>alert("Backend required: secure support/report submission.")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          </>}
+          {securitySheet === "tokenRisk" && <>
+            <LightSheetTitle title="Internal-token risk & disclosure" desc="Creator tokens can carry market, liquidity, smart-contract and loss risks." />
+            <div style={{background:"#FFF4F4",border:"1px solid #F2B8B8",borderRadius:13,padding:"12px 13px",fontSize:11,color:"#8E2A2A",lineHeight:1.55,marginBottom:12}}>Treat every creator token as high risk until verified. Do not present internal-token balances or creator projections as guaranteed value. Final risk disclosures and acknowledgement records must be enforced server-side.</div>
+            <LightSecurityToggleRow title="Require risk acknowledgement" subtitle="Require a user acknowledgement before sensitive creator-token actions" prefKey="tokenRiskAcknowledgement" />
+          </>}
+          {securitySheet === "creatorControls" && <>
+            <LightSheetTitle title="Premium creator controls" desc="Permissions that should be backed by server-side role and entitlement checks." />
+            <LightRow icon={Lock} title="Creator permissions" subtitle="Manage who can publish, moderate and change creator settings" onPress={()=>alert("Backend required: role/permission management.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+            <LightDivider />
+            <LightRow icon={Wallet} title="Payout protection" subtitle="Require verification before payout destination changes" onPress={()=>alert("Backend required: payout-change verification.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+            <LightDivider />
+            <LightRow icon={FileCheck} title="Moderation & reports" subtitle="Review token reports, takedowns and creator disputes" onPress={()=>alert("Backend required: moderation/report queue.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+          </>}
           {securitySheet === "pin" && <>
             <LightSheetTitle title={securityPrefs.pinEnabled?"Change RainX PIN":"Set up RainX PIN"} desc="Your PIN is hashed before it is stored on this device." />
             <input value={pinValue} onChange={e=>setPinValue(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" type="password" placeholder="New PIN" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",color:PREF_TEXT,fontFamily:FONT_HEAD,fontSize:15,outline:"none",marginBottom:10}} />
@@ -7134,8 +7333,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       </MoreSection>
 
       <MoreSection title="More">
-        <MoreRow icon={ScrollText} title="Trade History" onPress={() => setMorePage("history")} />
-        <MoreRowDivider />
         <MoreRow
           icon={Zap}
           title="Scalping"
@@ -7143,8 +7340,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           badgeColor={hasAccess(entitlement.tier, "weekly") ? T.sage : T.muted}
           onPress={() => setMorePage("scalping")}
         />
-        <MoreRowDivider />
-        <MoreRow icon={Bell} title="Notifications" subtitle="Alerts, sounds, categories" onPress={() => setMorePage("notifications")} />
         <MoreRowDivider />
         {appInstalled
           ? <MoreRow icon={Smartphone} title="App Installed" subtitle="RainX is on your home screen" />
