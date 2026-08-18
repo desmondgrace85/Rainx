@@ -6427,6 +6427,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               full_name: fullName,
               username: username,
               avatar_url: avatarUrl,
+              badge: verification || "none",
+              is_official: verification === "official",
+              is_admin: false,
             }}
             onOpenProfile={() => {}}
             onDmUser={() => {}}
