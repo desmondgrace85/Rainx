@@ -16,16 +16,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      # pnpm MUST be installed before setup-node when package.json declares
+      # a packageManager field; setup-node may otherwise try to locate pnpm
+      # for its automatic cache and fail before pnpm exists.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.28.0
+          run_install: false
+
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: '24'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.28.0
-          run_install: false
+          cache: pnpm
 
       - name: Verify pnpm
         run: pnpm --version
@@ -35,6 +39,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
@@ -56,11 +61,10 @@ jobs:
         working-directory: artifacts/rainx
         run: |
           test -f google-services.json
-          test -f android/build.gradle
           test -d android/app
           cp google-services.json android/app/google-services.json
           test -f android/app/google-services.json
-          grep -q 'com.rainx.app' android/app/google-services.json
+          grep -q '"package_name": "com.rainx.app"' android/app/google-services.json
 
       - name: Sync Capacitor Android
         working-directory: artifacts/rainx
@@ -68,16 +72,14 @@ jobs:
 
       - name: Verify Android project and Firebase
         run: |
-          test -f artifacts/rainx/android/gradlew
+          test -x artifacts/rainx/android/gradlew || chmod +x artifacts/rainx/android/gradlew
           test -f artifacts/rainx/android/gradle/wrapper/gradle-wrapper.properties
           test -f artifacts/rainx/android/app/google-services.json
-          grep -q 'com.rainx.app' artifacts/rainx/android/app/google-services.json
+          grep -q '"package_name": "com.rainx.app"' artifacts/rainx/android/app/google-services.json
 
       - name: Build APK
         working-directory: artifacts/rainx/android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Verify APK
         run: test -s artifacts/rainx/android/app/build/outputs/apk/debug/app-debug.apk
