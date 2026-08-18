@@ -6118,11 +6118,11 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       <div style={{ padding:"8px 16px 0", display:"grid", gridTemplateColumns:"repeat(2, minmax(0, 1fr))", gap:12 }}>
         {/* Profile + Security row */}
         {[
-          { label:"Profile", icon:Users2, page:"profile" },
+          { label:"Profile", icon:Users2, page:"profile", wide:true },
           { label:"Security", icon:ShieldCheck, page:"security" },
         ].map(item => (
           <button key={item.label} onClick={() => setMorePage(item.page)}
-            style={{ width:"100%", minHeight:118, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", gap:8, position:"relative" }}>
+            style={{ width:"100%", minHeight:item.wide ? 100 : 110, gridColumn:item.wide ? "1 / -1" : "auto", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:item.wide ? "16px" : "16px 14px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", gap:6, position:"relative" }}>
             <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:14, right:14 }} />
             <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
               <item.icon size={18} color={T.ink} />
@@ -6134,7 +6134,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
         {/* Appearance — standalone, before Settings */}
         <button onClick={() => setAppearanceOpen(true)}
-          style={{ width:"100%", minHeight:118, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:8, position:"relative" }}>
+          style={{ width:"100%", minHeight:110, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"16px 14px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:6, position:"relative" }}>
           <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:14, right:14 }} />
           <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <Palette size={18} color={T.ink} />
@@ -6145,7 +6145,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
         {/* Settings */}
         <button onClick={() => setMorePage("settings")}
-          style={{ width:"100%", minHeight:118, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:8, position:"relative" }}>
+          style={{ width:"100%", minHeight:110, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"16px 14px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:6, position:"relative" }}>
           <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:14, right:14 }} />
           <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <Settings size={18} color={T.ink} />
@@ -6156,7 +6156,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
         {/* Account activity & history */}
         <button onClick={() => setMorePage("history")}
-          style={{ width:"100%", minHeight:118, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:8, position:"relative" }}>
+          style={{ width:"100%", minHeight:110, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"16px 14px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:6, position:"relative" }}>
           <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:14, right:14 }} />
           <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <Activity size={18} color={T.ink} />
@@ -6167,7 +6167,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
         {/* Privacy & data center */}
         <button onClick={() => setMorePage("privacy-center")}
-          style={{ width:"100%", minHeight:118, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:8, position:"relative" }}>
+          style={{ width:"100%", minHeight:110, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"16px 14px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:6, position:"relative" }}>
           <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:14, right:14 }} />
           <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <Eye size={18} color={T.ink} />
@@ -6178,7 +6178,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
         {/* Creator & token safety */}
         <button onClick={() => setMorePage("creator-safety")}
-          style={{ width:"100%", minHeight:118, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:8, position:"relative" }}>
+          style={{ width:"100%", minHeight:110, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"16px 14px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:6, position:"relative" }}>
           <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:14, right:14 }} />
           <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <ShieldCheck size={18} color={T.ink} />
@@ -6189,7 +6189,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
         {/* Logout */}
         <button onClick={() => onLogoutConfirm && onLogoutConfirm()}
-          style={{ width:"100%", minHeight:118, background:"rgba(176,96,74,0.08)", border:"1px solid rgba(176,96,74,0.25)", borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:8, position:"relative" }}>
+          style={{ width:"100%", minHeight:100, gridColumn:"1 / -1", background:"rgba(176,96,74,0.08)", border:"1px solid rgba(176,96,74,0.25)", borderRadius:20, padding:"16px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:6, position:"relative" }}>
           <ChevronRight size={13} color={T.rust} style={{ position:"absolute", top:14, right:14 }} />
           <div style={{ width:40, height:40, borderRadius:"50%", background:"rgba(176,96,74,0.15)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <LogOut size={18} color={T.rust} />
