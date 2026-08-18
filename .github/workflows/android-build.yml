@@ -1,0 +1,62 @@
+name: Build RainX Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10.15.1
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build RainX only
+        run: pnpm --filter @workspace/rainx build
+
+      - name: Verify RainX build
+        run: test -f artifacts/rainx/dist/public/index.html
+
+      - name: Prepare Capacitor Android
+        run: pnpm --filter @workspace/rainx cap:prepare
+
+      - name: Verify Android project
+        run: |
+          test -f artifacts/rainx/android/gradlew
+          test -f artifacts/rainx/android/gradle/wrapper/gradle-wrapper.properties
+          test -d artifacts/rainx/android/app
+
+      - name: Build APK
+        working-directory: artifacts/rainx/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RainX-Android-debug
+          path: artifacts/rainx/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
