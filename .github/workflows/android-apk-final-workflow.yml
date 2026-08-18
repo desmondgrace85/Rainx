@@ -1,0 +1,111 @@
+name: Build RainX Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+          run_install: false
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install web dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build web app
+        run: pnpm build
+
+      - name: Locate web build
+        shell: bash
+        run: |
+          set -e
+          if [ -f dist/index.html ]; then
+            echo "WEB_DIST=dist" >> "$GITHUB_ENV"
+          elif [ -f build/index.html ]; then
+            echo "WEB_DIST=build" >> "$GITHUB_ENV"
+          elif [ -f artifacts/rainx/dist/index.html ]; then
+            echo "WEB_DIST=artifacts/rainx/dist" >> "$GITHUB_ENV"
+          elif [ -f artifacts/rainx/build/index.html ]; then
+            echo "WEB_DIST=artifacts/rainx/build" >> "$GITHUB_ENV"
+          else
+            echo "No web build containing index.html was found."
+            find . -maxdepth 5 -name index.html -print
+            exit 1
+          fi
+
+      - name: Create isolated Capacitor project
+        shell: bash
+        run: |
+          set -e
+          rm -rf artifacts/rainx/android artifacts/rainx/www
+          mkdir -p artifacts/rainx/www
+          cp -R "$WEB_DIST"/. artifacts/rainx/www/
+
+          cat > artifacts/rainx/package.json <<'EOF'
+          {
+            "name": "rainx-android",
+            "private": true,
+            "scripts": {
+              "cap": "cap"
+            }
+          }
+          EOF
+
+          cat > artifacts/rainx/capacitor.config.json <<'EOF'
+          {
+            "appId": "com.rainx.app",
+            "appName": "RainX",
+            "webDir": "www",
+            "bundledWebRuntime": false
+          }
+          EOF
+
+          cd artifacts/rainx
+          npm install --no-package-lock --no-save             @capacitor/core@7.4.3             @capacitor/cli@7.4.3             @capacitor/android@7.4.3
+
+          npx cap add android
+          npx cap sync android
+
+      - name: Verify Capacitor Android project
+        working-directory: artifacts/rainx/android
+        run: |
+          test -f gradlew
+          test -f gradle/wrapper/gradle-wrapper.properties
+          test -d app
+
+      - name: Build APK
+        working-directory: artifacts/rainx/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RainX-Android-debug
+          path: artifacts/rainx/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
