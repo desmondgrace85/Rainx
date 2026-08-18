@@ -5977,7 +5977,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
   // Inline verified badge — same circular checkmark shape as community, colour-coded by tier
   const VerifBadgeIcon = ({ size = 16 }) =>
-    verification === "golden" ? (
+    verification === "official" || verification === "golden" ? (
       <svg width={size} height={size} viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
         <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#F4D35E" />
       </svg>
@@ -6011,6 +6011,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [profileComposerPosting, setProfileComposerPosting] = useState(false);
   const [showProfileFabModal, setShowProfileFabModal] = useState(false);
   const [showYearPicker, setShowYearPicker] = useState(false);
+  const [profileTab, setProfileTab] = useState("posts");
   useEffect(() => {
     if (!account?.id || morePage !== "profile") return;
     supabase.from("profiles").select("full_name,location,date_of_birth,cover_url").eq("id",account.id).single().then(({data})=>{
@@ -6026,7 +6027,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           const { data: allComments } = await supabase.from("post_comments").select("post_id").in("post_id", rows.map(r => r.id));
           const cCounts = {};
           (allComments || []).forEach(c => { cCounts[c.post_id] = (cCounts[c.post_id] || 0) + 1; });
-          rows = rows.map(r => ({ ...r, comment_count: cCounts[r.id] || r.comment_count || 0 }));
+          rows = rows.map(r => ({ ...r, comments_count: cCounts[r.id] || 0 }));
         }
         setProfilePosts(rows);
         setProfilePostsLoading(false);
@@ -6395,9 +6396,17 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           )}
         </div>
 
-        {/* ── Posts header ── */}
-        <div style={{ borderTop:`1px solid ${T.cardBorder}`, padding:"12px 16px 0" }}>
-          <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper, borderBottom:`2px solid ${T.gold}`, paddingBottom:10, display:"inline-block" }}>Posts</span>
+        {/* ── Posts / Reposts ── */}
+        <div style={{ borderTop:`1px solid ${T.cardBorder}`, display:"grid", gridTemplateColumns:"1fr 1fr" }}>
+          {[
+            { key:"posts", label:"Posts" },
+            { key:"reposts", label:"Reposts" },
+          ].map(({ key, label }) => (
+            <button key={key} onClick={() => setProfileTab(key)}
+              style={{ background:"none", border:"none", color:profileTab === key ? T.paper : T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, padding:"13px 8px 11px", cursor:"pointer", borderBottom:profileTab === key ? `2px solid ${T.gold}` : "2px solid transparent" }}>
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* ── Profile Composer FAB ── */}
@@ -6428,7 +6437,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           <div style={{ fontSize:13, color:T.muted, padding:"28px 0", textAlign:"center" }}>No posts yet.</div>
         ) : (
           <CommunityProfileFeed
-            posts={profilePosts}
+            posts={profilePosts.filter(p => profileTab === "reposts" ? !!p.repost_of_post_id : !p.repost_of_post_id)}
             account={account}
             themeTokens={T}
             profileEntry={{

@@ -1187,6 +1187,10 @@ function GiftIconButton({ profile, account }) {
 
 function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeData, onToggleLike, repostData, onToggleRepost, onOpenProfile, onOpenPost, onDelete, onHidePost, onEdit, onReport, onActivityOpen, onDmUser, forceOpen, onOpened }) {
   const [showComments, setShowComments] = useState(false);
+  // The feed item and the post whose comments are open are separate concepts.
+  // For a repost, comments belong to the repost wrapper; the quoted original
+  // is only opened when the quoted post itself is tapped.
+  const [detailPostId, setDetailPostId] = useState(post.id);
   const [showRepostSheet, setShowRepostSheet] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -1201,8 +1205,11 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
   const [originalProfile, setOriginalProfile] = useState(post._originalProfile || null);
   const [originalLikeData, setOriginalLikeData] = useState({});
   const [originalRepostData, setOriginalRepostData] = useState({});
-  const displayPost = post.repost_of_post_id && originalPost ? originalPost : post;
-  const displayProfile = post.repost_of_post_id && originalProfile ? originalProfile : profile;
+  const showingQuotedOriginal = Boolean(
+    post.repost_of_post_id && detailPostId === post.repost_of_post_id && originalPost
+  );
+  const displayPost = showingQuotedOriginal ? originalPost : post;
+  const displayProfile = showingQuotedOriginal ? originalProfile : profile;
   const displayPostId = displayPost.id;
   const displayAuthorId = displayPost.user_id;
   const displayIsOwn = displayAuthorId === account.id;
@@ -1307,6 +1314,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
   // Auto-open the post detail when a notification targets this post.
   useEffect(() => {
     if (forceOpen && !showComments) {
+      setDetailPostId(post.id);
       setShowComments(true);
       if (typeof onOpened === "function") onOpened();
     }
@@ -1325,7 +1333,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
   };
 
   return (
-    <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.cardBorder}`, animation: "fadeInUp 0.25s ease" }}>
+    <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.cardBorder}` }}>
       <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
       {/* Avatar column */}
       <button onClick={() => onOpenProfile(post.user_id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
@@ -1386,7 +1394,12 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       {post.repost_of_post_id ? (
         <button
           type="button"
-          onClick={() => originalPost?.id && setShowComments(true)}
+          onClick={() => {
+            if (originalPost?.id) {
+              setDetailPostId(originalPost.id);
+              setShowComments(true);
+            }
+          }}
           style={{ width:"100%", marginTop:10, padding:0, textAlign:"left", background:"none", border:"none", cursor:originalPost?.id ? "pointer" : "default" }}
         >
           <div style={{ border:`1px solid ${T.cardBorder}`, borderRadius:18, padding:"14px 14px 12px", overflow:"hidden", background:T.card }}>
@@ -1462,7 +1475,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
         <button onClick={() => onToggleLike(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: feedLikeData.likedByMe ? T.rust : ash }}>
           <Heart size={16} strokeWidth={2} fill={feedLikeData.likedByMe ? T.rust : "none"} style={feedLikeData.likedByMe ? { animation: "likePulse 0.3s ease" } : {}} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(feedLikeData.count)}</span>
         </button>
-        <button onClick={() => setShowComments(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ash }}>
+        <button onClick={() => { setDetailPostId(post.id); setShowComments(true); }} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ash }}>
           <MessageCircle size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(feedCommentCount)}</span>
         </button>
         <button onClick={() => setShowRepostSheet(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: feedRepostData.repostedByMe ? T.sage : ash }}>
@@ -1514,11 +1527,50 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
                   <Badge isAdmin={displayProfile?.is_admin} badge={displayProfile?.badge} isPro={displayProfile?.isPro} />
                 </div>
                 {(displayProfile?.username || displayProfile?.display_name) && <span style={{ fontSize: 12, color: T.muted }}>@{displayProfile?.username || displayProfile?.display_name}</span>}
-                <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 10, lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(displayPost.text, onOpenProfile)}</div>
-                {displayPost.images?.length > 0 && (
-                  <div style={{ marginTop: 10, borderRadius: 14, overflow: "hidden" }}>
-                    <img src={displayPost.images[0]} alt="" style={{ width: "100%", display: "block" }} />
+                {post.repost_of_post_id && !showingQuotedOriginal ? (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ fontSize: 12, color: T.muted, marginBottom: 7 }}>Reposted</div>
+                    <button
+                      type="button"
+                      onClick={() => originalPost?.id && setDetailPostId(originalPost.id)}
+                      style={{ width: "100%", textAlign: "left", background: "transparent", border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: 12, cursor: originalPost?.id ? "pointer" : "default" }}
+                    >
+                      {originalPost ? (
+                        <>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                            <Avatar name={originalProfile?.display_name || originalProfile?.full_name || originalProfile?.username} avatarUrl={originalProfile?.avatar_url} size={30} />
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <span style={{ fontSize: 12.5, fontWeight: 800, color: T.paper, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{originalProfile?.full_name || originalProfile?.display_name || originalProfile?.username || "User"}</span>
+                                <Badge isAdmin={originalProfile?.is_admin} badge={originalProfile?.badge} isPro={originalProfile?.isPro} />
+                              </div>
+                              <div style={{ fontSize: 10.5, color: T.muted }}>@{originalProfile?.username || originalProfile?.display_name || "user"}</div>
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 14, fontWeight: 500, color: T.paper, lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif" }}>
+                            {renderTextWithTags(originalPost.text || "", onOpenProfile)}
+                          </div>
+                          {originalPost.images?.length > 0 && (
+                            <div style={{ marginTop: 9, borderRadius: 10, overflow: "hidden" }}>
+                              <img src={originalPost.images[0]} alt="" style={{ width: "100%", maxHeight: 220, objectFit: "cover", display: "block" }} />
+                            </div>
+                          )}
+                          <div style={{ fontSize: 10.5, color: T.muted, marginTop: 8 }}>Tap to open original post</div>
+                        </>
+                      ) : (
+                        <div style={{ color: T.muted, fontSize: 12 }}>Loading original post…</div>
+                      )}
+                    </button>
                   </div>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 10, lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(displayPost.text, onOpenProfile)}</div>
+                    {displayPost.images?.length > 0 && (
+                      <div style={{ marginTop: 10, borderRadius: 14, overflow: "hidden" }}>
+                        <img src={displayPost.images[0]} alt="" style={{ width: "100%", display: "block" }} />
+                      </div>
+                    )}
+                  </>
                 )}
                 <div style={{ fontSize: 12, color: T.muted, marginTop: 10 }}>{timeAgo(displayPost.created_at)}{displayPost.location ? ` · ${displayPost.location}` : ""}</div>
               </div>
