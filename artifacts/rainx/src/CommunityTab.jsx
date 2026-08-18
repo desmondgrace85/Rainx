@@ -4,7 +4,7 @@ import CommunityChat from "./CommunityChat";
 const BASE_URL = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
 import {
   Send, Trash2, Edit3, X, BadgeCheck, Heart, Eye, MessageCircle, Repeat2, MessageSquareDashed,
-  UserPlus, UserCheck, ArrowLeft, Bell, MoreHorizontal, Plus, Hash, AtSign, Flag, ChevronRight, MessageSquare, Search, Bookmark, Share2,
+  UserPlus, UserCheck, ArrowLeft, Bell, MoreHorizontal, Plus, Hash, AtSign, Flag, ChevronRight, MessageSquare, Search, Bookmark, Share2, ChevronDown,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 
@@ -954,7 +954,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
       <div style={{ position:"relative", display:"flex", alignItems:"center", padding:"10px 2px 9px", borderBottom:`1px solid ${T.cardBorder}` }}>
         <button onClick={() => setShowCommentSort(v => !v)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", color:T.paper, fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, cursor:"pointer", padding:0 }}>
           <span>{commentSort === "recent" ? "Most recent" : commentSort === "oldest" ? "Oldest" : "Most relevant"}</span>
-          <span style={{ fontSize:16, lineHeight:1, transform:showCommentSort ? "rotate(180deg)" : "none", transition:"transform .18s" }}>⌄</span>
+          <ChevronDown size={15} strokeWidth={2.4} style={{ transform:showCommentSort ? "rotate(180deg)" : "none", transition:"transform .18s" }} />
         </button>
         {showCommentSort && (
           <div style={{ position:"absolute", top:"calc(100% + 5px)", left:0, zIndex:30, minWidth:170, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, boxShadow:"0 12px 30px rgba(0,0,0,.24)", overflow:"hidden" }}>
@@ -984,10 +984,10 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
               rows={1}
               maxLength={300}
               data-rainx-comment-input="true"
-              style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: "8px 10px", fontFamily: FONT_BODY, fontSize: 13, resize: "none" }}
+              style={{ width: "100%", minHeight: 40, boxSizing: "border-box", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 20, color: T.paper, padding: "10px 14px", fontFamily: FONT_BODY, fontSize: 13, lineHeight: 1.35, resize: "none", outline: "none", transition: "border-color .18s ease, box-shadow .18s ease, background .18s ease" }}
             />
           </div>
-          <button onClick={handleSubmit} disabled={!text.trim()} style={{ background: T.goldGradient, color: T.ink, border: "none", borderRadius: 8, padding: "8px 14px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, cursor: "pointer", flexShrink: 0, opacity: text.trim() ? 1 : 0.5 }}>{replyTo ? "Reply" : "Post"}</button>
+          <button onClick={handleSubmit} disabled={!text.trim()} style={{ minWidth: 58, height: 40, background: T.goldGradient, color: T.ink, border: "none", borderRadius: 20, padding: "0 15px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 11.5, cursor: text.trim() ? "pointer" : "default", flexShrink: 0, opacity: text.trim() ? 1 : 0.45, transform: "translateZ(0)", boxShadow: text.trim() ? "0 4px 12px rgba(0,0,0,.16)" : "none", transition: "transform .12s ease, box-shadow .18s ease, opacity .18s ease" }} onPointerDown={(e) => { if (text.trim()) e.currentTarget.style.transform = "scale(.96)"; }} onPointerUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }} onPointerCancel={(e) => { e.currentTarget.style.transform = "scale(1)"; }}>{replyTo ? "Reply" : "Post"}</button>
         </div>
       </div>
     </div>
@@ -1188,6 +1188,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           <span><strong style={{ color:T.paper }}>{post._repostActorProfile?.full_name || post._repostActorProfile?.display_name || post._repostActorProfile?.username || "Someone"}</strong> reposted</span>
         </div>
       )}
+      <div style={post._isRepost ? { border:`1px solid ${T.cardBorder}`, borderRadius:16, padding:"12px", background:`${T.card}88` } : undefined}>
       <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
       {/* Avatar column */}
       <button onClick={() => onOpenProfile(post.user_id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
@@ -1319,10 +1320,6 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: `1px solid ${T.cardBorder}`, flexShrink: 0 }}>
             <button onClick={() => setShowComments(false)} style={{ background: "none", border: "none", color: T.paper, cursor: "pointer", display: "flex", padding:2 }}><ArrowLeft size={21} /></button>
             <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, flex:1 }}>Post</span>
-            {!isOwn && (
-              <button onClick={toggleFollowUser} style={{ border:`1px solid ${isFollowing ? T.cardBorder : T.gold}`, background:isFollowing ? "transparent" : T.gold, color:isFollowing ? T.paper : T.ink, borderRadius:999, padding:"7px 14px", fontSize:11, fontWeight:800, cursor:"pointer" }}>{isFollowing ? "Following" : "Follow"}</button>
-            )}
-            <button onClick={() => setMenuOpen(true)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", padding:4 }}><MoreHorizontal size={20} /></button>
           </div>
           {/* Scrollable body: post + comments */}
           <div style={{ flex: 1, overflowY: "auto" }}>
@@ -1331,9 +1328,16 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
                 <Avatar name={profile?.display_name} avatarUrl={profile?.avatar_url} size={44} />
               </button>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: T.paper }}>{profile?.full_name || profile?.display_name}</span>
-                  <Badge isAdmin={profile?.is_admin} badge={profile?.badge} isPro={profile?.isPro} />
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:5, minWidth:0, flex:1 }}>
+                    <span style={{ fontSize:15, fontWeight:700, color:T.paper, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{profile?.full_name || profile?.display_name}</span>
+                    <Badge isAdmin={profile?.is_admin} badge={profile?.badge} isPro={profile?.isPro} />
+                    <span style={{ fontSize:11, color:T.muted, whiteSpace:"nowrap" }}>{timeAgo(post.created_at)}</span>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:5, flexShrink:0 }}>
+                    {!isOwn && <button onClick={toggleFollowUser} style={{ border:`1px solid ${isFollowing ? T.cardBorder : T.gold}`, background:isFollowing ? "transparent" : T.gold, color:isFollowing ? T.paper : T.ink, borderRadius:999, padding:"5px 11px", fontSize:10.5, fontWeight:800, cursor:"pointer", transition:"transform .12s ease, opacity .18s ease" }}>{isFollowing ? "Following" : "Follow"}</button>}
+                    <button onClick={() => setMenuOpen(true)} aria-label="Post options" style={{ width:30, height:30, display:"flex", alignItems:"center", justifyContent:"center", background:"transparent", border:"none", color:T.muted, cursor:"pointer", borderRadius:"50%" }}><MoreHorizontal size={18} /></button>
+                  </div>
                 </div>
                 {(profile?.username || profile?.display_name) && <span style={{ fontSize: 12, color: T.muted }}>@{profile?.username || profile?.display_name}</span>}
                 <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 10, lineHeight: 1.5, whiteSpace: "pre-wrap", fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(post.text, onOpenProfile)}</div>
@@ -1371,7 +1375,8 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       )}
 
       </div>{/* end content column */}
-      </div>{/* end post card */}
+      </div>{/* end post row */}
+      </div>{/* end repost frame / post row */}
     </div>
   );
 }
@@ -1612,6 +1617,8 @@ function FollowListModal({ userId, type, onClose, onOpenProfile }) {
 function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState(null);
+  const [reposts, setReposts] = useState([]);
+  const [profileTab, setProfileTab] = useState("posts");
   const [isFollowing, setIsFollowing] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -1648,7 +1655,8 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
       }
       const { data: postRows } = await supabase.from("community_posts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
       const { data: repostRows } = await supabase.from("post_reposts").select("post_id, created_at").eq("user_id", userId).order("created_at", { ascending: false });
-      let profilePosts = postRows || [];
+      const ownPosts = postRows || [];
+      setPosts(ownPosts);
       if ((repostRows || []).length) {
         const repostIds = [...new Set(repostRows.map(r => r.post_id))];
         const { data: originals } = await supabase.from("community_posts").select("*").in("id", repostIds);
@@ -1656,11 +1664,12 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
         const reposted = (repostRows || []).map(r => {
           const original = byId[r.post_id];
           if (!original) return null;
-          return { ...original, _isRepost:true, _originalPostId:original.id, _repostedAt:r.created_at, _feedKey:`repost-${userId}-${original.id}-${r.created_at}` };
+          return { ...original, _isRepost:true, _originalPostId:original.id, _repostedAt:r.created_at, _repostActorId:userId, _repostActorProfile:null, _feedKey:`repost-${userId}-${original.id}-${r.created_at}` };
         }).filter(Boolean);
-        profilePosts = [...profilePosts, ...reposted].sort((a,b) => new Date(b._isRepost ? b._repostedAt : b.created_at) - new Date(a._isRepost ? a._repostedAt : a.created_at));
+        setReposts(reposted);
+      } else {
+        setReposts([]);
       }
-      setPosts(profilePosts);
       const { count: followers } = await supabase.from("follows").select("*", { count: "exact", head: true }).eq("followed_id", userId);
       const { count: following } = await supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", userId);
       setCounts({ followers: followers || 0, following: following || 0 });
@@ -1953,14 +1962,21 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
         )}
       </div>
 
-      {/* ── Posts ── */}
-      <div style={{ borderTop:`1px solid ${T.cardBorder}`, padding:"12px 16px 0" }}>
-        <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper, borderBottom:`2px solid ${T.gold}`, paddingBottom:10, display:"inline-block" }}>Posts</span>
+      {/* ── Posts / Reposts tabs ── */}
+      <div style={{ borderTop:`1px solid ${T.cardBorder}`, display:"flex", alignItems:"stretch" }}>
+        {[{key:"posts",label:"Posts",Icon:MessageSquare},{key:"reposts",label:"Reposts",Icon:Repeat2}].map(({key,label,Icon}) => (
+          <button key={key} onClick={() => setProfileTab(key)} style={{ flex:1, position:"relative", display:"flex", alignItems:"center", justifyContent:"center", gap:7, padding:"13px 12px 12px", background:"none", border:"none", color:profileTab===key ? T.paper : T.muted, fontFamily:FONT_HEAD, fontWeight:profileTab===key ? 800 : 600, fontSize:13, cursor:"pointer" }}>
+            <Icon size={16} strokeWidth={profileTab===key ? 2.4 : 2} /> {label}
+            {profileTab===key && <span style={{ position:"absolute", left:"25%", right:"25%", bottom:0, height:2.5, borderRadius:3, background:T.gold }} />}
+          </button>
+        ))}
       </div>
-      {posts.length === 0 ? (
-        <div style={{ fontSize:13, color:T.muted, padding:"32px 0", textAlign:"center" }}>No posts yet.</div>
-      ) : (
+      {profileTab === "posts" ? (
+        posts.length === 0 ? <div style={{ fontSize:13, color:T.muted, padding:"32px 0", textAlign:"center" }}>No posts yet.</div> :
         <ProfileFeed posts={posts} account={account} profileEntry={profile} onOpenProfile={onOpenProfile} onDmUser={onDmUser} />
+      ) : (
+        reposts.length === 0 ? <div style={{ fontSize:13, color:T.muted, padding:"32px 0", textAlign:"center" }}>No reposts yet.</div> :
+        <ProfileFeed posts={reposts} account={account} profileEntry={profile} onOpenProfile={onOpenProfile} onDmUser={onDmUser} />
       )}
     </div>
   );
