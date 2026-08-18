@@ -1,7 +1,7 @@
 /* RainX Service Worker — Push Notifications + Offline Cache */
 // Keep this unique for deploys, but update adoption is also enforced by
 // index.html with updateViaCache: "none" and an explicit registration.update().
-const CACHE_NAME = "rainx-v2026-08-16-update-adoption-1";
+const CACHE_NAME = "rainx-v2026-08-18-navigation-refresh-1";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
 const presenceByClient = new Map();
 const recentPushIds = new Set();
@@ -111,10 +111,22 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// ── Fetch (network-first for API, cache-first for assets) ──────────────────
+// ── Fetch (network-first; navigation explicitly bypasses browser HTTP cache) ──
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.pathname.startsWith("/api/")) return; // never cache API calls
+
+  // The app shell must always pick up a newly deployed Vite index/chunk graph.
+  // This is especially important for installed PWAs, where an older index can
+  // otherwise keep pointing at the previous production bundle after a deploy.
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(new Request(event.request, { cache: "no-store" }))
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request))
   );
