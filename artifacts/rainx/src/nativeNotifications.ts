@@ -39,7 +39,6 @@ async function registerToken(token: Token, accessToken: string, userId: string) 
     }),
   }).catch(() => {});
 
-  // Keep a lightweight local record so the token is re-sent after a session refresh.
   try { localStorage.setItem(`rainx-native-push-user:${userId}`, token.value); } catch {}
 }
 
@@ -60,10 +59,14 @@ export async function initNativeNotifications() {
       } catch {}
     }),
     PushNotifications.addListener('registration', async (token) => {
-      const { data } = await supabase.auth.getSession();
-      const session = data.session;
-      if (session?.user?.id && session.access_token) {
-        await registerToken(token, session.access_token, session.user.id);
+      try {
+        const { data } = await supabase.auth.getSession();
+        const session = data.session;
+        if (session?.user?.id && session.access_token) {
+          await registerToken(token, session.access_token, session.user.id);
+        }
+      } catch (error) {
+        console.warn('[RainX] native push token registration failed', error);
       }
     }),
     PushNotifications.addListener('registrationError', (error) => {
@@ -89,32 +92,40 @@ export async function initNativeNotifications() {
   ]);
 
   const requestAndRegister = async () => {
-    const { data } = await supabase.auth.getSession();
-    const session = data.session;
-    if (!session?.user?.id) return;
-    const permissions = await PushNotifications.checkPermissions();
-    let receive = permissions.receive;
-    if (receive === 'prompt') {
-      receive = (await PushNotifications.requestPermissions()).receive;
+    try {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+      if (!session?.user?.id) return;
+
+      const permissions = await PushNotifications.checkPermissions();
+      let receive = permissions.receive;
+      if (receive === 'prompt') {
+        receive = (await PushNotifications.requestPermissions()).receive;
+      }
+      if (receive !== 'granted') return;
+
+      if (Capacitor.getPlatform() === 'android') {
+        await PushNotifications.createChannel({
+          id: 'rainx_default',
+          name: 'RainX notifications',
+          description: 'RainX community, messages and trading alerts',
+          importance: 5,
+          visibility: 1,
+          sound: 'default',
+          vibration: true,
+        }).catch(() => {});
+      }
+
+      await PushNotifications.register();
+    } catch (error) {
+      // Push must never be allowed to crash or blank the RainX app.
+      console.warn('[RainX] native push initialization skipped', error);
     }
-    if (receive !== 'granted') return;
-    if (Capacitor.getPlatform() === 'android') {
-      await PushNotifications.createChannel({
-        id: 'rainx_default',
-        name: 'RainX notifications',
-        description: 'RainX community, messages and trading alerts',
-        importance: 5,
-        visibility: 1,
-        sound: 'default',
-        vibration: true,
-      }).catch(() => {});
-    }
-    await PushNotifications.register();
   };
 
   const authSub = supabase.auth.onAuthStateChange((_event, session) => {
     if (session?.user?.id) {
-      setTimeout(() => requestAndRegister(), 0);
+      setTimeout(() => { void requestAndRegister(); }, 0);
     }
   });
 
