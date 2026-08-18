@@ -904,7 +904,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
     const ld = likeData[c.id] || { count: 0, likedByMe: false };
     const childReplies = repliesByParent[c.id] || [];
     return (
-      <div key={c.id} style={{ display: "flex", gap: 8, marginBottom: 10, paddingLeft: 10, borderLeft: `2px solid ${T.cardBorder}` }}>
+      <div key={c.id} style={{ display: "flex", gap: 8, marginBottom: 10, paddingLeft: isReply ? 12 : 0, marginLeft: isReply ? 12 : 0, borderLeft: isReply ? `2px solid ${T.cardBorder}` : "none" }}>
         <button onClick={() => onOpenProfile(c.user_id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
           <Avatar name={p?.display_name} size={isReply ? 22 : 24} avatarUrl={p?.avatar_url} />
         </button>
@@ -961,6 +961,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
               placeholder={replyTo ? `Reply to ${replyTargetName}…` : "Write a comment…"}
               rows={1}
               maxLength={300}
+              data-rainx-comment-input="true"
               style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: "8px 10px", fontFamily: FONT_BODY, fontSize: 13, resize: "none" }}
             />
           </div>
@@ -1061,6 +1062,27 @@ function PollWidget({ pollId, account }) {
   );
 }
 
+// ---------- Repost action sheet ----------
+function RepostSheet({ onClose, onRepost, onAddPost, alreadyReposted }) {
+  return (
+    <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:620, background:"rgba(0,0,0,0.48)" }}>
+      <style>{"@keyframes repostSheetUp{from{transform:translateY(100%);opacity:.6}to{transform:translateY(0);opacity:1}}"}</style>
+      <div onClick={e => e.stopPropagation()} style={{ position:"absolute", left:0, right:0, bottom:0, maxWidth:480, margin:"0 auto", background:T.card, borderRadius:"22px 22px 0 0", padding:"10px 16px 28px", animation:"repostSheetUp .24s cubic-bezier(.16,1,.3,1)", boxShadow:"0 -12px 35px rgba(0,0,0,.22)" }}>
+        <div style={{ width:38, height:4, borderRadius:3, background:T.cardBorder, margin:"2px auto 14px" }} />
+        <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.paper, padding:"4px 4px 12px" }}>Repost</div>
+        <button onClick={() => { onClose(); onRepost(); }} style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"14px 10px", background:"none", border:"none", borderRadius:12, color:T.paper, cursor:"pointer", textAlign:"left" }}>
+          <span style={{ width:38, height:38, borderRadius:"50%", background:`${T.gold}18`, display:"flex", alignItems:"center", justifyContent:"center" }}><Repeat2 size={19} color={T.gold} /></span>
+          <span><span style={{ display:"block", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14 }}>{alreadyReposted ? "Undo repost" : "Repost"}</span><span style={{ display:"block", color:T.muted, fontSize:11.5, marginTop:2 }}>{alreadyReposted ? "Remove this repost from your profile" : "Share this post to your profile"}</span></span>
+        </button>
+        <button onClick={() => { onClose(); onAddPost(); }} style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"14px 10px", background:"none", border:"none", borderRadius:12, color:T.paper, cursor:"pointer", textAlign:"left" }}>
+          <span style={{ width:38, height:38, borderRadius:"50%", background:`${T.gold}18`, display:"flex", alignItems:"center", justifyContent:"center" }}><Plus size={19} color={T.gold} /></span>
+          <span><span style={{ display:"block", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14 }}>Add a post</span><span style={{ display:"block", color:T.muted, fontSize:11.5, marginTop:2 }}>Create a new community post</span></span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ---------- Post card ----------
 function GiftIconButton({ profile, account }) {
   const [open, setOpen] = useState(false);
@@ -1083,6 +1105,7 @@ function GiftIconButton({ profile, account }) {
 
 function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeData, onToggleLike, repostData, onToggleRepost, onOpenProfile, onDelete, onEdit, onReport, onActivityOpen, onDmUser, forceOpen, onOpened }) {
   const [showComments, setShowComments] = useState(false);
+  const [showRepostSheet, setShowRepostSheet] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(post.text);
@@ -1109,7 +1132,14 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
   };
 
   return (
-    <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.cardBorder}`, animation: "fadeInUp 0.25s ease", display: "flex", gap: 10, alignItems: "flex-start" }}>
+    <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.cardBorder}`, animation: "fadeInUp 0.25s ease" }}>
+      {post._isRepost && (
+        <div style={{ display:"flex", alignItems:"center", gap:6, margin:"0 0 8px 50px", color:T.muted, fontSize:11.5, fontWeight:600 }}>
+          <Repeat2 size={14} color={T.sage} />
+          <span><strong style={{ color:T.paper }}>{post._repostActorProfile?.full_name || post._repostActorProfile?.display_name || post._repostActorProfile?.username || "Someone"}</strong> reposted</span>
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
       {/* Avatar column */}
       <button onClick={() => onOpenProfile(post.user_id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}>
         <Avatar name={profile?.display_name} avatarUrl={profile?.avatar_url} size={40} />
@@ -1209,7 +1239,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
         <button onClick={() => setShowComments(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ash }}>
           <MessageCircle size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(commentCount)}</span>
         </button>
-        <button onClick={() => onToggleRepost(post.id, post.user_id)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: rd.repostedByMe ? T.sage : ash }}>
+        <button onClick={() => setShowRepostSheet(true)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: rd.repostedByMe ? T.sage : ash }}>
           <Repeat2 size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{formatCount(rd.count)}</span>
         </button>
         <button onClick={() => isOwn && onActivityOpen && onActivityOpen(post)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: isOwn ? "pointer" : "default", color: isOwn ? T.gold : ash }}>
@@ -1219,6 +1249,15 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
           <GiftIconButton profile={profile} account={account} />
         )}
       </div>
+
+      {showRepostSheet && (
+        <RepostSheet
+          alreadyReposted={rd.repostedByMe}
+          onClose={() => setShowRepostSheet(false)}
+          onRepost={() => onToggleRepost(post._originalPostId || post.id, post.user_id)}
+          onAddPost={() => window.dispatchEvent(new CustomEvent("rainx:community-compose"))}
+        />
+      )}
 
       {showComments && (
         <div style={{ position: "fixed", inset: 0, background: T.ink, zIndex: 500, display: "flex", flexDirection: "column" }}>
@@ -1248,6 +1287,22 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
                 <div style={{ fontSize: 12, color: T.muted, marginTop: 10 }}>{timeAgo(post.created_at)}{post.location ? ` · ${post.location}` : ""}</div>
               </div>
             </div>
+            <div style={{ padding:"8px 16px 10px", borderBottom:`1px solid ${T.cardBorder}` }}>
+              <div style={{ display:"flex", alignItems:"center", gap:22 }}>
+                <button onClick={() => onToggleLike(post.id, post.user_id)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:"pointer", color:ld.likedByMe ? T.rust : ash }}>
+                  <Heart size={18} strokeWidth={2} fill={ld.likedByMe ? T.rust : "none"} /> <span style={{ fontSize:12, fontWeight:700 }}>{formatCount(ld.count)}</span>
+                </button>
+                <button onClick={() => setShowRepostSheet(true)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:"pointer", color:rd.repostedByMe ? T.sage : ash }}>
+                  <Repeat2 size={18} strokeWidth={2} /> <span style={{ fontSize:12, fontWeight:700 }}>{formatCount(rd.count)}</span>
+                </button>
+                <button onClick={() => { try { document.querySelector('[data-rainx-comment-input]')?.focus(); } catch(_){} }} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:"pointer", color:ash }}>
+                  <MessageCircle size={18} strokeWidth={2} /> <span style={{ fontSize:12, fontWeight:700 }}>{formatCount(commentCount)}</span>
+                </button>
+                <button onClick={() => isOwn && onActivityOpen && onActivityOpen(post)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:isOwn ? "pointer" : "default", color:isOwn ? T.gold : ash }}>
+                  <AnalyticsBarIcon size={18} color={isOwn ? T.gold : ash} /> <span style={{ fontSize:12, fontWeight:700 }}>{formatCount(post.views || 0)}</span>
+                </button>
+              </div>
+            </div>
             <div style={{ padding: "0 16px" }}>
               <CommentsSection postId={post.id} postAuthorId={post.user_id} account={account} profilesMap={profilesMap} onProfilesNeeded={onProfilesNeeded} onOpenProfile={onOpenProfile} onCommentsChange={setCommentCount} />
             </div>
@@ -1256,6 +1311,7 @@ function PostCard({ post, profile, account, profilesMap, onProfilesNeeded, likeD
       )}
 
       </div>{/* end content column */}
+      </div>{/* end post card */}
     </div>
   );
 }
@@ -1528,7 +1584,19 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
         if (process.env.NODE_ENV !== "production") console.error("Profile API fallback used:", apiErr?.message);
       }
       const { data: postRows } = await supabase.from("community_posts").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+      const { data: repostRows } = await supabase.from("post_reposts").select("post_id, created_at").eq("user_id", userId).order("created_at", { ascending: false });
       let profilePosts = postRows || [];
+      if ((repostRows || []).length) {
+        const repostIds = [...new Set(repostRows.map(r => r.post_id))];
+        const { data: originals } = await supabase.from("community_posts").select("*").in("id", repostIds);
+        const byId = Object.fromEntries((originals || []).map(p => [p.id, p]));
+        const reposted = (repostRows || []).map(r => {
+          const original = byId[r.post_id];
+          if (!original) return null;
+          return { ...original, _isRepost:true, _originalPostId:original.id, _repostedAt:r.created_at, _feedKey:`repost-${userId}-${original.id}-${r.created_at}` };
+        }).filter(Boolean);
+        profilePosts = [...profilePosts, ...reposted].sort((a,b) => new Date(b._isRepost ? b._repostedAt : b.created_at) - new Date(a._isRepost ? a._repostedAt : a.created_at));
+      }
       setPosts(profilePosts);
       const { count: followers } = await supabase.from("follows").select("*", { count: "exact", head: true }).eq("followed_id", userId);
       const { count: following } = await supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", userId);
@@ -1813,7 +1881,20 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
   if (themeTokens) Object.assign(T, themeTokens);
   const [likeData, setLikeData] = useState({});
   const [repostData, setRepostData] = useState({});
-  const profilesMap = { [profileEntry.id]: profileEntry };
+  const [profilesMap, setProfilesMap] = useState({ [profileEntry.id]: profileEntry });
+
+  useEffect(() => {
+    setProfilesMap((m) => ({ ...m, [profileEntry.id]: profileEntry }));
+    const ids = [...new Set(posts.map(p => p.user_id).filter(Boolean))];
+    const missing = ids.filter(id => id !== profileEntry.id);
+    if (!missing.length) return;
+    supabase.from("public_profiles").select("id,display_name,full_name,username,avatar_url,is_admin,badge").in("id", missing)
+      .then(({ data }) => {
+        const extra = {};
+        (data || []).forEach(p => { extra[p.id] = p; });
+        if (Object.keys(extra).length) setProfilesMap(m => ({ ...m, ...extra }));
+      }).catch(() => {});
+  }, [posts, profileEntry.id]);
 
   useEffect(() => {
     if (!posts.length) return;
@@ -1862,8 +1943,8 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onDmUser, on
     <div>
       {posts.map(p => (
         <PostCard
-          key={p.id}
-          post={p}
+          key={p._feedKey || p.id}
+          post={{ ...p, _repostActorProfile: p._isRepost ? profileEntry : null }}
           profile={profilesMap[p.user_id]}
           account={account}
           profilesMap={profilesMap}
@@ -2140,6 +2221,12 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
 
   // Load following IDs for the "Following" feed tab
   useEffect(() => {
+    const openComposer = () => setShowFabModal(true);
+    window.addEventListener("rainx:community-compose", openComposer);
+    return () => window.removeEventListener("rainx:community-compose", openComposer);
+  }, []);
+
+  useEffect(() => {
     if (!account?.id) return;
     supabase.from("follows").select("followed_id").eq("follower_id", account.id)
       .then(({ data }) => setFollowingIds(new Set((data||[]).map(r=>r.followed_id))))
@@ -2331,6 +2418,17 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
     setPosts(rows);
     setPostsLoading(false);
   }, [account.id]);
+
+  useEffect(() => {
+    const channel = supabase.channel("community-post-counts")
+      .on("postgres_changes", { event:"*", schema:"public", table:"post_comments" }, (payload) => {
+        const postId = payload.new?.post_id || payload.old?.post_id;
+        if (!postId) return;
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: Math.max(0, Number(p.comments_count || 0) + (payload.eventType === "INSERT" ? 1 : -1)) } : p));
+      })
+      .subscribe();
+    return () => { try { supabase.removeChannel(channel); } catch(_){} };
+  }, []);
 
   useEffect(() => {
     loadPosts();
