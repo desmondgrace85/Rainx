@@ -837,6 +837,9 @@ function AuthScreen({ onAuthed }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [mfaChallenge, setMfaChallenge] = useState(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaBusy, setMfaBusy] = useState(false);
   const [content, setContent] = useState({
     hero_title: "RainX", hero_subtitle: "Powered by Raina AI", hero_tagline: "Your intelligent trading companion.",
   });
@@ -930,10 +933,62 @@ function AuthScreen({ onAuthed }) {
         setBusy(false);
         return;
       }
+      // A password sign-in may only reach AAL1 when the account has MFA.
+      // Do not enter the app until the second factor has been verified.
+      const { data: aal, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (!aalError && aal?.nextLevel === "aal2" && aal?.currentLevel !== "aal2") {
+        const { data: factors, error: factorError } = await supabase.auth.mfa.listFactors();
+        const verified = [...(factors?.totp || []), ...(factors?.phone || [])].filter(f => f.status === "verified");
+        if (factorError || verified.length === 0) {
+          await supabase.auth.signOut({ scope: "local" });
+          setError("Two-step authentication is enabled but no verified factor is available. Contact support.");
+          setBusy(false);
+          return;
+        }
+        setMfaChallenge({ factor: verified[0], userId: data.user.id });
+        setMfaCode("");
+        setBusy(false);
+        return;
+      }
       recordActivity(data.user.id, "login", { userAgent: navigator.userAgent, language: navigator.language, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, platform: navigator.platform });
       onAuthed(data.session);
     }
     setBusy(false);
+  };
+
+  const verifyMfaLogin = async () => {
+    if (!mfaChallenge?.factor?.id || !/^\d{6}$/.test(mfaCode.trim())) {
+      setError("Enter the 6-digit code from your authenticator or phone.");
+      return;
+    }
+    setError("");
+    setMfaBusy(true);
+    try {
+      const challenge = await supabase.auth.mfa.challenge({ factorId: mfaChallenge.factor.id });
+      if (challenge.error) throw challenge.error;
+      const verified = await supabase.auth.mfa.verify({
+        factorId: mfaChallenge.factor.id,
+        challengeId: challenge.data.id,
+        code: mfaCode.trim(),
+      });
+      if (verified.error) throw verified.error;
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session) throw sessionError || new Error("Secure session could not be restored.");
+      recordActivity(mfaChallenge.userId, "login", {
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        platform: navigator.platform,
+        mfa: true,
+      });
+      setMfaChallenge(null);
+      setMfaCode("");
+      onAuthed(sessionData.session);
+    } catch (e) {
+      setError(e?.message || "The verification code was not accepted. Try again.");
+    } finally {
+      setMfaBusy(false);
+    }
   };
 
   // Local premium palette - scoped to this screen only, doesn't touch the
@@ -944,6 +999,39 @@ function AuthScreen({ onAuthed }) {
     border: "rgba(255,255,255,0.08)", gray: "#B4B4B4",
   };
   const [oauthNotice, setOauthNotice] = useState("");
+
+  if (mfaChallenge) {
+    const factorLabel = mfaChallenge.factor.factor_type === "phone"
+      ? "A verification code was sent to your verified phone."
+      : "Open your authenticator app and enter the current 6-digit code.";
+    return (
+      <div style={{ minHeight:"100dvh", background:"#0B0B0B", color:"#fff", fontFamily:FONT_BODY, display:"flex", flexDirection:"column", justifyContent:"center", padding:"28px 22px", maxWidth:480, margin:"0 auto" }}>
+        <div style={{ background:"#171513", border:"1px solid rgba(255,255,255,.08)", borderRadius:20, padding:22 }}>
+          <div style={{ width:48, height:48, borderRadius:"50%", background:"#F4D35E", display:"grid", placeItems:"center", marginBottom:16 }}>
+            <ShieldCheck size={23} color="#0B0B0B" />
+          </div>
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:21, marginBottom:7 }}>Two-step verification</div>
+          <div style={{ color:"#B4B4B4", fontSize:12.5, lineHeight:1.6, marginBottom:18 }}>{factorLabel}</div>
+          <input
+            value={mfaCode}
+            onChange={e=>setMfaCode(e.target.value.replace(/\D/g,"").slice(0,6))}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            placeholder="6-digit code"
+            style={{ width:"100%", boxSizing:"border-box", background:"#0B0B0B", color:"#fff", border:"1px solid rgba(255,255,255,.12)", borderRadius:12, padding:"13px 14px", fontSize:18, letterSpacing:4, textAlign:"center", outline:"none", marginBottom:10 }}
+          />
+          {error && <div style={{ color:"#F08A78", fontSize:11.5, lineHeight:1.5, margin:"8px 0 10px" }}>{error}</div>}
+          <button type="button" disabled={mfaBusy} onClick={verifyMfaLogin} style={{ width:"100%", border:0, borderRadius:12, background:"#F4D35E", color:"#0B0B0B", padding:"13px 14px", fontFamily:FONT_HEAD, fontWeight:800, cursor:mfaBusy?"wait":"pointer", opacity:mfaBusy ? 0.65 : 1 }}>
+            {mfaBusy ? "Verifying…" : "Verify & continue"}
+          </button>
+          <button type="button" disabled={mfaBusy} onClick={async()=>{ await supabase.auth.signOut({scope:"local"}); setMfaChallenge(null); setMfaCode(""); setError(""); }} style={{ width:"100%", border:0, background:"transparent", color:"#B4B4B4", padding:"12px 14px", fontFamily:FONT_HEAD, fontWeight:700, cursor:"pointer" }}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100dvh", background: A.bg, color: "#fff", fontFamily: FONT_BODY, display: "flex", flexDirection: "column", padding: "28px 22px", maxWidth: 480, margin: "0 auto" }}>
@@ -5159,15 +5247,50 @@ function NotificationSettingsScreen({ account, activeMarkets = [] }) {
   const [prefs, setPrefs] = useState(() => {
     try { return JSON.parse(lsGet("rainx-notif-prefs") || "{}"); } catch { return {}; }
   });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const masterOn = prefs.master !== false;
-  const toggle = (key) => {
-    setPrefs(prev => {
-      const next = key === "master"
-        ? { ...prev, master: !masterOn }
-        : { ...prev, [key]: prev[key] === false ? true : false };
-      lsSet("rainx-notif-prefs", JSON.stringify(next));
-      return next;
-    });
+
+  useEffect(() => {
+    if (!account?.id) { setLoading(false); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from("account_settings").select("settings").eq("user_id", account.id).maybeSingle();
+      if (cancelled) return;
+      const backendPrefs = data?.settings?.notificationPrefs;
+      if (backendPrefs && typeof backendPrefs === "object") {
+        setPrefs(prev => {
+          const merged = { ...prev, ...backendPrefs };
+          lsSet("rainx-notif-prefs", JSON.stringify(merged));
+          return merged;
+        });
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [account?.id]);
+
+  const toggle = async (key) => {
+    const previous = prefs;
+    const next = key === "master"
+      ? { ...previous, master: !masterOn }
+      : { ...previous, [key]: previous[key] === false ? true : false };
+    setPrefs(next);
+    lsSet("rainx-notif-prefs", JSON.stringify(next));
+    if (!account?.id) return;
+    setSaving(true);
+    const { data: existing } = await supabase.from("account_settings").select("settings").eq("user_id", account.id).maybeSingle();
+    const mergedSettings = { ...(existing?.settings || {}), notificationPrefs: next };
+    const { error } = await supabase.from("account_settings").upsert(
+      { user_id: account.id, settings: mergedSettings, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" }
+    );
+    setSaving(false);
+    if (error) {
+      setPrefs(previous);
+      lsSet("rainx-notif-prefs", JSON.stringify(previous));
+      alert("Notification preference could not be saved. Your previous setting was restored.");
+    }
   };
   const bg = "#F2F3F5", card = "#FFFFFF", border = "#E7E9EC", text = "#111418", muted = "#737B85", yellow = T.gold;
   const SwitchToggle = ({ on, onChange }) => (
@@ -5177,6 +5300,8 @@ function NotificationSettingsScreen({ account, activeMarkets = [] }) {
   );
   return (
     <div style={{ background:bg, padding:"16px 16px 28px", minHeight:"100%" }}>
+      {loading && <div style={{fontSize:11,color:muted,padding:"0 4px 10px"}}>Loading notification preferences…</div>}
+      {saving && <div style={{fontSize:10,color:muted,padding:"0 4px 10px"}}>Saving…</div>}
       <div style={{ background:card, border:`1px solid ${border}`, borderRadius:17, padding:"15px 16px", marginBottom:16, boxShadow:"0 1px 2px rgba(15,20,25,.03)" }}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
           <div><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:14,color:text}}>All Notifications</div><div style={{fontSize:11.2,color:muted,marginTop:3}}>Master control for all alerts</div></div>
@@ -5687,6 +5812,47 @@ function HeaderAvatar({ account, morePage, T }) {
     : <div style={{ width:42, height:42, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink }}>{initial}</div>;
 }
 
+const DEFAULT_SETTINGS_PREFS = {
+  profileDiscoverable: true,
+  activityStatus: true,
+  readReceipts: true,
+  personalizedSuggestions: true,
+  signalAlerts: true,
+  riskAlerts: true,
+  signalSounds: true,
+  autoRefresh: true,
+  communityNotifications: true,
+  messageRequests: true,
+  creatorUpdates: true,
+  launchAlerts: true,
+  hideBalances: false,
+  analyticsCookies: false,
+  marketingNotifications: false,
+  signalDelivery: "all",
+  messageWho: "Followers and people you follow",
+  messageWhoKey: "followers",
+  language: "English",
+  region: "Ghana",
+  notificationPrefs: { master: true },
+};
+
+const DEFAULT_SECURITY_PREFS = {
+  loginAlerts: true,
+  tradeConfirmations: true,
+  withdrawConfirmations: true,
+  securityEmails: true,
+  suspiciousActivityAlerts: true,
+  sensitiveActionConfirmations: true,
+  creatorSecurityAlerts: true,
+  tokenReporting: true,
+  creatorPayoutConfirmations: true,
+  moderationNotifications: true,
+  tokenRiskAcknowledgement: true,
+  appLock: false,
+  pinEnabled: false,
+  biometricEnabled: false,
+};
+
 function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, onLogoutConfirm, setTab, entitlement, themeMode, setThemeMode, morePage, setMorePage, setProfileFromHeader, activeMarkets = [] }) {
   // morePage/setMorePage lifted to MainAppContent so sidebar can deep-link
   const [username, setUsername] = useState("");
@@ -5707,17 +5873,24 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   // these controls can be added without changing the existing community, signal,
   // wallet, creator-space or home implementations.
   const [securityPrefs, setSecurityPrefs] = useState(() => {
-    try { return JSON.parse(lsGet("rainx-security-prefs") || "{}"); } catch { return {}; }
+    try { return { ...DEFAULT_SECURITY_PREFS, ...(JSON.parse(lsGet("rainx-security-prefs") || "{}") || {}) }; } catch { return { ...DEFAULT_SECURITY_PREFS }; }
   });
   const [securitySheet, setSecuritySheet] = useState(null);
   const [pinValue, setPinValue] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
   const [pinError, setPinError] = useState("");
   const [settingsPrefs, setSettingsPrefs] = useState(() => {
-    try { return JSON.parse(lsGet("rainx-settings-prefs") || "{}"); } catch { return {}; }
+    try { return { ...DEFAULT_SETTINGS_PREFS, ...(JSON.parse(lsGet("rainx-settings-prefs") || "{}") || {}) }; } catch { return { ...DEFAULT_SETTINGS_PREFS }; }
   });
   const [settingsSheet, setSettingsSheet] = useState(null);
   const [accountSettingsLoaded, setAccountSettingsLoaded] = useState(false);
+  const [mfaFactors, setMfaFactors] = useState([]);
+  const [mfaEnrollment, setMfaEnrollment] = useState(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaBusy, setMfaBusy] = useState(false);
+  const [mfaChallengeId, setMfaChallengeId] = useState(null);
+  const [passwordForm, setPasswordForm] = useState({ current:"", next:"", confirm:"" });
+  const [phoneForm, setPhoneForm] = useState({ phone:"", code:"", pending:false });
   const [securitySessions, setSecuritySessions] = useState([]);
   const [securitySessionsLoading, setSecuritySessionsLoading] = useState(false);
   const [loginHistoryRows, setLoginHistoryRows] = useState([]);
@@ -5752,31 +5925,68 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   }, [account?.id]);
   useEffect(() => { if (settingsSheet === "blockedUsers") loadBlockedAndMuted(); }, [settingsSheet, loadBlockedAndMuted]);
   const [postVisibility, setPostVisibility] = useState(() => lsGet("rainx-post-visibility") || "public");
+  useEffect(() => {
+    if (settingsPrefs.postVisibility && settingsPrefs.postVisibility !== postVisibility) {
+      setPostVisibility(settingsPrefs.postVisibility);
+      lsSet("rainx-post-visibility", settingsPrefs.postVisibility);
+    }
+  }, [settingsPrefs.postVisibility]);
 
-  const persistSecurity = (patch) => {
-    setSecurityPrefs(prev => {
-      const next = { ...prev, ...patch };
-      lsSet("rainx-security-prefs", JSON.stringify(next));
-      // Never send device PIN hashes or biometric credential IDs to the account backend.
-      const backendSafe = { ...next };
-      delete backendSafe.pinHash;
-      delete backendSafe.biometricCredentialId;
-      if (account?.id) {
-        supabase.from("account_settings").upsert({ user_id: account.id, security_prefs: backendSafe, updated_at: new Date().toISOString() }, { onConflict: "user_id" }).then(() => {}).catch(() => {});
-      }
-      return next;
-    });
+  const persistSecurity = async (patch) => {
+    const previous = securityPrefs;
+    const next = { ...previous, ...patch };
+    setSecurityPrefs(next);
+    lsSet("rainx-security-prefs", JSON.stringify(next));
+    // Never send device PIN hashes or biometric credential IDs to the account backend.
+    const backendSafe = { ...next };
+    delete backendSafe.pinHash;
+    delete backendSafe.biometricCredentialId;
+    if (!account?.id) return true;
+    const { error } = await supabase.from("account_settings").upsert(
+      { user_id: account.id, security_prefs: backendSafe, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" }
+    );
+    if (error) {
+      setSecurityPrefs(previous);
+      lsSet("rainx-security-prefs", JSON.stringify(previous));
+      alert("Security setting could not be saved. Your previous setting was restored.");
+      return false;
+    }
+    return true;
   };
-  const persistSettings = (patch) => {
-    setSettingsPrefs(prev => {
-      const next = { ...prev, ...patch };
-      lsSet("rainx-settings-prefs", JSON.stringify(next));
-      if (account?.id) {
-        supabase.from("account_settings").upsert({ user_id: account.id, settings: next, updated_at: new Date().toISOString() }, { onConflict: "user_id" }).then(() => {}).catch(() => {});
-      }
-      return next;
-    });
+
+  const persistSettings = async (patch) => {
+    const previous = settingsPrefs;
+    const next = { ...previous, ...patch };
+    setSettingsPrefs(next);
+    lsSet("rainx-settings-prefs", JSON.stringify(next));
+    try { window.dispatchEvent(new CustomEvent("rainx:settings-changed", { detail: next })); } catch {}
+    if (!account?.id) return true;
+    const { error } = await supabase.from("account_settings").upsert(
+      { user_id: account.id, settings: next, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" }
+    );
+    if (error) {
+      setSettingsPrefs(previous);
+      lsSet("rainx-settings-prefs", JSON.stringify(previous));
+      alert("Setting could not be saved. Your previous setting was restored.");
+      return false;
+    }
+    return true;
   };
+
+  const persistPostVisibility = async (value) => {
+    const ok = await persistSettings({ postVisibility: value });
+    if (!ok) return;
+    setPostVisibility(value);
+    lsSet("rainx-post-visibility", value);
+    if (!account?.id) return;
+    const { error } = await supabase.from("community_posts").update({ visibility: value }).eq("user_id", account.id);
+    if (error) {
+      alert("Your post visibility preference was saved, but existing posts could not all be updated. New posts will still use the selected setting.");
+    }
+  };
+
   useEffect(() => {
     if (!account?.id) return;
     let cancelled = false;
@@ -5785,12 +5995,18 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       if (cancelled) return;
       if (!error && data) {
         if (data.settings && typeof data.settings === "object") {
-          setSettingsPrefs(prev => ({ ...prev, ...data.settings }));
-          lsSet("rainx-settings-prefs", JSON.stringify({ ...settingsPrefs, ...data.settings }));
+          setSettingsPrefs(prev => {
+            const merged = { ...DEFAULT_SETTINGS_PREFS, ...prev, ...data.settings };
+            lsSet("rainx-settings-prefs", JSON.stringify(merged));
+            return merged;
+          });
         }
         if (data.security_prefs && typeof data.security_prefs === "object") {
-          setSecurityPrefs(prev => ({ ...prev, ...data.security_prefs }));
-          lsSet("rainx-security-prefs", JSON.stringify({ ...securityPrefs, ...data.security_prefs }));
+          setSecurityPrefs(prev => {
+            const merged = { ...DEFAULT_SECURITY_PREFS, ...prev, ...data.security_prefs };
+            lsSet("rainx-security-prefs", JSON.stringify(merged));
+            return merged;
+          });
         }
       }
       setAccountSettingsLoaded(true);
@@ -5862,6 +6078,225 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       }
     } catch (e) {
       if (e?.name !== "NotAllowedError") alert("Face ID / passkey setup could not be completed.");
+    }
+  };
+
+  const loadMfaFactors = useCallback(async () => {
+    if (!account?.id) return [];
+    const { data, error } = await supabase.auth.mfa.listFactors();
+    if (error) {
+      alert(error.message || "Unable to load two-step authentication factors.");
+      return [];
+    }
+    const factors = [...(data?.totp || []), ...(data?.phone || [])].filter(f => f.status === "verified");
+    setMfaFactors(factors);
+    setSecurityPrefs(prev => ({ ...prev, twoFactorEnabled: factors.length > 0 }));
+    return factors;
+  }, [account?.id]);
+
+  useEffect(() => {
+    if (morePage !== "security" || !account?.id) return;
+    loadMfaFactors();
+  }, [morePage, account?.id, loadMfaFactors]);
+
+  const startTotpEnrollment = async () => {
+    setMfaBusy(true);
+    try {
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: "RainX Authenticator" });
+      if (error) throw error;
+      setMfaEnrollment(data);
+      setMfaCode("");
+    } catch (e) {
+      alert(e?.message || "Unable to start authenticator setup.");
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const verifyMfaEnrollment = async () => {
+    if (!mfaEnrollment?.id || !/^\d{6}$/.test(mfaCode.trim())) {
+      alert("Enter the 6-digit code from your authenticator app.");
+      return;
+    }
+    setMfaBusy(true);
+    try {
+      const challenge = await supabase.auth.mfa.challenge({ factorId: mfaEnrollment.id });
+      if (challenge.error) throw challenge.error;
+      const verified = await supabase.auth.mfa.verify({
+        factorId: mfaEnrollment.id,
+        challengeId: challenge.data.id,
+        code: mfaCode.trim(),
+      });
+      if (verified.error) throw verified.error;
+      setMfaEnrollment(null);
+      setMfaCode("");
+      await loadMfaFactors();
+      await supabase.auth.refreshSession();
+      alert("Two-step authentication is now enabled.");
+    } catch (e) {
+      alert(e?.message || "The authenticator code was not accepted.");
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const startPhoneFactor = async () => {
+    const phone = phoneForm.phone.trim();
+    if (!/^\+?[1-9]\d{7,14}$/.test(phone)) {
+      alert("Enter a valid phone number in international format, for example +233...");
+      return;
+    }
+    setMfaBusy(true);
+    try {
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "phone", friendlyName: "RainX recovery phone", phone });
+      if (error) throw error;
+      setMfaEnrollment(data);
+      setPhoneForm(prev => ({ ...prev, pending: true, code: "" }));
+      // Phone MFA challenge sends the OTP.
+      const challenge = await supabase.auth.mfa.challenge({ factorId: data.id });
+      if (challenge.error) throw challenge.error;
+      setMfaChallengeId(challenge.data.id);
+    } catch (e) {
+      alert(e?.message || "Phone verification could not be started. Make sure SMS/phone MFA is enabled in Supabase Auth.");
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const verifyPhoneFactor = async () => {
+    if (!mfaEnrollment?.id || !mfaChallengeId || !/^\d{6}$/.test(phoneForm.code.trim())) {
+      alert("Enter the 6-digit code sent to your phone.");
+      return;
+    }
+    setMfaBusy(true);
+    try {
+      const verified = await supabase.auth.mfa.verify({
+        factorId: mfaEnrollment.id,
+        challengeId: mfaChallengeId,
+        code: phoneForm.code.trim(),
+      });
+      if (verified.error) throw verified.error;
+      setMfaEnrollment(null);
+      setMfaChallengeId(null);
+      setPhoneForm({ phone:"", code:"", pending:false });
+      await loadMfaFactors();
+      await supabase.auth.refreshSession();
+      alert("Recovery phone is verified and can be used as a second factor.");
+    } catch (e) {
+      alert(e?.message || "The phone verification code was not accepted.");
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const removeMfaFactor = async (factorId) => {
+    if (!factorId || !window.confirm("Remove this two-step authentication factor? You may need another factor to sign in securely.")) return;
+    setMfaBusy(true);
+    try {
+      const { error } = await supabase.auth.mfa.unenroll({ factorId });
+      if (error) throw error;
+      await loadMfaFactors();
+      await supabase.auth.refreshSession();
+    } catch (e) {
+      alert(e?.message || "This security factor could not be removed.");
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const changePassword = async () => {
+    const { current, next, confirm } = passwordForm;
+    if (next.length < 8) { alert("Use a password with at least 8 characters."); return; }
+    if (next !== confirm) { alert("The new passwords do not match."); return; }
+    if (!current) { alert("Enter your current password."); return; }
+    setMfaBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: next, current_password: current });
+      if (error) throw error;
+      setPasswordForm({ current:"", next:"", confirm:"" });
+      setSecuritySheet(null);
+      alert("Password changed successfully. Other sessions may be signed out by Supabase Auth.");
+    } catch (e) {
+      alert(e?.message || "Password could not be changed.");
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const exportAccountData = async () => {
+    if (!account?.id) return;
+    setMfaBusy(true);
+    try {
+      const { data, error } = await supabase.rpc("export_my_account_data");
+      if (error) throw error;
+      const blob = new Blob([JSON.stringify(data || {}, null, 2)], { type:"application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `rainx-account-data-${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setSettingsSheet(null);
+    } catch (e) {
+      alert(e?.message || "Your account data could not be exported.");
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const requestAccountDeletion = async () => {
+    if (!account?.id) return;
+    if (!window.confirm("Request permanent deletion of your RainX account and associated data? This creates a deletion request; it does not delete the account instantly.")) return;
+    setMfaBusy(true);
+    try {
+      const { error } = await supabase.rpc("request_account_deletion");
+      if (error) throw error;
+      alert("Your deletion request has been recorded. Support can now process the permanent deletion.");
+      setSecuritySheet(null);
+    } catch (e) {
+      alert(e?.message || "The deletion request could not be recorded.");
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const startPhoneRecovery = async () => {
+    const phone = phoneForm.phone.trim();
+    if (!/^\+?[1-9]\d{7,14}$/.test(phone)) {
+      alert("Enter a valid phone number in international format.");
+      return;
+    }
+    setMfaBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ phone });
+      if (error) throw error;
+      setPhoneForm(prev => ({ ...prev, pending:true, code:"" }));
+      alert("A verification code was sent to the new phone number.");
+    } catch (e) {
+      alert(e?.message || "Could not start phone verification.");
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const verifyPhoneRecovery = async () => {
+    if (!/^\d{6}$/.test(phoneForm.code.trim()) || !phoneForm.phone.trim()) {
+      alert("Enter the 6-digit phone verification code.");
+      return;
+    }
+    setMfaBusy(true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({ phone: phoneForm.phone.trim(), token: phoneForm.code.trim(), type: "phone_change" });
+      if (error) throw error;
+      setPhoneForm(prev => ({ ...prev, pending:false, code:"" }));
+      await supabase.auth.refreshSession();
+      alert("Recovery phone verified successfully.");
+    } catch (e) {
+      alert(e?.message || "The phone verification code was not accepted.");
+    } finally {
+      setMfaBusy(false);
     }
   };
   useEffect(() => {
@@ -6104,12 +6539,14 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
   // ── last_seen heartbeat ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!account?.id) return;
-    const bump = async () => { try { await supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", account.id); } catch(e) {} };
+    if (!account?.id || settingsPrefs.activityStatus === false) return;
+    const bump = async () => {
+      try { await supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", account.id); } catch(e) {}
+    };
     bump(); // immediate on mount
     const iv = setInterval(bump, 60_000);
     return () => clearInterval(iv);
-  }, [account?.id]);
+  }, [account?.id, settingsPrefs.activityStatus]);
   const saveProfileExtended = async () => {
     setSavingProfile(true); setProfileMsg("");
     const clean = username.trim().replace(/[^a-zA-Z0-9_.@-]/g,"").slice(0,30)||null;
@@ -6932,12 +7369,12 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           <LightDivider />
           <LightToggleRow icon={Bell} title="Marketing updates" subtitle="Allow optional promotional and creator updates" prefKey="marketingNotifications" defaultValue={false} />
           <LightDivider />
-          <LightRow icon={Download} title="Download your data" subtitle="Export available local preferences now; full account export needs backend support" onPress={()=>setSettingsSheet("downloadData")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightRow icon={Download} title="Download your data" subtitle="Export your account data and saved preferences" onPress={()=>setSettingsSheet("downloadData")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
         </LightSection>
         <LightSection title="Data lifecycle">
-          <LightRow icon={Database} title="Data deletion request" subtitle="Request deletion of eligible account data" onPress={()=>alert("Backend required: authenticated data-deletion request and retention workflow.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED,border:`1px solid ${PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>BACKEND</span>} />
+           <LightRow icon={Database} title="Data deletion request" subtitle="Request permanent deletion of your RainX account data" onPress={requestAccountDeletion} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
           <LightDivider />
-          <LightRow icon={Trash2} title="Clear local RainX data" subtitle="Remove locally stored preferences on this device" onPress={()=>{try{Object.keys(localStorage).filter(k=>k.startsWith("rainx-")).forEach(k=>localStorage.removeItem(k));}catch{} setSettingsPrefs({}); setSecurityPrefs({}); alert("Local RainX data cleared.");}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightRow icon={Trash2} title="Clear local RainX data" subtitle="Remove locally stored preferences on this device" onPress={()=>{try{Object.keys(localStorage).filter(k=>k.startsWith("rainx-")).forEach(k=>localStorage.removeItem(k));}catch{} setSettingsPrefs({ ...DEFAULT_SETTINGS_PREFS }); setSecurityPrefs({ ...DEFAULT_SECURITY_PREFS }); alert("Local RainX data cleared.");}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
         </LightSection>
         <LightSection title="Legal & preferences">
           <LightRow icon={FileCheck} title="Privacy Policy" subtitle="Review how personal information is handled" onPress={()=>alert("Open the RainX Privacy Policy from the legal centre.")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
@@ -6993,7 +7430,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
         <LightSection title="Your posts">
           {[["public","Public — everyone","Anyone can view your posts"],["followers","Followers only","Only your followers can view your posts"],["premium","Subscribers only","Only eligible subscribers can view your posts"]].map(([value,title,desc],i)=>{
-            return <React.Fragment key={value}>{i>0&&<LightDivider/>}<LightRow icon={FileText} title={title} subtitle={desc} onPress={()=>{setPostVisibility(value);lsSet("rainx-post-visibility",value)}} right={<div style={{width:20,height:20,borderRadius:"50%",border:`2px solid ${postVisibility===value?PREF_YELLOW:"#C9CED4"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{postVisibility===value&&<div style={{width:10,height:10,borderRadius:"50%",background:PREF_YELLOW}}/>}</div>} /></React.Fragment>;
+            return <React.Fragment key={value}>{i>0&&<LightDivider/>}<LightRow icon={FileText} title={title} subtitle={desc} onPress={()=>persistPostVisibility(value)} right={<div style={{width:20,height:20,borderRadius:"50%",border:`2px solid ${postVisibility===value?PREF_YELLOW:"#C9CED4"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{postVisibility===value&&<div style={{width:10,height:10,borderRadius:"50%",background:PREF_YELLOW}}/>}</div>} /></React.Fragment>;
           })}
         </LightSection>
 
@@ -7072,7 +7509,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           </>}
           {settingsSheet === "dataStorage" && <>
             <LightSheetTitle title="Data & storage" desc="Manage local app data without changing your account." />
-            <LightRow icon={ScrollText} title="Clear local preferences" subtitle="Remove locally saved RainX preferences on this device" onPress={()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('rainx-')).forEach(k=>localStorage.removeItem(k));}catch{} setSettingsPrefs({}); setSettingsSheet(null); alert('Local RainX preferences were cleared.');}} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+            <LightRow icon={ScrollText} title="Clear local preferences" subtitle="Remove locally saved RainX preferences on this device" onPress={()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('rainx-')).forEach(k=>localStorage.removeItem(k));}catch{} setSettingsPrefs({ ...DEFAULT_SETTINGS_PREFS }); setSettingsSheet(null); alert('Local RainX preferences were cleared.');}} right={<ChevronRight size={18} color={PREF_MUTED} />} />
           </>}
           {settingsSheet === "region" && <>
             <LightSheetTitle title="Language & region" desc="Choose your preferred app language and region." />
@@ -7088,7 +7525,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           </>}
           {settingsSheet === "downloadData" && <>
             <LightSheetTitle title="Download your data" desc="Create a local copy of the preferences currently stored on this device." />
-            <LightRow icon={Download} title="Export local preferences" subtitle="Save your RainX settings as a JSON file" onPress={()=>{try{const payload={exportedAt:new Date().toISOString(),settings:settingsPrefs,security:{...securityPrefs,pinHash:undefined,biometricCredentialId:undefined}};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="rainx-settings.json";a.click();URL.revokeObjectURL(url);setSettingsSheet(null)}catch{alert("Unable to export local preferences on this device.")}}} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+            <LightRow icon={Download} title="Export account data" subtitle="Download a copy of the account data RainX makes available to you" onPress={exportAccountData} right={<ChevronRight size={18} color={PREF_MUTED} />} />
           </>}
         </LightSheet>}
       </div>
@@ -7132,9 +7569,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           );
         })()}
         <LightSection title="Sign-in security">
-          <LightRow icon={Key} title="Change Password" subtitle="Update your account password" onPress={async()=>{const {error}=await supabase.auth.resetPasswordForEmail(account?.email||""); if(!error) alert("Password reset link sent to your email."); else alert("Could not send reset email. Try again.");}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightRow icon={Key} title="Change Password" subtitle="Update your account password securely" onPress={()=>{setPasswordForm({current:"",next:"",confirm:""});setSecuritySheet("changePassword")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
           <LightDivider />
-          <LightRow icon={ShieldCheck} title="Two-Step Authentication (2FA)" subtitle={securityPrefs.twoFactorEnabled ? "2FA is enabled for this account" : "Add an authenticator app or verified factor"} onPress={()=>setSecuritySheet("twoFactor")} right={<span style={{fontSize:10.5,fontWeight:800,color:securityPrefs.twoFactorEnabled?"#1A7A50":PREF_MUTED,border:`1px solid ${securityPrefs.twoFactorEnabled?"#B9DCCB":PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>{securityPrefs.twoFactorEnabled?"ENABLED":"BACKEND"}</span>} />
+          <LightRow icon={ShieldCheck} title="Two-Step Authentication (2FA)" subtitle={mfaFactors.length > 0 ? "2FA is enabled for this account" : "Add an authenticator app or verified factor"} onPress={()=>setSecuritySheet("twoFactor")} right={<span style={{fontSize:10.5,fontWeight:800,color:mfaFactors.length>0?"#1A7A50":PREF_MUTED,border:`1px solid ${securityPrefs.twoFactorEnabled?"#B9DCCB":PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>{mfaFactors.length>0?"ENABLED":"SET UP"}</span>} />
           <LightDivider />
           <LightRow icon={Smartphone} title="Phone & recovery methods" subtitle="Manage verified phone numbers and recovery factors" onPress={()=>setSecuritySheet("recovery")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
           <LightDivider />
@@ -7195,21 +7632,49 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
         {securitySheet && <LightSheet onClose={()=>setSecuritySheet(null)}>
           {securitySheet === "twoFactor" && <>
-            <LightSheetTitle title="Two-Step Authentication" desc="Backend registration is required before 2FA can protect the account. This screen is ready for the authenticated setup flow." />
-            <div style={{background:"#FFF8E5",border:"1px solid #EAD28A",borderRadius:12,padding:"12px 13px",fontSize:11,color:"#765B00",lineHeight:1.5,marginBottom:12}}>UI is ready; the server must issue and verify the authenticator secret, recovery codes and challenge before enabling the account flag.</div>
-            <LightRow icon={ShieldCheck} title="Authenticator app" subtitle="Register TOTP and verify a one-time code" onPress={()=>alert("Backend required: TOTP enrollment endpoint and verification.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
-            <LightDivider />
-            <LightRow icon={FileText} title="Recovery codes" subtitle="Generate and rotate one-time recovery codes" onPress={()=>alert("Backend required: secure recovery-code generation.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
-          </>}
-          {securitySheet === "recovery" && <>
-            <LightSheetTitle title="Recovery methods" desc="Keep at least two trusted ways to regain access." />
-            <LightRow icon={Mail} title="Account email" subtitle={account?.email || "Not available"} right={<span style={{fontSize:10,fontWeight:800,color:"#1A7A50"}}>VERIFIED</span>} />
-            <LightDivider />
-            <LightRow icon={Smartphone} title="Verified phone" subtitle="Add and verify a recovery phone number" onPress={()=>alert("Backend required: phone verification and recovery-factor storage.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
-            <LightDivider />
-            <LightRow icon={Key} title="Recovery codes" subtitle="One-time codes for account recovery" onPress={()=>alert("Backend required: recovery-code generation.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
-          </>}
-          {securitySheet === "loginHistory" && <>
+             <LightSheetTitle title="Two-Step Authentication" desc="Use an authenticator app or verified phone as a second factor for sign-in." />
+             {mfaEnrollment?.factor_type === "totp" ? <>
+               <div style={{textAlign:"center",padding:"4px 0 14px"}}>
+                 {mfaEnrollment?.totp?.qr_code && <img alt="Scan with your authenticator app" src={`data:image/svg+xml;utf8,${encodeURIComponent(mfaEnrollment.totp.qr_code)}`} style={{width:190,height:190,display:"block",margin:"0 auto 12px",background:"#fff",borderRadius:12}} />}
+                 <div style={{fontSize:11,color:PREF_MUTED,lineHeight:1.5}}>Scan the QR code, then enter the 6-digit code generated by your authenticator.</div>
+                 {mfaEnrollment?.totp?.secret && <div style={{marginTop:9,fontFamily:"monospace",fontSize:11,color:PREF_TEXT,wordBreak:"break-all",background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:10,padding:"9px"}}>{mfaEnrollment.totp.secret}</div>}
+               </div>
+               <input value={mfaCode} onChange={e=>setMfaCode(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit authenticator code" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",fontSize:16,letterSpacing:3,textAlign:"center",outline:"none",marginBottom:9}} />
+               <button type="button" disabled={mfaBusy} onClick={verifyMfaEnrollment} style={{width:"100%",border:0,borderRadius:12,background:PREF_YELLOW,color:PREF_TEXT,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,cursor:mfaBusy?"wait":"pointer"}}>{mfaBusy?"Verifying…":"Enable authenticator"}</button>
+             </> : <>
+               <LightRow icon={ShieldCheck} title="Authenticator app" subtitle={mfaFactors.some(f=>f.factor_type==="totp") ? "Authenticator factor is active" : "Set up TOTP with Google Authenticator, Authy or another app"} onPress={startTotpEnrollment} right={<span style={{fontSize:10,fontWeight:800,color:mfaFactors.some(f=>f.factor_type==="totp")?"#1A7A50":PREF_MUTED}}>{mfaFactors.some(f=>f.factor_type==="totp")?"ENABLED":"SET UP"}</span>} />
+               {mfaFactors.filter(f=>f.factor_type==="totp").map(f=><React.Fragment key={f.id}><LightDivider/><LightRow icon={Trash2} title={f.friendly_name || "Authenticator"} subtitle="Verified TOTP factor" onPress={()=>removeMfaFactor(f.id)} right={<span style={{fontSize:10,fontWeight:800,color:"#C0392B"}}>REMOVE</span>} /></React.Fragment>)}
+               <LightDivider />
+               <LightRow icon={Smartphone} title="Phone verification" subtitle={mfaFactors.some(f=>f.factor_type==="phone") ? "Verified phone factor is active" : "Use a verified phone as an additional factor"} onPress={()=>{setSecuritySheet("recovery");setPhoneForm({phone:"",code:"",pending:false})}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+             </>}
+           </>}
+           {securitySheet === "changePassword" && <>
+             <LightSheetTitle title="Change Password" desc="Confirm your current password before setting a new one." />
+             <input type="password" value={passwordForm.current} onChange={e=>setPasswordForm(p=>({...p,current:e.target.value}))} autoComplete="current-password" placeholder="Current password" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",fontSize:14,outline:"none",marginBottom:9}} />
+             <input type="password" value={passwordForm.next} onChange={e=>setPasswordForm(p=>({...p,next:e.target.value}))} autoComplete="new-password" placeholder="New password" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",fontSize:14,outline:"none",marginBottom:9}} />
+             <input type="password" value={passwordForm.confirm} onChange={e=>setPasswordForm(p=>({...p,confirm:e.target.value}))} autoComplete="new-password" placeholder="Confirm new password" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",fontSize:14,outline:"none",marginBottom:12}} />
+             <button type="button" disabled={mfaBusy} onClick={changePassword} style={{width:"100%",border:0,borderRadius:12,background:PREF_YELLOW,color:PREF_TEXT,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,cursor:mfaBusy?"wait":"pointer"}}>{mfaBusy?"Changing…":"Change password"}</button>
+           </>}
+           {securitySheet === "recovery" && <>
+             <LightSheetTitle title="Phone & recovery methods" desc="Keep your email and at least one additional verified factor available for account recovery." />
+             <LightRow icon={Mail} title="Account email" subtitle={account?.email || "Not available"} right={<span style={{fontSize:10,fontWeight:800,color:"#1A7A50"}}>VERIFIED</span>} />
+             <LightDivider />
+             {mfaFactors.filter(f=>f.factor_type==="phone").map(f=><React.Fragment key={f.id}>
+               <LightRow icon={Smartphone} title={f.friendly_name || "Verified phone"} subtitle={f.phone ? f.phone.replace(/.(?=.{4})/g,"•") : "Verified phone factor"} onPress={()=>removeMfaFactor(f.id)} right={<span style={{fontSize:10,fontWeight:800,color:"#1A7A50"}}>VERIFIED</span>} />
+               <LightDivider />
+             </React.Fragment>)}
+             <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:12,color:PREF_TEXT,margin:"4px 0 8px"}}>Add recovery phone</div>
+             <input value={phoneForm.phone} onChange={e=>setPhoneForm(p=>({...p,phone:e.target.value}))} inputMode="tel" placeholder="+233..." style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",fontSize:14,outline:"none",marginBottom:9}} />
+             {!phoneForm.pending ? (
+               <button type="button" disabled={mfaBusy} onClick={startPhoneFactor} style={{width:"100%",border:0,borderRadius:12,background:PREF_YELLOW,color:PREF_TEXT,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,cursor:mfaBusy?"wait":"pointer"}}>{mfaBusy?"Sending…":"Verify phone as recovery factor"}</button>
+             ) : <>
+               <div style={{fontSize:11,color:PREF_MUTED,lineHeight:1.5,marginBottom:8}}>Enter the code sent to this phone number.</div>
+               <input value={phoneForm.code} onChange={e=>setPhoneForm(p=>({...p,code:e.target.value.replace(/\D/g,"").slice(0,6)}))} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",fontSize:16,letterSpacing:3,textAlign:"center",outline:"none",marginBottom:9}} />
+               <button type="button" disabled={mfaBusy} onClick={verifyPhoneFactor} style={{width:"100%",border:0,borderRadius:12,background:PREF_YELLOW,color:PREF_TEXT,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,cursor:mfaBusy?"wait":"pointer"}}>{mfaBusy?"Verifying…":"Verify phone"}</button>
+             </>}
+             <div style={{fontSize:10.5,color:PREF_MUTED,lineHeight:1.5,marginTop:10}}>RainX does not fabricate recovery codes. Supabase MFA supports multiple verified factors, so a second authenticator or verified phone can be used as the backup factor.</div>
+           </>}
+           {securitySheet === "loginHistory" && <>
             <LightSheetTitle title="Login history" desc="Recent RainX sign-ins and the devices currently holding sessions." />
             {loginHistoryLoading ? <div style={{padding:"18px 0",fontSize:12,color:PREF_MUTED,textAlign:"center"}}>Loading secure sign-in history…</div> : <>
               {loginHistoryRows.length === 0 && securitySessions.length === 0 && <div style={{padding:"12px 0",fontSize:12,color:PREF_MUTED}}>No recorded sign-in events yet.</div>}
@@ -7252,7 +7717,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           </>}
           {securitySheet === "sessions" && <>
             <LightSheetTitle title="Active Sessions" desc="Review devices currently signed in to RainX." />
-            {securitySessionsLoading ? <div style={{padding:"18px 0",fontSize:12,color:PREF_MUTED,textAlign:"center"}}>Loading sessions…</div> : securitySessions.length === 0 ? <div style={{padding:"10px 0",fontSize:12,color:PREF_MUTED}}>No active session details are available.</div> : securitySessions.map((s) => <div key={s.session_id} style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:14,padding:"13px 14px",display:"flex",alignItems:"center",gap:12,marginBottom:8}}><LightIcon Icon={Smartphone}/><div style={{flex:1,minWidth:0}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>{s.user_agent ? s.user_agent.slice(0,72) : "RainX device"}</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>{s.ip_address || "IP unavailable"} · {s.updated_at ? new Date(s.updated_at).toLocaleString() : ""}</div></div><span style={{fontSize:9.5,color:"#1A7A50",fontWeight:800}}>ACTIVE</span></div>)}
+             {securitySessionsLoading ? <div style={{padding:"18px 0",fontSize:12,color:PREF_MUTED,textAlign:"center"}}>Loading sessions…</div> : securitySessions.length === 0 ? <div style={{padding:"10px 0",fontSize:12,color:PREF_MUTED}}>No active session details are available.</div> : securitySessions.map((s) => <div key={s.session_id} style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:14,padding:"13px 14px",display:"flex",alignItems:"center",gap:12,marginBottom:8}}><LightIcon Icon={Smartphone}/><div style={{flex:1,minWidth:0}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>{s.user_agent ? s.user_agent.slice(0,72) : "RainX device"}</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>{s.ip_address || "IP unavailable"} · {s.updated_at ? new Date(s.updated_at).toLocaleString() : ""}</div></div><span style={{fontSize:9.5,color:"#1A7A50",fontWeight:800}}>{s.is_current?"CURRENT":"ACTIVE"}</span></div>)}
+             <button type="button" onClick={async()=>{if(!window.confirm("Sign out RainX on every other device?"))return; const {error}=await supabase.auth.signOut({scope:"others"}); if(error) alert(error.message); else {await loadSecuritySessions(); alert("All other active sessions have been signed out.");}}} style={{width:"100%",marginTop:8,border:`1px solid ${PREF_BORDER}`,background:"#fff",borderRadius:12,padding:"11px 12px",fontFamily:FONT_HEAD,fontWeight:800,fontSize:12,color:PREF_TEXT,cursor:"pointer"}}>Sign out other devices</button>
           </>}
           {securitySheet === "appLockSetup" && <>
             <LightSheetTitle title="Set up App Lock" desc="RainX needs a PIN or device biometric before App Lock can be enabled." />
@@ -7262,14 +7728,14 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           </>}
           {securitySheet === "accountData" && <>
             <LightSheetTitle title="Account data" desc="Manage the privacy and account-data actions available from this device." />
-            <LightRow icon={Download} title="Export local settings" subtitle="Download your RainX preferences as JSON" onPress={()=>{setSecuritySheet(null);setMorePage("settings");setSettingsSheet("downloadData")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+             <LightRow icon={Download} title="Export account data" subtitle="Download the account data available through RainX" onPress={()=>{setSecuritySheet(null);setMorePage("settings");setSettingsSheet("downloadData")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
             <LightDivider />
             <LightRow icon={FileCheck} title="Privacy controls" subtitle="Review discovery, messaging and personalization settings" onPress={()=>{setSecuritySheet(null);setMorePage("settings")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
           </>}
           {securitySheet === "deleteAccount" && <>
             <LightSheetTitle title="Delete account" desc="Account deletion is permanent. Real deletion should require re-authentication and a trusted server-side deletion flow." />
             <div style={{background:"#FFF4F4",border:"1px solid #F2B8B8",borderRadius:13,padding:"12px 13px",fontSize:11,color:"#8E2A2A",lineHeight:1.5,marginBottom:12}}>This client screen does not delete server data by itself. Connect it to your authenticated account-deletion endpoint before enabling permanent deletion.</div>
-            <button onClick={()=>{setSecuritySheet(null);alert("Deletion was not performed. A secure server-side account-deletion flow is required.")}} style={{width:"100%",background:"#C0392B",color:"#FFFFFF",border:0,borderRadius:12,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:13,cursor:"pointer"}}>Continue</button>
+             <button onClick={requestAccountDeletion} disabled={mfaBusy} style={{width:"100%",background:"#C0392B",color:"#FFFFFF",border:0,borderRadius:12,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:13,cursor:mfaBusy?"wait":"pointer",opacity:mfaBusy ? 0.7 : 1}}>{mfaBusy?"Submitting…":"Request account deletion"}</button>
           </>}
           {securitySheet === "checkup" && <>
             <LightSheetTitle title="Security checkup" desc="A quick view of your current protection." />

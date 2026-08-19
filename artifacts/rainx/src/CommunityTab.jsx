@@ -629,7 +629,13 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
       }
     }
     const trimmed = text.trim();
-    const insertData = { user_id: account.id, text: trimmed };
+    const { data: accountSettingsRow } = await supabase.from("account_settings").select("settings").eq("user_id", account.id).maybeSingle();
+    const configuredVisibility = accountSettingsRow?.settings?.postVisibility;
+    const insertData = {
+      user_id: account.id,
+      text: trimmed,
+      visibility: ["public","followers","premium"].includes(configuredVisibility) ? configuredVisibility : "public",
+    };
     if (uploadedUrls.length) insertData.images = uploadedUrls;
     if (pollId) insertData.poll_id = pollId;
     if (location) insertData.location = location.label;
@@ -1714,7 +1720,13 @@ function SuggestedAccounts({ account, onOpenProfile }) {
   });
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
+      const { data: accountSettings } = await supabase.from("account_settings").select("settings").eq("user_id", account.id).maybeSingle();
+      if (accountSettings?.settings?.personalizedSuggestions === false) {
+        if (!cancelled) setSuggestions([]);
+        return;
+      }
       const { data: myFollows } = await supabase.from("follows").select("followed_id").eq("follower_id", account.id);
       const followedSet = new Set((myFollows || []).map((f) => f.followed_id));
       setFollowingIds(followedSet);
@@ -1729,6 +1741,7 @@ function SuggestedAccounts({ account, onOpenProfile }) {
         setSuggestions([]);
       }
     })();
+    return () => { cancelled = true; };
   }, [account.id]);
 
   const toggleFollow = async (id) => {

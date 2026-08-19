@@ -857,7 +857,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
         const allowed = who === "everyone" || (who === "followers" && mutual) || (who === "nobody" ? false : !!prefs.messageRequests);
         setMessageAccess({ loading:false, allowed, reason: allowed ? "" : who === "nobody" ? "This user does not accept messages." : "This user only accepts messages from followers/people they follow." });
       } catch (_) {
-        if (!cancelled) setMessageAccess({ loading:false, allowed:true, reason:"" });
+        if (!cancelled) setMessageAccess({ loading:false, allowed:false, reason:"Messaging permissions could not be verified. Please try again." });
       }
     })();
     return () => { cancelled = true; };
@@ -1503,6 +1503,20 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
 
 // ── Main export ────────────────────────────────────────────────────────────
 export default function CommunityChat({ account, themeTokens, onClose, onViewProfile, onUnreadCleared, initialUser, isPro }) {
+  useEffect(() => {
+    const syncGlobalSettings = (event) => {
+      const next = event?.detail || {};
+      const patch = {};
+      if (typeof next.readReceipts === "boolean") patch.readReceipts = next.readReceipts;
+      if (typeof next.activityStatus === "boolean") {
+        patch.showLastSeen = next.activityStatus;
+        patch.showOnline = next.activityStatus;
+      }
+      if (Object.keys(patch).length) setGeneralSettings(patch);
+    };
+    window.addEventListener("rainx:settings-changed", syncGlobalSettings);
+    return () => window.removeEventListener("rainx:settings-changed", syncGlobalSettings);
+  }, []);
   initialUser = initialUser || null;
   const T = buildT(themeTokens);
   const [screen, setScreen] = useState(initialUser ? "dm" : "list");
