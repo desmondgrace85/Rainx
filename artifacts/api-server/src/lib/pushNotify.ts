@@ -29,6 +29,32 @@ export async function sendPushToUser(
   body: string,
   data: Record<string, unknown> = {}
 ): Promise<{ sent: number; stale: number }> {
+  const rainaAiUrl = (process.env.RAINA_AI_URL || "").replace(/\/$/, "");
+
+  // Use the same Raina AI transport selector as /api/push/send so native
+  // RainX devices never receive a second legacy Web Push notification.
+  if (rainaAiUrl) {
+    try {
+      const response = await fetch(`${rainaAiUrl}/push/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, title, body, data }),
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (response.ok) {
+        const result = await response.json().catch(() => ({}));
+        return {
+          sent: Number(result?.sent || result?.nativeSent || result?.webSent || 0),
+          stale: Number(result?.stale || 0),
+        };
+      }
+    } catch (error) {
+      console.error("[pushNotify] Raina AI push failed:", error);
+    }
+  }
+
+  // Self-contained legacy fallback for environments that intentionally run
+  // without the Raina AI push service.
   const db = getDb();
   if (!db) return { sent: 0, stale: 0 };
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return { sent: 0, stale: 0 };
@@ -71,3 +97,4 @@ export async function sendPushToUser(
 
   return { sent, stale: stale.length };
 }
+
