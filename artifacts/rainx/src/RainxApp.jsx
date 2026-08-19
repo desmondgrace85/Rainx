@@ -2065,7 +2065,7 @@ function MainAppContent({ account, onLogout }) {
     const entry = { id, read: false, time: new Date().toLocaleTimeString(), created_at: new Date().toISOString(), ...n, data: target };
     enqueueInAppNotification(entry);
     const apiBase = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
-    fetch(`${apiBase}/api/push/send`, {
+    fetch(`https://rainx-webapp.vercel.app/api/push/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

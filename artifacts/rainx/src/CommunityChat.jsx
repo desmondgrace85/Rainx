@@ -13,6 +13,7 @@ import {
 import { supabase } from "./supabaseClient";
 import chatWallpaper from "./assets/chat-wallpaper.jpg";
 const BASE_URL = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
+const API_BASE = "https://rainx-webapp.vercel.app";
 const PRESENCE_EVENT = "RAINX_PRESENCE";
 
 function postRainxPresence(presence) {
@@ -894,7 +895,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
         return;
       }
       try {
-        const pushResponse = await fetch(`${BASE_URL}/api/push/send`, {
+        const pushResponse = await fetch(`${API_BASE}/api/push/send`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

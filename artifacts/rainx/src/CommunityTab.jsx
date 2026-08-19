@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import CommunityChat from "./CommunityChat";
 
 const BASE_URL = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
+const API_BASE = "https://rainx-webapp.vercel.app";
 import {
   Send, Trash2, Edit3, X, BadgeCheck, Heart, Eye, MessageCircle, Repeat2, MessageSquareDashed,
   UserPlus, UserCheck, ArrowLeft, Bell, MoreHorizontal, Plus, Hash, AtSign, Flag, ChevronRight, ChevronDown, MessageSquare, Search, Bookmark, Share2,
@@ -213,7 +214,7 @@ async function notify(userId, actorId, type, postId) {
     return false;
   }
   try {
-    const pushResponse = await fetch(`${BASE_URL}/api/push/send`, {
+    const pushResponse = await fetch(`${API_BASE}/api/push/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
