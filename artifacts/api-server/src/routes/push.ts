@@ -120,8 +120,18 @@ router.post("/push/native/register", async (req: Request, res: Response) => {
         signal: AbortSignal.timeout(15_000),
       });
       const text = await r.text();
-      try { return res.status(r.status).json(JSON.parse(text)); }
-      catch { return res.status(r.status).send(text); }
+      try {
+        const json = JSON.parse(text);
+        if (r.ok && db) {
+          const userId = String(req.body?.userId || "");
+          if (userId) {
+            await db.from("push_subscriptions").delete().eq("user_id", userId).then(() => {}, () => {});
+          }
+        }
+        return res.status(r.status).json(json);
+      } catch {
+        return res.status(r.status).send(text);
+      }
     } catch (err: any) {
       console.error(`[push/native/register] Railway forward failed: ${err.message}`);
       return res.status(502).json({ error: "Native push registration failed", detail: err.message });
@@ -135,6 +145,28 @@ router.post("/push/native/register", async (req: Request, res: Response) => {
 // Proxied to Railway when RAINA_AI_URL is set, because that is where the
 // browser push subscriptions actually live. This is what makes pushes deliver
 // to a phone even when the RainX app is closed / offline.
+router.post("/push/native/unregister", async (req: Request, res: Response) => {
+  if (USE_RAILWAY_PUSH) {
+    try {
+      const r = await fetch(`${railwayBase}/push/native/unregister`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}),
+        },
+        body: JSON.stringify(req.body),
+        signal: AbortSignal.timeout(15_000),
+      });
+      const text = await r.text();
+      return res.status(r.status).send(text);
+    } catch (err: any) {
+      console.error(`[push/native/unregister] Railway forward failed: ${err.message}`);
+      return res.status(502).json({ error: "Native push unregister failed", detail: err.message });
+    }
+  }
+  return res.status(503).json({ error: "RAINA_AI_URL not configured" });
+});
+
 router.post("/push/send", async (req: Request, res: Response) => {
   const { userId, title, body, data } = req.body;
   if (!userId || !title) {
