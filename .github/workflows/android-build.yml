@@ -65,6 +65,13 @@ jobs:
           test -f android/app/google-services.json
           grep -q '"package_name": "com.rainx.app"' android/app/google-services.json
 
+      - name: Apply Firebase Google Services plugin
+        working-directory: artifacts/rainx
+        run: |
+          grep -q "com.google.gms:google-services" android/build.gradle || sed -i "/classpath 'com.android.tools.build:gradle:/a\        classpath 'com.google.gms:google-services:4.4.2'" android/build.gradle
+          grep -q "com.google.gms.google-services" android/app/build.gradle || printf "\napply plugin: 'com.google.gms.google-services'\n" >> android/app/build.gradle
+          grep -q "com.google.gms.google-services" android/app/build.gradle
+
       - name: Sync Capacitor Android
         working-directory: artifacts/rainx
         run: pnpm exec cap sync android
