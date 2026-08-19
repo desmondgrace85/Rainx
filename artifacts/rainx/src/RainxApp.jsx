@@ -15,6 +15,7 @@ import LightweightChart from "./LightweightChart";
 import SpaceCoinsIntro from "./SpaceCoinsIntro";
 import SpaceCoinsDashboard from "./SpaceCoinsDashboard";
 import HomeTab from "./HomeTab";
+import { unregisterNativePush } from "./nativeNotifications";
 
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
 import { resolveMarketLogo, resolveMarketDirection, isMarketNotification, FALLBACK_NEWS_LOGO, FALLBACK_RAINX_LOGO, MARKET_NAMES } from "./MarketLogos";
@@ -2099,9 +2100,18 @@ function MainAppContent({ account, onLogout }) {
       const data = notification?.data || {};
       const kind = String(data.kind || data.category || "").toLowerCase();
       const category = String(data.category || "").toLowerCase();
-      const isCommunity = kind === "community" || ["like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention", "chat"].includes(kind) || category === "community" || category === "chat";
+      const isChat = kind === "chat" || category === "chat" || data.targetKind === "chat";
+      const isCommunity = !isChat && (
+        kind === "community" ||
+        ["like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention"].includes(kind) ||
+        category === "community"
+      );
+      if (isChat) {
+        window.dispatchEvent(new CustomEvent("rainx:message-notification-received", { detail: data }));
+        return;
+      }
       if (isCommunity) {
-        window.dispatchEvent(new CustomEvent("rainx:community-notification-received"));
+        window.dispatchEvent(new CustomEvent("rainx:community-notification-received", { detail: data }));
         return;
       }
       if (document.visibilityState === "visible") {
@@ -2135,9 +2145,14 @@ function MainAppContent({ account, onLogout }) {
         // generic trading/home notification list: doing so made it appear in
         // the wrong area and then disappear after refresh because that list is
         // rehydrated from `user_notifications`.
-        const COMMUNITY_KINDS = new Set(["chat", "like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention"]);
+        const isChat = kind === "chat" || category === "chat" || data.targetKind === "chat";
+        const COMMUNITY_KINDS = new Set(["like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention"]);
+        if (isChat) {
+          window.dispatchEvent(new CustomEvent("rainx:message-notification-received", { detail: data }));
+          return;
+        }
         if (COMMUNITY_KINDS.has(kind) || category === "community") {
-          window.dispatchEvent(new CustomEvent("rainx:community-notification-received"));
+          window.dispatchEvent(new CustomEvent("rainx:community-notification-received", { detail: data }));
           return;
         }
         if (document.visibilityState === "visible") enqueueInAppNotification({
@@ -2188,20 +2203,20 @@ function MainAppContent({ account, onLogout }) {
         event: "INSERT", schema: "public", table: "direct_messages",
         filter: `receiver_id=eq.${account.id}`,
       }, ({ new: message }) => {
-        if (document.visibilityState === "visible") enqueueInAppNotification({
-          id: message.id,
-          title: "New Message",
-          body: message.content || "",
-          type: "community",
-          read: false,
-          time: new Date().toLocaleTimeString(),
-          data: {
-            targetKind: "chat",
-            userId: message.sender_id,
-            senderId: message.sender_id,
-            conversationId: [account.id, message.sender_id].sort().join("_"),
-          },
-        });
+        // Direct messages have their own source of truth and their own badge.
+        // They must never be copied into user_notifications / Home / Markets.
+        try {
+          window.dispatchEvent(new CustomEvent("rainx:message-notification-received", {
+            detail: {
+              kind: "chat",
+              targetKind: "chat",
+              messageId: message.id,
+              userId: message.sender_id,
+              senderId: message.sender_id,
+              conversationId: [account.id, message.sender_id].sort().join("_"),
+            },
+          }));
+        } catch {}
       })
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "user_notifications",
@@ -2223,7 +2238,8 @@ function MainAppContent({ account, onLogout }) {
 
   // ─── Register service worker push subscription ──────────────────────────
   useEffect(() => {
-    if (!account?.id || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    if (!account?.id || localStorage.getItem("rainx-push-transport") === "native") return;
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
     const apiBase = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
     (async () => {
       try {
@@ -7794,7 +7810,15 @@ export default function RainX() {
   }, []);
 
   const handleLogout = async () => {
-    if (account) recordActivity(account.id, "logout");
+    if (account) {
+      recordActivity(account.id, "logout");
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.access_token && localStorage.getItem("rainx-push-transport") === "native") {
+          await unregisterNativePush(data.session.access_token);
+        }
+      } catch {}
+    }
     await supabase.auth.signOut();
     setAccount(null);
   };

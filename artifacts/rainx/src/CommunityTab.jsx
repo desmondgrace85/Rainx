@@ -2474,6 +2474,7 @@ function ProfileFeed({ posts, account, profileEntry, onOpenProfile, onOpenPost, 
 // ---------- Community notification bell + panel ----------
 const NOTIF_LABELS = {
   like: "liked your post.",
+  comment: "commented on your post.",
   reply: "replied to your post.",
   comment_reply: "replied to your comment.",
   mention: "mentioned you.",
@@ -2523,13 +2524,13 @@ function CommunityNotifBell({ account, onOpenProfile, onOpenPost }) {
     try { window.dispatchEvent(new CustomEvent("rainx:community-notifs-read")); } catch {}
   };
 
-  const filterMap = { all: () => true, likes: (n) => n.type === "like" || n.type === "comment_like", replies: (n) => n.type === "reply", mentions: (n) => n.type === "mention", reposts: (n) => n.type === "repost", followers: (n) => n.type === "follow" };
+  const filterMap = { all: () => true, likes: (n) => n.type === "like" || n.type === "comment_like", replies: (n) => n.type === "reply" || n.type === "comment" || n.type === "comment_reply", mentions: (n) => n.type === "mention", reposts: (n) => n.type === "repost", followers: (n) => n.type === "follow" };
   const filtered = (notifs || []).filter(filterMap[filter] || (() => true));
 
   // Per-type professional icon badge (Facebook-style: small round circle on the avatar corner).
   const notifIcon = (type) => {
     if (type === "like" || type === "comment_like") return { Icon: Heart, bg: T.rust, fill: "#fff" };
-    if (type === "reply" || type === "comment_reply") return { Icon: MessageCircle, bg: T.gold, fill: T.ink };
+    if (type === "reply" || type === "comment" || type === "comment_reply") return { Icon: MessageCircle, bg: T.gold, fill: T.ink };
     if (type === "repost") return { Icon: Repeat2, bg: T.sage, fill: "#fff" };
     if (type === "follow") return { Icon: UserPlus, bg: T.gold, fill: T.ink };
     if (type === "mention") return { Icon: AtSign, bg: T.gold, fill: T.ink };
@@ -2756,7 +2757,12 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
     const ch = supabase.channel("dm_unread_" + account.id)
       .on("postgres_changes", { event: "*", schema: "public", table: "direct_messages" }, loadUnread)
       .subscribe();
-    return () => supabase.removeChannel(ch);
+    const onNativeMessage = () => { loadUnread(); };
+    window.addEventListener("rainx:message-notification-received", onNativeMessage);
+    return () => {
+      supabase.removeChannel(ch);
+      window.removeEventListener("rainx:message-notification-received", onNativeMessage);
+    };
   }, [account?.id]);
 
   // Persist viewingUserId so page refresh returns to the same profile
