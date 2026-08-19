@@ -3,8 +3,8 @@ import { App } from '@capacitor/app';
 import { PushNotifications, type Token } from '@capacitor/push-notifications';
 import { supabase } from './supabaseClient';
 
-const API_BASE = (import.meta.env.BASE_URL || '').replace(/\/$/, '');
 const TOKEN_KEY = 'rainx-native-push-token';
+const APP_ID = 'com.rainx.app';
 
 function platform(): 'android' | 'ios' | null {
   const p = Capacitor.getPlatform();
@@ -12,87 +12,91 @@ function platform(): 'android' | 'ios' | null {
 }
 
 function deviceName() {
+  try { return navigator.userAgent.slice(0, 240); } catch { return undefined; }
+}
+
+async function removeLegacyWebPush() {
+  if (!('serviceWorker' in navigator)) return;
   try {
-    return navigator.userAgent.slice(0, 240);
-  } catch {
-    return undefined;
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map(async (registration) => {
+      try {
+        const subscription = await registration.pushManager?.getSubscription?.();
+        if (subscription) await subscription.unsubscribe().catch(() => {});
+      } catch {}
+      await registration.unregister().catch(() => {});
+    }));
+  } catch (error) {
+    console.warn('[RainX] legacy web-push cleanup failed', error);
   }
 }
 
 async function registerToken(token: Token, accessToken: string, userId: string) {
   const p = platform();
-  if (!p || !token?.value) return;
+  if (!p || !token?.value || !accessToken || !userId) return false;
 
   localStorage.setItem(TOKEN_KEY, token.value);
-  try {
-    const info = await App.getInfo();
-    await fetch(`${API_BASE}/api/push/native/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        platform: p,
-        token: token.value,
-        appId: 'com.rainx.app',
-        deviceName: deviceName(),
-        osVersion: navigator.userAgent,
-        appVersion: info.version || '1.0.0',
-      }),
-    }).catch(() => {});
-  } catch {}
 
-  // Keep a lightweight local record so the token is re-sent after a session refresh.
-  try {
-    localStorage.setItem(`rainx-native-push-user:${userId}`, token.value);
-    localStorage.setItem('rainx-native-push-user-id', userId);
-  } catch {}
-}
-
-async function clearLegacyWebPush() {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem('rainx-push-transport', 'native');
-  } catch {}
-
-  // The Capacitor app no longer uses the browser Web Push subscription.
-  // Remove any subscription/service worker left over from the old web build.
-  try {
-    if ('serviceWorker' in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations.map(async (registration) => {
-        try {
-          const subscription = await registration.pushManager?.getSubscription?.();
-          if (subscription) await subscription.unsubscribe();
-        } catch {}
-        try { await registration.unregister(); } catch {}
-      }));
-    }
-  } catch {}
-}
-
-export async function unregisterNativePush(accessToken: string) {
-  const token = localStorage.getItem(TOKEN_KEY);
-  if (!token) return;
-  await fetch(`${API_BASE}/api/push/native/unregister`, {
+  const response = await fetch('/api/push/native/register', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({ token, userId: localStorage.getItem('rainx-native-push-user-id') || '' }),
-  }).catch(() => {});
-  try {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem('rainx-native-push-user-id');
-  } catch {}
+    body: JSON.stringify({
+      platform: p,
+      token: token.value,
+      appId: APP_ID,
+      deviceName: deviceName(),
+      appVersion: '1.0.0',
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`Native push registration failed (${response.status})${detail ? `: ${detail}` : ''}`);
+  }
+
+  return true;
+}
+
+async function registerCurrentSession() {
+  const { data } = await supabase.auth.getSession();
+  const session = data.session;
+  if (!session?.user?.id || !session.access_token) return;
+
+  const permission = await PushNotifications.checkPermissions();
+  let receive = permission.receive;
+
+  if (receive === 'prompt') {
+    receive = (await PushNotifications.requestPermissions()).receive;
+  }
+
+  if (receive !== 'granted') {
+    console.warn('[RainX] notification permission is not granted:', receive);
+    return;
+  }
+
+  if (Capacitor.getPlatform() === 'android') {
+    await PushNotifications.createChannel({
+      id: 'rainx_default',
+      name: 'RainX notifications',
+      description: 'RainX messages, community activity and trading alerts',
+      importance: 5,
+      visibility: 1,
+      sound: 'default',
+      vibration: true,
+    }).catch((error) => console.warn('[RainX] notification channel failed', error));
+  }
+
+  await PushNotifications.register();
 }
 
 export async function initNativeNotifications() {
   if (!Capacitor.isNativePlatform()) return () => {};
 
-  await clearLegacyWebPush();
+  // Native RainX must never keep the old browser Push/VAPID worker alive.
+  await removeLegacyWebPush();
 
   const listeners = await Promise.all([
     App.addListener('backButton', ({ canGoBack }) => {
@@ -102,20 +106,29 @@ export async function initNativeNotifications() {
     App.addListener('appUrlOpen', ({ url }) => {
       try {
         const parsed = new URL(url);
-        const target = parsed.search || parsed.hash ? `${parsed.pathname}${parsed.search}${parsed.hash}` : '/';
+        const target = parsed.search || parsed.hash
+          ? `${parsed.pathname}${parsed.search}${parsed.hash}`
+          : '/';
         window.history.replaceState({}, '', target);
         window.dispatchEvent(new PopStateEvent('popstate'));
       } catch {}
     }),
     PushNotifications.addListener('registration', async (token) => {
-      const { data } = await supabase.auth.getSession();
-      const session = data.session;
-      if (session?.user?.id && session.access_token) {
-        await registerToken(token, session.access_token, session.user.id);
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user?.id && data.session.access_token) {
+          await registerToken(token, data.session.access_token, data.session.user.id);
+        } else {
+          // Auth may finish a moment after FCM registration. The auth listener
+          // below will call register() again and persist this token.
+          console.warn('[RainX] FCM token received before auth session');
+        }
+      } catch (error) {
+        console.error('[RainX] FCM token registration failed', error);
       }
     }),
     PushNotifications.addListener('registrationError', (error) => {
-      console.warn('[RainX] native push registration failed', error);
+      console.error('[RainX] native push registration failed', error);
     }),
     PushNotifications.addListener('pushNotificationReceived', (notification) => {
       window.dispatchEvent(new CustomEvent('rainx:native-push-received', { detail: notification }));
@@ -126,51 +139,21 @@ export async function initNativeNotifications() {
         ? String(data.url || `/?rainxTarget=post&postId=${encodeURIComponent(data.postId)}`)
         : '/';
       window.dispatchEvent(new CustomEvent('rainx:native-push-open', { detail: { ...data, url: target } }));
-      if (target) {
-        try {
-          const url = new URL(target, window.location.origin);
-          window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
-          window.dispatchEvent(new PopStateEvent('popstate'));
-        } catch {}
-      }
+      try {
+        const url = new URL(target, window.location.origin);
+        window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      } catch {}
     }),
   ]);
 
-  const requestAndRegister = async () => {
-    const { data } = await supabase.auth.getSession();
-    const session = data.session;
-    if (!session?.user?.id) return;
-    const permissions = await PushNotifications.checkPermissions();
-    let receive = permissions.receive;
-    if (receive === 'prompt') {
-      receive = (await PushNotifications.requestPermissions()).receive;
-    }
-    if (receive !== 'granted') return;
-    if (Capacitor.getPlatform() === 'android') {
-      await PushNotifications.createChannel({
-        id: 'rainx_default',
-        name: 'RainX notifications',
-        description: 'RainX community, messages and trading alerts',
-        importance: 5,
-        visibility: 1,
-        sound: 'default',
-        vibration: true,
-      }).catch(() => {});
-    }
-    await PushNotifications.register();
-  };
-
-  const authSub = supabase.auth.onAuthStateChange((event, session) => {
+  const authSub = supabase.auth.onAuthStateChange((_event, session) => {
     if (session?.user?.id) {
-      setTimeout(() => requestAndRegister(), 0);
-    } else if (event === 'SIGNED_OUT') {
-      try {
-        localStorage.removeItem('rainx-push-transport');
-      } catch {}
+      setTimeout(() => { void registerCurrentSession(); }, 250);
     }
   });
 
-  await requestAndRegister();
+  await registerCurrentSession();
 
   return async () => {
     authSub.data.subscription.unsubscribe();

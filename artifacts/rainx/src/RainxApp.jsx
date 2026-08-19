@@ -15,7 +15,6 @@ import LightweightChart from "./LightweightChart";
 import SpaceCoinsIntro from "./SpaceCoinsIntro";
 import SpaceCoinsDashboard from "./SpaceCoinsDashboard";
 import HomeTab from "./HomeTab";
-import { unregisterNativePush } from "./nativeNotifications";
 
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
 import { resolveMarketLogo, resolveMarketDirection, isMarketNotification, FALLBACK_NEWS_LOGO, FALLBACK_RAINX_LOGO, MARKET_NAMES } from "./MarketLogos";
@@ -2100,21 +2099,45 @@ function MainAppContent({ account, onLogout }) {
       const data = notification?.data || {};
       const kind = String(data.kind || data.category || "").toLowerCase();
       const category = String(data.category || "").toLowerCase();
-      const isChat = kind === "chat" || category === "chat" || data.targetKind === "chat";
-      const isCommunity = !isChat && (
-        kind === "community" ||
-        ["like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention"].includes(kind) ||
-        category === "community"
-      );
-      if (isChat) {
-        window.dispatchEvent(new CustomEvent("rainx:message-notification-received", { detail: data }));
-        return;
-      }
-      if (isCommunity) {
-        window.dispatchEvent(new CustomEvent("rainx:community-notification-received", { detail: data }));
-        return;
-      }
+      const isChat = kind === "chat" || category === "chat";
+      const isCommunity = kind === "community" || ["like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention"].includes(kind) || category === "community";
       if (document.visibilityState === "visible") {
+        if (isChat) {
+          enqueueInAppNotification({
+            id: data.notificationId || data.messageId || `${notification.title || "New Message"}::${notification.body || ""}`,
+            title: notification.title || "New Message",
+            body: notification.body || "",
+            type: "message",
+            read: false,
+            time: new Date().toLocaleTimeString(),
+            created_at: new Date().toISOString(),
+            data: {
+              ...data,
+              kind: "chat",
+              category: "chat",
+              targetKind: "chat",
+            },
+          });
+          return;
+        }
+        if (isCommunity) {
+          setCommunityUnreadCount((count) => count + 1);
+          enqueueInAppNotification({
+            id: data.notificationId || `${notification.title || "Community"}::${notification.body || ""}`,
+            title: notification.title || "Community activity",
+            body: notification.body || "",
+            type: "community",
+            read: false,
+            time: new Date().toLocaleTimeString(),
+            created_at: new Date().toISOString(),
+            data: {
+              ...data,
+              kind: "community",
+              category: "community",
+            },
+          });
+          return;
+        }
         enqueueInAppNotification({
           id: data.notificationId || data.messageId || `${notification.title || "RainX"}::${notification.body || ""}`,
           title: notification.title || "RainX",
@@ -2145,14 +2168,9 @@ function MainAppContent({ account, onLogout }) {
         // generic trading/home notification list: doing so made it appear in
         // the wrong area and then disappear after refresh because that list is
         // rehydrated from `user_notifications`.
-        const isChat = kind === "chat" || category === "chat" || data.targetKind === "chat";
-        const COMMUNITY_KINDS = new Set(["like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention"]);
-        if (isChat) {
-          window.dispatchEvent(new CustomEvent("rainx:message-notification-received", { detail: data }));
-          return;
-        }
+        const COMMUNITY_KINDS = new Set(["chat", "like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention"]);
         if (COMMUNITY_KINDS.has(kind) || category === "community") {
-          window.dispatchEvent(new CustomEvent("rainx:community-notification-received", { detail: data }));
+          window.dispatchEvent(new CustomEvent("rainx:community-notification-received"));
           return;
         }
         if (document.visibilityState === "visible") enqueueInAppNotification({
@@ -2193,30 +2211,63 @@ function MainAppContent({ account, onLogout }) {
         event: "INSERT", schema: "public", table: "community_notifications",
         filter: `user_id=eq.${account.id}`,
       }, ({ new: row }) => {
-        // Community notifications are owned by CommunityTab and
-        // `community_notifications`. Keep the shell badge in sync, but do not
-        // inject the row into the generic notification history.
+        // Community has its own persistent source of truth. The shell only
+        // mirrors its unread count and foreground banner; it never copies the
+        // row into Home/Markets notification history.
         setCommunityUnreadCount((count) => count + 1);
+        if (document.visibilityState === "visible") {
+          const labels = {
+            like: "Someone liked your post",
+            comment: "Someone commented on your post",
+            reply: "Someone replied to your post",
+            comment_reply: "Someone replied to your comment",
+            comment_like: "Someone liked your comment",
+            follow: "Someone started following you",
+            repost: "Someone reposted your post",
+            mention: "Someone mentioned you",
+          };
+          enqueueInAppNotification({
+            id: row.id,
+            title: labels[row.type] || "Community activity",
+            body: "Open Community notifications to see the activity.",
+            type: "community",
+            read: false,
+            time: new Date().toLocaleTimeString(),
+            data: {
+              targetKind: "post",
+              postId: row.post_id,
+              actorId: row.actor_id,
+              kind: "community",
+              category: "community",
+              notificationId: row.id,
+            },
+          });
+        }
         try { window.dispatchEvent(new CustomEvent("rainx:community-notification-received")); } catch {}
       })
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "direct_messages",
         filter: `receiver_id=eq.${account.id}`,
       }, ({ new: message }) => {
-        // Direct messages have their own source of truth and their own badge.
-        // They must never be copied into user_notifications / Home / Markets.
-        try {
-          window.dispatchEvent(new CustomEvent("rainx:message-notification-received", {
-            detail: {
-              kind: "chat",
-              targetKind: "chat",
-              messageId: message.id,
-              userId: message.sender_id,
-              senderId: message.sender_id,
-              conversationId: [account.id, message.sender_id].sort().join("_"),
-            },
-          }));
-        } catch {}
+        const entry = {
+          id: message.id,
+          title: "New Message",
+          body: message.content || "",
+          type: "message",
+          read: false,
+          time: new Date().toLocaleTimeString(),
+          data: {
+            targetKind: "chat",
+            userId: message.sender_id,
+            senderId: message.sender_id,
+            conversationId: [account.id, message.sender_id].sort().join("_"),
+            kind: "chat",
+            category: "chat",
+          },
+        };
+        if (document.visibilityState === "visible") {
+          enqueueInAppNotification(entry);
+        }
       })
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "user_notifications",
@@ -2236,54 +2287,8 @@ function MainAppContent({ account, onLogout }) {
     return () => { supabase.removeChannel(channel); };
   }, [account?.id, enqueueInAppNotification]);
 
-  // ─── Register service worker push subscription ──────────────────────────
-  useEffect(() => {
-    if (!account?.id || localStorage.getItem("rainx-push-transport") === "native") return;
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
-    const apiBase = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
-    (async () => {
-      try {
-        const reg = await navigator.serviceWorker.ready;
-        const existing = await reg.pushManager.getSubscription();
-        if (existing) {
-          // Re-sync existing subscription with backend on login
-          fetch(`${apiBase}/api/push/subscribe`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ subscription: existing.toJSON(), userId: account.id, activeMarkets }),
-          }).catch(() => {});
-          return;
-        }
-        // No existing subscription — ask for permission and create one
-        const permission = Notification.permission === "granted"
-          ? "granted"
-          : await Notification.requestPermission().catch(() => "denied");
-        if (permission !== "granted") return;
-
-        // Fetch VAPID public key from backend
-        const keyRes = await fetch(`${apiBase}/api/push/keys`).then(r => r.ok ? r.json() : null).catch(() => null);
-        const vapidPublicKey = keyRes?.publicKey;
-        if (!vapidPublicKey) return;
-
-        // Convert base64url VAPID key → Uint8Array (required by browsers)
-        const b64 = vapidPublicKey.replace(/-/g, "+").replace(/_/g, "/").padEnd(
-          vapidPublicKey.length + ((4 - vapidPublicKey.length % 4) % 4), "="
-        );
-        const serverKey = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-
-        const subscription = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: serverKey,
-        });
-        fetch(`${apiBase}/api/push/subscribe`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subscription: subscription.toJSON(), userId: account.id, activeMarkets }),
-        }).catch(() => {});
-      } catch { /* push not supported in this environment */ }
-    })();
-  }, [account?.id]);
-
+  // Native Capacitor push is registered exclusively by nativeNotifications.ts.
+  // No browser/VAPID PushManager subscription is created from the RainX app shell.
   useEffect(() => {
     if (!activeToast && toastQueue.length > 0) {
       setActiveToast({ ...toastQueue[0], count: toastQueue.length });
@@ -7810,15 +7815,7 @@ export default function RainX() {
   }, []);
 
   const handleLogout = async () => {
-    if (account) {
-      recordActivity(account.id, "logout");
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session?.access_token && localStorage.getItem("rainx-push-transport") === "native") {
-          await unregisterNativePush(data.session.access_token);
-        }
-      } catch {}
-    }
+    if (account) recordActivity(account.id, "logout");
     await supabase.auth.signOut();
     setAccount(null);
   };
