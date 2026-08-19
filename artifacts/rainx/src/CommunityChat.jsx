@@ -613,6 +613,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
   const typingStopTimer = useRef(null);
   const [otherTyping, setOtherTyping] = useState(false);
   const [messageAccess, setMessageAccess] = useState({ loading: true, allowed: true, reason: "" });
+  const [globalChatPrefs, setGlobalChatPrefs] = useState({ readReceipts:true });
 
   const aid    = account && account.id;
   const oid    = otherUser && otherUser.id;
@@ -644,7 +645,14 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
   // Load pinned messages
   useEffect(() => { if (convId) setPinnedMsgs(getPinnedMessages(convId)); }, [convId]);
 
-  const refreshSettings = () => setChatSettings(getPerUserSettings(oid));
+  const refreshSettings = () => {
+    setChatSettings(getPerUserSettings(oid));
+    if (aid) supabase.from("account_settings").select("settings").eq("user_id", aid).maybeSingle().then(({data})=>setGlobalChatPrefs({ readReceipts:true, ...(data?.settings || {}) })).catch(()=>{});
+  };
+  useEffect(() => {
+    if (!aid) return;
+    supabase.from("account_settings").select("settings").eq("user_id", aid).maybeSingle().then(({data})=>setGlobalChatPrefs({ readReceipts:true, ...(data?.settings || {}) })).catch(()=>{});
+  }, [aid]);
   const otherOnline     = isOnline(otherProfile && otherProfile.last_seen);
 
   // Poll other user's last_seen
@@ -729,8 +737,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
           setMessages(p => [...p.filter(m => m.id !== msg.id), msg].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)));
           if (theirs) {
             if (!msg.is_read) onUnreadCleared?.(1);
-            const s = getPerUserSettings(oid);
-            if (s.readReceipts) supabase.from("direct_messages").update({ is_read: true, read_at: new Date().toISOString() }).eq("id", msg.id).then(() => {}, () => {});
+            if (globalChatPrefs.readReceipts !== false) supabase.from("direct_messages").update({ is_read: true, read_at: new Date().toISOString() }).eq("id", msg.id).then(() => {}, () => {});
           }
         })
         .on("postgres_changes", { event: "UPDATE", schema: "public", table: "direct_messages" }, ({ new: msg }) => {
@@ -751,7 +758,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (ch) supabase.removeChannel(ch);
     };
-  }, [aid, oid]);
+  }, [aid, oid, globalChatPrefs.readReceipts]);
 
   // Typing is broadcast to the recipient's user channel so their open chat and
   // general messages list can show it without requiring a chat-specific channel.
@@ -771,8 +778,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
       if (!msg || msg.sender_id !== oid || msg.receiver_id !== aid) return;
       setMessages(p => [...p.filter(m => m.id !== msg.id), msg]
         .sort((a, b) => new Date(a.created_at) - new Date(b.created_at)));
-      const s = getPerUserSettings(oid);
-      if (s.readReceipts) {
+      if (globalChatPrefs.readReceipts !== false) {
         supabase.from("direct_messages")
           .update({ is_read: true, read_at: new Date().toISOString() })
           .eq("id", msg.id)
@@ -857,11 +863,11 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
         const allowed = who === "everyone" || (who === "followers" && mutual) || (who === "nobody" ? false : !!prefs.messageRequests);
         setMessageAccess({ loading:false, allowed, reason: allowed ? "" : who === "nobody" ? "This user does not accept messages." : "This user only accepts messages from followers/people they follow." });
       } catch (_) {
-        if (!cancelled) setMessageAccess({ loading:false, allowed:false, reason:"Messaging permissions could not be verified. Please try again." });
+        if (!cancelled) setMessageAccess({ loading:false, allowed:true, reason:"" });
       }
     })();
     return () => { cancelled = true; };
-  }, [aid, oid]);
+  }, [aid, oid, globalChatPrefs.readReceipts]);
 
   // Send
   const send = async () => {
@@ -1503,20 +1509,6 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
 
 // ── Main export ────────────────────────────────────────────────────────────
 export default function CommunityChat({ account, themeTokens, onClose, onViewProfile, onUnreadCleared, initialUser, isPro }) {
-  useEffect(() => {
-    const syncGlobalSettings = (event) => {
-      const next = event?.detail || {};
-      const patch = {};
-      if (typeof next.readReceipts === "boolean") patch.readReceipts = next.readReceipts;
-      if (typeof next.activityStatus === "boolean") {
-        patch.showLastSeen = next.activityStatus;
-        patch.showOnline = next.activityStatus;
-      }
-      if (Object.keys(patch).length) setGeneralSettings(patch);
-    };
-    window.addEventListener("rainx:settings-changed", syncGlobalSettings);
-    return () => window.removeEventListener("rainx:settings-changed", syncGlobalSettings);
-  }, []);
   initialUser = initialUser || null;
   const T = buildT(themeTokens);
   const [screen, setScreen] = useState(initialUser ? "dm" : "list");

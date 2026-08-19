@@ -629,13 +629,7 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
       }
     }
     const trimmed = text.trim();
-    const { data: accountSettingsRow } = await supabase.from("account_settings").select("settings").eq("user_id", account.id).maybeSingle();
-    const configuredVisibility = accountSettingsRow?.settings?.postVisibility;
-    const insertData = {
-      user_id: account.id,
-      text: trimmed,
-      visibility: ["public","followers","premium"].includes(configuredVisibility) ? configuredVisibility : "public",
-    };
+    const insertData = { user_id: account.id, text: trimmed };
     if (uploadedUrls.length) insertData.images = uploadedUrls;
     if (pollId) insertData.poll_id = pollId;
     if (location) insertData.location = location.label;
@@ -1720,13 +1714,9 @@ function SuggestedAccounts({ account, onOpenProfile }) {
   });
 
   useEffect(() => {
-    let cancelled = false;
     (async () => {
-      const { data: accountSettings } = await supabase.from("account_settings").select("settings").eq("user_id", account.id).maybeSingle();
-      if (accountSettings?.settings?.personalizedSuggestions === false) {
-        if (!cancelled) setSuggestions([]);
-        return;
-      }
+      const { data: mySettings } = await supabase.from("account_settings").select("settings").eq("user_id", account.id).maybeSingle();
+      if (mySettings?.settings?.personalizedSuggestions === false) { setSuggestions([]); return; }
       const { data: myFollows } = await supabase.from("follows").select("followed_id").eq("follower_id", account.id);
       const followedSet = new Set((myFollows || []).map((f) => f.followed_id));
       setFollowingIds(followedSet);
@@ -1741,7 +1731,6 @@ function SuggestedAccounts({ account, onOpenProfile }) {
         setSuggestions([]);
       }
     })();
-    return () => { cancelled = true; };
   }, [account.id]);
 
   const toggleFollow = async (id) => {
@@ -3023,7 +3012,9 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
 
   useEffect(() => {
     const beat = async () => {
-      await supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", account.id);
+      const { data: mySettings } = await supabase.from("account_settings").select("settings").eq("user_id", account.id).maybeSingle();
+      const activityVisible = mySettings?.settings?.activityStatus !== false;
+      if (activityVisible) await supabase.from("profiles").update({ last_seen: new Date().toISOString() }).eq("id", account.id);
       const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       const { count } = await supabase.from("profiles").select("*", { count: "exact", head: true }).gte("last_seen", fiveMinAgo);
       setOnlineCount(count || 1);

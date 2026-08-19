@@ -496,6 +496,8 @@ export function BiasChip({ bias }) {
 }
 export function playNotifSound() {
   try {
+    const prefs = JSON.parse(localStorage.getItem("rainx-settings-prefs") || "{}");
+    if (prefs.signalSounds === false) return;
     const Ctx = window.AudioContext || window.webkitAudioContext;
     const ctx = new Ctx();
     const osc = ctx.createOscillator();
