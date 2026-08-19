@@ -29,6 +29,45 @@ export async function sendPushToUser(
   body: string,
   data: Record<string, unknown> = {}
 ): Promise<{ sent: number; stale: number }> {
+  const db = getDb();
+
+  // Notification settings are account-scoped in Supabase. Enforce them here
+  // before either the native or legacy push transport is used.
+  if (db) {
+    try {
+      const { data: row } = await db
+        .from("account_settings")
+        .select("settings,security_prefs")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      const settings = (row?.settings || {}) as Record<string, any>;
+      const security = (row?.security_prefs || {}) as Record<string, any>;
+      const notificationPrefs = (settings.notificationPrefs || {}) as Record<string, any>;
+      const master = notificationPrefs.master !== false;
+      const category = String(data?.category || "default").toLowerCase();
+
+      const allowed =
+        master &&
+        (category === "signal" ? settings.signalAlerts !== false && notificationPrefs.trading !== false :
+         category === "risk" ? settings.riskAlerts !== false && notificationPrefs.trading !== false :
+         category === "news" ? notificationPrefs.news !== false :
+         category === "community" ? settings.communityNotifications !== false && notificationPrefs.community !== false :
+         category === "money" ? notificationPrefs.money !== false :
+         category === "creator" ? settings.creatorUpdates !== false :
+         category === "launch" ? settings.launchAlerts !== false :
+         category === "marketing" ? settings.marketingNotifications === true :
+         category === "security" ? security.securityEmails !== false && notificationPrefs.system !== false :
+         notificationPrefs.system !== false);
+
+      if (!allowed) return { sent: 0, stale: 0 };
+    } catch (error) {
+      // Do not fail a notification because a preference lookup is temporarily
+      // unavailable; the transport remains the fallback path.
+      console.warn("[pushNotify] preference lookup failed:", error);
+    }
+  }
+
   const rainaAiUrl = (process.env.RAINA_AI_URL || "").replace(/\/$/, "");
 
   // Use the same Raina AI transport selector as /api/push/send so native
@@ -55,7 +94,6 @@ export async function sendPushToUser(
 
   // Self-contained legacy fallback for environments that intentionally run
   // without the Raina AI push service.
-  const db = getDb();
   if (!db) return { sent: 0, stale: 0 };
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return { sent: 0, stale: 0 };
 
