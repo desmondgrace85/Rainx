@@ -18,7 +18,6 @@ import HomeTab from "./HomeTab";
 
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
 import { resolveMarketLogo, resolveMarketDirection, isMarketNotification, FALLBACK_NEWS_LOGO, FALLBACK_RAINX_LOGO, MARKET_NAMES } from "./MarketLogos";
-import { initNativeNotifications } from "./nativeNotifications";
 
 // ---------- Design tokens ----------
 const T = {
@@ -43,29 +42,7 @@ function notifyAvatarRefresh() { _avatarRefreshTick++; _avatarRefreshListeners.f
 const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#F4D35E", goldBright:"#F4D35E", goldGradient:"linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)", goldShine:"linear-gradient(180deg, #F4D35E 0%, #F4D35E 48%, #F4D35E 100%)", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
 const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#F4D35E", goldBright:"#F4D35E", goldGradient:"linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)", goldShine:"linear-gradient(180deg, #F4D35E 0%, #F4D35E 48%, #F4D35E 100%)", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
 const FONT_HEAD = "'Montserrat', sans-serif";
-const FONT_BODY = "\'Montserrat\', sans-serif";
-
-// Native Android/iOS foreground notifications need an explicit sound because
-// FCM system banners are only automatic while the app is backgrounded.
-function playRainxNativeNotificationSound(category = "default") {
-  const soundMap = {
-    trading: "/sounds/Trade%20Entry%20notification%20sound%20.mp3",
-    signal: "/sounds/Trade%20Entry%20notification%20sound%20.mp3",
-    tp: "/sounds/take%20profit%20notification%20sound%20.mp3",
-    sl: "/sounds/Stop%20Loss%20notification%20sound%20.mp3",
-    community: "/sounds/community%20notification.mp3",
-    chat: "/sounds/community%20notification.mp3",
-    news: "/sounds/market%20news%20notification%20sound%20.mp3",
-    risk: "/sounds/money%20received%20notification.mp3",
-    default: "/sounds/analysis%20complete%20notification.mp3",
-  };
-  try {
-    const src = soundMap[String(category || "default").toLowerCase()] || soundMap.default;
-    const audio = new Audio(src);
-    audio.volume = 0.85;
-    void audio.play().catch(() => {});
-  } catch {}
-}
+const FONT_BODY = "'Montserrat', sans-serif";
 
 // Format a notification timestamp as "DD/MM/YYYY, HH:MM" (date + time).
 // Falls back to n.time (time-only) or n.created_at when available.
@@ -2122,7 +2099,6 @@ function MainAppContent({ account, onLogout }) {
       const data = notification?.data || {};
       const kind = String(data.kind || data.category || "").toLowerCase();
       const category = String(data.category || "").toLowerCase();
-      playRainxNativeNotificationSound(category || kind);
       const isCommunity = kind === "community" || ["like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention", "chat"].includes(kind) || category === "community" || category === "chat";
       if (isCommunity) {
         window.dispatchEvent(new CustomEvent("rainx:community-notification-received"));
@@ -2212,7 +2188,6 @@ function MainAppContent({ account, onLogout }) {
         event: "INSERT", schema: "public", table: "direct_messages",
         filter: `receiver_id=eq.${account.id}`,
       }, ({ new: message }) => {
-        playRainxNativeNotificationSound("chat");
         if (document.visibilityState === "visible") enqueueInAppNotification({
           id: message.id,
           title: "New Message",
@@ -2232,7 +2207,6 @@ function MainAppContent({ account, onLogout }) {
         event: "INSERT", schema: "public", table: "user_notifications",
         filter: `user_id=eq.${account.id}`,
       }, ({ new: row }) => {
-        playRainxNativeNotificationSound(row?.type || row?.data?.category || "default");
         if (document.visibilityState === "visible") enqueueInAppNotification({
           id: row.id,
           title: row.title || "RainX",
@@ -7810,30 +7784,6 @@ function sessionToAccount(session) {
 
 export default function RainX() {
   const [account, setAccount] = useState(undefined); // undefined = loading, null = logged out
-
-  // Initialize real Capacitor/FCM notifications. Previously the app only ran the
-  // browser Notification permission flow, so accepting Android notifications did
-  // not register an FCM token and Railway had no native destination to send to.
-  useEffect(() => {
-    let cancelled = false;
-    let cleanup = null;
-    (async () => {
-      try {
-        const dispose = await initNativeNotifications();
-        if (cancelled) {
-          if (typeof dispose === "function") await dispose();
-        } else {
-          cleanup = dispose;
-        }
-      } catch (error) {
-        console.warn("[RainX] native notification initialization skipped", error);
-      }
-    })();
-    return () => {
-      cancelled = true;
-      if (typeof cleanup === "function") void cleanup();
-    };
-  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setAccount(sessionToAccount(data.session)));
