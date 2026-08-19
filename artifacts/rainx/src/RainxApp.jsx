@@ -2099,45 +2099,12 @@ function MainAppContent({ account, onLogout }) {
       const data = notification?.data || {};
       const kind = String(data.kind || data.category || "").toLowerCase();
       const category = String(data.category || "").toLowerCase();
-      const isChat = kind === "chat" || category === "chat";
-      const isCommunity = kind === "community" || ["like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention"].includes(kind) || category === "community";
+      const isCommunity = kind === "community" || ["like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention", "chat"].includes(kind) || category === "community" || category === "chat";
+      if (isCommunity) {
+        window.dispatchEvent(new CustomEvent("rainx:community-notification-received"));
+        return;
+      }
       if (document.visibilityState === "visible") {
-        if (isChat) {
-          enqueueInAppNotification({
-            id: data.notificationId || data.messageId || `${notification.title || "New Message"}::${notification.body || ""}`,
-            title: notification.title || "New Message",
-            body: notification.body || "",
-            type: "message",
-            read: false,
-            time: new Date().toLocaleTimeString(),
-            created_at: new Date().toISOString(),
-            data: {
-              ...data,
-              kind: "chat",
-              category: "chat",
-              targetKind: "chat",
-            },
-          });
-          return;
-        }
-        if (isCommunity) {
-          setCommunityUnreadCount((count) => count + 1);
-          enqueueInAppNotification({
-            id: data.notificationId || `${notification.title || "Community"}::${notification.body || ""}`,
-            title: notification.title || "Community activity",
-            body: notification.body || "",
-            type: "community",
-            read: false,
-            time: new Date().toLocaleTimeString(),
-            created_at: new Date().toISOString(),
-            data: {
-              ...data,
-              kind: "community",
-              category: "community",
-            },
-          });
-          return;
-        }
         enqueueInAppNotification({
           id: data.notificationId || data.messageId || `${notification.title || "RainX"}::${notification.body || ""}`,
           title: notification.title || "RainX",
@@ -2211,49 +2178,21 @@ function MainAppContent({ account, onLogout }) {
         event: "INSERT", schema: "public", table: "community_notifications",
         filter: `user_id=eq.${account.id}`,
       }, ({ new: row }) => {
-        // Community has its own persistent source of truth. The shell only
-        // mirrors its unread count and foreground banner; it never copies the
-        // row into Home/Markets notification history.
+        // Community notifications are owned by CommunityTab and
+        // `community_notifications`. Keep the shell badge in sync, but do not
+        // inject the row into the generic notification history.
         setCommunityUnreadCount((count) => count + 1);
-        if (document.visibilityState === "visible") {
-          const labels = {
-            like: "Someone liked your post",
-            comment: "Someone commented on your post",
-            reply: "Someone replied to your post",
-            comment_reply: "Someone replied to your comment",
-            comment_like: "Someone liked your comment",
-            follow: "Someone started following you",
-            repost: "Someone reposted your post",
-            mention: "Someone mentioned you",
-          };
-          enqueueInAppNotification({
-            id: row.id,
-            title: labels[row.type] || "Community activity",
-            body: "Open Community notifications to see the activity.",
-            type: "community",
-            read: false,
-            time: new Date().toLocaleTimeString(),
-            data: {
-              targetKind: "post",
-              postId: row.post_id,
-              actorId: row.actor_id,
-              kind: "community",
-              category: "community",
-              notificationId: row.id,
-            },
-          });
-        }
         try { window.dispatchEvent(new CustomEvent("rainx:community-notification-received")); } catch {}
       })
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "direct_messages",
         filter: `receiver_id=eq.${account.id}`,
       }, ({ new: message }) => {
-        const entry = {
+        if (document.visibilityState === "visible") enqueueInAppNotification({
           id: message.id,
           title: "New Message",
           body: message.content || "",
-          type: "message",
+          type: "community",
           read: false,
           time: new Date().toLocaleTimeString(),
           data: {
@@ -2261,13 +2200,8 @@ function MainAppContent({ account, onLogout }) {
             userId: message.sender_id,
             senderId: message.sender_id,
             conversationId: [account.id, message.sender_id].sort().join("_"),
-            kind: "chat",
-            category: "chat",
           },
-        };
-        if (document.visibilityState === "visible") {
-          enqueueInAppNotification(entry);
-        }
+        });
       })
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "user_notifications",
@@ -2287,8 +2221,8 @@ function MainAppContent({ account, onLogout }) {
     return () => { supabase.removeChannel(channel); };
   }, [account?.id, enqueueInAppNotification]);
 
-  // Native Capacitor push is registered exclusively by nativeNotifications.ts.
-  // No browser/VAPID PushManager subscription is created from the RainX app shell.
+  // Native Capacitor/FCM is the only notification transport in the mobile app.
+
   useEffect(() => {
     if (!activeToast && toastQueue.length > 0) {
       setActiveToast({ ...toastQueue[0], count: toastQueue.length });
