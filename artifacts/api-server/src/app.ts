@@ -52,7 +52,7 @@ if (db) {
             newRow.user_id,
             "Subscription Confirmed! 🎉",
             `Your ${planLabel} subscription is now active. Enjoy RainX Premium!`,
-            { category: "default", url: "/" }
+            { category: "money", url: "/" }
           );
         } catch {}
       }
