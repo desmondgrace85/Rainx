@@ -2547,7 +2547,7 @@ function CommunityNotifBell({ account, onOpenProfile, onOpenPost }) {
     <>
       <button onClick={() => { setOpen(true); markAllRead(); }} style={{ position: "relative", background: "none", border: "none", color: T.paper, cursor: "pointer" }}>
         <Bell size={20} />
-        {unreadCount > 0 && <span style={{ position: "absolute", top: -5, right: -7, width: 9, height: 9, borderRadius: "50%", background: T.gold, border: `1px solid ${T.ink}` }} />}
+        {unreadCount > 0 && <span style={{ position: "absolute", top: -7, right: -9, background: T.rust, color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 10, minWidth: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px", border: `1px solid ${T.ink}` }}>{unreadCount > 99 ? "99+" : unreadCount}</span>}
       </button>
       {open && (
         <div style={{ position: "fixed", inset: 0, background: T.ink, zIndex: 500, display: "flex", flexDirection: "column", animation: "slideInPanel 0.25s ease-out" }}>

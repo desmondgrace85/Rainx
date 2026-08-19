@@ -2089,6 +2089,38 @@ function MainAppContent({ account, onLogout }) {
     }).catch(() => {});
   }, [account, entitlement?.tier, enqueueInAppNotification]);
 
+  // Native Capacitor/FCM foreground delivery uses the same routing rules as
+  // service-worker delivery. Android shows the system notification while the
+  // app is backgrounded; when the app is open we surface it in-app here.
+  useEffect(() => {
+    if (!account?.id) return undefined;
+    const handleNativePush = (event) => {
+      const notification = event?.detail || {};
+      const data = notification?.data || {};
+      const kind = String(data.kind || data.category || "").toLowerCase();
+      const category = String(data.category || "").toLowerCase();
+      const isCommunity = kind === "community" || ["like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention", "chat"].includes(kind) || category === "community" || category === "chat";
+      if (isCommunity) {
+        window.dispatchEvent(new CustomEvent("rainx:community-notification-received"));
+        return;
+      }
+      if (document.visibilityState === "visible") {
+        enqueueInAppNotification({
+          id: data.notificationId || data.messageId || `${notification.title || "RainX"}::${notification.body || ""}`,
+          title: notification.title || "RainX",
+          body: notification.body || "",
+          type: data.kind || data.category || "update",
+          read: false,
+          time: new Date().toLocaleTimeString(),
+          created_at: new Date().toISOString(),
+          data,
+        });
+      }
+    };
+    window.addEventListener("rainx:native-push-received", handleNativePush);
+    return () => window.removeEventListener("rainx:native-push-received", handleNativePush);
+  }, [account?.id, enqueueInAppNotification]);
+
   // ─── One account-scoped notification bridge for every RainX surface ────────
   useEffect(() => {
     if (!account?.id) return undefined;
