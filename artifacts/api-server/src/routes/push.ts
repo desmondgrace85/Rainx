@@ -106,6 +106,30 @@ router.post("/push/subscribe", async (req: Request, res: Response) => {
   return res.json({ ok: true });
 });
 
+// POST /api/push/native/register → register an Android/iOS FCM token with Railway.
+router.post("/push/native/register", async (req: Request, res: Response) => {
+  if (USE_RAILWAY_PUSH) {
+    try {
+      const r = await fetch(`${railwayBase}/push/native/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}),
+        },
+        body: JSON.stringify(req.body),
+        signal: AbortSignal.timeout(15_000),
+      });
+      const text = await r.text();
+      try { return res.status(r.status).json(JSON.parse(text)); }
+      catch { return res.status(r.status).send(text); }
+    } catch (err: any) {
+      console.error(`[push/native/register] Railway forward failed: ${err.message}`);
+      return res.status(502).json({ error: "Native push registration failed", detail: err.message });
+    }
+  }
+  return res.status(503).json({ error: "RAINA_AI_URL not configured" });
+});
+
 // POST /api/push/send → send notification (called by the frontend notify() helpers)
 //
 // Proxied to Railway when RAINA_AI_URL is set, because that is where the
