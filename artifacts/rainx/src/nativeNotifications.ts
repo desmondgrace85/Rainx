@@ -109,11 +109,7 @@ export async function initNativeNotifications() {
         vibration: true,
       }).catch(() => {});
     }
-    try {
-      await PushNotifications.register();
-    } catch (error) {
-      console.warn('[RainX] native push registration unavailable', error);
-    }
+    await PushNotifications.register();
   };
 
   const authSub = supabase.auth.onAuthStateChange((_event, session) => {
