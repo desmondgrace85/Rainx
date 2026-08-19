@@ -29,46 +29,34 @@ export async function sendPushToUser(
   body: string,
   data: Record<string, unknown> = {}
 ): Promise<{ sent: number; stale: number }> {
-  const db = getDb();
-
-  // Notification settings are account-scoped in Supabase. Enforce them here
-  // before either the native or legacy push transport is used.
-  if (db) {
-    try {
-      const { data: row } = await db
-        .from("account_settings")
-        .select("settings,security_prefs")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      const settings = (row?.settings || {}) as Record<string, any>;
-      const security = (row?.security_prefs || {}) as Record<string, any>;
-      const notificationPrefs = (settings.notificationPrefs || {}) as Record<string, any>;
-      const master = notificationPrefs.master !== false;
-      const category = String(data?.category || "default").toLowerCase();
-
-      const allowed =
-        master &&
-        (category === "signal" ? settings.signalAlerts !== false && notificationPrefs.trading !== false :
-         category === "risk" ? settings.riskAlerts !== false && notificationPrefs.trading !== false :
-         category === "news" ? notificationPrefs.news !== false :
-         category === "community" ? settings.communityNotifications !== false && notificationPrefs.community !== false :
-         category === "money" ? notificationPrefs.money !== false :
-         category === "creator" ? settings.creatorUpdates !== false :
-         category === "launch" ? settings.launchAlerts !== false :
-         category === "marketing" ? settings.marketingNotifications === true :
-         category === "security" ? security.securityEmails !== false && notificationPrefs.system !== false :
-         notificationPrefs.system !== false);
-
-      if (!allowed) return { sent: 0, stale: 0 };
-    } catch (error) {
-      // Do not fail a notification because a preference lookup is temporarily
-      // unavailable; the transport remains the fallback path.
-      console.warn("[pushNotify] preference lookup failed:", error);
-    }
-  }
-
   const rainaAiUrl = (process.env.RAINA_AI_URL || "").replace(/\/$/, "");
+
+  // Respect the account-level notification preferences before sending anything.
+  // These are stored in account_settings by the Settings screen and are therefore
+  // shared across the user's devices instead of being a UI-only toggle.
+  let soundEnabled = true;
+  try {
+    const { data: row } = await getDb()?.from("account_settings").select("settings").eq("user_id", userId).maybeSingle() as any;
+    const prefs = row?.settings || {};
+    soundEnabled = prefs.signalSounds !== false;
+    const master = prefs.master !== false;
+    if (!master) return { sent: 0, stale: 0 };
+    const section = String(data?.section || data?.category || "").toLowerCase();
+    const type = String(data?.type || "").toLowerCase();
+    const text = `${title} ${body}`.toLowerCase();
+    const key = section === "community" || /like|comment|reply|mention|follow|repost|community/.test(type + " " + text)
+      ? "communityNotifications"
+      : section === "markets" || /signal|trade|market|tp|stop|entry|news|risk/.test(type + " " + text)
+      ? (/(risk|stop|loss|tp|take profit)/.test(type + " " + text) ? "riskAlerts" : "signalAlerts")
+      : section === "more" || /reward|wallet|creator|payout|subscription|referral/.test(type + " " + text)
+      ? "creatorUpdates"
+      : section === "system"
+      ? "securityEmails"
+      : null;
+    if (key && prefs[key] === false) return { sent: 0, stale: 0 };
+  } catch (error) {
+    console.error("[pushNotify] preference lookup failed; continuing with delivery:", error);
+  }
 
   // Use the same Raina AI transport selector as /api/push/send so native
   // RainX devices never receive a second legacy Web Push notification.
@@ -94,6 +82,7 @@ export async function sendPushToUser(
 
   // Self-contained legacy fallback for environments that intentionally run
   // without the Raina AI push service.
+  const db = getDb();
   if (!db) return { sent: 0, stale: 0 };
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return { sent: 0, stale: 0 };
 
@@ -104,7 +93,7 @@ export async function sendPushToUser(
 
   if (!rows?.length) return { sent: 0, stale: 0 };
 
-  const payload = JSON.stringify({ title, body, data });
+  const payload = JSON.stringify({ title, body, data: { ...data, soundEnabled } });
   let sent = 0;
   const stale: string[] = [];
 
