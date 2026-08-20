@@ -5,7 +5,12 @@ import NativeLockOverride from "./NativeLockOverride";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { supabase } from "./supabaseClient";
-import { getNativeLockConfig } from "./nativeSecurity";
+import {
+  clearNativeSessionUnlock,
+  getNativeLockConfig,
+  hasNativeUnlockedSession,
+  markNativeSessionUnlocked,
+} from "./nativeSecurity";
 
 const LOCK_EVENT = "rainx:native-lock-state";
 const LOCK_CONFIG_EVENT = "rainx:native-lock-config-changed";
@@ -18,9 +23,6 @@ function readHash() {
 }
 
 function installRouteBridge() {
-  // RainX routing uses history.pushState/replaceState. Those APIs do not fire
-  // hashchange, which was the reason the old More page could remain mounted
-  // until a manual refresh. Bridge both APIs into one synchronous route event.
   const historyAny = window.history as any;
   if (historyAny.__rainxRouteBridgeInstalled) return () => {};
 
@@ -28,9 +30,7 @@ function installRouteBridge() {
   const originalReplace = historyAny.replaceState.bind(historyAny);
 
   const notify = () => {
-    try {
-      window.dispatchEvent(new Event(ROUTE_EVENT));
-    } catch {}
+    try { window.dispatchEvent(new Event(ROUTE_EVENT)); } catch {}
   };
 
   historyAny.pushState = function (...args) {
@@ -48,13 +48,8 @@ function installRouteBridge() {
   historyAny.__rainxRouteBridgeInstalled = true;
 
   return () => {
-    // Only restore if this bridge still owns the methods.
-    if (historyAny.pushState !== originalPush) {
-      historyAny.pushState = originalPush;
-    }
-    if (historyAny.replaceState !== originalReplace) {
-      historyAny.replaceState = originalReplace;
-    }
+    if (historyAny.pushState !== originalPush) historyAny.pushState = originalPush;
+    if (historyAny.replaceState !== originalReplace) historyAny.replaceState = originalReplace;
     delete historyAny.__rainxRouteBridgeInstalled;
   };
 }
@@ -68,12 +63,11 @@ export default function App() {
 
   useEffect(() => {
     const updateRoute = () => setRoute(readHash());
-
     const removeBridge = installRouteBridge();
+
     window.addEventListener("hashchange", updateRoute);
     window.addEventListener("popstate", updateRoute);
     window.addEventListener(ROUTE_EVENT, updateRoute);
-
     updateRoute();
 
     return () => {
@@ -102,10 +96,17 @@ export default function App() {
       if (!mounted) return;
       const user = session?.user;
       setAccount(user ? { id: user.id, email: user.email } : null);
+
       if (!user) {
+        clearNativeSessionUnlock();
         setLocked(false);
         setLockReady(true);
+      } else if (_event === "SIGNED_IN" || _event === "INITIAL_SESSION") {
+        // A successful login/new app start must always pass through the
+        // configured native lock. Never trust a stale WebView session flag.
+        clearNativeSessionUnlock();
       }
+
       setAuthReady(true);
     });
 
@@ -139,39 +140,46 @@ export default function App() {
     getNativeLockConfig(account.id)
       .then((config) => {
         if (!mounted) return;
+        // The app-lock gate is authoritative at app start/sign-in.
+        // sessionStorage is only used after an explicit unlock during this
+        // running app session; it must never bypass the initial security gate.
         setLocked(!!config.appLock);
         setLockReady(true);
       })
       .catch(() => {
         if (!mounted) return;
-        // Fail closed for a signed-in native session: the lock screen will
-        // re-check storage rather than silently exposing the app.
         setLocked(true);
         setLockReady(true);
       });
 
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [account?.id, authReady]);
 
   useEffect(() => {
     const onLockState = (event) => {
       if (!Capacitor.isNativePlatform()) return;
+
       const nextLocked = !!event?.detail?.locked;
       setLocked(nextLocked);
       setLockReady(true);
+
+      if (account?.id) {
+        if (nextLocked) clearNativeSessionUnlock();
+        else markNativeSessionUnlocked(account.id);
+      }
     };
 
     const onLockConfigChanged = async () => {
       if (!Capacitor.isNativePlatform() || !account?.id) return;
+
       try {
         const config = await getNativeLockConfig(account.id);
         setLockReady(true);
-        // A settings change may disable the lock. Enabling/changing a PIN
-        // does not immediately interrupt the current session; it takes effect
-        // on the next cold start or background -> foreground transition.
-        if (!config.appLock) setLocked(false);
+
+        if (!config.appLock) {
+          clearNativeSessionUnlock();
+          setLocked(false);
+        }
       } catch {}
     };
 
@@ -199,14 +207,14 @@ export default function App() {
         return;
       }
 
-      // Do not lock merely because the native WebView becomes active during
-      // initial startup. Only a real background -> foreground transition locks.
       if (!wasBackgrounded) return;
       wasBackgrounded = false;
 
       try {
         const config = await getNativeLockConfig(account.id);
+
         if (mounted && config.appLock) {
+          clearNativeSessionUnlock();
           setLocked(true);
           setLockReady(true);
           window.dispatchEvent(
@@ -224,6 +232,14 @@ export default function App() {
     };
   }, [account?.id, authReady]);
 
+  const liveRoute = readHash();
+
+  // Never let RainxApp paint its legacy More landing while authentication is
+  // still resolving. That one render was the source of the old-screen flash.
+  if (!authReady && liveRoute.tab === "more" && !liveRoute.sub) {
+    return <div style={{ position: "fixed", inset: 0, background: "#fff" }} />;
+  }
+
   if (Capacitor.isNativePlatform() && !authReady) {
     return <div style={{ position: "fixed", inset: 0, background: "#fff" }} />;
   }
@@ -233,12 +249,13 @@ export default function App() {
   }
 
   if (Capacitor.isNativePlatform() && account?.id && locked) {
-    return <NativeLockOverride account={account} />;
+    return <NativeLockOverride account={account} initialLocked />;
   }
 
-  // IMPORTANT: More owns the #more landing route. RainxApp is not mounted
-  // underneath it, so the legacy More landing cannot render first.
-  const showMoreLanding = !!account?.id && route.tab === "more" && !route.sub;
+  // Read the URL synchronously as well as from React state. This prevents one
+  // stale render of RainxApp's legacy More landing during navigation.
+  const showMoreLanding =
+    !!account?.id && liveRoute.tab === "more" && !liveRoute.sub;
 
   if (showMoreLanding) {
     return <MoreLandingOverride account={account} />;
@@ -247,7 +264,7 @@ export default function App() {
   return (
     <>
       <RainXApp />
-      {account?.id && <NativeLockOverride account={account} />}
+      {account?.id && <NativeLockOverride account={account} initialLocked={false} />}
     </>
   );
 }
