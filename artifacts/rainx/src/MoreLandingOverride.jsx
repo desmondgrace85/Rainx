@@ -61,15 +61,6 @@ export default function MoreLandingOverride({ account }) {
     return () => { cancelled = true; };
   }, [account?.id]);
 
-  return () => {
-      cancelled = true;
-      html.style.overflow = old.htmlOverflow;
-      html.style.overscrollBehaviorY = old.htmlOverscroll;
-      body.style.overflow = old.bodyOverflow;
-      body.style.overscrollBehaviorY = old.bodyOverscroll;
-    };
-  }, [account?.id]);
-
   return (
     <div
       style={{
@@ -99,7 +90,6 @@ export default function MoreLandingOverride({ account }) {
           touchAction: "pan-y",
           scrollbarWidth: "none",
           padding: "0 14px 18px",
-          boxSizing: "border-box",
         }}
       >
         <header
