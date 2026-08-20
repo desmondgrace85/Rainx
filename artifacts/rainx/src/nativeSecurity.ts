@@ -340,7 +340,6 @@ export async function recordNativeLogin() {
     p_device_id: device.deviceId,
     p_platform: device.platform,
     p_device_name: device.name,
-    p_manufacturer: device.manufacturer,
     p_model: device.model,
     p_os_version: device.osVersion,
     p_app_version: device.appVersion,
