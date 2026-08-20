@@ -11,7 +11,13 @@ import { clearNativeSessionUnlock, getNativeLockConfig, hasNativeUnlockedSession
 const LOCK_EVENT = "rainx:native-lock-state";
 const LOCK_CONFIG_EVENT = "rainx:native-lock-config-changed";
 const ROUTE_EVENT = "rainx:route-change";
-function readHash() { const raw = window.location.hash.replace(/^#/, ""); const [tab, sub] = raw.split("/"); return { tab: tab || null, sub: sub ? decodeURIComponent(sub) : null }; }
+
+function readHash() {
+  const raw = window.location.hash.replace(/^#/, "");
+  const [tab, sub] = raw.split("/");
+  return { tab: tab || null, sub: sub ? decodeURIComponent(sub) : null };
+}
+
 function installRouteBridge() {
   const h = window.history as any;
   if (h.__rainxRouteBridgeInstalled) return () => {};
@@ -20,23 +26,142 @@ function installRouteBridge() {
   h.pushState = function(...args) { const r = push(...args); notify(); return r; };
   h.replaceState = function(...args) { const r = replace(...args); notify(); return r; };
   h.__rainxRouteBridgeInstalled = true;
-  return () => { if (h.pushState !== push) h.pushState = push; if (h.replaceState !== replace) h.replaceState = replace; delete h.__rainxRouteBridgeInstalled; };
+  return () => {
+    if (h.pushState !== push) h.pushState = push;
+    if (h.replaceState !== replace) h.replaceState = replace;
+    delete h.__rainxRouteBridgeInstalled;
+  };
 }
-const APP_SURFACE = { position:"fixed", inset:0, width:"100%", height:"100%", overflow:"hidden", background:"#FFFFFF", contain:"layout paint size", isolation:"isolate" } as const;
+
+/*
+ * Keep the app shell fixed to the viewport, but let the shell itself scroll.
+ * RainXApp contains the Home, Community and Wallet surfaces. Previously this
+ * shell used overflow:hidden, which clipped all content taller than the
+ * viewport and prevented normal vertical touch scrolling on those tabs.
+ */
+const APP_SURFACE = {
+  position: "fixed",
+  inset: 0,
+  width: "100%",
+  height: "100%",
+  overflowY: "auto",
+  overflowX: "hidden",
+  WebkitOverflowScrolling: "touch",
+  overscrollBehaviorY: "none",
+  background: "#FFFFFF",
+  contain: "layout paint size",
+  isolation: "isolate",
+} as const;
 
 export default function App() {
   const [route,setRoute]=useState(()=>readHash()),[account,setAccount]=useState(null),[authReady,setAuthReady]=useState(false),[lockReady,setLockReady]=useState(!Capacitor.isNativePlatform()),[locked,setLocked]=useState(false);
   const previousAccountId=useRef(null),forceLockOnNextAccountLoad=useRef(false);
-  useEffect(()=>{const update=()=>setRoute(readHash());const remove=installRouteBridge();window.addEventListener("hashchange",update);window.addEventListener("popstate",update);window.addEventListener(ROUTE_EVENT,update);update();return()=>{remove();window.removeEventListener("hashchange",update);window.removeEventListener("popstate",update);window.removeEventListener(ROUTE_EVENT,update)}},[]);
-  useEffect(()=>{let mounted=true;supabase.auth.getSession().then(({data})=>{if(!mounted)return;const u=data.session?.user;previousAccountId.current=u?.id||null;setAccount(u?{id:u.id,email:u.email}:null);setAuthReady(true)}).catch(()=>mounted&&setAuthReady(true));const {data:listener}=supabase.auth.onAuthStateChange((event,session)=>{if(!mounted)return;const u=session?.user,id=u?.id||null,changed=id&&id!==previousAccountId.current;if(!u){clearNativeSessionUnlock();forceLockOnNextAccountLoad.current=false;previousAccountId.current=null;setLocked(false);setLockReady(true)}else if(event==="SIGNED_IN"&&changed){clearNativeSessionUnlock();forceLockOnNextAccountLoad.current=true}previousAccountId.current=id;setAccount(u?{id:u.id,email:u.email}:null);setAuthReady(true)});return()=>{mounted=false;listener?.subscription?.unsubscribe()}},[]);
-  useEffect(()=>{if(!Capacitor.isNativePlatform()){setLockReady(true);setLocked(false);return}if(!authReady){setLockReady(false);return}if(!account?.id){setLocked(false);setLockReady(true);return}let mounted=true;setLockReady(false);getNativeLockConfig(account.id).then(config=>{if(!mounted)return;const fresh=forceLockOnNextAccountLoad.current;forceLockOnNextAccountLoad.current=false;const already=hasNativeUnlockedSession(account.id);setLocked(!!config.appLock&&(fresh||!already));setLockReady(true)}).catch(()=>{if(mounted){setLocked(true);setLockReady(true)}});return()=>{mounted=false}},[account?.id,authReady]);
-  useEffect(()=>{const onLock=e=>{if(!Capacitor.isNativePlatform())return;setLocked(!!e?.detail?.locked);setLockReady(true)};const onConfig=async()=>{if(!Capacitor.isNativePlatform()||!account?.id)return;try{const c=await getNativeLockConfig(account.id);setLockReady(true);if(!c.appLock){setLocked(false);clearNativeSessionUnlock()}}catch{}};window.addEventListener(LOCK_EVENT,onLock);window.addEventListener(LOCK_CONFIG_EVENT,onConfig);return()=>{window.removeEventListener(LOCK_EVENT,onLock);window.removeEventListener(LOCK_CONFIG_EVENT,onConfig)}},[account?.id]);
-  useEffect(()=>{if(!Capacitor.isNativePlatform()||!authReady||!account?.id)return;let mounted=true,wasBackgrounded=false,listener;CapacitorApp.addListener("appStateChange",async({isActive})=>{if(!mounted)return;if(!isActive){wasBackgrounded=true;return}if(!wasBackgrounded)return;wasBackgrounded=false;try{const c=await getNativeLockConfig(account.id);if(!mounted||!c.appLock)return;clearNativeSessionUnlock();setLocked(true);setLockReady(true);window.dispatchEvent(new CustomEvent(LOCK_EVENT,{detail:{locked:true}}))}catch{}}).then(h=>listener=h).catch(()=>{});return()=>{mounted=false;listener?.remove?.()}},[account?.id,authReady]);
+
+  useEffect(()=>{
+    const update=()=>setRoute(readHash());
+    const remove=installRouteBridge();
+    window.addEventListener("hashchange",update);
+    window.addEventListener("popstate",update);
+    window.addEventListener(ROUTE_EVENT,update);
+    update();
+    return()=>{remove();window.removeEventListener("hashchange",update);window.removeEventListener("popstate",update);window.removeEventListener(ROUTE_EVENT,update)}
+  },[]);
+
+  useEffect(()=>{
+    let mounted=true;
+    supabase.auth.getSession().then(({data})=>{
+      if(!mounted)return;
+      const u=data.session?.user;
+      previousAccountId.current=u?.id||null;
+      setAccount(u?{id:u.id,email:u.email}:null);
+      setAuthReady(true)
+    }).catch(()=>mounted&&setAuthReady(true));
+
+    const {data:listener}=supabase.auth.onAuthStateChange((event,session)=>{
+      if(!mounted)return;
+      const u=session?.user,id=u?.id||null,changed=id&&id!==previousAccountId.current;
+      if(!u){
+        clearNativeSessionUnlock();
+        forceLockOnNextAccountLoad.current=false;
+        previousAccountId.current=null;
+        setLocked(false);
+        setLockReady(true)
+      }else if(event==="SIGNED_IN"&&changed){
+        clearNativeSessionUnlock();
+        forceLockOnNextAccountLoad.current=true
+      }
+      previousAccountId.current=id;
+      setAccount(u?{id:u.id,email:u.email}:null);
+      setAuthReady(true)
+    });
+    return()=>{mounted=false;listener?.subscription?.unsubscribe()}
+  },[]);
+
+  useEffect(()=>{
+    if(!Capacitor.isNativePlatform()){setLockReady(true);setLocked(false);return}
+    if(!authReady){setLockReady(false);return}
+    if(!account?.id){setLocked(false);setLockReady(true);return}
+    let mounted=true;
+    setLockReady(false);
+    getNativeLockConfig(account.id).then(config=>{
+      if(!mounted)return;
+      const fresh=forceLockOnNextAccountLoad.current;
+      forceLockOnNextAccountLoad.current=false;
+      const already=hasNativeUnlockedSession(account.id);
+      setLocked(!!config.appLock&&(fresh||!already));
+      setLockReady(true)
+    }).catch(()=>{
+      if(mounted){setLocked(true);setLockReady(true)}
+    });
+    return()=>{mounted=false}
+  },[account?.id,authReady]);
+
+  useEffect(()=>{
+    const onLock=e=>{
+      if(!Capacitor.isNativePlatform())return;
+      setLocked(!!e?.detail?.locked);
+      setLockReady(true)
+    };
+    const onConfig=async()=>{
+      if(!Capacitor.isNativePlatform()||!account?.id)return;
+      try{
+        const c=await getNativeLockConfig(account.id);
+        setLockReady(true);
+        if(!c.appLock){
+          setLocked(false);
+          clearNativeSessionUnlock()
+        }
+      }catch{}
+    };
+    window.addEventListener(LOCK_EVENT,onLock);
+    window.addEventListener(LOCK_CONFIG_EVENT,onConfig);
+    return()=>{
+      window.removeEventListener(LOCK_EVENT,onLock);
+      window.removeEventListener(LOCK_CONFIG_EVENT,onConfig)
+    }
+  },[account?.id]);
+
+  useEffect(()=>{
+    if(!Capacitor.isNativePlatform()||!authReady||!account?.id)return;
+    let mounted=true,wasBackgrounded=false,listener;
+    CapacitorApp.addListener("appStateChange",async({isActive})=>{
+      if(!mounted)return;
+      if(!isActive){wasBackgrounded=true;return}
+      if(!wasBackgrounded)return;
+      wasBackgrounded=false;
+      try{
+        const c=await getNativeLockConfig(account.id);
+        if(!mounted||!c.appLock)return;
+        clearNativeSessionUnlock();
+        setLocked(true);
+        setLockReady(true);
+        window.dispatchEvent(new CustomEvent(LOCK_EVENT,{detail:{locked:true}}))
+      }catch{}
+    }).then(h=>listener=h).catch(()=>{});
+    return()=>{mounted=false;listener?.remove?.()}
+  },[account?.id,authReady]);
 
   const isMoreLanding=route.tab==="more"&&!route.sub;
-  // Analytics gets its own top-level render surface. This deliberately bypasses the
-  // legacy analytics branch inside RainxApp so it cannot mount, flash, or be cached
-  // underneath the replacement screen.
   const isAnalyticsRoute=route.tab==="analytics"||(route.tab==="more"&&route.sub==="analytics");
 
   if(Capacitor.isNativePlatform()&&!authReady)return <div style={APP_SURFACE}/>;
