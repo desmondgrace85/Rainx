@@ -39,14 +39,10 @@ function installRouteBridge() {
  * which makes the bottom navigation and profile controls move while scrolling.
  */
 const APP_SURFACE = {
-  position: "fixed",
-  inset: 0,
+  position: "relative",
   width: "100%",
-  height: "100%",
-  overflowY: "auto",
+  minHeight: "100dvh",
   overflowX: "hidden",
-  WebkitOverflowScrolling: "touch",
-  overscrollBehaviorY: "none",
   background: "#FFFFFF",
   isolation: "isolate",
 } as const;
