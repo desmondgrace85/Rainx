@@ -20,16 +20,6 @@ function postRainxPresence(presence) {
   try {
     localStorage.setItem("rainx_presence", JSON.stringify({ ...presence, updatedAt: Date.now() }));
   } catch {}
-  try {
-    if ("serviceWorker" in navigator) {
-      const message = { type: PRESENCE_EVENT, ...presence };
-      if (navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage(message);
-      } else {
-        navigator.serviceWorker.ready.then(reg => reg.active?.postMessage(message)).catch(() => {});
-      }
-    }
-  } catch {}
 }
 
 // Short WhatsApp-style "sent" tick sound, synthesized (no audio file needed)
@@ -613,7 +603,6 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
   const typingStopTimer = useRef(null);
   const [otherTyping, setOtherTyping] = useState(false);
   const [messageAccess, setMessageAccess] = useState({ loading: true, allowed: true, reason: "" });
-  const [globalChatPrefs, setGlobalChatPrefs] = useState({ readReceipts:true });
 
   const aid    = account && account.id;
   const oid    = otherUser && otherUser.id;
@@ -645,14 +634,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
   // Load pinned messages
   useEffect(() => { if (convId) setPinnedMsgs(getPinnedMessages(convId)); }, [convId]);
 
-  const refreshSettings = () => {
-    setChatSettings(getPerUserSettings(oid));
-    if (aid) supabase.from("account_settings").select("settings").eq("user_id", aid).maybeSingle().then(({data})=>setGlobalChatPrefs({ readReceipts:true, ...(data?.settings || {}) })).catch(()=>{});
-  };
-  useEffect(() => {
-    if (!aid) return;
-    supabase.from("account_settings").select("settings").eq("user_id", aid).maybeSingle().then(({data})=>setGlobalChatPrefs({ readReceipts:true, ...(data?.settings || {}) })).catch(()=>{});
-  }, [aid]);
+  const refreshSettings = () => setChatSettings(getPerUserSettings(oid));
   const otherOnline     = isOnline(otherProfile && otherProfile.last_seen);
 
   // Poll other user's last_seen
@@ -737,7 +719,8 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
           setMessages(p => [...p.filter(m => m.id !== msg.id), msg].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)));
           if (theirs) {
             if (!msg.is_read) onUnreadCleared?.(1);
-            if (globalChatPrefs.readReceipts !== false) supabase.from("direct_messages").update({ is_read: true, read_at: new Date().toISOString() }).eq("id", msg.id).then(() => {}, () => {});
+            const s = getPerUserSettings(oid);
+            if (s.readReceipts) supabase.from("direct_messages").update({ is_read: true, read_at: new Date().toISOString() }).eq("id", msg.id).then(() => {}, () => {});
           }
         })
         .on("postgres_changes", { event: "UPDATE", schema: "public", table: "direct_messages" }, ({ new: msg }) => {
@@ -758,7 +741,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (ch) supabase.removeChannel(ch);
     };
-  }, [aid, oid, globalChatPrefs.readReceipts]);
+  }, [aid, oid]);
 
   // Typing is broadcast to the recipient's user channel so their open chat and
   // general messages list can show it without requiring a chat-specific channel.
@@ -778,7 +761,8 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
       if (!msg || msg.sender_id !== oid || msg.receiver_id !== aid) return;
       setMessages(p => [...p.filter(m => m.id !== msg.id), msg]
         .sort((a, b) => new Date(a.created_at) - new Date(b.created_at)));
-      if (globalChatPrefs.readReceipts !== false) {
+      const s = getPerUserSettings(oid);
+      if (s.readReceipts) {
         supabase.from("direct_messages")
           .update({ is_read: true, read_at: new Date().toISOString() })
           .eq("id", msg.id)
@@ -867,7 +851,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
       }
     })();
     return () => { cancelled = true; };
-  }, [aid, oid, globalChatPrefs.readReceipts]);
+  }, [aid, oid]);
 
   // Send
   const send = async () => {

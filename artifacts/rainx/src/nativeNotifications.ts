@@ -1,6 +1,6 @@
 /**
  * Native (Capacitor) push — Android/iOS via FCM.
- * Web is a no-op. Do not rely on browser Web Push for the app builds.
+ * This bridge is for native Capacitor builds only. Web Push/service workers are not used.
  */
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
@@ -21,26 +21,6 @@ const API_BASE = "https://rainx-webapp.vercel.app";
 function getPlatform(): "android" | "ios" | null {
   const p = Capacitor.getPlatform();
   return p === "android" || p === "ios" ? p : null;
-}
-
-async function clearLegacyBrowserPush() {
-  if (!("serviceWorker" in navigator)) return;
-  try {
-    const regs = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(
-      regs.map(async (r) => {
-        try {
-          const sub = await r.pushManager?.getSubscription?.();
-          if (sub) await sub.unsubscribe().catch(() => {});
-        } catch {
-          /* ignore */
-        }
-        await r.unregister().catch(() => {});
-      }),
-    );
-  } catch (e) {
-    console.warn("[RainX] legacy web push cleanup failed", e);
-  }
 }
 
 /** Pending FCM token if it arrived before Supabase session was ready. */
@@ -135,7 +115,6 @@ export async function initNativeNotifications(): Promise<() => Promise<void>> {
   }
 
   localStorage.setItem(TRANSPORT_KEY, "native");
-  await clearLegacyBrowserPush();
 
   const listeners = await Promise.all([
     App.addListener("backButton", ({ canGoBack }) => {

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { App as CapacitorApp } from "@capacitor/app";
 import { Area, ComposedChart, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import {
   Bell, Home, Briefcase, MessageCircle, MoreHorizontal, Settings, X, Repeat2,
@@ -10,6 +9,11 @@ import {
   BrainCircuit, Cpu, Palette, Globe, Trash2, UserX, Download, FileCheck, Cookie, Database,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
+import { Capacitor } from "@capacitor/core";
+import {
+  getNativeLockConfig, saveNativePin, verifyNativePin, disableNativePin, setNativeAppLock,
+  setNativeBiometricEnabled, registerNativeDeviceSession, recordNativeLogin, attachNativeResumeListener,
+} from "./nativeSecurity";
 import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, Badge as CommunityBadge, formatCount } from "./CommunityTab";
 import FullChartView from "./FullChartView";
 import LightweightChart from "./LightweightChart";
@@ -292,12 +296,6 @@ function lsSet(key, value) {
 }
 function lsDelete(key) {
   try { localStorage.removeItem(key); } catch { delete memoryStore[key]; }
-}
-function getStoredRainxSetting(key, fallback) {
-  try { const prefs = JSON.parse(lsGet("rainx-settings-prefs") || "{}"); return prefs[key] ?? fallback; } catch { return fallback; }
-}
-function getStoredRainxSecuritySetting(key, fallback) {
-  try { const prefs = JSON.parse(lsGet("rainx-security-prefs") || "{}"); return prefs[key] ?? fallback; } catch { return fallback; }
 }
 
 // ── URL-hash routing helpers — keeps current page alive across refresh ────────
@@ -640,8 +638,6 @@ function BiasChip({ bias }) {
 }
 function playNotifSound() {
   try {
-    const prefs = JSON.parse(localStorage.getItem("rainx-settings-prefs") || "{}");
-    if (prefs.signalSounds === false) return;
     const Ctx = window.AudioContext || window.webkitAudioContext;
     const ctx = new Ctx();
     const osc = ctx.createOscillator();
@@ -798,59 +794,9 @@ function Toast({ toast, items = [], onDone, onDismissOne, onOpen }) {
 }
 const getInputStyle = () => ({ flex: 1, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 8, color: T.paper, padding: 10, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 500 });
 
-// ---------- Auth + security helpers ----------
-const AUTH_EVENT_FUNCTION_URL = "https://fsndqkacfizulovhfldz.supabase.co/functions/v1/record-auth-event";
-
-function describeRainxUserAgent(userAgent = "") {
-  const ua = String(userAgent || "");
-  let os = "Unknown OS";
-  if (/Android/i.test(ua)) os = `Android ${ua.match(/Android\s+([0-9.]+)/i)?.[1] || ""}`.trim();
-  else if (/iPhone|iPad|iPod/i.test(ua)) os = `iOS ${(ua.match(/OS\s([0-9_]+)/i)?.[1] || "").replaceAll("_", ".")}`.trim();
-  else if (/Windows/i.test(ua)) os = "Windows";
-  else if (/Mac OS X/i.test(ua)) os = "macOS";
-  else if (/Linux/i.test(ua)) os = "Linux";
-  let model = "";
-  if (/Android/i.test(ua)) {
-    const m = ua.match(/Android[^;)]*;\s*(?:[a-z]{2}(?:-[A-Z]{2})?;\s*)?([^;)]+?)(?:\s+Build\/[^;)]+)?[;)]/i);
-    if (m?.[1] && !/wv|mobile|build/i.test(m[1])) model = m[1].trim();
-  } else if (/iPhone/i.test(ua)) model = "iPhone";
-  else if (/iPad/i.test(ua)) model = "iPad";
-  let browser = "RainX";
-  if (/Edg\//i.test(ua)) browser = "Edge";
-  else if (/Chrome\//i.test(ua)) browser = "Chrome";
-  else if (/Firefox\//i.test(ua)) browser = "Firefox";
-  else if (/Safari\//i.test(ua) && !/Chrome\//i.test(ua)) browser = "Safari";
-  else if (/wv\)/i.test(ua)) browser = "Android WebView";
-  return { label: [model, os].filter(Boolean).join(" · ") || browser, model: model || null, os, browser };
-}
-
-async function hashRainxPin(pin) {
-  const bytes = new TextEncoder().encode(String(pin));
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
+// ---------- Auth (real Supabase accounts) ----------
 async function recordActivity(userId, action, meta) {
   try { await supabase.from("activity_logs").insert({ user_id: userId, action, meta: meta || null }); } catch {}
-}
-
-async function recordAuthEvent(action, session) {
-  if (!session?.access_token) return false;
-  try {
-    const response = await fetch(AUTH_EVENT_FUNCTION_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ action, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, language: navigator.language }),
-    });
-    if (response.ok) return true;
-  } catch {}
-  try {
-    await supabase.from("activity_logs").insert({
-      user_id: session.user.id, action,
-      meta: { userAgent:navigator.userAgent, language:navigator.language, timezone:Intl.DateTimeFormat().resolvedOptions().timeZone, platform:navigator.platform, device:describeRainxUserAgent(navigator.userAgent).label, source:"client-fallback" }
-    });
-    return true;
-  } catch { return false; }
 }
 
 // ---------- Candle-based signal engine ----------
@@ -896,10 +842,6 @@ function AuthScreen({ onAuthed }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
-  const [mfaLogin, setMfaLogin] = useState(null);
-  const [mfaLoginCode, setMfaLoginCode] = useState("");
-  const [mfaLoginBusy, setMfaLoginBusy] = useState(false);
-  const [mfaLoginError, setMfaLoginError] = useState("");
   const [content, setContent] = useState({
     hero_title: "RainX", hero_subtitle: "Powered by Raina AI", hero_tagline: "Your intelligent trading companion.",
   });
@@ -916,21 +858,6 @@ function AuthScreen({ onAuthed }) {
       } catch { /* keep defaults if the CMS table isn't reachable */ }
     })();
   }, []);
-
-  const verifyMfaLogin = async () => {
-    if (!mfaLogin?.factorId || !/^\d{6}$/.test(mfaLoginCode)) { setMfaLoginError("Enter the 6-digit verification code."); return; }
-    setMfaLoginBusy(true); setMfaLoginError("");
-    try {
-      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId:mfaLogin.factorId, ...(mfaLogin.factorType === "phone" ? { channel:"sms" } : {}) });
-      if (challengeError) throw challengeError;
-      const { error } = await supabase.auth.mfa.verify({ factorId:mfaLogin.factorId, challengeId:challenge.id, code:mfaLoginCode });
-      if (error) throw error;
-      const { data: sessionData } = await supabase.auth.getSession();
-      await recordAuthEvent("login", sessionData.session);
-      setMfaLogin(null); setMfaLoginCode(""); onAuthed(sessionData.session);
-    } catch (e) { setMfaLoginError(e?.message || "The verification code is incorrect or expired."); }
-    finally { setMfaLoginBusy(false); }
-  };
 
   const submit = async () => {
     setError(""); setNotice("");
@@ -965,7 +892,7 @@ function AuthScreen({ onAuthed }) {
           phone: phone.trim() || null,
           country: country.trim() || null,
         }).catch(() => {});
-        await recordAuthEvent("signup", data.session);
+        recordActivity(data.user.id, "signup", { userAgent: navigator.userAgent, language: navigator.language, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, platform: navigator.platform });
         // Referral attribution — ?ref=CODE in the URL
         try {
           const refCode = new URLSearchParams(window.location.search).get("ref");
@@ -1008,18 +935,7 @@ function AuthScreen({ onAuthed }) {
         setBusy(false);
         return;
       }
-      const { data: aal, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (aalError) throw aalError;
-      if (aal?.currentLevel === "aal1" && aal?.nextLevel === "aal2") {
-        const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
-        if (factorsError) throw factorsError;
-        const verified = [...(factors?.totp || []), ...(factors?.phone || [])].filter(f => f.status === "verified");
-        if (!verified.length) throw new Error("Your account has MFA enabled but no verified factor is available. Contact support.");
-        const factor = verified.find(f=>f.factor_type === "totp") || verified[0];
-        setMfaLogin({ factorId:factor.id, factorType:factor.factor_type });
-        setMfaLoginCode(""); setMfaLoginError(""); setBusy(false); return;
-      }
-      await recordAuthEvent("login", data.session);
+      recordActivity(data.user.id, "login", { userAgent: navigator.userAgent, language: navigator.language, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, platform: navigator.platform });
       onAuthed(data.session);
     }
     setBusy(false);
@@ -1033,19 +949,6 @@ function AuthScreen({ onAuthed }) {
     border: "rgba(255,255,255,0.08)", gray: "#B4B4B4",
   };
   const [oauthNotice, setOauthNotice] = useState("");
-
-  if (mfaLogin) return (
-    <div style={{ minHeight:"100dvh", background:A.bg, color:"#fff", fontFamily:FONT_BODY, display:"flex", flexDirection:"column", justifyContent:"center", padding:"28px 22px", maxWidth:480, margin:"0 auto" }}>
-      <div style={{background:A.card,border:`1px solid ${A.border}`,borderRadius:20,padding:22}}>
-        <div style={{fontFamily:FONT_HEAD,fontWeight:900,fontSize:20,marginBottom:6}}>Verify your sign-in</div>
-        <div style={{fontSize:12,color:A.gray,lineHeight:1.55,marginBottom:16}}>Your account has two-step authentication enabled. Enter the code from your {mfaLogin.factorType === "phone" ? "phone" : "authenticator app"} to continue.</div>
-        {mfaLoginError&&<div style={{fontSize:11,color:"#F3A49A",marginBottom:10}}>{mfaLoginError}</div>}
-        <input autoFocus value={mfaLoginCode} onChange={e=>setMfaLoginCode(e.target.value.replace(/\D/g,"").slice(0,6))} onKeyDown={e=>{if(e.key==="Enter")verifyMfaLogin();}} inputMode="numeric" type="text" placeholder="6-digit code" style={{width:"100%",boxSizing:"border-box",background:"#111",border:`1px solid ${A.border}`,borderRadius:12,padding:"13px",color:"#fff",fontFamily:FONT_HEAD,fontSize:16,textAlign:"center",letterSpacing:4}} />
-        <button onClick={verifyMfaLogin} disabled={mfaLoginBusy} style={{width:"100%",marginTop:12,border:0,borderRadius:12,padding:"13px 0",background:A.gold,color:"#111",fontFamily:FONT_HEAD,fontWeight:900}}>{mfaLoginBusy?"Verifying…":"Verify & continue"}</button>
-        <button onClick={async()=>{setMfaLogin(null);setMfaLoginCode("");setMfaLoginError("");await supabase.auth.signOut();}} style={{width:"100%",marginTop:8,border:`1px solid ${A.border}`,borderRadius:12,padding:"11px 0",background:"transparent",color:A.gray,fontFamily:FONT_HEAD,fontWeight:700}}>Cancel</button>
-      </div>
-    </div>
-  );
 
   return (
     <div style={{ minHeight: "100dvh", background: A.bg, color: "#fff", fontFamily: FONT_BODY, display: "flex", flexDirection: "column", padding: "28px 22px", maxWidth: 480, margin: "0 auto" }}>
@@ -1475,56 +1378,58 @@ function SubscribeScreen({ account, entitlement, onBack }) {
 }
 
 // ---------- Main App ----------
-function MainApp({ account, onLogout }) {
-  const readLockState = () => {
-    try {
-      const prefs = JSON.parse(localStorage.getItem("rainx-security-prefs") || "{}");
-      return !!(prefs.appLock && prefs.pinEnabled && prefs.pinHash);
-    } catch { return false; }
-  };
-  const [locked, setLocked] = useState(() => readLockState());
-  const [unlockPin, setUnlockPin] = useState("");
-  const [unlockError, setUnlockError] = useState("");
-  const [unlocking, setUnlocking] = useState(false);
-
-  useEffect(() => {
-    const lockIfEnabled = () => { if (readLockState()) { setUnlockPin(""); setUnlockError(""); setLocked(true); } };
-    const onVisibility = () => { if (document.visibilityState === "hidden") lockIfEnabled(); };
-    document.addEventListener("visibilitychange", onVisibility);
-    let appListener;
-    CapacitorApp.addListener("appStateChange", ({ isActive }) => { if (!isActive) lockIfEnabled(); else if (readLockState()) setLocked(true); }).then(handle => { appListener = handle; }).catch(() => {});
-    return () => {
-      document.removeEventListener("visibilitychange", onVisibility);
-      appListener?.remove?.();
-    };
+function NativeSecurityGate({ account, children }) {
+  const [ready, setReady] = useState(!Capacitor.isNativePlatform());
+  const [locked, setLocked] = useState(false);
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+  const resumeLock = useCallback(async () => {
+    const config = await getNativeLockConfig();
+    if (!config.appLock) { setLocked(false); return; }
+    setLocked(true);
+    setPin(""); setError("");
   }, []);
-
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!Capacitor.isNativePlatform()) return;
+      await registerNativeDeviceSession().catch(() => {});
+      const config = await getNativeLockConfig();
+      if (!mounted) return;
+      setLocked(!!config.appLock);
+      setReady(true);
+    })();
+    let handle;
+    attachNativeResumeListener(resumeLock).then(h => { handle = h; });
+    return () => { mounted = false; handle?.remove?.(); };
+  }, [resumeLock]);
   const unlock = async () => {
-    setUnlockError("");
-    if (!/^\d{4,6}$/.test(unlockPin)) { setUnlockError("Enter your 4–6 digit PIN."); return; }
-    setUnlocking(true);
-    try {
-      const prefs = JSON.parse(localStorage.getItem("rainx-security-prefs") || "{}");
-      const hash = await hashRainxPin(unlockPin);
-      if (hash !== prefs.pinHash) { setUnlockError("Incorrect PIN."); setUnlockPin(""); return; }
-      setLocked(false); setUnlockPin("");
-    } catch { setUnlockError("Unable to unlock this device."); }
-    finally { setUnlocking(false); }
+    setError("");
+    if (await verifyNativePin(pin)) { setLocked(false); setPin(""); return; }
+    const config = await getNativeLockConfig();
+    if (config.biometricEnabled) {
+      const ok = await (await import("./nativeSecurity")).authenticateNativeLock();
+      if (ok) { setLocked(false); setPin(""); return; }
+    }
+    setError("Incorrect PIN.");
   };
+  if (!ready) return <div style={{minHeight:"100dvh",background:T.ink}} />;
+  if (!locked) return children;
+  return <div style={{position:"fixed",inset:0,zIndex:99999,background:"#0F0E0B",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+    <div style={{width:"100%",maxWidth:340,textAlign:"center"}}>
+      <img src={rainxLogoTransparent} alt="RainX" style={{width:74,height:74,objectFit:"contain",marginBottom:18}} />
+      <div style={{color:"#F2EDE0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:22}}>RainX is locked</div>
+      <div style={{color:"#9C947F",fontFamily:FONT_BODY,fontSize:12,margin:"8px 0 20px"}}>Enter your PIN to continue.</div>
+      <input autoFocus inputMode="numeric" type="password" maxLength={6} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,"").slice(0,6))} onKeyDown={e=>{if(e.key==="Enter") unlock();}} placeholder="PIN" style={{width:"100%",boxSizing:"border-box",background:"#1C1913",border:"1px solid #332C1F",borderRadius:14,padding:"14px",color:"#F2EDE0",fontSize:20,textAlign:"center",letterSpacing:8,outline:"none"}} />
+      {error && <div style={{color:"#C0392B",fontSize:11,marginTop:8}}>{error}</div>}
+      <button onClick={unlock} style={{width:"100%",marginTop:14,border:0,borderRadius:14,padding:"13px",background:T.gold,color:T.ink,fontFamily:FONT_HEAD,fontWeight:800}}>Unlock with PIN</button>
+      <button onClick={async()=>{setError("");const ok=await (await import("./nativeSecurity")).authenticateNativeLock();if(ok)setLocked(false);else setError("Biometric authentication was cancelled or failed.");}} style={{width:"100%",marginTop:9,border:`1px solid ${T.cardBorder}`,borderRadius:14,padding:"12px",background:"transparent",color:T.paper,fontFamily:FONT_HEAD,fontWeight:700}}>Use Face ID / fingerprint</button>
+    </div>
+  </div>;
+}
 
-  return <>
-    <MainAppContent account={account} onLogout={onLogout} />
-    {locked && <div style={{position:"fixed",inset:0,zIndex:99999,background:"#F2F3F5",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
-      <div style={{width:"100%",maxWidth:360,background:"#fff",border:"1px solid #E7E9EC",borderRadius:22,padding:24,boxShadow:"0 20px 60px rgba(0,0,0,.16)"}}>
-        <div style={{width:56,height:56,borderRadius:18,background:"#F4D35E",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}><Lock size={26} color="#111418"/></div>
-        <div style={{fontFamily:FONT_HEAD,fontWeight:900,fontSize:20,color:"#111418",textAlign:"center"}}>RainX is locked</div>
-        <div style={{fontSize:12,color:"#737B85",textAlign:"center",marginTop:6,marginBottom:18}}>Enter your device PIN to continue.</div>
-        <input autoFocus value={unlockPin} onChange={e=>setUnlockPin(e.target.value.replace(/\D/g,"").slice(0,6))} onKeyDown={e=>{if(e.key==="Enter")unlock();}} inputMode="numeric" type="password" placeholder="Enter PIN" style={{width:"100%",boxSizing:"border-box",border:"1px solid #D9DEE3",borderRadius:12,padding:"13px 14px",fontFamily:FONT_HEAD,fontSize:16,outline:"none",textAlign:"center",letterSpacing:4}} />
-        {unlockError&&<div style={{fontSize:11,color:"#C0392B",textAlign:"center",marginTop:8}}>{unlockError}</div>}
-        <button onClick={unlock} disabled={unlocking} style={{width:"100%",marginTop:12,border:0,borderRadius:12,padding:"13px 0",background:"#F4D35E",color:"#111418",fontFamily:FONT_HEAD,fontWeight:900,fontSize:13}}>{unlocking?"Checking…":"Unlock RainX"}</button>
-      </div>
-    </div>}
-  </>;
+function MainApp({ account, onLogout }) {
+  return <NativeSecurityGate account={account}><MainAppContent account={account} onLogout={onLogout} /></NativeSecurityGate>;
 }
 
 class MoreTabErrorBoundary extends React.Component {
@@ -2081,12 +1986,6 @@ function MainAppContent({ account, onLogout }) {
       updatedAt: Date.now(),
     };
     try { localStorage.setItem("rainx_presence", JSON.stringify(presence)); } catch {}
-    try {
-      if ("serviceWorker" in navigator) {
-        if (navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage(presence);
-        else navigator.serviceWorker.ready.then(reg => reg.active?.postMessage(presence)).catch(() => {});
-      }
-    } catch {}
   }, [account?.id]);
 
   // Announce that RainX is open. DMScreen overrides activeChatUserId while a
@@ -2269,54 +2168,6 @@ function MainAppContent({ account, onLogout }) {
     };
     window.addEventListener("rainx:native-push-received", handleNativePush);
     return () => window.removeEventListener("rainx:native-push-received", handleNativePush);
-  }, [account?.id, enqueueInAppNotification]);
-
-  // ─── One account-scoped notification bridge for every RainX surface ────────
-  useEffect(() => {
-    if (!account?.id) return undefined;
-    const handleMsg = (event) => {
-      if (event.data?.type === "RAINX_PUSH_RECEIVED") {
-        const payload = event.data.payload || {};
-        const data = payload.data || {};
-        const kind = String(data.kind || "").toLowerCase();
-        const category = String(data.category || "").toLowerCase();
-        // Community notifications have their own persistent source of truth
-        // (`community_notifications`). Do not copy a community push into the
-        // generic trading/home notification list: doing so made it appear in
-        // the wrong area and then disappear after refresh because that list is
-        // rehydrated from `user_notifications`.
-        const COMMUNITY_KINDS = new Set(["chat", "like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention"]);
-        if (COMMUNITY_KINDS.has(kind) || category === "community") {
-          window.dispatchEvent(new CustomEvent("rainx:community-notification-received"));
-          return;
-        }
-        if (document.visibilityState === "visible") enqueueInAppNotification({
-          id: data.notificationId || data.messageId || `${payload.title || ""}::${payload.body || ""}`,
-          title: payload.title || "RainX",
-          body: payload.body || "",
-          type: kind === "chat" ? "community" : (data.kind || "update"),
-          read: false,
-          time: new Date().toLocaleTimeString(),
-          data,
-        });
-        return;
-      }
-      if (event.data?.type === "RAINX_NOTIFICATION_ACTION") {
-        const data = event.data.payload || {};
-        if (data.url) window.location.assign(data.url);
-        return;
-      }
-      if (event.data?.type !== "PLAY_SOUND" || !event.data.soundSrc) return;
-      try {
-        const audio = new Audio(event.data.soundSrc);
-        audio.volume = 0.8;
-        audio.play().catch(() => {}); // silently ignore autoplay policy rejections
-      } catch {}
-    };
-    if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", handleMsg);
-    return () => {
-      if ("serviceWorker" in navigator) navigator.serviceWorker.removeEventListener("message", handleMsg);
-    };
   }, [account?.id, enqueueInAppNotification]);
 
   // Push is the background delivery path. These realtime channels are the
@@ -5305,14 +5156,19 @@ function SecuritySection({ icon: Icon, title, desc, onPress, label, comingSoon }
   { key: "money",     label: "Money & Rewards",      desc: "Transfers, rewards, wallet updates" },
   { key: "system",    label: "System",               desc: "Security, account, announcements" },
 ];
-function NotificationSettingsScreen({ account, activeMarkets = [], settingsPrefs = {}, persistSettings }) {
-  const prefs = settingsPrefs;
+function NotificationSettingsScreen({ account, activeMarkets = [] }) {
+  const [prefs, setPrefs] = useState(() => {
+    try { return JSON.parse(lsGet("rainx-notif-prefs") || "{}"); } catch { return {}; }
+  });
   const masterOn = prefs.master !== false;
   const toggle = (key) => {
-    const next = key === "master"
-      ? { master: !masterOn }
-      : { [key]: prefs[key] === false ? true : false };
-    if (persistSettings) persistSettings(next);
+    setPrefs(prev => {
+      const next = key === "master"
+        ? { ...prev, master: !masterOn }
+        : { ...prev, [key]: prev[key] === false ? true : false };
+      lsSet("rainx-notif-prefs", JSON.stringify(next));
+      return next;
+    });
   };
   const bg = "#F2F3F5", card = "#FFFFFF", border = "#E7E9EC", text = "#111418", muted = "#737B85", yellow = T.gold;
   const SwitchToggle = ({ on, onChange }) => (
@@ -5432,7 +5288,6 @@ function MoreSubScreen({ onBack, title, subtitle, rightElement, children }) {
 
 function RewardsScreen({ account, entitlement }) {
   const [rewardsData, setRewardsData] = useState(null);
-  const [hideBalances, setHideBalances] = useState(() => getStoredRainxSetting("hideBalances", false));
   const [txns, setTxns] = useState([]);
   const [quickPage, setQuickPage] = useState(null);
 
@@ -5452,8 +5307,7 @@ function RewardsScreen({ account, entitlement }) {
   const weeklyPct       = rewardsData?.weekly_change_pct ?? 0;
 
   const fmtGHS = (n) =>
-    hideBalances ? "••••••" : `GHS ${Number(n).toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  useEffect(() => { const sync=()=>setHideBalances(getStoredRainxSetting("hideBalances", false)); window.addEventListener("focus",sync); document.addEventListener("visibilitychange",sync); return ()=>{window.removeEventListener("focus",sync);document.removeEventListener("visibilitychange",sync)}; }, []);
+    `GHS ${Number(n).toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const quickItems = [
     { icon: Landmark,       label: "Bank\nAccounts",       page: "bank"      },
@@ -5618,7 +5472,6 @@ function RewardsScreen({ account, entitlement }) {
 // ── Creator Wallet Screen ─────────────────────────────────────────────────
 function CreatorWalletScreen({ account }) {
   const [walletData, setWalletData] = useState(null);
-  const [hideBalances, setHideBalances] = useState(() => getStoredRainxSetting("hideBalances", false));
   const [txns, setTxns] = useState([]);
   const [walletPage, setWalletPage] = useState(null); // "topup" | "withdraw" | "history"
   const [payStep, setPayStep] = useState(null);   // chosen payment method
@@ -5636,8 +5489,7 @@ function CreatorWalletScreen({ account }) {
   }, [account?.id]);
 
   const balance = walletData?.balance ?? 0;
-  const fmtGHS  = (n) => hideBalances ? "••••••" : `GHS ${Number(n).toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  useEffect(() => { const sync=()=>setHideBalances(getStoredRainxSetting("hideBalances", false)); window.addEventListener("focus",sync); document.addEventListener("visibilitychange",sync); return ()=>{window.removeEventListener("focus",sync);document.removeEventListener("visibilitychange",sync)}; }, []);
+  const fmtGHS  = (n) => `GHS ${Number(n).toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const fmtDate = (iso) => {
     if (!iso) return "";
     const d = new Date(iso);
@@ -5655,10 +5507,6 @@ function CreatorWalletScreen({ account }) {
 
   const handleSubmit = async () => {
     if (!amount || isNaN(+amount) || +amount <= 0) { setMsg("Enter a valid amount."); return; }
-    if (walletPage === "withdraw" && getStoredRainxSecuritySetting("withdrawConfirmations", true) !== false) {
-      const ok = window.confirm(`Confirm withdrawal of GHS ${Number(amount).toLocaleString("en-GH", {minimumFractionDigits:2, maximumFractionDigits:2})} via ${payStep?.label || "selected method"}?`);
-      if (!ok) return;
-    }
     setBusy(true); setMsg("");
     await supabase.from("wallet_transactions").insert({
       user_id: account.id,
@@ -5853,7 +5701,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [benefits, setBenefits] = useState(DEFAULT_BENEFITS);
   const [verification, setVerification] = useState(null);
   const [showLegal, setShowLegal] = useState(false);
-  const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
 
   // Security + Settings preferences are intentionally local to this app shell so
@@ -5863,22 +5710,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     try { return JSON.parse(lsGet("rainx-security-prefs") || "{}"); } catch { return {}; }
   });
   const [securitySheet, setSecuritySheet] = useState(null);
-  const [pinCurrent, setPinCurrent] = useState("");
   const [pinValue, setPinValue] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
   const [pinError, setPinError] = useState("");
-  const [passwordForm, setPasswordForm] = useState({ current:"", next:"", confirm:"" });
-  const [passwordBusy, setPasswordBusy] = useState(false);
-  const [mfaFactors, setMfaFactors] = useState({ totp:[], phone:[] });
-  const [mfaEnrollment, setMfaEnrollment] = useState(null);
-  const [mfaCode, setMfaCode] = useState("");
-  const [mfaBusy, setMfaBusy] = useState(false);
-  const [mfaError, setMfaError] = useState("");
-  const [recoveryPhone, setRecoveryPhone] = useState("");
-  const [recoveryOtp, setRecoveryOtp] = useState("");
-  const [recoveryStep, setRecoveryStep] = useState("phone");
-  const [recoveryBusy, setRecoveryBusy] = useState(false);
-  const [recoveryError, setRecoveryError] = useState("");
   const [settingsPrefs, setSettingsPrefs] = useState(() => {
     try { return JSON.parse(lsGet("rainx-settings-prefs") || "{}"); } catch { return {}; }
   });
@@ -5888,6 +5722,22 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [securitySessionsLoading, setSecuritySessionsLoading] = useState(false);
   const [loginHistoryRows, setLoginHistoryRows] = useState([]);
   const [loginHistoryLoading, setLoginHistoryLoading] = useState(false);
+  const [mfaFactors, setMfaFactors] = useState([]);
+  const [mfaEnrollment, setMfaEnrollment] = useState(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaBusy, setMfaBusy] = useState(false);
+  const [mfaError, setMfaError] = useState("");
+  const [recoveryCodes, setRecoveryCodes] = useState([]);
+  const [recoveryBusy, setRecoveryBusy] = useState(false);
+  const [recoveryVisible, setRecoveryVisible] = useState(false);
+  const [phoneValue, setPhoneValue] = useState("");
+  const [phoneOtp, setPhoneOtp] = useState("");
+  const [phoneBusy, setPhoneBusy] = useState(false);
+  const [phoneStage, setPhoneStage] = useState("number");
+  const [passwordValue, setPasswordValue] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [mutedUsers, setMutedUsers] = useState([]);
   const [blockedLoading, setBlockedLoading] = useState(false);
@@ -5919,40 +5769,30 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   useEffect(() => { if (settingsSheet === "blockedUsers") loadBlockedAndMuted(); }, [settingsSheet, loadBlockedAndMuted]);
   const [postVisibility, setPostVisibility] = useState(() => lsGet("rainx-post-visibility") || "public");
 
-  const persistSecurity = async (patch) => {
-    const previous = securityPrefs;
-    const next = { ...previous, ...patch };
-    setSecurityPrefs(next);
-    try { lsSet("rainx-security-prefs", JSON.stringify(next)); } catch {}
-    if (!account?.id) return true;
-    const backendSafe = { ...next };
-    delete backendSafe.pinHash;
-    delete backendSafe.biometricCredentialId;
-    const { error } = await supabase.from("account_settings").upsert({ user_id: account.id, security_prefs: backendSafe, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
-    if (error) {
-      setSecurityPrefs(previous);
-      try { lsSet("rainx-security-prefs", JSON.stringify(previous)); } catch {}
-      alert("Could not save this security setting. Nothing was changed.");
-      return false;
-    }
-    return true;
+  const persistSecurity = (patch) => {
+    setSecurityPrefs(prev => {
+      const next = { ...prev, ...patch };
+      lsSet("rainx-security-prefs", JSON.stringify(next));
+      // Never send device PIN hashes or biometric credential IDs to the account backend.
+      const backendSafe = { ...next };
+      delete backendSafe.pinHash;
+      delete backendSafe.biometricCredentialId;
+      if (account?.id) {
+        supabase.from("account_settings").upsert({ user_id: account.id, security_prefs: backendSafe, updated_at: new Date().toISOString() }, { onConflict: "user_id" }).then(() => {}).catch(() => {});
+      }
+      return next;
+    });
   };
-  const persistSettings = async (patch) => {
-    const previous = settingsPrefs;
-    const next = { ...previous, ...patch };
-    setSettingsPrefs(next);
-    try { lsSet("rainx-settings-prefs", JSON.stringify(next)); } catch {}
-    if (!account?.id) return true;
-    const { error } = await supabase.from("account_settings").upsert({ user_id: account.id, settings: next, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
-    if (error) {
-      setSettingsPrefs(previous);
-      try { lsSet("rainx-settings-prefs", JSON.stringify(previous)); } catch {}
-      alert("Could not save this setting. Nothing was changed.");
-      return false;
-    }
-    return true;
+  const persistSettings = (patch) => {
+    setSettingsPrefs(prev => {
+      const next = { ...prev, ...patch };
+      lsSet("rainx-settings-prefs", JSON.stringify(next));
+      if (account?.id) {
+        supabase.from("account_settings").upsert({ user_id: account.id, settings: next, updated_at: new Date().toISOString() }, { onConflict: "user_id" }).then(() => {}).catch(() => {});
+      }
+      return next;
+    });
   };
-
   useEffect(() => {
     if (!account?.id) return;
     let cancelled = false;
@@ -5979,8 +5819,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     setSecuritySessionsLoading(true);
     try {
       const [{ data: sessionData }, { data: activityData }] = await Promise.all([
-        supabase.rpc("get_my_auth_sessions"),
-        supabase.from("activity_logs").select("id,action,meta,created_at").eq("user_id", account.id).in("action", ["login","signup"]).order("created_at", { ascending:false }).limit(30),
+        supabase.rpc("get_my_device_sessions"),
+        supabase.from("auth_login_events").select("id,device_id,platform,device_name,manufacturer,model,os_version,app_version,created_at").eq("user_id", account.id).order("created_at", { ascending:false }).limit(50),
       ]);
       setSecuritySessions(sessionData || []);
       setLoginHistoryRows(activityData || []);
@@ -5993,176 +5833,131 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     loadSecuritySessions().finally(() => setLoginHistoryLoading(false));
   }, [settingsSheet, loadSecuritySessions]);
 
-  const hashPin = hashRainxPin;
+  const loadMfaFactors = useCallback(async () => {
+    const { data, error } = await supabase.auth.mfa.listFactors();
+    if (error) throw error;
+    const factors = data?.totp || [];
+    setMfaFactors(factors);
+    setSecurityPrefs(prev => ({ ...prev, twoFactorEnabled: factors.some(f => f.status === "verified") }));
+    return factors;
+  }, []);
+  useEffect(() => {
+    if (securitySheet === "twoFactor") loadMfaFactors().catch(e => setMfaError(e?.message || "Unable to load authenticator status."));
+  }, [securitySheet, loadMfaFactors]);
+  const beginMfaEnrollment = async () => {
+    setMfaBusy(true); setMfaError("");
+    try {
+      const existing = await loadMfaFactors();
+      const pending = existing.find(f => f.status === "unverified");
+      if (pending) await supabase.auth.mfa.unenroll({ factorId: pending.id }).catch(() => {});
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: `RainX Authenticator ${new Date().toLocaleDateString()}` });
+      if (error) throw error;
+      setMfaEnrollment(data?.totp || null);
+    } catch (e) { setMfaError(e?.message || "Could not start authenticator setup."); }
+    finally { setMfaBusy(false); }
+  };
+  const verifyMfaEnrollment = async () => {
+    if (!mfaEnrollment?.id || !/^\d{6}$/.test(mfaCode)) { setMfaError("Enter the 6-digit code from your authenticator app."); return; }
+    setMfaBusy(true); setMfaError("");
+    try {
+      const { data: challenge, error: ce } = await supabase.auth.mfa.challenge({ factorId: mfaEnrollment.id });
+      if (ce) throw ce;
+      const { error } = await supabase.auth.mfa.verify({ factorId: mfaEnrollment.id, challengeId: challenge.id, code: mfaCode });
+      if (error) throw error;
+      setMfaEnrollment(null); setMfaCode("");
+      await loadMfaFactors();
+    } catch (e) { setMfaError(e?.message || "The authenticator code could not be verified."); }
+    finally { setMfaBusy(false); }
+  };
+  const disableMfa = async (factorId) => {
+    if (!window.confirm("Disable two-step authentication for this account?")) return;
+    setMfaBusy(true); setMfaError("");
+    try { const { error } = await supabase.auth.mfa.unenroll({ factorId }); if (error) throw error; await loadMfaFactors(); }
+    catch (e) { setMfaError(e?.message || "Could not disable two-step authentication."); }
+    finally { setMfaBusy(false); }
+  };
+  const generateRecoveryCodes = async () => {
+    setRecoveryBusy(true);
+    try {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const codes = Array.from({length:10},()=>{let c=""; const bytes=crypto.getRandomValues(new Uint8Array(8)); for(let i=0;i<8;i++) c+=chars[bytes[i]%chars.length]; return c.slice(0,4)+"-"+c.slice(4);});
+      const rows=[];
+      for (const code of codes) rows.push({user_id:account.id,code_hash:await hashPin(code.replace("-",""))});
+      await supabase.from("account_recovery_codes").delete().eq("user_id",account.id);
+      const { error } = await supabase.from("account_recovery_codes").insert(rows);
+      if (error) throw error;
+      setRecoveryCodes(codes); setRecoveryVisible(true);
+    } catch(e) { alert(e?.message || "Could not generate recovery codes."); }
+    finally { setRecoveryBusy(false); }
+  };
+  const startPhoneVerification = async () => {
+    if (!/^\+[1-9]\d{7,14}$/.test(phoneValue.trim())) { alert("Enter the phone number in international format, for example +233XXXXXXXXX."); return; }
+    setPhoneBusy(true);
+    try { const { error } = await supabase.auth.updateUser({ phone: phoneValue.trim() }); if (error) throw error; setPhoneStage("otp"); }
+    catch(e) { alert(e?.message || "Phone verification could not be started. Check the SMS provider configuration."); }
+    finally { setPhoneBusy(false); }
+  };
+  const verifyPhone = async () => {
+    if (!/^\d{6}$/.test(phoneOtp)) { alert("Enter the 6-digit verification code."); return; }
+    setPhoneBusy(true);
+    try { const { error } = await supabase.auth.verifyOtp({ phone: phoneValue.trim(), token: phoneOtp, type: "phone_change" }); if (error) throw error; setPhoneStage("verified"); }
+    catch(e) { alert(e?.message || "The phone verification code is invalid or expired."); }
+    finally { setPhoneBusy(false); }
+  };
+  const changePassword = async () => {
+    setPasswordError("");
+    if (passwordValue.length < 8) { setPasswordError("Password must be at least 8 characters."); return; }
+    if (passwordValue !== passwordConfirm) { setPasswordError("Passwords do not match."); return; }
+    setPasswordBusy(true);
+    try { const { error } = await supabase.auth.updateUser({ password: passwordValue }); if (error) throw error; setPasswordValue(""); setPasswordConfirm(""); setSecuritySheet(null); alert("Password changed successfully."); }
+    catch(e) { setPasswordError(e?.message || "Could not change your password."); }
+    finally { setPasswordBusy(false); }
+  };
+
+  const hashPin = async (pin) => {
+    const bytes = new TextEncoder().encode(pin);
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
+  };
   const setupPin = async () => {
     setPinError("");
     if (!/^\d{4,6}$/.test(pinValue)) { setPinError("Enter a 4–6 digit PIN."); return; }
     if (pinValue !== pinConfirm) { setPinError("PINs do not match."); return; }
     try {
-      if (securityPrefs.pinEnabled) {
-        if (!/^\d{4,6}$/.test(pinCurrent) || await hashPin(pinCurrent) !== securityPrefs.pinHash) { setPinError("Current PIN is incorrect."); return; }
-      }
+      if (Capacitor.isNativePlatform()) await saveNativePin(pinValue);
       const hash = await hashPin(pinValue);
-      persistSecurity({ pinEnabled: true, pinHash: hash });
-      setPinCurrent(""); setPinValue(""); setPinConfirm(""); setSecuritySheet(null);
-    } catch { setPinError("Unable to save PIN on this device."); }
+      persistSecurity({ pinEnabled: true, appLock: true, pinHash: Capacitor.isNativePlatform() ? undefined : hash });
+      setPinValue(""); setPinConfirm(""); setSecuritySheet(null);
+    } catch (e) { setPinError(e?.message || "Unable to save PIN on this device."); }
   };
-  const loadMfaFactors = useCallback(async () => {
-    const { data, error } = await supabase.auth.mfa.listFactors();
-    if (error) { setMfaError(error.message); return; }
-    setMfaFactors({ totp: data?.totp || [], phone: data?.phone || [] });
-    const enabled = [...(data?.totp || []), ...(data?.phone || [])].some(f => f.status === "verified");
-    if (securityPrefs.twoFactorEnabled !== enabled) await persistSecurity({ twoFactorEnabled: enabled });
-  }, [securityPrefs.twoFactorEnabled]);
-
-  const beginTotpEnrollment = async () => {
-    setMfaError(""); setMfaBusy(true); setMfaEnrollment(null); setMfaCode("");
+  const disablePin = async () => {
+    setPinError("");
     try {
-      const { data: factors } = await supabase.auth.mfa.listFactors();
-      const existing = (factors?.totp || []).find(f => f.status === "unverified" && f.friendly_name === "RainX Authenticator");
-      if (existing) await supabase.auth.mfa.unenroll({ factorId: existing.id });
-      const { data, error } = await supabase.auth.mfa.enroll({ factorType:"totp", friendlyName:"RainX Authenticator" });
-      if (error) throw error;
-      setMfaEnrollment(data);
-    } catch (e) { setMfaError(e?.message || "Unable to start authenticator setup."); }
-    finally { setMfaBusy(false); }
+      if (Capacitor.isNativePlatform()) await disableNativePin(pinValue);
+      else {
+        const hash = await hashPin(pinValue);
+        if (hash !== securityPrefs.pinHash) throw new Error("Incorrect PIN.");
+      }
+      persistSecurity({ pinEnabled: false, appLock: false, pinHash: undefined });
+      setPinValue(""); setPinConfirm(""); setSecuritySheet(null);
+    } catch (e) { setPinError(e?.message || "Unable to disable PIN."); }
   };
-
-  const verifyTotpEnrollment = async () => {
-    if (!mfaEnrollment?.id || !/^\d{6}$/.test(mfaCode)) { setMfaError("Enter the 6-digit code from your authenticator app."); return; }
-    setMfaBusy(true); setMfaError("");
-    try {
-      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId:mfaEnrollment.id });
-      if (challengeError) throw challengeError;
-      const { error } = await supabase.auth.mfa.verify({ factorId:mfaEnrollment.id, challengeId:challenge.id, code:mfaCode });
-      if (error) throw error;
-      setMfaEnrollment(null); setMfaCode("");
-      await loadMfaFactors();
-      await persistSecurity({ twoFactorEnabled:true });
-    } catch (e) { setMfaError(e?.message || "The code is incorrect or expired."); }
-    finally { setMfaBusy(false); }
-  };
-
-  const disableMfaFactor = async (factorId) => {
-    setMfaBusy(true); setMfaError("");
-    try {
-      const { error } = await supabase.auth.mfa.unenroll({ factorId });
-      if (error) throw error;
-      await supabase.auth.refreshSession();
-      await loadMfaFactors();
-      const { data } = await supabase.auth.mfa.listFactors();
-      await persistSecurity({ twoFactorEnabled:(data?.totp || []).some(f=>f.status === "verified") || (data?.phone || []).some(f=>f.status === "verified") });
-    } catch (e) { setMfaError(e?.message || "Unable to remove this factor."); }
-    finally { setMfaBusy(false); }
-  };
-
-  const changePassword = async () => {
-    setMfaError("");
-    if (!passwordForm.current || passwordForm.next.length < 8 || passwordForm.next !== passwordForm.confirm) { setMfaError("Enter your current password and a matching new password of at least 8 characters."); return; }
-    setPasswordBusy(true);
-    try {
-      const { error: reauthError } = await supabase.auth.signInWithPassword({ email:account?.email || "", password:passwordForm.current });
-      if (reauthError) throw new Error("Current password is incorrect.");
-      const { error } = await supabase.auth.updateUser({ password:passwordForm.next });
-      if (error) throw error;
-      await recordActivity(account.id, "password_changed", { source:"security_settings" });
-      setPasswordForm({current:"",next:"",confirm:""}); setSettingsSheet(null); setSecuritySheet(null);
-      alert("Your password was changed successfully.");
-    } catch (e) { setMfaError(e?.message || "Unable to change your password."); }
-    finally { setPasswordBusy(false); }
-  };
-
-  const sendRecoveryPhone = async () => {
-    setRecoveryError("");
-    if (!/^\+?[1-9]\d{7,14}$/.test(recoveryPhone.replace(/\s+/g,""))) { setRecoveryError("Enter a valid phone number with country code."); return; }
-    setRecoveryBusy(true);
-    try {
-      const phone = recoveryPhone.replace(/\s+/g,"");
-      const { error } = await supabase.auth.updateUser({ phone });
-      if (error) throw error;
-      setRecoveryStep("otp");
-    } catch (e) { setRecoveryError(e?.message || "Unable to send the verification code. Check that SMS verification is enabled."); }
-    finally { setRecoveryBusy(false); }
-  };
-
-  const verifyRecoveryPhone = async () => {
-    if (!/^\d{6}$/.test(recoveryOtp)) { setRecoveryError("Enter the 6-digit verification code."); return; }
-    setRecoveryBusy(true); setRecoveryError("");
-    try {
-      const { error } = await supabase.auth.verifyOtp({ phone:recoveryPhone.replace(/\s+/g,""), token:recoveryOtp, type:"phone_change" });
-      if (error) throw error;
-      setRecoveryStep("phone"); setRecoveryOtp(""); setRecoveryError("");
-      alert("Recovery phone verified successfully.");
-    } catch (e) { setRecoveryError(e?.message || "The verification code is invalid or expired."); }
-    finally { setRecoveryBusy(false); }
-  };
-
-  useEffect(() => {
-    if (!securityPrefs.biometricEnabled) return;
-    (async () => {
-      try {
-        const supported = "PublicKeyCredential" in window && typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === "function"
-          ? await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(() => false)
-          : false;
-        if (!supported) await persistSecurity({ biometricEnabled:false, biometricCredentialId:null });
-      } catch {}
-    })();
-  }, [securityPrefs.biometricEnabled]);
-
-  useEffect(() => {
-    if (securitySheet === "twoFactor") loadMfaFactors();
-    if (securitySheet === "recovery") {
-      supabase.auth.getUser().then(({data}) => setRecoveryPhone(data?.user?.phone || ""));
-      setRecoveryStep("phone"); setRecoveryOtp(""); setRecoveryError("");
-    }
-  }, [securitySheet, loadMfaFactors]);
-
   const setupPasskey = async () => {
     try {
-      if (!("PublicKeyCredential" in window) || !navigator.credentials?.create) {
-        alert("Face ID / device passkeys are not supported on this device or browser.");
+      if (!Capacitor.isNativePlatform()) {
+        alert("RainX biometric lock is available only in the native app.");
         return;
       }
-      const platformReady = typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === "function"
-        ? await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(() => false)
-        : true;
-      if (platformReady === false) {
-        alert("A device biometric authenticator is not available. You can use a PIN instead.");
-        return;
-      }
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
-      const userId = crypto.getRandomValues(new Uint8Array(16));
-      const credential = await navigator.credentials.create({ publicKey: {
-        challenge,
-        rp: { name: "RainX" },
-        user: { id: userId, name: account?.email || "rainx-user", displayName: fullName || username || "RainX User" },
-        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
-        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "preferred" },
-        timeout: 60000,
-        attestation: "none",
-      }});
-      if (credential?.rawId) {
-        const id = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-        persistSecurity({ biometricEnabled: true, biometricCredentialId: id });
-      }
+      await setNativeBiometricEnabled(true);
+      persistSecurity({ biometricEnabled: true, appLock: true, biometricCredentialId: undefined });
+      setSecuritySheet(null);
     } catch (e) {
-      if (e?.name !== "NotAllowedError") alert("Face ID / passkey setup could not be completed.");
+      alert(e?.message || "Biometric setup could not be completed.");
     }
   };
   useEffect(() => {
     if (morePage !== "profile-menu") setAppearanceOpen(false);
   }, [morePage]);
-  // PWA install — deferred prompt + installed flag
-  const [installPrompt, setInstallPrompt] = useState(null);
-  const [appInstalled, setAppInstalled] = useState(() => window.matchMedia('(display-mode: standalone)').matches);
-  useEffect(() => {
-    if (appInstalled) return;
-    const _bip = (e) => { e.preventDefault(); setInstallPrompt(e); };
-    const _ai  = () => { setAppInstalled(true); setInstallPrompt(null); };
-    window.addEventListener('beforeinstallprompt', _bip);
-    window.addEventListener('appinstalled', _ai);
-    return () => { window.removeEventListener('beforeinstallprompt', _bip); window.removeEventListener('appinstalled', _ai); };
-  }, [appInstalled]);
   // Trader Rewards progress counters — declared here (Rules of Hooks: no hooks after early returns)
   const [followerCount, setFollowerCount] = useState(0);
   const [referralCount, setReferralCount] = useState(0);
@@ -7220,7 +7015,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           <LightRow icon={Download} title="Download your data" subtitle="Export available local preferences now; full account export needs backend support" onPress={()=>setSettingsSheet("downloadData")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
         </LightSection>
         <LightSection title="Data lifecycle">
-          <LightRow icon={Database} title="Data deletion request" subtitle="Request deletion of eligible account data" onPress={async()=>{const {error}=await supabase.rpc("request_account_deletion"); if(error) alert(error.message || "Unable to submit deletion request."); else alert("Your account deletion request has been submitted.");}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightRow icon={Database} title="Data deletion request" subtitle="Request deletion of eligible account data" onPress={async()=>{const {error}=await supabase.rpc("request_account_deletion"); if(error) alert(error.message||"Unable to submit deletion request."); else alert("Deletion request submitted securely.");}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
           <LightDivider />
           <LightRow icon={Trash2} title="Clear local RainX data" subtitle="Remove locally stored preferences on this device" onPress={()=>{try{Object.keys(localStorage).filter(k=>k.startsWith("rainx-")).forEach(k=>localStorage.removeItem(k));}catch{} setSettingsPrefs({}); setSecurityPrefs({}); alert("Local RainX data cleared.");}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
         </LightSection>
@@ -7372,8 +7167,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <LightToggleRow icon={Bell} title="Marketing notifications" subtitle="Allow promotional product and creator updates" prefKey="marketingNotifications" defaultValue={false} />
           </>}
           {settingsSheet === "downloadData" && <>
-            <LightSheetTitle title="Download your data" desc="Export the account preferences currently available to your authenticated session." />
-            <LightRow icon={Download} title="Export local preferences" subtitle="Save your RainX settings as a JSON file" onPress={()=>{try{const payload={exportedAt:new Date().toISOString(),settings:settingsPrefs,security:{...securityPrefs,pinHash:undefined,biometricCredentialId:undefined}};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="rainx-settings.json";a.click();URL.revokeObjectURL(url);setSettingsSheet(null)}catch{alert("Unable to export local preferences on this device.")}}} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+            <LightSheetTitle title="Download your data" desc="Create a local copy of the preferences currently stored on this device." />
+            <LightRow icon={Download} title="Download your data" subtitle="Export your account data from RainX" onPress={async()=>{const {data,error}=await supabase.rpc("export_my_account_data");if(error){alert(error.message||"Unable to export your data.");return;}try{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="rainx-account-data.json";a.click();URL.revokeObjectURL(url);setSettingsSheet(null)}catch{alert("Unable to create the export file on this device.")}}} right={<ChevronRight size={18} color={PREF_MUTED} />} />
           </>}
         </LightSheet>}
       </div>
@@ -7382,7 +7177,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
   if (morePage === "notifications") return (
     <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Notifications" subtitle="Alert preferences & push settings">
-      <div style={{ background:PREF_BG, minHeight:"100%" }}><NotificationSettingsScreen account={account} activeMarkets={activeMarkets} settingsPrefs={settingsPrefs} persistSettings={persistSettings} /></div>
+      <div style={{ background:PREF_BG, minHeight:"100%" }}><NotificationSettingsScreen account={account} activeMarkets={activeMarkets} /></div>
     </MoreSubScreen>
   );
 
@@ -7417,7 +7212,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           );
         })()}
         <LightSection title="Sign-in security">
-          <LightRow icon={Key} title="Change Password" subtitle="Update your account password securely" onPress={()=>{setPasswordForm({current:"",next:"",confirm:""});setMfaError("");setSecuritySheet("changePassword")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightRow icon={Key} title="Change Password" subtitle="Update your account password" onPress={()=>{setPasswordValue("");setPasswordConfirm("");setPasswordError("");setSecuritySheet("changePassword")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
           <LightDivider />
           <LightRow icon={ShieldCheck} title="Two-Step Authentication (2FA)" subtitle={securityPrefs.twoFactorEnabled ? "2FA is enabled for this account" : "Add an authenticator app or verified factor"} onPress={()=>setSecuritySheet("twoFactor")} right={<span style={{fontSize:10.5,fontWeight:800,color:securityPrefs.twoFactorEnabled?"#1A7A50":PREF_MUTED,border:`1px solid ${securityPrefs.twoFactorEnabled?"#B9DCCB":PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>{securityPrefs.twoFactorEnabled?"ENABLED":"BACKEND"}</span>} />
           <LightDivider />
@@ -7427,9 +7222,17 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         </LightSection>
 
         <LightSection title="Device security">
-          <LightRow icon={Lock} title="App Lock" subtitle="Require device authentication before opening RainX" onPress={()=>{ if (!(securityPrefs.pinEnabled || securityPrefs.biometricEnabled)) { setSecuritySheet("appLockSetup"); return; } persistSecurity({appLock:!(securityPrefs.appLock ?? false)}); }} right={<LightToggle on={securityPrefs.appLock ?? false} onChange={()=>{ if (!(securityPrefs.pinEnabled || securityPrefs.biometricEnabled)) { setSecuritySheet("appLockSetup"); return; } persistSecurity({appLock:!(securityPrefs.appLock ?? false)}); }} />} />
+          <LightRow icon={Lock} title="App Lock" subtitle="Require your RainX PIN or device biometric before opening" onPress={async()=>{
+            if (!(securityPrefs.pinEnabled || securityPrefs.biometricEnabled)) { setSecuritySheet("appLockSetup"); return; }
+            const next = !(securityPrefs.appLock ?? false);
+            try { if (Capacitor.isNativePlatform()) await setNativeAppLock(next); persistSecurity({appLock:next}); } catch (e) { alert(e?.message || "Unable to change App Lock."); }
+          }} right={<LightToggle on={securityPrefs.appLock ?? false} onChange={async()=>{
+            if (!(securityPrefs.pinEnabled || securityPrefs.biometricEnabled)) { setSecuritySheet("appLockSetup"); return; }
+            const next = !(securityPrefs.appLock ?? false);
+            try { if (Capacitor.isNativePlatform()) await setNativeAppLock(next); persistSecurity({appLock:next}); } catch (e) { alert(e?.message || "Unable to change App Lock."); }
+          }} />} />
           <LightDivider />
-          <LightRow icon={Key} title="PIN Lock" subtitle={securityPrefs.pinEnabled ? "A RainX device PIN is set" : "Create a 4–6 digit RainX device PIN"} onPress={()=>{setPinCurrent("");setPinCurrent("");setPinValue("");setPinConfirm("");setPinError("");setSecuritySheet("pin")}} right={<span style={{fontSize:10.5,fontWeight:800,color:securityPrefs.pinEnabled?PREF_YELLOW:PREF_MUTED,border:`1px solid ${securityPrefs.pinEnabled?PREF_YELLOW:PREF_BORDER}`,borderRadius:20,padding:"4px 9px"}}>{securityPrefs.pinEnabled?"ENABLED":"SET UP"}</span>} />
+          <LightRow icon={Key} title="PIN Lock" subtitle={securityPrefs.pinEnabled ? "PIN is enabled. Tap to change or disable it." : "Create a 4–6 digit RainX device PIN"} onPress={()=>{setPinValue("");setPinConfirm("");setPinError("");setSecuritySheet(securityPrefs.pinEnabled?"pinManage":"pin")}} right={<span style={{fontSize:10.5,fontWeight:800,color:securityPrefs.pinEnabled?PREF_YELLOW:PREF_MUTED,border:`1px solid ${securityPrefs.pinEnabled?PREF_YELLOW:PREF_BORDER}`,borderRadius:20,padding:"4px 9px"}}>{securityPrefs.pinEnabled?"ENABLED":"SET UP"}</span>} />
           <LightDivider />
           <LightRow icon={Smartphone} title="Face ID / Device Passkey" subtitle={securityPrefs.biometricEnabled?"Biometric sign-in is enabled on this device":"Use Face ID, fingerprint or device biometrics"} onPress={setupPasskey} right={<span style={{fontSize:10.5,fontWeight:800,color:securityPrefs.biometricEnabled?PREF_YELLOW:PREF_MUTED,border:`1px solid ${securityPrefs.biometricEnabled?PREF_YELLOW:PREF_BORDER}`,borderRadius:20,padding:"4px 9px"}}>{securityPrefs.biometricEnabled?"ENABLED":"SET UP"}</span>} />
         </LightSection>
@@ -7447,7 +7250,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <LightSection title="Sessions & recovery">
           <LightRow icon={Smartphone} title="Active Sessions" subtitle="View and manage devices signed in to RainX" onPress={()=>setSecuritySheet("sessions")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
           <LightDivider />
-          <LightRow icon={Mail} title="Recovery email" subtitle={account?.email?"Your account email is set":"Add a recovery email"} onPress={()=>setSecuritySheet("recovery")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightRow icon={Mail} title="Recovery email" subtitle={account?.email?"Your account email is set":"Add a recovery email"} onPress={()=>alert(account?.email?"Your RainX account email is the current recovery email.":"Add a recovery email from your account profile.")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
           <LightDivider />
           <LightRow icon={ShieldCheck} title="Security checkup" subtitle="Review your account protection settings" onPress={()=>setSecuritySheet("checkup")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
         </LightSection>
@@ -7479,64 +7282,62 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         </LightSection>
 
         {securitySheet && <LightSheet onClose={()=>setSecuritySheet(null)}>
-          {securitySheet === "changePassword" && <>
-            <LightSheetTitle title="Change Password" desc="Confirm your current password before setting a new one." />
-            {mfaError&&<div style={{background:"#FFF4F4",border:"1px solid #F2B8B8",borderRadius:12,padding:"10px 12px",fontSize:11,color:"#8E2A2A",marginBottom:12}}>{mfaError}</div>}
-            <input type="password" autoComplete="current-password" value={passwordForm.current} onChange={e=>setPasswordForm(v=>({...v,current:e.target.value}))} placeholder="Current password" style={{width:"100%",boxSizing:"border-box",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",marginBottom:9,fontFamily:FONT_HEAD}} />
-            <input type="password" autoComplete="new-password" value={passwordForm.next} onChange={e=>setPasswordForm(v=>({...v,next:e.target.value}))} placeholder="New password" style={{width:"100%",boxSizing:"border-box",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",marginBottom:9,fontFamily:FONT_HEAD}} />
-            <input type="password" autoComplete="new-password" value={passwordForm.confirm} onChange={e=>setPasswordForm(v=>({...v,confirm:e.target.value}))} placeholder="Confirm new password" style={{width:"100%",boxSizing:"border-box",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",fontFamily:FONT_HEAD}} />
-            <button onClick={changePassword} disabled={passwordBusy} style={{width:"100%",marginTop:12,border:0,borderRadius:12,padding:"12px 0",background:PREF_YELLOW,color:T.ink,fontFamily:FONT_HEAD,fontWeight:900}}>{passwordBusy?"Changing…":"Change password"}</button>
-          </>}
           {securitySheet === "twoFactor" && <>
-            <LightSheetTitle title="Two-Step Authentication" desc="Protect sign-ins with an authenticator app. Supabase handles the secret and verification securely." />
-            {mfaError&&<div style={{background:"#FFF4F4",border:"1px solid #F2B8B8",borderRadius:12,padding:"10px 12px",fontSize:11,color:"#8E2A2A",marginBottom:12}}>{mfaError}</div>}
-            {mfaEnrollment ? <>
-              {mfaEnrollment?.totp?.qr_code && <img alt="Scan with your authenticator app" src={`data:image/svg+xml;utf8,${encodeURIComponent(mfaEnrollment.totp.qr_code)}`} style={{width:190,height:190,display:"block",margin:"0 auto 12px",background:"#fff",borderRadius:12}} />}
-              <div style={{fontSize:11,color:PREF_MUTED,lineHeight:1.5,marginBottom:10}}>Scan this QR code in Google Authenticator, Authy or another TOTP app, then enter the 6-digit code it generates.</div>
-              {mfaEnrollment?.totp?.secret && <div style={{fontFamily:"monospace",fontSize:11,wordBreak:"break-all",background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:10,padding:9,marginBottom:10}}>{mfaEnrollment.totp.secret}</div>}
-              <input value={mfaCode} onChange={e=>setMfaCode(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" type="text" placeholder="6-digit code" style={{width:"100%",boxSizing:"border-box",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",fontFamily:FONT_HEAD,fontSize:15,textAlign:"center",letterSpacing:3}} />
-              <button onClick={verifyTotpEnrollment} disabled={mfaBusy} style={{width:"100%",marginTop:10,border:0,borderRadius:12,padding:"12px 0",background:PREF_YELLOW,color:T.ink,fontFamily:FONT_HEAD,fontWeight:900}}>{mfaBusy?"Verifying…":"Verify & enable 2FA"}</button>
-            </> : <>
-              {(mfaFactors.totp||[]).filter(f=>f.status === "verified").map(f=><div key={f.id} style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",marginBottom:8,display:"flex",alignItems:"center",gap:10}}><ShieldCheck size={20}/><div style={{flex:1}}><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:12.5}}>Authenticator app</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>{f.friendly_name || "RainX Authenticator"} · Verified</div></div><button onClick={()=>disableMfaFactor(f.id)} disabled={mfaBusy} style={{border:`1px solid ${PREF_BORDER}`,background:"#fff",borderRadius:9,padding:"7px 9px",fontSize:10,fontWeight:800}}>REMOVE</button></div>)}
-              {!(mfaFactors.totp||[]).some(f=>f.status === "verified") && <div style={{fontSize:12,color:PREF_MUTED,marginBottom:12}}>No authenticator is enabled yet.</div>}
-              <button onClick={beginTotpEnrollment} disabled={mfaBusy} style={{width:"100%",border:0,borderRadius:12,padding:"12px 0",background:PREF_YELLOW,color:T.ink,fontFamily:FONT_HEAD,fontWeight:900}}>{mfaBusy?"Preparing…":(mfaFactors.totp||[]).some(f=>f.status === "verified")?"Add another authenticator":"Set up authenticator app"}</button>
-            </>}
+            <LightSheetTitle title="Two-Step Authentication" desc="Protect your RainX account with an authenticator app." />
+            {mfaError && <div style={{background:"#FFF4F4",border:"1px solid #F2B8B8",borderRadius:12,padding:"10px 12px",fontSize:11,color:"#8E2A2A",marginBottom:10}}>{mfaError}</div>}
+            {!mfaEnrollment && mfaFactors.filter(f=>f.status==="verified").map(f => <div key={f.id} style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:13,padding:"12px 13px",marginBottom:9}}><div style={{display:"flex",alignItems:"center",gap:10}}><LightIcon Icon={ShieldCheck}/><div style={{flex:1}}><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:12.5,color:PREF_TEXT}}>{f.friendly_name || "Authenticator app"}</div><div style={{fontSize:10.5,color:"#1A7A50",marginTop:3}}>VERIFIED</div></div><button disabled={mfaBusy} onClick={()=>disableMfa(f.id)} style={{border:0,borderRadius:9,padding:"7px 9px",background:"#FFF4F4",color:"#C0392B",fontSize:10,fontWeight:800}}>Disable</button></div></div>)}
+            {!mfaEnrollment && mfaFactors.filter(f=>f.status==="verified").length===0 && <div style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:13,padding:"12px 13px",fontSize:11,color:PREF_MUTED,marginBottom:10}}>No authenticator is currently verified.</div>}
+            {!mfaEnrollment && <LightRow icon={ShieldCheck} title={mfaFactors.some(f=>f.status==="verified")?"Add another authenticator":"Set up authenticator app"} subtitle="Scan a QR code, then enter the 6-digit code" onPress={beginMfaEnrollment} right={<ChevronRight size={18} color={PREF_MUTED}/>} />}
+            {mfaEnrollment && <div style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:14,padding:14,marginTop:8}}>
+              <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:12.5,color:PREF_TEXT,marginBottom:8}}>Scan this QR code</div>
+              <div style={{display:"flex",justifyContent:"center",background:"#fff",borderRadius:12,padding:12,marginBottom:10}}>
+                {mfaEnrollment.qr_code ? (String(mfaEnrollment.qr_code).startsWith("<svg") ? <div dangerouslySetInnerHTML={{__html:mfaEnrollment.qr_code}} /> : <img src={mfaEnrollment.qr_code} alt="RainX authenticator QR code" style={{width:220,height:220}} />) : <div style={{padding:40,fontSize:11,color:PREF_MUTED}}>QR code unavailable. Use the secret below.</div>}
+              </div>
+              <div style={{fontSize:10.5,color:PREF_MUTED,marginBottom:4}}>Manual setup key</div>
+              <button onClick={()=>navigator.clipboard?.writeText(mfaEnrollment.secret||"")} style={{width:"100%",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:10,padding:"10px",fontFamily:"monospace",fontWeight:800,letterSpacing:1,fontSize:12,color:PREF_TEXT,wordBreak:"break-all"}}>{mfaEnrollment.secret || "Unavailable"}</button>
+              <input inputMode="numeric" maxLength={6} value={mfaCode} onChange={e=>setMfaCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit authenticator code" style={{width:"100%",boxSizing:"border-box",marginTop:10,background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:10,padding:"12px",fontSize:15,textAlign:"center",letterSpacing:4}} />
+              <button disabled={mfaBusy} onClick={verifyMfaEnrollment} style={{width:"100%",marginTop:10,border:0,borderRadius:11,padding:"12px",background:PREF_YELLOW,color:T.ink,fontFamily:FONT_HEAD,fontWeight:800}}>{mfaBusy?"Verifying…":"Verify & enable 2FA"}</button>
+              <button onClick={()=>{setMfaEnrollment(null);setMfaCode("")}} style={{width:"100%",marginTop:8,border:`1px solid ${PREF_BORDER}`,borderRadius:11,padding:"11px",background:"transparent",color:PREF_TEXT,fontWeight:700}}>Cancel</button>
+            </div>}
+            <LightDivider />
+            <LightRow icon={FileText} title="Recovery codes" subtitle="Generate one-time backup codes for account recovery" onPress={generateRecoveryCodes} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>{recoveryBusy?"GENERATING":"OPEN"}</span>} />
+            {recoveryVisible && recoveryCodes.length>0 && <div style={{background:"#FFF8E5",border:"1px solid #EAD28A",borderRadius:12,padding:12,marginTop:10}}><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:12,color:PREF_TEXT}}>Save these codes now</div><div style={{fontSize:10.5,color:"#765B00",margin:"5px 0 9px"}}>They are shown once. Each code can be used once.</div><div style={{fontFamily:"monospace",fontSize:13,lineHeight:1.8,letterSpacing:1,color:PREF_TEXT}}>{recoveryCodes.map(c=><div key={c}>{c}</div>)}</div><button onClick={()=>navigator.clipboard?.writeText(recoveryCodes.join("\n"))} style={{marginTop:8,width:"100%",border:0,borderRadius:9,padding:"9px",background:PREF_YELLOW,fontWeight:800}}>Copy codes</button></div>}
           </>}
           {securitySheet === "recovery" && <>
-            <LightSheetTitle title="Phone & recovery methods" desc="Verify a phone number for account recovery. Phone MFA is separate; this uses Supabase's authenticated phone-change verification flow." />
-            {recoveryError&&<div style={{background:"#FFF4F4",border:"1px solid #F2B8B8",borderRadius:12,padding:"10px 12px",fontSize:11,color:"#8E2A2A",marginBottom:12}}>{recoveryError}</div>}
-            <LightRow icon={Mail} title="Account email" subtitle={account?.email || "Not available"} right={<span style={{fontSize:10.5,fontWeight:800,color:"#1A7A50"}}>VERIFIED</span>} />
+            <LightSheetTitle title="Recovery methods" desc="Keep more than one trusted way to regain access." />
+            <LightRow icon={Mail} title="Account email" subtitle={account?.email || "Not available"} right={<span style={{fontSize:10,fontWeight:800,color:"#1A7A50"}}>VERIFIED</span>} />
             <LightDivider />
-            {recoveryStep === "phone" ? <>
-              <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:13,color:PREF_TEXT,margin:"8px 0"}}>Recovery phone</div>
-              <input value={recoveryPhone} onChange={e=>setRecoveryPhone(e.target.value)} inputMode="tel" placeholder="+233..." style={{width:"100%",boxSizing:"border-box",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",fontFamily:FONT_HEAD,fontSize:14}} />
-              <button onClick={sendRecoveryPhone} disabled={recoveryBusy} style={{width:"100%",marginTop:10,border:0,borderRadius:12,padding:"12px 0",background:PREF_YELLOW,color:T.ink,fontFamily:FONT_HEAD,fontWeight:900}}>{recoveryBusy?"Sending…":"Send verification code"}</button>
-            </> : <>
-              <div style={{fontSize:11.5,color:PREF_MUTED,lineHeight:1.5,marginBottom:10}}>Enter the 6-digit code sent to {recoveryPhone}.</div>
-              <input value={recoveryOtp} onChange={e=>setRecoveryOtp(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" type="text" placeholder="6-digit code" style={{width:"100%",boxSizing:"border-box",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",fontFamily:FONT_HEAD,fontSize:15,textAlign:"center",letterSpacing:3}} />
-              <button onClick={verifyRecoveryPhone} disabled={recoveryBusy} style={{width:"100%",marginTop:10,border:0,borderRadius:12,padding:"12px 0",background:PREF_YELLOW,color:T.ink,fontFamily:FONT_HEAD,fontWeight:900}}>{recoveryBusy?"Verifying…":"Verify phone"}</button>
-            </>}
+            <LightRow icon={Smartphone} title="Verified phone" subtitle={phoneStage === "verified" ? phoneValue : "Add and verify a recovery phone number"} onPress={()=>{setPhoneStage("number");setPhoneOtp("");setPhoneValue("");setSecuritySheet("phoneRecovery")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+            <LightDivider />
+            <LightRow icon={Key} title="Recovery codes" subtitle="One-time codes for account recovery" onPress={()=>setSecuritySheet("twoFactor")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          </>}
+          {securitySheet === "phoneRecovery" && <>
+            <LightSheetTitle title="Phone recovery" desc="Verify a phone number through Supabase Auth SMS." />
+            {phoneStage === "number" && <><input value={phoneValue} onChange={e=>setPhoneValue(e.target.value)} placeholder="+233XXXXXXXXX" inputMode="tel" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px",fontSize:14}} /><button disabled={phoneBusy} onClick={startPhoneVerification} style={{width:"100%",marginTop:10,border:0,borderRadius:11,padding:"12px",background:PREF_YELLOW,fontFamily:FONT_HEAD,fontWeight:800}}>{phoneBusy?"Sending…":"Send verification code"}</button></>}
+            {phoneStage === "otp" && <><input value={phoneOtp} onChange={e=>setPhoneOtp(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6-digit code" inputMode="numeric" maxLength={6} style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px",fontSize:16,textAlign:"center",letterSpacing:4}} /><button disabled={phoneBusy} onClick={verifyPhone} style={{width:"100%",marginTop:10,border:0,borderRadius:11,padding:"12px",background:PREF_YELLOW,fontFamily:FONT_HEAD,fontWeight:800}}>{phoneBusy?"Verifying…":"Verify phone"}</button></>}
+            {phoneStage === "verified" && <div style={{padding:14,background:"#EAF7F0",border:"1px solid #B9DCCB",borderRadius:12,color:"#1A7A50",fontSize:12}}>Phone verified successfully.</div>}
+          </>}
+          {securitySheet === "changePassword" && <>
+            <LightSheetTitle title="Change Password" desc="Choose a new password for your RainX account." />
+            <input type="password" value={passwordValue} onChange={e=>setPasswordValue(e.target.value)} placeholder="New password" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px",fontSize:14,marginBottom:8}} />
+            <input type="password" value={passwordConfirm} onChange={e=>setPasswordConfirm(e.target.value)} placeholder="Confirm new password" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px",fontSize:14}} />
+            {passwordError && <div style={{fontSize:11,color:"#C0392B",marginTop:7}}>{passwordError}</div>}
+            <button disabled={passwordBusy} onClick={changePassword} style={{width:"100%",marginTop:12,border:0,borderRadius:11,padding:"12px",background:PREF_YELLOW,color:T.ink,fontFamily:FONT_HEAD,fontWeight:800}}>{passwordBusy?"Changing…":"Change password"}</button>
           </>}
           {securitySheet === "loginHistory" && <>
             <LightSheetTitle title="Login history" desc="Recent RainX sign-ins and the devices currently holding sessions." />
             {loginHistoryLoading ? <div style={{padding:"18px 0",fontSize:12,color:PREF_MUTED,textAlign:"center"}}>Loading secure sign-in history…</div> : <>
               {loginHistoryRows.length === 0 && securitySessions.length === 0 && <div style={{padding:"12px 0",fontSize:12,color:PREF_MUTED}}>No recorded sign-in events yet.</div>}
-              {loginHistoryRows.map((row) => {
-                const meta = row.meta || {};
-                return <div key={row.id} style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:14,padding:"12px 13px",marginBottom:8}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}><LightIcon Icon={Activity}/><div style={{flex:1}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>{row.action === "signup" ? "Account created" : "Successful sign-in"}</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>{new Date(row.created_at).toLocaleString()}</div></div><span style={{fontSize:9.5,fontWeight:800,color:"#1A7A50"}}>RECORDED</span></div>
-                  <div style={{fontSize:10.5,color:PREF_MUTED,marginTop:8,lineHeight:1.45}}>{typeof device === "string" ? device : device.label} · {meta.ip || "IP unavailable"} · {meta.timezone || "Timezone unavailable"}</div>
-                </div>;
-              })}
+              {loginHistoryRows.map((row) => <div key={row.id} style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:14,padding:"12px 13px",marginBottom:8}}><div style={{display:"flex",alignItems:"center",gap:10}}><LightIcon Icon={Activity}/><div style={{flex:1,minWidth:0}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>Successful sign-in</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>{new Date(row.created_at).toLocaleString()}</div></div><span style={{fontSize:9.5,fontWeight:800,color:"#1A7A50"}}>RECORDED</span></div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:8,lineHeight:1.45}}>{[row.manufacturer,row.model].filter(Boolean).join(" ") || row.device_name || "RainX device"} · {(row.platform||"").toUpperCase()} {row.os_version ? `· ${row.os_version}` : ""}</div></div>)}
               {securitySessions.length > 0 && <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:12,color:PREF_MUTED,margin:"14px 0 8px"}}>ACTIVE AUTH SESSIONS</div>}
-              {securitySessions.map((s) => <div key={s.session_id} style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:14,padding:"12px 13px",marginBottom:8}}><div style={{display:"flex",alignItems:"center",gap:10}}><LightIcon Icon={Smartphone}/><div style={{flex:1,minWidth:0}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>{describeRainxUserAgent(s.user_agent || "").label}</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>{s.created_at ? new Date(s.created_at).toLocaleString() : ""} · {s.ip_address || "IP unavailable"}</div></div><span style={{fontSize:9.5,color:"#1A7A50",fontWeight:800}}>ACTIVE</span></div></div>)}
+              {securitySessions.map((s) => <div key={s.session_id} style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:14,padding:"12px 13px",marginBottom:8}}><div style={{display:"flex",alignItems:"center",gap:10}}><LightIcon Icon={Smartphone}/><div style={{flex:1,minWidth:0}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>{[s.manufacturer, s.model].filter(Boolean).join(" ") || s.device_name || "RainX device"}</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>{s.created_at ? new Date(s.created_at).toLocaleString() : ""} · {(s.platform || "").toUpperCase()} {s.os_version ? `· Android ${s.os_version}` : ""}</div></div><span style={{fontSize:9.5,color:"#1A7A50",fontWeight:800}}>ACTIVE</span></div></div>)}
             </>}
           </>}
           {securitySheet === "reportSecurity" && <>
             <LightSheetTitle title="Report a security issue" desc="Use the authenticated security-report endpoint when this flow is wired to the backend." />
-            <LightRow icon={ShieldCheck} title="Account may be compromised" subtitle="Start an urgent account-security review" onPress={async()=>{const {error}=await supabase.rpc("submit_security_report",{p_report_type:"account_compromised",p_details:"User reported a possible account compromise from Security settings."});if(error){alert(error.message||"Unable to submit security report.");return;}alert("Security report submitted securely.");}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+            <LightRow icon={ShieldCheck} title="Account may be compromised" subtitle="Start an urgent account-security review" onPress={async()=>{const {error}=await supabase.rpc("submit_security_report",{p_report_type:"account_compromised",p_details:"User reported that their account may be compromised."});alert(error?error.message:"Security report submitted.")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
             <LightDivider />
-            <LightRow icon={Mail} title="Contact security support" subtitle="Send a protected security report with account context" onPress={async()=>{const {error}=await supabase.rpc("submit_security_report",{p_report_type:"security_support",p_details:"User requested security support from Security settings."});if(error){alert(error.message||"Unable to submit security request.");return;}alert("Security-support request submitted securely.");}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+            <LightRow icon={Mail} title="Contact security support" subtitle="Send a protected security report with account context" onPress={async()=>{const {error}=await supabase.rpc("submit_security_report",{p_report_type:"security_support",p_details:"User requested security support from the in-app security center."});alert(error?error.message:"Security support request submitted.")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
           </>}
           {securitySheet === "tokenRisk" && <>
             <LightSheetTitle title="Internal-token risk & disclosure" desc="Creator tokens can carry market, liquidity, smart-contract and loss risks." />
@@ -7551,9 +7352,15 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <LightDivider />
             <LightRow icon={FileCheck} title="Moderation & reports" subtitle="Review token reports, takedowns and creator disputes" onPress={()=>alert("Backend required: moderation/report queue.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
           </>}
+          {securitySheet === "pinManage" && <>
+            <LightSheetTitle title="PIN Lock" desc="Enter your current PIN to change or disable RainX App Lock." />
+            <input inputMode="numeric" type="password" maxLength={6} value={pinValue} onChange={e=>setPinValue(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="Current PIN" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",color:PREF_TEXT,fontFamily:FONT_HEAD,fontSize:15,outline:"none",marginBottom:6}} />
+            {pinError&&<div style={{fontSize:11,color:T.rust,margin:"5px 0 10px"}}>{pinError}</div>}
+            <button onClick={()=>{setPinValue("");setPinConfirm("");setPinError("");setSecuritySheet("pin")}} style={{width:"100%",background:PREF_YELLOW,color:T.ink,border:0,borderRadius:12,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:13,cursor:"pointer",marginTop:8}}>Change PIN</button>
+            <button onClick={disablePin} style={{width:"100%",background:"#FFF4F4",color:"#C0392B",border:"1px solid #F2B8B8",borderRadius:12,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:13,cursor:"pointer",marginTop:8}}>Disable PIN Lock</button>
+          </>}
           {securitySheet === "pin" && <>
-            <LightSheetTitle title={securityPrefs.pinEnabled?"Change RainX PIN":"Set up RainX PIN"} desc="Your PIN is hashed before it is stored on this device." />
-            {securityPrefs.pinEnabled&&<input value={pinCurrent} onChange={e=>setPinCurrent(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" type="password" placeholder="Current PIN" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",color:PREF_TEXT,fontFamily:FONT_HEAD,fontSize:15,outline:"none",marginBottom:10}} />}
+            <LightSheetTitle title="Set up RainX PIN" desc="Your PIN is stored securely on this device and App Lock is enabled after setup." />
             <input value={pinValue} onChange={e=>setPinValue(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" type="password" placeholder="New PIN" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",color:PREF_TEXT,fontFamily:FONT_HEAD,fontSize:15,outline:"none",marginBottom:10}} />
             <input value={pinConfirm} onChange={e=>setPinConfirm(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" type="password" placeholder="Confirm PIN" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",color:PREF_TEXT,fontFamily:FONT_HEAD,fontSize:15,outline:"none",marginBottom:6}} />
             {pinError&&<div style={{fontSize:11,color:T.rust,margin:"5px 0 10px"}}>{pinError}</div>}
@@ -7561,11 +7368,11 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           </>}
           {securitySheet === "sessions" && <>
             <LightSheetTitle title="Active Sessions" desc="Review devices currently signed in to RainX." />
-            {securitySessionsLoading ? <div style={{padding:"18px 0",fontSize:12,color:PREF_MUTED,textAlign:"center"}}>Loading sessions…</div> : securitySessions.length === 0 ? <div style={{padding:"10px 0",fontSize:12,color:PREF_MUTED}}>No active session details are available.</div> : securitySessions.map((s) => <div key={s.session_id} style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:14,padding:"13px 14px",display:"flex",alignItems:"center",gap:12,marginBottom:8}}><LightIcon Icon={Smartphone}/><div style={{flex:1,minWidth:0}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>{s.user_agent ? s.user_agent.slice(0,72) : "RainX device"}</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>{s.ip_address || "IP unavailable"} · {s.updated_at ? new Date(s.updated_at).toLocaleString() : ""}</div></div><span style={{fontSize:9.5,color:"#1A7A50",fontWeight:800}}>ACTIVE</span></div>)}
+            {securitySessionsLoading ? <div style={{padding:"18px 0",fontSize:12,color:PREF_MUTED,textAlign:"center"}}>Loading sessions…</div> : securitySessions.length === 0 ? <div style={{padding:"10px 0",fontSize:12,color:PREF_MUTED}}>No active session details are available.</div> : securitySessions.map((s) => <div key={s.session_id} style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:14,padding:"13px 14px",display:"flex",alignItems:"center",gap:12,marginBottom:8}}><LightIcon Icon={Smartphone}/><div style={{flex:1,minWidth:0}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>{[s.manufacturer, s.model].filter(Boolean).join(" ") || s.device_name || "RainX device"}</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>{(s.platform || "").toUpperCase()} {s.os_version ? `· ${s.os_version}` : ""} · {s.last_seen_at ? new Date(s.last_seen_at).toLocaleString() : (s.updated_at ? new Date(s.updated_at).toLocaleString() : "")}</div></div><span style={{fontSize:9.5,color:"#1A7A50",fontWeight:800}}>ACTIVE</span></div>)}
           </>}
           {securitySheet === "appLockSetup" && <>
             <LightSheetTitle title="Set up App Lock" desc="RainX needs a PIN or device biometric before App Lock can be enabled." />
-            <LightRow icon={Key} title="Set up PIN" subtitle="Create a 4–6 digit RainX PIN" onPress={()=>{setPinCurrent("");setPinCurrent("");setPinValue("");setPinConfirm("");setPinError("");setSecuritySheet("pin")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+            <LightRow icon={Key} title="Set up PIN" subtitle="Create a 4–6 digit RainX PIN" onPress={()=>{setPinValue("");setPinConfirm("");setPinError("");setSecuritySheet("pin")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
             <LightDivider />
             <LightRow icon={Smartphone} title="Set up Face ID / device passkey" subtitle="Use your device biometric when supported" onPress={setupPasskey} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
           </>}
@@ -7576,9 +7383,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <LightRow icon={FileCheck} title="Privacy controls" subtitle="Review discovery, messaging and personalization settings" onPress={()=>{setSecuritySheet(null);setMorePage("settings")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
           </>}
           {securitySheet === "deleteAccount" && <>
-            <LightSheetTitle title="Delete account" desc="Account deletion is permanent. Real deletion should require re-authentication and a trusted server-side deletion flow." />
-            <div style={{background:"#FFF4F4",border:"1px solid #F2B8B8",borderRadius:13,padding:"12px 13px",fontSize:11,color:"#8E2A2A",lineHeight:1.5,marginBottom:12}}>This client screen does not delete server data by itself. Connect it to your authenticated account-deletion endpoint before enabling permanent deletion.</div>
-            <button onClick={async()=>{const {error}=await supabase.rpc("request_account_deletion");if(error){alert(error.message||"Unable to submit deletion request.");return;}setSecuritySheet(null);alert("Your deletion request has been submitted for secure processing.");}} style={{width:"100%",background:"#C0392B",color:"#FFFFFF",border:0,borderRadius:12,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:13,cursor:"pointer"}}>Request deletion</button>
+            <LightSheetTitle title="Delete account" desc="This submits an authenticated deletion request. Permanent removal follows the server retention process." />
+            <div style={{background:"#FFF4F4",border:"1px solid #F2B8B8",borderRadius:13,padding:"12px 13px",fontSize:11,color:"#8E2A2A",lineHeight:1.5,marginBottom:12}}>Your request is recorded against this signed-in account. You will be signed out after the request is accepted.</div>
+            <button onClick={async()=>{const {error}=await supabase.rpc("request_account_deletion");if(error){alert(error.message||"Unable to submit deletion request.");return;}setSecuritySheet(null);await supabase.auth.signOut();onLogout?.();}} style={{width:"100%",background:"#C0392B",color:"#FFFFFF",border:0,borderRadius:12,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:13,cursor:"pointer"}}>Request account deletion</button>
           </>}
           {securitySheet === "checkup" && <>
             <LightSheetTitle title="Security checkup" desc="A quick view of your current protection." />
@@ -7709,9 +7516,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           onPress={() => setMorePage("scalping")}
         />
         <MoreRowDivider />
-        {appInstalled
-          ? <MoreRow icon={Smartphone} title="App Installed" subtitle="RainX is on your home screen" />
-          : <MoreRow icon={ArrowUpCircle} title="Install App" subtitle="Add RainX to your home screen" onPress={async () => { if (installPrompt) { installPrompt.prompt(); const { outcome } = await installPrompt.userChoice; if (outcome === 'accepted') { setInstallPrompt(null); setAppInstalled(true); } } else { setShowInstallHelp(true); } }} />}
+
       </MoreSection>
 
       <div style={{ textAlign: "center", marginTop: 4 }}>
@@ -7719,26 +7524,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <div style={{ fontSize: 10, color: T.muted, marginTop: 4, lineHeight: 1.6 }}>RainX is an analysis tool, not a broker.</div>
       </div>
 
-      {showInstallHelp && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}>
-          <div style={{ background: T.card, width: '100%', maxWidth: 480, margin: '0 auto', borderRadius: '16px 16px 0 0', padding: '22px 20px 36px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.paper, fontWeight: 800 }}>Install RainX</div>
-              <button onClick={() => setShowInstallHelp(false)} style={{ background: 'none', border: 'none', color: T.muted, cursor: 'pointer' }}><X size={20} /></button>
-            </div>
-            <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.8, marginBottom: 20 }}>
-              <div style={{ color: T.paper, fontWeight: 700, marginBottom: 6 }}>📱 On iPhone / Safari:</div>
-              <div>1. Tap the <strong style={{ color: T.paper }}>Share</strong> button at the bottom of your screen</div>
-              <div>2. Scroll and tap <strong style={{ color: T.paper }}>Add to Home Screen</strong></div>
-              <div>3. Tap <strong style={{ color: T.paper }}>Add</strong></div>
-              <div style={{ color: T.paper, fontWeight: 700, margin: '14px 0 6px' }}>🤖 On Android / Chrome:</div>
-              <div>1. Tap the <strong style={{ color: T.paper }}>⋮ menu</strong> at the top right</div>
-              <div>2. Tap <strong style={{ color: T.paper }}>Add to Home Screen</strong> or <strong style={{ color: T.paper }}>Install App</strong></div>
-            </div>
-            <button onClick={() => setShowInstallHelp(false)} style={{ width: '100%', background: T.goldGradient, color: T.ink, border: 'none', borderRadius: 12, padding: '13px 0', fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Got it</button>
-          </div>
-        </div>
-      )}
       {showLegal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 500, display: "flex", alignItems: "flex-end" }}>
           <div style={{ background: T.card, width: "100%", maxWidth: 480, margin: "0 auto", borderRadius: "16px 16px 0 0", padding: 22, maxHeight: "80vh", overflowY: "auto" }}>
@@ -7988,58 +7773,6 @@ function NewFeaturesPrompt() {
   );
 }
 
-// ---------- Install banner ----------
-// Uses the real browser "beforeinstallprompt" event. This only fires once RainX
-// is actually deployed as a standalone site with manifest.json linked in the HTML
-// head - it won't trigger inside the Claude artifact preview itself.
-function InstallBanner() {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [visible, setVisible] = useState(false);
-  const [dragX, setDragX] = useState(0);
-  const dragging = useRef(false);
-  const startX = useRef(0);
-
-  useEffect(() => {
-    // Do not show banner if already running as an installed PWA
-    if (window.matchMedia('(display-mode: standalone)').matches) return;
-    // Do not show if the user previously dismissed it
-    if (localStorage.getItem('rainx-install-dismissed') === '1') return;
-    const handler = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setVisible(true);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
-
-  if (!visible || !deferredPrompt) return null;
-
-  const dismiss = () => { setVisible(false); localStorage.setItem('rainx-install-dismissed', '1'); };
-  const onTouchStart = (e) => { dragging.current = true; startX.current = e.touches[0].clientX; };
-  const onTouchMove = (e) => { if (dragging.current) setDragX(e.touches[0].clientX - startX.current); };
-  const onTouchEnd = () => { dragging.current = false; if (Math.abs(dragX) > 80) dismiss(); else setDragX(0); };
-
-  return (
-    <div
-      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
-      style={{ position: "fixed", top: 10, left: 10, right: 10, maxWidth: 460, margin: "0 auto", zIndex: 110, background: T.card, border: `1px solid ${T.gold}`, borderRadius: 12, padding: "10px 12px", boxShadow: "0 8px 24px rgba(0,0,0,0.5)", display: "flex", alignItems: "center", gap: 10, fontFamily: FONT_BODY, transform: `translateX(${dragX}px)`, opacity: Math.max(0, 1 - Math.abs(dragX) / 200), transition: dragging.current ? "none" : "transform 0.2s, opacity 0.2s" }}
-    >
-      <div style={{ flex: 1 }}>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper }}>Install RainX</div>
-        <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>Add to your home screen for quick access</div>
-      </div>
-      <button
-        onClick={async () => { setVisible(false); deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') localStorage.setItem('rainx-install-dismissed', '1'); setDeferredPrompt(null); }}
-        style={{ background: T.gold, color: T.ink, border: "none", borderRadius: 8, padding: "7px 12px", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 11.5, cursor: "pointer" }}
-      >
-        Install
-      </button>
-      <button onClick={dismiss} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: "4px", display: "flex", alignItems: "center" }}><X size={15} /></button>
-    </div>
-  );
-}
-
 // ---------- Root ----------
 function sessionToAccount(session) {
   if (!session || !session.user) return null;
@@ -8051,8 +7784,9 @@ export default function RainX() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setAccount(sessionToAccount(data.session)));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       setAccount(sessionToAccount(session));
+      if (event === "SIGNED_IN") void recordNativeLogin().catch(() => {});
     });
     return () => listener.subscription.unsubscribe();
   }, []);
@@ -8064,6 +7798,6 @@ export default function RainX() {
   };
 
   if (account === undefined) return <div style={{ minHeight: "100dvh", background: T.ink }} />;
-  if (!account) return <><InstallBanner /><NewFeaturesPrompt /><AuthScreen onAuthed={(session) => setAccount(sessionToAccount(session))} /></>;
-  return <><InstallBanner /><NewFeaturesPrompt /><MainApp account={account} onLogout={handleLogout} /></>;
+  if (!account) return <><NewFeaturesPrompt /><AuthScreen onAuthed={(session) => setAccount(sessionToAccount(session))} /></>;
+  return <><NewFeaturesPrompt /><MainApp account={account} onLogout={handleLogout} /></>;
 }
