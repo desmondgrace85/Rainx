@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Gift, UsersRound, CircleDollarSign, ChevronRight } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { ArrowLeft, ChevronRight, Gift, UsersRound, CircleDollarSign } from "lucide-react";
 import { supabase } from "./supabaseClient";
 
 const FONT = "'Montserrat', sans-serif";
@@ -11,122 +11,231 @@ function formatCount(value) {
   return n.toLocaleString();
 }
 
-function goMore(sub = null) {
-  const next = sub ? `#more/${encodeURIComponent(sub)}` : "#more";
-  window.location.hash = next;
+function go(route) {
+  window.location.hash = route;
 }
+
+async function loadCreatorAnalytics(accountId) {
+  const since = new Date(Date.now() - 7 * 864e5).toISOString();
+
+  const { data: posts = [] } = await supabase
+    .from("community_posts")
+    .select("id,views,created_at")
+    .eq("user_id", accountId)
+    .gte("created_at", since);
+
+  const postIds = posts.map((p) => p.id).filter(Boolean);
+
+  let likes = [];
+  if (postIds.length) {
+    const received = await supabase
+      .from("post_likes")
+      .select("id,post_id,created_at")
+      .in("post_id", postIds)
+      .gte("created_at", since);
+    if (!received.error) likes = received.data || [];
+  }
+
+  // Compatibility fallback for older data where post_likes was queried by liker_id.
+  if (!likes.length && postIds.length) {
+    const fallback = await supabase
+      .from("post_likes")
+      .select("id,post_id,created_at")
+      .in("post_id", postIds);
+    if (!fallback.error) likes = fallback.data || [];
+  }
+
+  const { data: follows = [] } = await supabase
+    .from("follows")
+    .select("id,created_at")
+    .eq("followed_id", accountId)
+    .gte("created_at", since);
+
+  return {
+    views: posts.reduce((sum, row) => sum + Number(row.views || 0), 0),
+    followers: follows.length,
+    likes: likes.length,
+  };
+}
+
+const metricStyle = {
+  minWidth: 0,
+};
 
 export default function MoreLandingOverride({ account }) {
   const [analytics, setAnalytics] = useState({ views: 0, followers: 0, likes: 0 });
-  const [activeTab, setActiveTab] = useState("Posts");
 
   useEffect(() => {
-    if (!account?.id) return;
     let cancelled = false;
-    const since = new Date(Date.now() - 7 * 864e5).toISOString();
+    if (!account?.id) return undefined;
 
-    const safe = (query) => query.then((r) => r, () => ({ data: [] }));
-
-    Promise.all([
-      safe(supabase.from("community_posts")
-        .select("id,views,created_at")
-        .eq("user_id", account.id)
-        .gte("created_at", since)),
-      safe(supabase.from("post_likes")
-        .select("created_at")
-        .eq("liker_id", account.id)
-        .gte("created_at", since))
-        .then((r) => (r.data || []).length ? r : safe(
-          supabase.from("post_likes").select("created_at").eq("user_id", account.id).gte("created_at", since)
-        )),
-      safe(supabase.from("follows")
-        .select("created_at")
-        .eq("followed_id", account.id)
-        .gte("created_at", since)),
-    ]).then(([posts, likes, follows]) => {
-      if (cancelled) return;
-      const rows = posts.data || [];
-      setAnalytics({
-        views: rows.reduce((sum, row) => sum + Number(row.views || 0), 0),
-        followers: (follows.data || []).length,
-        likes: (likes.data || []).length,
-      });
-    });
+    loadCreatorAnalytics(account.id)
+      .then((data) => {
+        if (!cancelled) setAnalytics(data);
+      })
+      .catch(() => {});
 
     return () => { cancelled = true; };
   }, [account?.id]);
-
-  const bars = useMemo(() => [42, 58, 36, 72, 49, 84, 61, 92, 68, 88], []);
 
   return (
     <div
       style={{
         minHeight: "100dvh",
+        width: "100%",
+        boxSizing: "border-box",
         background: "#FFFFFF",
         color: "#111418",
         fontFamily: FONT,
-        padding: "0 26px 112px",
-        boxSizing: "border-box",
+        padding: "0 26px 104px",
+        overflowX: "hidden",
       }}
     >
-      <div style={{ height: 78, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+      <header
+        style={{
+          height: 78,
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <button
           type="button"
           aria-label="Back"
-          onClick={() => { window.location.hash = "#home"; }}
-          style={{ position: "absolute", left: 4, top: 23, width: 40, height: 40, border: 0, background: "transparent", padding: 0, display: "grid", placeItems: "center", cursor: "pointer" }}
+          onClick={() => go("#home")}
+          style={{
+            position: "absolute",
+            left: -2,
+            top: 19,
+            width: 42,
+            height: 42,
+            border: 0,
+            background: "transparent",
+            display: "grid",
+            placeItems: "center",
+            color: "#111418",
+            padding: 0,
+            cursor: "pointer",
+          }}
         >
-          <ArrowLeft size={28} strokeWidth={2.1} />
+          <ArrowLeft size={29} strokeWidth={2.15} />
         </button>
-        <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.7 }}>Trader’s Space</div>
+        <div style={{ fontSize: 22, lineHeight: 1, fontWeight: 800, letterSpacing: -0.75 }}>
+          Trader’s Space
+        </div>
+      </header>
+
+      <div
+        style={{
+          height: 58,
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          borderBottom: "1px solid #E7E8EA",
+          marginBottom: 26,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderBottom: "3px solid #111418",
+            fontSize: 17,
+            fontWeight: 800,
+          }}
+        >
+          Posts
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#858A91",
+            fontSize: 17,
+            fontWeight: 700,
+          }}
+        >
+          Space Talk
+        </div>
       </div>
 
-      <div style={{ display: "flex", borderBottom: "1px solid #E8EAED", marginBottom: 24 }}>
-        {["Posts", "Space Talk"].map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab)}
-            style={{
-              flex: 1,
-              height: 58,
-              border: 0,
-              borderBottom: `3px solid ${activeTab === tab ? "#111418" : "transparent"}`,
-              background: "transparent",
-              color: activeTab === tab ? "#111418" : "#858A91",
-              fontFamily: FONT,
-              fontSize: 17,
-              fontWeight: activeTab === tab ? 800 : 700,
-              cursor: "pointer",
-            }}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      <section style={{ background: "#FFFFFF", borderRadius: 28, boxShadow: "0 2px 14px rgba(17,20,24,0.05)", padding: "26px 22px 24px", marginBottom: 22, border: "1px solid #F2F3F4" }}>
+      <section
+        style={{
+          background: "#FFFFFF",
+          border: "1px solid #F0F1F2",
+          borderRadius: 28,
+          boxShadow: "0 2px 15px rgba(17,20,24,0.055)",
+          padding: "27px 22px 25px",
+          marginBottom: 22,
+        }}
+      >
         <button
           type="button"
-          onClick={() => goMore("analytics")}
-          style={{ width: "100%", border: 0, background: "transparent", padding: 0, cursor: "pointer", textAlign: "left" }}
+          onClick={() => go("#more/analytics")}
+          style={{
+            width: "100%",
+            padding: 0,
+            border: 0,
+            background: "transparent",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            color: "#111418",
+            cursor: "pointer",
+            textAlign: "left",
+          }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.4 }}>Analytics</div>
-            <ChevronRight size={26} strokeWidth={2.1} />
-          </div>
+          <span style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.45 }}>Analytics</span>
+          <ChevronRight size={27} strokeWidth={2.15} />
         </button>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18, marginTop: 24 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            columnGap: 24,
+            marginTop: 25,
+          }}
+        >
           {[
             ["Post views", formatCount(analytics.views)],
             ["Net followers", formatCount(analytics.followers)],
             ["Likes", formatCount(analytics.likes)],
           ].map(([label, value]) => (
-            <div key={label}>
-              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 7 }}>{label}</div>
-              <div style={{ fontSize: 31, lineHeight: 1, fontWeight: 800, letterSpacing: -1.1 }}>{value}</div>
-              <div style={{ marginTop: 10, fontSize: 14, color: "#329CE6", fontWeight: 700 }}>▲ 7d</div>
+            <div key={label} style={metricStyle}>
+              <div
+                style={{
+                  fontSize: 14,
+                  lineHeight: 1.45,
+                  fontWeight: 700,
+                  marginBottom: 5,
+                }}
+              >
+                {label}
+              </div>
+              <div
+                style={{
+                  fontSize: 31,
+                  lineHeight: 1.05,
+                  fontWeight: 800,
+                  letterSpacing: -1.2,
+                }}
+              >
+                {value}
+              </div>
+              <div
+                style={{
+                  marginTop: 12,
+                  fontSize: 14,
+                  lineHeight: 1,
+                  color: "#329CE6",
+                  fontWeight: 700,
+                }}
+              >
+                ▲ 7d
+              </div>
             </div>
           ))}
         </div>
@@ -134,82 +243,148 @@ export default function MoreLandingOverride({ account }) {
 
       <button
         type="button"
-        onClick={() => goMore("verification")}
+        onClick={() => go("#more/verification")}
+        aria-label="Get Verified"
         style={{
+          display: "block",
           width: "100%",
           padding: 0,
+          margin: "0 0 22px",
           border: 0,
-          background: "transparent",
           borderRadius: 24,
+          background: "transparent",
           overflow: "hidden",
           cursor: "pointer",
-          display: "block",
-          marginBottom: 22,
         }}
       >
         <img
           src="/verified_banner.webp"
-          alt="Get Verified"
-          style={{ width: "100%", height: 116, display: "block", objectFit: "cover", objectPosition: "center" }}
+          alt="Get Verified — Earn your badge & unlock exclusive rewards"
+          style={{
+            display: "block",
+            width: "100%",
+            height: "auto",
+            objectFit: "contain",
+          }}
         />
       </button>
 
-      <section style={{ background: "#FFFFFF", borderRadius: 28, boxShadow: "0 2px 14px rgba(17,20,24,0.05)", padding: "26px 18px 22px", border: "1px solid #F2F3F4" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "0 6px 22px" }}>
-          <div style={{ fontSize: 21, fontWeight: 800 }}>Monetisation</div>
-          <ChevronRight size={26} strokeWidth={2.1} />
+      <section
+        style={{
+          background: "#FFFFFF",
+          border: "1px solid #F0F1F2",
+          borderRadius: 28,
+          boxShadow: "0 2px 15px rgba(17,20,24,0.055)",
+          padding: "27px 21px 22px",
+          marginBottom: 24,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            margin: "0 6px 23px",
+          }}
+        >
+          <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.45 }}>
+            Monetisation
+          </div>
+          <ChevronRight size={27} strokeWidth={2.15} />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <button type="button" onClick={() => goMore("rewards")} style={{ padding: 0, border: 0, background: "transparent", cursor: "pointer", borderRadius: 21, overflow: "hidden" }}>
-            <img src="/rewards_gold.webp" alt="Grab Rewards for your 10K+ posts views" style={{ width: "100%", aspectRatio: "700 / 827", display: "block", objectFit: "cover" }} />
-          </button>
-          <button type="button" onClick={() => goMore("rewards")} style={{ padding: 0, border: 0, background: "transparent", cursor: "pointer", borderRadius: 21, overflow: "hidden" }}>
-            <img src="/rewards_black.webp" alt="monetize in the same orbit" style={{ width: "100%", aspectRatio: "700 / 840", display: "block", objectFit: "cover" }} />
-          </button>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginTop: 18 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 12,
+          }}
+        >
           {[
-            { label: "Gifts", icon: Gift },
-            { label: "Referrals", icon: UsersRound },
-            { label: "Space Talk\nEarnings", icon: CircleDollarSign },
-          ].map(({ label, icon: Icon }) => (
+            ["rewards_gold.webp", "Grab Rewards for your 10K+ posts views"],
+            ["rewards_black.webp", "monetize in the same orbit"],
+          ].map(([src, alt]) => (
+            <button
+              key={src}
+              type="button"
+              onClick={() => go("#more/rewards")}
+              style={{
+                display: "block",
+                width: "100%",
+                aspectRatio: "700 / 827",
+                padding: 0,
+                border: 0,
+                borderRadius: 22,
+                overflow: "hidden",
+                background: "#FFFFFF",
+                cursor: "pointer",
+              }}
+            >
+              <img
+                src={`/${src}`}
+                alt={alt}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  objectPosition: "center",
+                }}
+              />
+            </button>
+          ))}
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gap: 14,
+            marginTop: 19,
+          }}
+        >
+          {[
+            ["Gifts", Gift],
+            ["Referrals", UsersRound],
+            ["Space Talk\nEarnings", CircleDollarSign],
+          ].map(([label, Icon]) => (
             <button
               key={label}
               type="button"
-              onClick={() => goMore("rewards")}
+              onClick={() => go("#more/rewards")}
               style={{
-                minHeight: 104,
+                minWidth: 0,
+                height: 148,
                 border: "1px solid #ECEEF0",
-                borderRadius: 20,
+                borderRadius: 22,
                 background: "#FFFFFF",
+                color: "#111418",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 10,
-                color: "#111418",
+                gap: 11,
                 fontFamily: FONT,
                 fontSize: 14,
+                lineHeight: 1.35,
                 fontWeight: 600,
                 whiteSpace: "pre-line",
                 cursor: "pointer",
               }}
             >
-              <Icon size={28} strokeWidth={2.2} />
-              {label}
+              <Icon size={31} strokeWidth={2.05} />
+              <span>{label}</span>
             </button>
           ))}
         </div>
 
         <button
           type="button"
-          onClick={() => goMore("rewards")}
+          onClick={() => go("#more/rewards")}
           style={{
             width: "100%",
-            marginTop: 22,
             height: 62,
+            marginTop: 23,
             border: 0,
             borderRadius: 15,
             background: "#F1F2F3",
@@ -223,6 +398,29 @@ export default function MoreLandingOverride({ account }) {
           More ways to get paid
         </button>
       </section>
+
+      {/* Keep the existing scalping destination intact below the new landing.
+          It is deliberately not duplicated or redesigned here. */}
+      <button
+        type="button"
+        onClick={() => go("#more/scalping")}
+        style={{
+          width: "100%",
+          height: 60,
+          margin: "0 0 22px",
+          border: "1px solid #ECEEF0",
+          borderRadius: 18,
+          background: "#FFFFFF",
+          color: "#111418",
+          fontFamily: FONT,
+          fontSize: 17,
+          fontWeight: 800,
+          cursor: "pointer",
+          boxShadow: "0 2px 12px rgba(17,20,24,0.035)",
+        }}
+      >
+        Scalping
+      </button>
     </div>
   );
 }
