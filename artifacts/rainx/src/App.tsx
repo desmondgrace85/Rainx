@@ -34,15 +34,19 @@ function installRouteBridge() {
 }
 
 /*
- * Let the document own vertical scrolling. A fixed/contained scrolling shell
- * makes fixed bottom navigation and profile controls scroll on Android WebView
- * (CSS containment also changes the containing block for position: fixed).
+ * Keep one native scroll surface for the app, but do not use CSS containment.
+ * Containment changes the containing block for position: fixed descendants,
+ * which makes the bottom navigation and profile controls move while scrolling.
  */
 const APP_SURFACE = {
-  position: "relative",
+  position: "fixed",
+  inset: 0,
   width: "100%",
-  minHeight: "100dvh",
+  height: "100%",
+  overflowY: "auto",
   overflowX: "hidden",
+  WebkitOverflowScrolling: "touch",
+  overscrollBehaviorY: "none",
   background: "#FFFFFF",
   isolation: "isolate",
 } as const;
