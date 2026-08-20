@@ -1479,10 +1479,1530 @@ function classifyNotification(notification) {
 }
 
 function PullToRefresh({ children }) {
-  // Keep native browser scrolling. The previous custom touch interception
-  // called preventDefault() during vertical swipes, which made the main
-  // screens shake and could move fixed navigation/profile layers.
-  return children;
+  const [distance, setDistance] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const touch = useRef(null);
+  const threshold = 28;
+
+  const getScrollParent = (target) => {
+    let node = target;
+    while (node && node !== document.body) {
+      if (node instanceof HTMLElement) {
+        const style = window.getComputedStyle(node);
+        if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight) return node;
+      }
+      node = node.parentElement;
+    }
+    return document.scrollingElement || document.documentElement;
+  };
+  const excluded = (target) => target?.closest?.("button, input, textarea, select, [contenteditable='true'], canvas, svg, video, a");
+  const onTouchStart = (event) => {
+    if (refreshing || excluded(event.target)) return;
+    const parent = getScrollParent(event.target);
+    if (parent.scrollTop === 0) touch.current = { x: event.touches[0].clientX, y: event.touches[0].clientY, parent, vertical: false };
+  };
+  const onTouchMove = (event) => {
+    const active = touch.current;
+    if (!active || refreshing) return;
+    const dx = event.touches[0].clientX - active.x;
+    const dy = event.touches[0].clientY - active.y;
+    if (!active.vertical) {
+      if (dy <= 0 || Math.abs(dx) > Math.abs(dy) || dy < 2) {
+        if (dy < 0 || Math.abs(dx) > 10) touch.current = null;
+        return;
+      }
+      active.vertical = true;
+    }
+    if (active.parent.scrollTop > 0) { touch.current = null; setDistance(0); return; }
+    event.preventDefault();
+    setDistance(Math.min(88, dy * 0.9));
+  };
+  const onTouchEnd = () => {
+    const active = touch.current;
+    touch.current = null;
+    if (!active?.vertical) { setDistance(0); return; }
+    if (distance >= threshold && !sessionStorage.getItem("rainx-pull-refreshing")) {
+      sessionStorage.setItem("rainx-pull-refreshing", "1");
+      setRefreshing(true);
+      setDistance(threshold);
+      window.setTimeout(() => window.location.reload(), 220);
+    } else setDistance(0);
+  };
+  useEffect(() => { sessionStorage.removeItem("rainx-pull-refreshing"); }, []);
+
+  return (
+    <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
+      <div className={`rx-pull-refresh-indicator${refreshing ? " is-refreshing" : ""}`} style={{ opacity: Math.min(1, distance / threshold), transform: `translate(-50%, ${Math.max(-52, distance - 58)}px) scale(${Math.min(1, 0.65 + distance / (threshold * 3))})`, transition: distance > 0 && !refreshing ? "none" : undefined }} aria-hidden="true">
+        <img src={rainxLogoTransparent} alt="" />
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function WalletTab({ account }) {
+  return (
+    <div style={{ minHeight:"100%", background:T.ink, paddingBottom:20 }}>
+      <div style={{ padding:"18px 16px 8px" }}>
+        <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:24, color:T.paper }}>Wallet</div>
+        <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>Your trader wallet, balance and transactions</div>
+      </div>
+      <CreatorWalletScreen account={account} />
+    </div>
+  );
+}
+
+function MainAppContent({ account, onLogout }) {
+  const seriesMap = useMultiPriceSeries();
+  const seriesMapRef = useRef(seriesMap);
+  seriesMapRef.current = seriesMap;
+  const entitlement = useEntitlement(account.id);
+  // ── Route state: URL hash is the source of truth; localStorage is fallback ─
+  const [morePage, setMorePage] = useState(() => {
+    const { tab: rt, sub } = routeRead();
+    // Only restore morePage from URL if the URL tab is "more" (or profileFromHeader overlay)
+    if (rt === "more" && sub) return sub;
+    if (rt && sub && rt !== "community") return sub; // e.g. #home/profile-menu/h
+    return lsGet("rainx-morepage") || null;
+  });
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const [tab, setTab] = useState(() => {
+    const { tab: urlTab } = routeRead();
+    if (urlTab && urlTab !== "space-coins") return urlTab === "markets" ? "wallet" : urlTab;
+    const t = lsGet("rainx-tab");
+    return t === "markets" ? "wallet" : (_ROUTE_TABS.includes(t) ? t : "home");
+  });
+  const [profileFromHeader, setProfileFromHeader] = useState(() => routeRead().flag === "h");
+  const [communityProfileOpen, setCommunityProfileOpen] = useState(false);
+  // Lazy keep-alive: set to true on first visit, stays true so the tab never unmounts again
+  const [communityMounted, setCommunityMounted] = useState(false);
+  const [spaceCoinsScreen, setSpaceCoinsScreen] = useState(() => {
+    const { tab: urlTab, sub } = routeRead();
+    return urlTab === "space-coins" && (sub === "intro" || sub === "dashboard") ? sub : null;
+  });
+  const [scalpingMounted,  setScalpingMounted]  = useState(false);
+  useEffect(() => {
+    if (tab === "community" && !communityMounted) setCommunityMounted(true);
+    if (tab === "scalping"  && !scalpingMounted)  setScalpingMounted(true);
+  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Telegram-style animated navigation ───────────────────────────────────
+  const prevTabRef = useRef("home");
+  const tabDirRef  = useRef(1);    // 1 = slide from right, −1 = from left
+  const swipeRef   = useRef(null); // edge-swipe touch tracking
+
+  const goTab = (key, forcedDir) => {
+    const ORDER = { home: 0, wallet: 1, community: 2, more: 3, history: 3, scalping: 3, subscribe: 3 };
+    tabDirRef.current  = forcedDir ?? ((ORDER[key] ?? 0) >= (ORDER[prevTabRef.current] ?? 0) ? 1 : -1);
+    prevTabRef.current = key;
+    setTab(key);
+    routeWrite(key, null, null);
+  };
+  const [activeSymbol, setActiveSymbol] = useState(() => {
+    const saved = lsGet("rainx-active-symbol");
+    if (saved) { _activeSymbolRef.current = saved; return saved; }
+    try {
+      const markets = JSON.parse(lsGet("rainx-active-markets") || "[]");
+      const s = markets[0] || "XAUUSD";
+      _activeSymbolRef.current = s;
+      return s;
+    } catch { _activeSymbolRef.current = "XAUUSD"; return "XAUUSD"; }
+  });
+  // ─── Per-market sessions map (persisted to localStorage) ────────────────────
+  // sessions = { [symbol]: { symbol, name, startTime, stepIndex, steps, activities, overlays, setup, state } }
+  const [sessions, setSessions] = useState(() => {
+    try {
+      const saved = JSON.parse(lsGet("rainx-sessions") || "{}");
+      // Scrub stale signal overlays for any TF that has a stored HOLD setup.
+      // These were written by the pre-fix code which kept old entry/SL/TP overlays
+      // in overlaysByTf even when the signal turned to HOLD.
+      Object.values(saved).forEach(sess => {
+        if (!sess || typeof sess !== "object") return;
+        if (sess.overlaysByTf && sess.setupByTf) {
+          Object.entries(sess.setupByTf).forEach(([tfKey, setup]) => {
+            if (setup?.bias === "HOLD") {
+              sess.overlaysByTf[tfKey] = [];
+              // Also remove _tf-tagged overlays for this TF from session.overlays
+              if (Array.isArray(sess.overlays)) {
+                sess.overlays = sess.overlays.filter(o => o._tf !== tfKey);
+              }
+            }
+          });
+        }
+      });
+      return saved;
+    } catch { return {}; }
+  });
+  // Derive the active session (for display) from the currently viewed symbol
+  const session = sessions[activeSymbol] || null;
+  const activeInst = ALL_ASSETS.find(i => i.symbol === (session?.symbol || activeSymbol)) || ALL_ASSETS.find(i => i.symbol === "XAUUSD");
+  const inst = activeInst;
+  const marketOpen = isMarketOpen(inst.cls);
+
+  const series = seriesMap[activeSymbol] || seriesMap["XAUUSD"] || [];
+  const prices = series.map((p) => p.price);
+  const last = prices[prices.length - 1];
+  const prev = prices[prices.length - 2] || last;
+  const changePct = ((last - prev) / prev) * 100;
+  const sma20 = sma(prices, 20);
+  const sma50 = sma(prices, 50);
+  const rsiVal = rsi(prices, 14);
+
+  const [signalsMap, setSignalsMap] = useState({}); // { [symbol]: { "15m": signal, "1h": signal } }
+  const [loadingKey, setLoadingKey] = useState(null); // `${symbol}_${tfKey}` currently being analyzed
+  const [selectedTf, setSelectedTf] = useState("15m");
+  const [notifications, setNotifications] = useState([]);
+  const [communityUnreadCount, setCommunityUnreadCount] = useState(0);
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const [notifToDelete, setNotifToDelete] = useState(null);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+  const [toastQueue, setToastQueue] = useState([]);
+  const [activeToast, setActiveToast] = useState(null);
+  const [activeToastItems, setActiveToastItems] = useState([]);
+  const notificationSeenStorageKey = `rainx-seen-notif-ids:${account?.id || "anonymous"}`;
+  const notificationsHydratedRef = useRef(false);
+  const pendingNotificationEntriesRef = useRef([]);
+  const seenNotificationIdsRef = useRef((() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(notificationSeenStorageKey) || "[]");
+      return new Set(stored);
+    } catch { return new Set(); }
+  })());
+  const persistSeenNotificationIds = () => {
+    try {
+      localStorage.setItem(
+        notificationSeenStorageKey,
+        JSON.stringify([...seenNotificationIdsRef.current].slice(-300)),
+      );
+    } catch {}
+  };
+  const [autoScan, setAutoScan] = useState(true);
+  const lastCandleTimeRef = useRef({}); // `${symbol}_${tfKey}` -> datetime string of the last candle we saw
+  const notifiedKeysRef = useRef(new Set()); // tracks which symbol+timeframe combos have had their first real check this session — separate from lastCandleTimeRef, which gets pre-populated from the DB on load and was wrongly reused for this, causing old signals to instantly notify on every app open/refresh
+
+  
+  // ─── Active markets (max 3 the user explicitly monitors) ────────────────────
+  const [activeMarkets, setActiveMarkets] = useState(() => {
+    try { return JSON.parse(lsGet("rainx-active-markets") || "[]"); } catch { return []; }
+  });
+  const [lastMarketReset, setLastMarketReset] = useState(() => lsGet("rxMarketResetDate") || "");
+  const MAX_ACTIVE_MARKETS = 3;
+  const addActiveMarket = useCallback((symbol) => {
+    setActiveMarkets(prev => {
+      if (prev.includes(symbol)) return prev;
+      if (prev.length >= MAX_ACTIVE_MARKETS) return prev; // Replace flow handled in AddMarketSheet
+      const next = [...prev, symbol];
+      lsSet("rainx-active-markets", JSON.stringify(next));
+      return next;
+    });
+  }, []);
+  const removeActiveMarket = useCallback((symbol) => {
+    setActiveMarkets(prev => {
+      const next = prev.filter(s => s !== symbol);
+      lsSet("rainx-active-markets", JSON.stringify(next));
+      return next;
+    });
+    // Also drop the session for this market so analysis doesn't run in background
+    setSessions(prev => {
+      const next = { ...prev };
+      delete next[symbol];
+      return next;
+    });
+  }, []);
+  const resetMarkets = useCallback(() => {
+    const today = new Date().toDateString();
+    if (lastMarketReset !== today) {
+       if (window.confirm("This will reset your selections. You can only do this once today.")) {
+         setActiveMarkets([]);
+         lsSet("rainx-active-markets", JSON.stringify([]));
+         setLastMarketReset(today);
+         lsSet("rxMarketResetDate", today);
+       }
+    } else {
+       alert("You have already reset your market selections today. Try again tomorrow.");
+    }
+  }, [lastMarketReset]);
+
+  // Auto-restore removed: on page refresh, no market is auto-selected or auto-analyzed.
+  // The user must manually select a market to begin analysis.
+
+  // ─── Analysis session step progression engine (runs for ALL analyzing markets)
+  // Key encodes symbol+stepIndex for every analyzing session so the effect re-fires
+  // each time any session advances a step.
+  const _analyzingKey = Object.entries(sessions)
+    .filter(([, s]) => s.state === "analyzing" && s.stepIndex < STEP_DEFS.length)
+    .map(([sym, s]) => `${sym}:${s.stepIndex}`)
+    .join(",");
+  useEffect(() => {
+    if (!_analyzingKey) return;
+    const timers = _analyzingKey.split(",").map(entry => {
+      const [symbol, stepIdxStr] = entry.split(":");
+      const stepIdx = Number(stepIdxStr);
+      const delay = 2800 + Math.random() * 3200;
+      return setTimeout(() => {
+        setSessions(prev => {
+          const sess = prev[symbol];
+          if (!sess || sess.state !== "analyzing" || sess.stepIndex !== stepIdx) return prev;
+          const ni = sess.stepIndex + 1;
+          const steps = STEP_DEFS.map((s, i) => ({ ...s, status: i < ni ? "done" : i === ni ? "active" : "pending" }));
+          const base = sess.overlays.filter(o => o._step !== sess.stepIndex);
+          const inst2 = ALL_ASSETS.find(a => a.symbol === symbol) || ALL_ASSETS[0];
+          const price = (seriesMapRef.current[symbol] || []).slice(-1)[0]?.price || inst2.base;
+          const vol = inst2.vol;
+          let newOverlays = [...base];
+          if (stepIdx === 0) {
+            newOverlays.push({ _step:0, type:"trendline",        price1: price - vol*6, price2: price - vol*1, label:"Uptrend Line" });
+            newOverlays.push({ _step:0, type:"swing_high",       price: price + vol*4, idx: 8  });
+            newOverlays.push({ _step:0, type:"swing_high",       price: price + vol*2.5, idx: 18 });
+            newOverlays.push({ _step:0, type:"swing_low",        price: price - vol*5, idx: 12 });
+            newOverlays.push({ _step:0, type:"swing_low",        price: price - vol*3, idx: 22 });
+            newOverlays.push({ _step:0, type:"market_structure", price: price + vol*4, idx: 8,  label:"HH" });
+            newOverlays.push({ _step:0, type:"market_structure", price: price - vol*5, idx: 12, label:"HL" });
+          } else if (stepIdx === 1) {
+            newOverlays.push({ _step:1, type:"resistance",    price: price + vol*2.5, label:"Resistance Zone" });
+            newOverlays.push({ _step:1, type:"support_zone",  priceLow: price - vol*2.5, priceHigh: price - vol*1 });
+            newOverlays.push({ _step:1, type:"liquidity",     priceLow: price + vol*2.2, priceHigh: price + vol*3.0 });
+            newOverlays.push({ _step:1, type:"liquidity",     priceLow: price - vol*3.0, priceHigh: price - vol*2.2 });
+          } else if (stepIdx === 2) {
+            newOverlays.push({ _step:2, type:"channel",
+              price1: price - vol*6, price2: price - vol*1,
+              price3: price - vol*5, price4: price + vol*0.5,
+            });
+          } else if (stepIdx === 3) {
+            newOverlays.push({ _step:3, type:"entry_zone", priceLow: price - vol*0.5, priceHigh: price + vol*0.5 });
+            newOverlays.push({ _step:3, type:"breakout",   priceLow: price + vol*0.4, priceHigh: price + vol*1.2 });
+          }
+          // Step 4: no placeholder overlays — real signal comes from checkCandle
+          newOverlays = newOverlays.filter(o => o.type !== "current_price");
+          newOverlays.push({ type:"current_price", price });
+          const actMsg = [
+            "Market structure mapped — bullish higher highs forming.",
+            `Support zone identified near ${(price - vol*1.5).toFixed(inst2.digits)}.`,
+            "Trend direction confirmed — bullish bias maintained.",
+            `Entry zone identified ${(price - vol*0.5).toFixed(inst2.digits)} – ${(price + vol*0.5).toFixed(inst2.digits)}. Monitoring price action.`,
+            "Confirmation pending — watching for momentum shift.",
+          ][stepIdx] || "Analysis progressing.";
+          const activities = [{ time: new Date().toLocaleTimeString(), text: actMsg }, ...sess.activities].slice(0, 20);
+          const state = ni >= STEP_DEFS.length ? "watching" : "analyzing";
+          return { ...prev, [symbol]: { ...sess, stepIndex: ni, steps, overlays: newOverlays, activities, setup: sess.setup || null, state } };
+        });
+      }, delay);
+    });
+    return () => timers.forEach(clearTimeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_analyzingKey]);
+
+  // Persist active symbol so it survives refresh
+  useEffect(() => { lsSet("rainx-active-symbol", activeSymbol); _activeSymbolRef.current = activeSymbol; }, [activeSymbol]);
+
+  // Persist all sessions to localStorage whenever they change
+  useEffect(() => { lsSet("rainx-sessions", JSON.stringify(sessions)); }, [sessions]);
+
+  // On mount: auto-start sessions for any active market that doesn't have one yet
+  // (handles fresh installs or cleared localStorage while activeMarkets was already saved)
+  useEffect(() => {
+    setActiveMarkets(prev => {
+      prev.forEach(symbol => {
+        setSessions(s => {
+          if (s[symbol]) return s; // session already exists — keep it
+          const asset = ALL_ASSETS.find(a => a.symbol === symbol);
+          if (!asset) return s;
+          const now = Date.now();
+          return {
+            ...s,
+            [symbol]: {
+              symbol: asset.symbol, name: asset.name, startTime: now, stepIndex: 0,
+              steps: STEP_DEFS.map((st, i) => ({ ...st, status: i === 0 ? "active" : "pending" })),
+              activities: [{ time: new Date().toLocaleTimeString(), text: `Raina AI resuming analysis on ${asset.symbol}.` }],
+              overlays: [], setup: null, state: "analyzing",
+            },
+          };
+        });
+      });
+      return prev; // don't change activeMarkets — side-effect only
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Activity heartbeat during watching phase (runs for ALL watching markets)
+  const _watchingKey = Object.keys(sessions).filter(sym => sessions[sym]?.state === "watching").join(",");
+  useEffect(() => {
+    if (!_watchingKey) return;
+    const msgs = [
+      "Price action remains constructive above support.",
+      "Monitoring momentum indicators for confirmation.",
+      "No significant structure changes detected.",
+      "Resistance zone holding. Watching for breakout.",
+      "Bullish structure intact. Setup still developing.",
+      "Price consolidating near entry zone.",
+    ];
+    const id = setInterval(() => {
+      setSessions(prev => {
+        const next = { ...prev };
+        let changed = false;
+        _watchingKey.split(",").forEach(symbol => {
+          const s = prev[symbol];
+          if (!s || s.state !== "watching") return;
+          const text = msgs[Math.floor(Math.random() * msgs.length)];
+          next[symbol] = { ...s, activities: [{ time: new Date().toLocaleTimeString(), text }, ...s.activities].slice(0, 20) };
+          changed = true;
+        });
+        return changed ? next : prev;
+      });
+    }, 30000);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_watchingKey]);
+
+  // Session countdown
+  const [sessionSecsLeft] = useState(0); // Session runs continuously — no countdown
+
+  const startAnalysisSession = useCallback((asset) => {
+    const now = Date.now();
+    setSessions(prev => ({
+      ...prev,
+      [asset.symbol]: {
+        symbol: asset.symbol,
+        name: asset.name,
+        startTime: now,
+        stepIndex: 0,
+        steps: STEP_DEFS.map((s, i) => ({ ...s, status: i === 0 ? "active" : "pending" })),
+        activities: [{ time: new Date().toLocaleTimeString(), text: `Raina AI starting analysis on ${asset.symbol}. Studying market structure…` }],
+        overlays: [],
+        setup: null,
+        state: "analyzing",
+      }
+    }));
+  }, []);
+
+  // ─── Theme ─────────────────────────────────────────────────────────────────
+  const [themeMode, setThemeMode] = useState(() => lsGet("rainx-theme") || "light");
+  const [showSidebar, setShowSidebar] = useState(false);
+  const isDark = themeMode === "dark" || (themeMode === "system" && typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches);
+  // Mutate T in-place BEFORE children render — all 200+ T.xxx refs in child components pick up new values automatically
+  Object.assign(T, isDark ? DARK_TOKENS : LIGHT_TOKENS);
+  useEffect(() => { document.body.style.background = T.ink; }, [isDark]);
+  useEffect(() => { lsSet("rainx-tab", tab); }, [tab]);
+  useEffect(() => { if (morePage !== null) lsSet("rainx-morepage", morePage); else lsDelete("rainx-morepage"); }, [morePage]);
+  // Keep URL hash in sync with current route state (replaceState — no new history entry)
+  useEffect(() => {
+    if (spaceCoinsScreen) {
+      routeReplace("space-coins", spaceCoinsScreen, null);
+    } else {
+      routeReplace(tab, morePage, profileFromHeader ? "h" : null);
+    }
+  }, [tab, morePage, profileFromHeader, spaceCoinsScreen]);
+  // Sync browser Back/Forward to React state
+  useEffect(() => {
+    const onPop = () => {
+      const { tab: t, sub: mp, flag } = routeRead();
+      if (t === "space-coins") {
+        setSpaceCoinsScreen(mp === "dashboard" ? "dashboard" : "intro");
+        return;
+      }
+      setSpaceCoinsScreen(null);
+      if (t) { prevTabRef.current = t; setTab(t); }
+      setMorePage(mp ?? null);
+      setProfileFromHeader(flag === "h");
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  const unreadSections = notifications.reduce((counts, notification) => {
+    if (!notification.read) counts[classifyNotification(notification)] += 1;
+    return counts;
+  }, { home: 0, markets: 0, community: 0, more: 0 });
+  const navBadges = {
+    home: formatNotificationCount(unreadSections.home),
+    markets: formatNotificationCount(unreadSections.markets),
+    community: formatNotificationCount(unreadSections.community + communityUnreadCount),
+    more: formatNotificationCount(unreadSections.more),
+  };
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const announceRainxPresence = useCallback((activeChatUserId = null) => {
+    const presence = {
+      type: "RAINX_PRESENCE",
+      accountId: account?.id || null,
+      visible: document.visibilityState === "visible",
+      activeChatUserId,
+      updatedAt: Date.now(),
+    };
+    try { localStorage.setItem("rainx_presence", JSON.stringify(presence)); } catch {}
+    try {
+      if ("serviceWorker" in navigator) {
+        if (navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage(presence);
+        else navigator.serviceWorker.ready.then(reg => reg.active?.postMessage(presence)).catch(() => {});
+      }
+    } catch {}
+  }, [account?.id]);
+
+  // Announce that RainX is open. DMScreen overrides activeChatUserId while a
+  // conversation is open.
+  useEffect(() => {
+    announceRainxPresence();
+    const onVisibilityChange = () => announceRainxPresence();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pageshow", onVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pageshow", onVisibilityChange);
+    };
+  }, [announceRainxPresence]);
+
+  const enqueueInAppNotification = useCallback((entry) => {
+    // Realtime can deliver the same row before the initial notification history
+    // has finished loading. Hold it until hydration has claimed all persisted IDs
+    // so an off-app push is not replayed as an in-app banner after launch.
+    if (!notificationsHydratedRef.current) {
+      pendingNotificationEntriesRef.current.push(entry);
+      return false;
+    }
+    const key = entry?.id == null
+      ? `${entry?.type || "notification"}:${entry?.title || ""}:${entry?.body || ""}`
+      : String(entry.id);
+    if (seenNotificationIdsRef.current.has(key)) return false;
+    seenNotificationIdsRef.current.add(key);
+    persistSeenNotificationIds();
+    if (seenNotificationIdsRef.current.size > 300) {
+      const oldest = seenNotificationIdsRef.current.values().next().value;
+      if (oldest) seenNotificationIdsRef.current.delete(oldest);
+    }
+    setNotifications((list) => [entry, ...list.filter((n) => String(n.id) !== key)].slice(0, 50));
+    // The service worker owns OS notifications when the app is not visible.
+    // When RainX is open, this queue owns the single in-app banner instead.
+    setToastQueue((queue) => [...queue, entry]);
+    return true;
+  }, [notificationSeenStorageKey]);
+
+  const openNotificationTarget = useCallback((entry) => {
+    const data = entry?.data || {};
+    const target = data.targetKind ? data : entry;
+    if (!target?.targetKind) return;
+    const url = buildRainxNotificationUrl({
+      kind: target.targetKind,
+      userId: target.userId || target.senderId,
+      conversationId: target.conversationId,
+      postId: target.postId,
+      symbol: target.symbol,
+      timeframe: target.timeframe,
+      notificationAction: "open",
+    });
+    window.history.replaceState(null, "", url);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    if (target.targetKind === "signal") {
+      const nextSymbol = target.symbol;
+      if (nextSymbol) {
+        lsSet("rainx-active-symbol", nextSymbol);
+        _activeSymbolRef.current = nextSymbol;
+        setActiveSymbol(nextSymbol);
+      }
+      setTab("home");
+      return;
+    }
+    setTab(target.targetKind === "chat" || target.targetKind === "post" ? "community" : "home");
+    lsSet("rainx-pending-notification", JSON.stringify({
+      ...target,
+      expiresAt: Date.now() + 60_000,
+    }));
+  }, []);
+
+  const pushNotification = useCallback(async (n) => {
+    // Subscribers do NOT receive trading signal / economic news push notifications
+    // (signals are shown in-app on the chart; push notifications are sent for confirmed signals)
+    const tradingKw = ["buy","sell","take profit","stop loss"," tp "," sl ","entry","cpi","nfp","fomc","reversal","signal"];
+    const isTradingNotif = ["signal","update","warning","news"].includes(n.type) ||
+      tradingKw.some(kw => (n.title||"").toLowerCase().includes(kw) || (n.body||"").toLowerCase().includes(kw));
+    if (isTradingNotif && !hasAccess(entitlement?.tier, "weekly")) return; // only send trading notifs to subscribers
+    let id = Date.now() + Math.random();
+    if (account?.id) {
+      const targetKind = n.targetKind || (n.type === "signal" || n.type === "update" || n.type === "warning" ? "signal" : undefined);
+      const target = {
+        targetKind,
+        symbol: n.symbol,
+        timeframe: n.timeframe,
+        postId: n.postId,
+        conversationId: n.conversationId,
+        senderId: n.senderId,
+      };
+      // Persist with type/section/data so notifications survive reload and
+      // market logos / buy-sell badges still resolve after closing the app.
+      // Try the full insert first; fall back to title+body only if the extra
+      // columns don't exist yet on the user_notifications table.
+      let rowId = null;
+      try {
+        const fullInsert = {
+          user_id: account.id,
+          title: n.title,
+          body: n.body,
+          type: n.type || null,
+          section: n.section || null,
+          data: target,
+        };
+        const r = await supabase.from("user_notifications").insert(fullInsert).select("id").single();
+        if (r?.data?.id) rowId = r.data.id;
+        else if (r?.error) throw r.error;
+      } catch (_) {
+        // Fallback: the table may not have type/section/data columns yet.
+        try {
+          const r2 = await supabase.from("user_notifications").insert({ user_id: account.id, title: n.title, body: n.body }).select("id").single();
+          if (r2?.data?.id) rowId = r2.data.id;
+        } catch (__) {}
+      }
+      if (rowId) id = rowId;
+    }
+    const targetKind2 = n.targetKind || (n.type === "signal" || n.type === "update" || n.type === "warning" ? "signal" : undefined);
+    const target = {
+      targetKind: targetKind2,
+      symbol: n.symbol,
+      timeframe: n.timeframe,
+      postId: n.postId,
+      conversationId: n.conversationId,
+      senderId: n.senderId,
+    };
+    const entry = { id, read: false, time: new Date().toLocaleTimeString(), created_at: new Date().toISOString(), ...n, data: target };
+    enqueueInAppNotification(entry);
+    const apiBase = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
+    fetch(`${apiBase}/api/push/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: account.id,
+        title: n.title,
+        body: n.body,
+        data: {
+          ...target,
+          kind: n.type === "signal" || n.type === "update" || n.type === "warning" ? "signal" : (n.type || "default"),
+          category: n.type === "warning" ? "sl" : (n.type === "update" ? "tp" : (n.type || "default")),
+          notificationId: String(id),
+          tag: n.type === "signal" || n.type === "update" || n.type === "warning"
+            ? "rainx-signal"
+            : `rainx-${n.type || "notification"}`,
+          group: n.type === "signal" || n.type === "update" || n.type === "warning"
+            ? "rainx-signals"
+            : "rainx",
+          url: targetKind ? buildRainxNotificationUrl(target) : "/",
+        },
+      }),
+    }).catch(() => {});
+  }, [account, entitlement?.tier, enqueueInAppNotification]);
+
+  // Native Capacitor/FCM foreground delivery uses the same routing rules as
+  // service-worker delivery. Android shows the system notification while the
+  // app is backgrounded; when the app is open we surface it in-app here.
+  useEffect(() => {
+    if (!account?.id) return undefined;
+    const handleNativePush = (event) => {
+      const notification = event?.detail || {};
+      const data = notification?.data || {};
+      const kind = String(data.kind || data.category || "").toLowerCase();
+      const category = String(data.category || "").toLowerCase();
+      const isCommunity = kind === "community" || ["like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention", "chat"].includes(kind) || category === "community" || category === "chat";
+      if (isCommunity) {
+        window.dispatchEvent(new CustomEvent("rainx:community-notification-received"));
+        return;
+      }
+      if (document.visibilityState === "visible") {
+        enqueueInAppNotification({
+          id: data.notificationId || data.messageId || `${notification.title || "RainX"}::${notification.body || ""}`,
+          title: notification.title || "RainX",
+          body: notification.body || "",
+          type: data.kind || data.category || "update",
+          read: false,
+          time: new Date().toLocaleTimeString(),
+          created_at: new Date().toISOString(),
+          data,
+        });
+      }
+    };
+    window.addEventListener("rainx:native-push-received", handleNativePush);
+    return () => window.removeEventListener("rainx:native-push-received", handleNativePush);
+  }, [account?.id, enqueueInAppNotification]);
+
+  // ─── One account-scoped notification bridge for every RainX surface ────────
+  useEffect(() => {
+    if (!account?.id) return undefined;
+    const handleMsg = (event) => {
+      if (event.data?.type === "RAINX_PUSH_RECEIVED") {
+        const payload = event.data.payload || {};
+        const data = payload.data || {};
+        const kind = String(data.kind || "").toLowerCase();
+        const category = String(data.category || "").toLowerCase();
+        // Community notifications have their own persistent source of truth
+        // (`community_notifications`). Do not copy a community push into the
+        // generic trading/home notification list: doing so made it appear in
+        // the wrong area and then disappear after refresh because that list is
+        // rehydrated from `user_notifications`.
+        const COMMUNITY_KINDS = new Set(["chat", "like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention"]);
+        if (COMMUNITY_KINDS.has(kind) || category === "community") {
+          window.dispatchEvent(new CustomEvent("rainx:community-notification-received"));
+          return;
+        }
+        if (document.visibilityState === "visible") enqueueInAppNotification({
+          id: data.notificationId || data.messageId || `${payload.title || ""}::${payload.body || ""}`,
+          title: payload.title || "RainX",
+          body: payload.body || "",
+          type: kind === "chat" ? "community" : (data.kind || "update"),
+          read: false,
+          time: new Date().toLocaleTimeString(),
+          data,
+        });
+        return;
+      }
+      if (event.data?.type === "RAINX_NOTIFICATION_ACTION") {
+        const data = event.data.payload || {};
+        if (data.url) window.location.assign(data.url);
+        return;
+      }
+      if (event.data?.type !== "PLAY_SOUND" || !event.data.soundSrc) return;
+      try {
+        const audio = new Audio(event.data.soundSrc);
+        audio.volume = 0.8;
+        audio.play().catch(() => {}); // silently ignore autoplay policy rejections
+      } catch {}
+    };
+    if ("serviceWorker" in navigator) navigator.serviceWorker.addEventListener("message", handleMsg);
+    return () => {
+      if ("serviceWorker" in navigator) navigator.serviceWorker.removeEventListener("message", handleMsg);
+    };
+  }, [account?.id, enqueueInAppNotification]);
+
+  // Push is the background delivery path. These realtime channels are the
+  // foreground fallback and deliberately do not suppress an open chat.
+  useEffect(() => {
+    if (!account?.id) return undefined;
+    const channel = supabase.channel("rainx-in-app-notifications-" + account.id)
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "community_notifications",
+        filter: `user_id=eq.${account.id}`,
+      }, ({ new: row }) => {
+        // Community notifications are owned by CommunityTab and
+        // `community_notifications`. Keep the shell badge in sync, but do not
+        // inject the row into the generic notification history.
+        setCommunityUnreadCount((count) => count + 1);
+        try { window.dispatchEvent(new CustomEvent("rainx:community-notification-received")); } catch {}
+      })
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "direct_messages",
+        filter: `receiver_id=eq.${account.id}`,
+      }, ({ new: message }) => {
+        if (document.visibilityState === "visible") enqueueInAppNotification({
+          id: message.id,
+          title: "New Message",
+          body: message.content || "",
+          type: "community",
+          read: false,
+          time: new Date().toLocaleTimeString(),
+          data: {
+            targetKind: "chat",
+            userId: message.sender_id,
+            senderId: message.sender_id,
+            conversationId: [account.id, message.sender_id].sort().join("_"),
+          },
+        });
+      })
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "user_notifications",
+        filter: `user_id=eq.${account.id}`,
+      }, ({ new: row }) => {
+        if (document.visibilityState === "visible") enqueueInAppNotification({
+          id: row.id,
+          title: row.title || "RainX",
+          body: row.body || "",
+          type: row.type || "update",
+          read: !!row.read,
+          time: new Date().toLocaleTimeString(),
+          data: row.data || {},
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [account?.id, enqueueInAppNotification]);
+
+  // Native Capacitor/FCM is the only notification transport in the mobile app.
+
+  useEffect(() => {
+    if (!activeToast && toastQueue.length > 0) {
+      setActiveToast({ ...toastQueue[0], count: toastQueue.length });
+      setActiveToastItems(toastQueue);
+      setToastQueue([]);
+    }
+  }, [toastQueue, activeToast]);
+
+  // Load this account's past notifications (survives logout, new device, etc.)
+  useEffect(() => {
+    if (!account?.id) return;
+    (async () => {
+      try {
+        const deliveredPushIds = await readDeliveredPushIds();
+        deliveredPushIds.forEach((id) => seenNotificationIdsRef.current.add(id));
+        const { data } = await supabase.from("user_notifications").select("*").eq("user_id", account.id).order("created_at", { ascending: false }).limit(50);
+        const loaded = (data || []).map((row) => ({
+            id: row.id, title: row.title, body: row.body,
+            type: row.type || null, section: row.section || null,
+            read: row.read, time: new Date(row.created_at).toLocaleTimeString(), created_at: row.created_at,
+            // Reconstruct the data object (symbol etc.) so market logos resolve
+            // after the app is closed and reopened.
+            data: row.data || {},
+            symbol: row.data?.symbol || row.symbol || null,
+        }));
+        loaded.forEach((row) => seenNotificationIdsRef.current.add(String(row.id)));
+        persistSeenNotificationIds();
+        setNotifications((current) => {
+          const loadedIds = new Set(loaded.map((n) => String(n.id)));
+          const localOnly = current.filter((n) => !loadedIds.has(String(n.id)));
+          return [...localOnly, ...loaded].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0, 50);
+        });
+      } catch { /* keep starting empty if this fails */ }
+      finally {
+        notificationsHydratedRef.current = true;
+        const pending = pendingNotificationEntriesRef.current;
+        pendingNotificationEntriesRef.current = [];
+        pending.forEach((entry) => enqueueInAppNotification(entry));
+      }
+    })();
+  }, [account?.id, enqueueInAppNotification, notificationSeenStorageKey]);
+
+  useEffect(() => {
+    if (!account?.id) return;
+    let cancelled = false;
+    const loadCommunityUnreadCount = async () => {
+      const { count } = await supabase
+        .from("community_notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", account.id)
+        .eq("read", false);
+      if (!cancelled) {
+        // Never let a stale poll shrink the badge below a realtime increment
+        // that the database may not have caught up to yet (replication lag).
+        // This stops the community menu badge from flickering "on and off".
+        const dbCount = count || 0;
+        setCommunityUnreadCount((current) => Math.max(current, dbCount));
+      }
+    };
+    loadCommunityUnreadCount();
+    const interval = window.setInterval(loadCommunityUnreadCount, 30000);
+    return () => { cancelled = true; window.clearInterval(interval); };
+  }, [account?.id]);
+
+  // When the community notification sheet marks everything read, clear the
+  // community menu-icon badge instantly instead of waiting for the next poll.
+  useEffect(() => {
+    const onRead = () => setCommunityUnreadCount(0);
+    const onCommunityNotification = async () => {
+      if (!account?.id) return;
+      const { count } = await supabase
+        .from("community_notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", account.id)
+        .eq("read", false);
+      setCommunityUnreadCount(count || 0);
+    };
+    window.addEventListener("rainx:community-notifs-read", onRead);
+    window.addEventListener("rainx:community-notification-received", onCommunityNotification);
+    return () => {
+      window.removeEventListener("rainx:community-notifs-read", onRead);
+      window.removeEventListener("rainx:community-notification-received", onCommunityNotification);
+    };
+  }, [account?.id]);
+
+  // Checks one (instrument, timeframe) combo's latest candle. If it's the
+  // same candle as last time, does nothing - signals only refresh when a
+  // genuinely new candle has closed, so they stay stable instead of flickering.
+  // checkCandle now calls the Raina-AI bot directly instead of Claude.
+  // The bot fetches its own market data (yfinance) and runs the full
+  // technical analysis engine, then returns a structured Signal.
+  const checkCandle = useCallback(async (inst, tf) => {
+    if (!isMarketOpen(inst.cls)) return;
+    const key = `${inst.symbol}_${tf.key}`;
+    const now = Date.now();
+    // Throttle: skip until this timeframe's own candle window has actually
+    // elapsed (15m holds ~15 min, 1h holds ~1h, 4h holds ~4h, etc.) instead
+    // of a flat 4 minutes for every timeframe.
+    if (lastCandleTimeRef.current[key] && now - lastCandleTimeRef.current[key] < stabilityWindowFor(tf.key)) return;
+    try {
+      const wasFirstLoad = !notifiedKeysRef.current.has(key);
+      notifiedKeysRef.current.add(key);
+      setLoadingKey(key);
+      const res = await fetch(`/api/signals/long-term/${encodeURIComponent(inst.symbol)}?timeframe=${tf.key}`);
+      setLoadingKey((k) => (k === key ? null : k));
+      if (!res.ok) return;
+      const signal = await res.json();
+
+      lastCandleTimeRef.current[key] = now;
+
+      // Map Raina-AI Signal shape → RainX UI shape
+      const result = {
+        bias: (signal.direction || "HOLD").toLowerCase(),
+        confidence: signal.confidence || 0,
+        entry: Array.isArray(signal.entry_zone) && signal.entry_zone.length >= 2
+          ? (signal.entry_zone[0] + signal.entry_zone[1]) / 2
+          : null,
+        stop_loss: signal.stop_loss || null,
+        take_profit_1: Array.isArray(signal.take_profit) ? (signal.take_profit[0] || null) : null,
+        take_profit_2: Array.isArray(signal.take_profit) ? (signal.take_profit[1] || null) : null,
+        risk_level: (signal.risk_level || "MEDIUM").toLowerCase(),
+        timeframe: signal.timeframe || tf.key,
+        reason: signal.explanation || "",
+      };
+
+      if (result.bias !== "hold" && result.confidence < 65) {
+        result.bias = "hold";
+        result.reason = "Confidence was below our 65% quality bar, so no trade is being suggested right now. " + result.reason;
+      }
+
+      setSignalsMap((prev) => ({
+        ...prev,
+        [inst.symbol]: {
+          ...prev[inst.symbol],
+          [tf.key]: { ...result, digits: inst.digits, name: inst.name, timeframeLabel: tf.label, generatedAt: Date.now(), status: "active", milestones: [] },
+        },
+      }));
+
+      // ── Update this symbol's session with real signal data from backend ──
+      if (result.bias === "hold" || result.entry != null) {
+        setSessions(prev => {
+          const sess = prev[inst.symbol];
+          if (!sess || sess.state === "completed") return prev;
+          const tfKey  = tf.key;
+          const tfLbl  = tf.label; // e.g. "15 Minute" or "1 Hour"
+
+          // HOLD: write real confidence into setupByTf and clear this TF's overlays
+          if (result.bias === "hold") {
+            const newSetup = {
+              bias:       "HOLD",
+              entry:      null,
+              entryLow:   null,
+              entryHigh:  null,
+              stopLoss:   null,
+              tp1:        null,
+              tp2:        null,
+              rr:         null,
+              confidence: result.confidence,
+              reason:     result.reason,
+            };
+            // Clear this TF's signal overlays so the chart doesn't show stale entry/SL/TP lines
+            const overlaysByTf = { ...sess.overlaysByTf, [tfKey]: [] };
+            // Rebuild session.overlays: keep structural + current_price, drop this TF's old overlays
+            const keepTypes = new Set(["trendline","channel","support_zone","resistance","liquidity","swing_high","swing_low","market_structure","current_price"]);
+            const baseOverlays = (sess.overlays || []).filter(o => keepTypes.has(o.type) || (!o._tf));
+            const remainingTfOverlays = Object.entries(overlaysByTf)
+              .filter(([k]) => k !== tfKey)
+              .flatMap(([, v]) => v);
+            return { ...prev, [inst.symbol]: {
+              ...sess,
+              overlays: [...baseOverlays, ...remainingTfOverlays],
+              overlaysByTf,
+              setupByTf: { ...sess.setupByTf, [tfKey]: newSetup },
+            } };
+          }
+
+          const price  = result.entry;
+          const slDist = result.stop_loss   ? Math.abs(price - result.stop_loss)   : inst.vol * 2.5;
+          const tp1    = result.take_profit_1;
+          const tp2    = result.take_profit_2;
+
+          // Keep structural (non-signal) overlays across timeframe updates
+          const keepTypes = new Set(["trendline","channel","support_zone","resistance","liquidity","swing_high","swing_low","market_structure"]);
+          const baseStructural = (sess.overlays || []).filter(o => keepTypes.has(o.type));
+
+          // Per-TF signal overlays — tagged with _tf so both 15m and 1h show on chart simultaneously
+          const tfOverlays = [
+            { type:"entry_zone", _tf: tfKey,
+              priceLow:  Array.isArray(signal.entry_zone) ? signal.entry_zone[0] : price-inst.vol*0.5,
+              priceHigh: Array.isArray(signal.entry_zone) ? signal.entry_zone[1] : price+inst.vol*0.5 },
+            { type:"sl_level",   _tf: tfKey, price: result.stop_loss || price - slDist, label: "SL (" + tfLbl + ")" },
+            ...(tp1 != null ? [{ type:"tp_level", _tf: tfKey, price: tp1, label: "TP1 (" + tfLbl + ")" }] : []),
+            ...(tp2 != null ? [{ type:"tp_level", _tf: tfKey, price: tp2, label: "TP2 (" + tfLbl + ")" }] : []),
+            { type:"direction_arrow", _tf: tfKey, from: price,
+              target: tp1 || (result.bias === "sell" ? price - slDist * 1.5 : price + slDist * 1.5),
+              bias: result.bias },
+            ...(tp2 != null ? [{ type:"projection", _tf: tfKey, target: tp2, bias: result.bias }] : []),
+            { type:"breakout", _tf: tfKey, priceLow: price + inst.vol*0.3, priceHigh: price + inst.vol*1.0 },
+          ];
+
+          // Accumulate overlays per-TF — keep all TFs stored; render only selected TF at chart site
+          const overlaysByTf = { ...sess.overlaysByTf, [tfKey]: tfOverlays };
+          const allTfOverlays = overlaysByTf[tfKey];
+
+          // One current_price overlay (live price line — no TF tag)
+          const currentPriceOverlay = { type: "current_price", price };
+
+          const mergedOverlays = [
+            ...baseStructural,
+            currentPriceOverlay,
+            ...allTfOverlays,
+          ];
+
+          const newSetup = {
+            bias:      result.bias.toUpperCase(),
+            entry:     price,
+            entryLow:  Array.isArray(signal.entry_zone) ? signal.entry_zone[0] : price-inst.vol*0.5,
+            entryHigh: Array.isArray(signal.entry_zone) ? signal.entry_zone[1] : price+inst.vol*0.5,
+            stopLoss:  result.stop_loss || price - slDist,
+            tp1:       tp1 || price + slDist * 1.5,
+            tp2:       tp2 || price + slDist * 3.0,
+            rr:        (slDist > 0 ? ((tp1 || price + slDist * 1.5) - price) / slDist : 1.5).toFixed(1),
+            confidence: result.confidence,
+            reason:     result.reason,
+          };
+
+          return { ...prev, [inst.symbol]: {
+            ...sess,
+            overlays: mergedOverlays,
+            overlaysByTf,
+            setupByTf: { ...sess.setupByTf, [tfKey]: newSetup },
+          } };
+        });
+      }
+
+      supabase.from("signals").upsert({
+        symbol: inst.symbol, timeframe: tf.key, candle_time: new Date().toISOString(),
+        bias: result.bias, confidence: result.confidence, entry: result.entry,
+        stop_loss: result.stop_loss, take_profit_1: result.take_profit_1, take_profit_2: result.take_profit_2,
+        risk_level: result.risk_level, reason: result.reason, status: "active", milestones: [],
+        generated_at: new Date().toISOString(),
+      }, { onConflict: "symbol,timeframe" }).then(() => {}, () => {});
+
+      if (!wasFirstLoad && result.bias !== "hold" && result.confidence >= 65) {
+        const verb = result.bias === "buy" ? "Buy" : "Sell";
+        pushNotification({
+          type: "signal", symbol: inst.symbol,
+          title: `${result.bias === "buy" ? "🟢" : "🔴"} ${verb} ${inst.name} — ${tf.label} signal`,
+          body: `${result.confidence}% confidence · ${result.reason}`,
+        });
+      }
+    } catch { /* keep the existing signal if the fetch fails */ }
+  }, [pushNotification]);
+
+  const allCombos = [];
+  INSTRUMENTS.forEach((inst) => {
+    // Only scan markets the user has explicitly activated
+    if (activeMarkets.includes(inst.symbol)) {
+      TIMEFRAMES.forEach((tf) => allCombos.push({ inst, tf }));
+    }
+  });
+
+  useEffect(() => {
+    (async () => {
+      // Load whatever signals already exist in Supabase first, so a reload,
+      // logout/login, or new device shows the SAME still-open signal instead
+      // of triggering a fresh (and possibly different) Raina call.
+      try {
+        const { data } = await supabase.from("signals").select("*");
+        if (data && data.length) {
+          const map = {};
+          data.forEach((row) => {
+            const inst = INSTRUMENTS.find((i) => i.symbol === row.symbol);
+            if (!inst) return;
+            if (!map[row.symbol]) map[row.symbol] = {};
+            map[row.symbol][row.timeframe] = {
+              bias: row.bias, confidence: row.confidence, entry: row.entry, stop_loss: row.stop_loss,
+              take_profit_1: row.take_profit_1, take_profit_2: row.take_profit_2, risk_level: row.risk_level,
+              reason: row.reason, digits: inst.digits, name: inst.name, timeframe: row.timeframe,
+              timeframeLabel: TIMEFRAMES.find((t) => t.key === row.timeframe)?.label || row.timeframe,
+              generatedAt: new Date(row.generated_at).getTime(), status: row.status || "active", milestones: row.milestones || [],
+            };
+            // row.candle_time comes back from Supabase as an ISO string. The
+            // throttle check does plain number subtraction (now - lastCandleTimeRef),
+            // and `Date.now() - "2026-..."` evaluates to NaN in JS, which silently
+            // disabled the stability window on every reload. Store it as epoch ms.
+            const parsedCandleTime = row.candle_time ? new Date(row.candle_time).getTime() : Date.now();
+            lastCandleTimeRef.current[`${row.symbol}_${row.timeframe}`] = Number.isFinite(parsedCandleTime) ? parsedCandleTime : Date.now();
+          });
+          setSignalsMap(map);
+        }
+      } catch { /* if this fails, checkCandle below will just generate fresh signals as before */ }
+
+      // Now check each combo - this will correctly do nothing for any combo
+      // whose candle hasn't actually changed since the persisted signal.
+      allCombos.forEach(({ inst, tf }, idx) => setTimeout(() => checkCandle(inst, tf), idx * 1200));
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
+  useEffect(() => {
+    if (!autoScan) return;
+    let i = 0;
+    // 3 min between checks; 3 instruments x 2 timeframes = 6 combos, so each
+    // gets re-checked roughly every 18 min - enough to catch 15M/1H candle
+    // closes reliably while staying well under the free-tier request budget.
+    const id = setInterval(() => {
+      const { inst, tf } = allCombos[i % allCombos.length];
+      i += 1;
+      checkCandle(inst, tf);
+    }, 180000);
+    return () => clearInterval(id);
+  }, [autoScan, checkCandle]);
+
+  // Live milestone + TP/SL monitor - runs against the live price ticker so
+  // profit updates feel responsive even though signals only refresh on candle close.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const sideEffects = []; // collected here, run AFTER state update - keeps the updater pure
+
+      setSignalsMap((prevMap) => {
+        let changed = false;
+        const next = {};
+        Object.keys(prevMap).forEach((symbol) => { next[symbol] = { ...prevMap[symbol] }; });
+
+        INSTRUMENTS.forEach((inst) => {
+          const arr = seriesMapRef.current[inst.symbol];
+          const price = arr && arr[arr.length - 1] ? arr[arr.length - 1].price : null;
+          if (!price || !next[inst.symbol]) return;
+
+          TIMEFRAMES.forEach((tf) => {
+            const sig = next[inst.symbol][tf.key];
+            if (!sig || sig.status !== "active" || sig.bias === "hold") return;
+
+            const dir = sig.bias === "buy" ? 1 : -1;
+            const profit = (price - sig.entry) * dir;
+            const slDist = Math.abs(sig.entry - sig.stop_loss);
+            const tpDist = Math.abs(sig.take_profit_1 - sig.entry);
+            let updatedSig = sig;
+
+            [10, 25, 50, 100].forEach((step) => {
+              if (profit >= step && !updatedSig.milestones.includes(step)) {
+                updatedSig = { ...updatedSig, milestones: [...updatedSig.milestones, step] };
+                changed = true;
+                sideEffects.push(() => pushNotification({ type: "update", symbol: inst.symbol, title: `+${step} ${unitFor(inst)} — ${inst.name} (${tf.label})`, body: `Trade is now moving +${step} ${unitFor(inst)} in profit.` }));
+              }
+            });
+
+            if (profit <= -slDist) {
+              updatedSig = { ...updatedSig, status: "sl_hit" };
+              changed = true;
+              sideEffects.push(() => pushNotification({ type: "warning", symbol: inst.symbol, title: `${inst.name} (${tf.label}) — Stop Loss hit`, body: "Stop Loss hit. Your capital was protected by our risk-management limits. We are analyzing the next high-probability market setup." }));
+              sideEffects.push(() => saveTradeHistory(account, inst, tf, sig, "sl", -Math.round(slDist)));
+            } else if (profit >= tpDist) {
+              updatedSig = { ...updatedSig, status: "tp_hit" };
+              changed = true;
+              sideEffects.push(() => pushNotification({ type: "update", symbol: inst.symbol, title: `🎯 Take Profit Hit — ${inst.name} (${tf.label})`, body: `Take Profit reached! +${Math.round(tpDist)} ${unitFor(inst)}.` }));
+              sideEffects.push(() => saveTradeHistory(account, inst, tf, sig, "tp", Math.round(tpDist)));
+            }
+
+            if (updatedSig !== sig) {
+              next[inst.symbol] = { ...next[inst.symbol], [tf.key]: updatedSig };
+              const candleTime = lastCandleTimeRef.current[`${inst.symbol}_${tf.key}`];
+              sideEffects.push(() =>
+                supabase.from("signals").upsert({
+                  symbol: inst.symbol, timeframe: tf.key, candle_time: candleTime,
+                  bias: updatedSig.bias, confidence: updatedSig.confidence, entry: updatedSig.entry,
+                  stop_loss: updatedSig.stop_loss, take_profit_1: updatedSig.take_profit_1, take_profit_2: updatedSig.take_profit_2,
+                  risk_level: updatedSig.risk_level, reason: updatedSig.reason, status: updatedSig.status, milestones: updatedSig.milestones,
+                }, { onConflict: "symbol,timeframe" }).then(() => {}, () => {})
+              );
+            }
+          });
+        });
+
+        return changed ? next : prevMap;
+      });
+
+      sideEffects.forEach((fn) => fn());
+    }, 15000);
+    return () => clearInterval(id);
+  }, [pushNotification, account]);
+
+  // When any session transitions to "watching", immediately fetch a real signal
+  // from the backend for that market instead of waiting for the scan loop.
+  useEffect(() => {
+    if (!_watchingKey) return;
+    _watchingKey.split(",").forEach(symbol => {
+      const inst2 = ALL_ASSETS.find(a => a.symbol === symbol);
+      if (!inst2) return;
+      // Clear throttle so the first call always goes through
+      delete lastCandleTimeRef.current[`${symbol}_15m`];
+      delete lastCandleTimeRef.current[`${symbol}_1h`];
+      delete lastCandleTimeRef.current[`${symbol}_4h`];
+      checkCandle(inst2, { key: "15m", label: "15M" });
+      checkCandle(inst2, { key: "1h",  label: "1H" });
+      checkCandle(inst2, { key: "4h",  label: "4H" });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_watchingKey]);
+
+  const activeSignal = signalsMap[activeSymbol]?.[selectedTf] || null;
+
+  return (
+    <PullToRefresh>
+      <div style={{ minHeight: "100dvh", background: tab === "home" ? "#F8F9FA" : T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative", isolation: "isolate" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+        * { box-sizing: border-box; }
+        body { margin:0; }
+        @keyframes slideDown { from { transform: translateY(-30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+        @keyframes priceFlash { 0% { opacity:0.4; } 100% { opacity:1; } }
+        @keyframes rx-slide-in-right { from { transform:translateX(40px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+        @keyframes rx-slide-in-left  { from { transform:translateX(-40px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }\n        @keyframes rx-breathe { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.68; transform:scale(.985); } }
+        .rx-slide-right { animation: rx-slide-in-right 0.22s cubic-bezier(0.25,0.46,0.45,0.94) backwards; }
+        .rx-slide-left  { animation: rx-slide-in-left  0.22s cubic-bezier(0.25,0.46,0.45,0.94) backwards; }
+        .hide-scroll::-webkit-scrollbar { display:none; }
+        .hide-scroll { -ms-overflow-style:none; scrollbar-width:none; }
+        .scroll-hint::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,rgba(244,211,94,0.5),transparent); opacity:0; transition:opacity 0.3s; pointer-events:none; }
+        .scroll-hint.scrolling::after { opacity:1; }
+      `}</style>
+
+      <Toast
+        toast={activeToast}
+        onDone={() => setActiveToast(null)}
+        onOpen={openNotificationTarget}
+      />
+
+      {tab === "home" && <div style={{ background: "transparent", borderBottom: "none", padding: "16px 18px 14px", minHeight: 82, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20, boxShadow: "none" }}>
+        {/* ── Profile avatar trigger ── */}
+          <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); routeWrite(tab, "profile-menu", "h"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
+              <HeaderAvatar account={account} morePage={morePage} T={T} />
+            </button>
+        <button onClick={() => {
+          setShowNotifPanel(true);
+          const unreadIds = notifications.filter((n) => !n.read).map((n) => n.id);
+          setNotifications((list) => list.map((n) => ({ ...n, read: true })));
+          if (account?.id && unreadIds.length) {
+            supabase.from("user_notifications").update({ read: true }).eq("user_id", account.id).in("id", unreadIds).then(() => {}, () => {});
+          }
+        }} style={{ position: "relative", background: "none", border: "none", color: "#0F0E0B", cursor: "pointer", padding: 4 }}>
+          <Bell size={24} strokeWidth={1.8} fill="#0F0E0B" color="#0F0E0B" />
+          {unreadCount > 0 && (
+            <span style={{ position: "absolute", top: -6, right: -8, background: T.rust, color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 10, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </button>
+      </div>}
+
+      {/* Community — lazy keep-alive: mounts on first visit, never unmounts again */}
+      {communityMounted && (
+        <div style={{ display: tab === "community" ? "block" : "none", paddingBottom: 78 }}>
+          <CommunityTab account={account} entitlement={entitlement} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />
+        </div>
+      )}
+      {/* Scalping — lazy keep-alive: mounts on first visit, never unmounts again */}
+      {scalpingMounted && (
+        <div style={{ display: tab === "scalping" ? "block" : "none", paddingBottom: 78 }}>
+          <ScalpingTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />
+        </div>
+      )}
+
+      {/* Animated tab container — key forces remount, triggering CSS slide per direction */}
+      {tab !== "community" && tab !== "scalping" && (
+      <div
+        key={tab}
+        className={tabDirRef.current >= 0 ? "rx-slide-right" : "rx-slide-left"}
+        style={{ paddingBottom: 78 }}
+        onTouchStart={(e) => {
+          const x = e.touches[0].clientX;
+          swipeRef.current = (x < 28 || x > window.innerWidth - 28)
+            ? { x, y: e.touches[0].clientY } : null;
+        }}
+        onTouchEnd={(e) => {
+          if (!swipeRef.current) return;
+          const dx = e.changedTouches[0].clientX - swipeRef.current.x;
+          const dy = Math.abs(e.changedTouches[0].clientY - swipeRef.current.y);
+          swipeRef.current = null;
+          if (Math.abs(dx) < 45 || dy > 100) return;
+          const tabs = ["home", "wallet", "community", "more"];
+          const ci = tabs.indexOf(tab);
+          if (dx < 0 && ci < tabs.length - 1) goTab(tabs[ci + 1]);
+          else if (dx > 0 && ci > 0)          goTab(tabs[ci - 1]);
+        }}
+      >
+        {tab === "home" && <HomeTab account={account} inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessions={sessions} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} seriesMap={seriesMap} signalsMap={signalsMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} />}
+        {tab === "wallet" && <WalletTab account={account} />}
+        {tab === "history" && <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />}
+        {tab === "subscribe" && <SubscribeScreen account={account} entitlement={entitlement} onBack={() => goTab("more", -1)} />}
+        {tab === "more" && <MoreTabErrorBoundary><MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} activeMarkets={activeMarkets} /></MoreTabErrorBoundary>}
+      </div>
+      )}
+
+      {/* ── Profile overlay — opens over any tab when accessed from header/sidebar ── */}
+      {profileFromHeader && morePage && tab !== "more" && (
+        <div style={{ position:"fixed", inset:0, zIndex:500, background:T.ink, overflowY:"auto" }}>
+          <MoreTabErrorBoundary>
+            <MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} activeMarkets={activeMarkets} />
+          </MoreTabErrorBoundary>
+        </div>
+      )}
+
+      {/* ── Sidebar drawer (hamburger menu) ──────────────────────────────── */}
+      {showSidebar && (
+        <div style={{ position:"fixed", inset:0, zIndex:500, display:"flex" }}>
+          {/* Backdrop */}
+          <div onClick={() => setShowSidebar(false)} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.45)", backdropFilter:"blur(2px)" }} />
+          {/* Panel */}
+          <div style={{
+            position:"relative", width:"82%", maxWidth:320, height:"100%",
+            background:T.card, borderRight:`1px solid ${T.cardBorder}`,
+            display:"flex", flexDirection:"column", overflow:"hidden",
+            animation:"slideInLeft 0.22s ease",
+          }}>
+            <style>{"@keyframes slideInLeft { from { transform:translateX(-100%); } to { transform:translateX(0); } }"}</style>
+
+            {/* Header */}
+            <div style={{ padding:"22px 20px 16px", borderBottom:`1px solid ${T.cardBorder}`, background:`linear-gradient(135deg,${T.gold}18,transparent)` }}>
+              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.goldBright, letterSpacing:-0.3, marginBottom:2 }}>RainX</div>
+              <div style={{ fontSize:10, color:T.muted, fontWeight:600 }}>Powered by Raina AI</div>
+              {/* Clickable Profile */}
+              <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); setShowSidebar(false); routeWrite(tab, "profile-menu", "h"); }} style={{ marginTop:18, width:"100%", display:"flex", alignItems:"center", gap:12, background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"12px 14px", cursor:"pointer", textAlign:"left" }}>
+                <div style={{ width:44, height:44, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink, flexShrink:0 }}>
+                  {(account?.email || "?")[0].toUpperCase()}
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper }}>Profile</div>
+                  <div style={{ fontSize:10.5, color:T.muted, marginTop:2 }}>View &amp; edit your profile</div>
+                </div>
+                <ChevronRight size={15} color={T.muted} />
+              </button>
+            </div>
+
+            {/* Nav items */}
+            <div style={{ flex:1, overflowY:"auto", padding:"8px 0" }}>
+              {[
+                { icon:Users2,      label:"Profile",        action:() => { setMorePage("profile");  goTab("more"); setShowSidebar(false); } },
+                { icon:Wallet,      label:"Creator Wallet", action:() => { setMorePage("wallet");   goTab("more"); setShowSidebar(false); } },
+                { icon:ShieldCheck, label:"Security",       action:() => { setMorePage("security"); goTab("more"); setShowSidebar(false); } },
+                { icon:Settings,    label:"Settings",       action:() => { setMorePage("settings"); goTab("more"); setShowSidebar(false); } },
+                null,
+                { icon:LogOut,      label:"Log out",        action:() => { setShowSidebar(false); setShowLogoutConfirm(true); }, danger:true },
+              ].map((item, i) => item === null ? (
+                <div key={`div-${i}`} style={{ height:1, background:T.cardBorder, margin:"6px 16px" }} />
+              ) : (
+                <button key={item.label} onClick={item.action} style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"13px 20px", background:"none", border:"none", cursor:"pointer" }}>
+                  <item.icon size={18} color={item.danger ? T.rust : T.gold} />
+                  <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:item.danger ? T.rust : T.paper }}>{item.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding:"14px 20px", borderTop:`1px solid ${T.cardBorder}` }}>
+              <div style={{ fontSize:10, color:T.muted, lineHeight:1.7 }}>RainX is an analysis tool, not a broker. AI analysis is not financial advice.</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showNotifPanel && (
+        <div style={{ position: "fixed", inset: 0, background: T.ink, zIndex: 500, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+            {/* Header */}
+            <div style={{ padding: "16px 18px 10px", borderBottom: `1px solid ${T.cardBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+              <div style={{ fontFamily: FONT_HEAD, fontSize: 17, color: T.paper, fontWeight: 700 }}>Notifications</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {notifications.length > 0 && (
+                  <button onClick={() => setShowClearAllConfirm(true)} style={{ background: "none", border: `1px solid ${T.cardBorder}`, borderRadius: 7, padding: "4px 10px", fontSize: 11, color: T.muted, cursor: "pointer", fontFamily: FONT_HEAD, fontWeight: 600 }}>Clear all</button>
+                )}
+                <button onClick={() => setShowNotifPanel(false)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><X size={20} /></button>
+              </div>
+            </div>
+            {/* Body */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "10px 18px 18px" }}>
+              <BlurGate unlocked={hasAccess(entitlement.tier, "weekly")} requiredLabel="Weekly" onSubscribe={() => { setShowNotifPanel(false); setTab("subscribe"); }} minHeight={140}>
+                {notifications.length === 0 ? (
+                  <div style={{ fontSize: 12, color: T.muted, paddingTop: 8 }}>Nothing yet. You'll only be notified for strong setups and trade updates — not every tick.</div>
+                ) : (() => {
+                  const nowDate = new Date();
+                  const todayStr = nowDate.toDateString();
+                  const yestStr = new Date(nowDate - 86400000).toDateString();
+                  const getGroup = (n) => {
+                    const d = new Date(n.created_at || Date.now()).toDateString();
+                    if (d === todayStr) return "Today";
+                    if (d === yestStr) return "Yesterday";
+                    return "Earlier";
+                  };
+                  const groups = ["Today", "Yesterday", "Earlier"].map(label => ({
+                    label, items: notifications.filter(n => getGroup(n) === label)
+                  })).filter(g => g.items.length > 0);
+                  const allUngrouped = groups.length === 0;
+                  const list = allUngrouped ? [{ label: null, items: notifications }] : groups;
+                  return list.map(group => (
+                    <div key={group.label || "all"}>
+                      {group.label && <div style={{ fontSize: 10, color: T.muted, fontFamily: FONT_HEAD, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, padding: "12px 0 6px" }}>{group.label}</div>}
+                      {group.items.map((n) => {
+                        const market = isMarketNotification(n);
+                        return (
+                        <div key={n.id} style={{ borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 0", display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+                          {market && <MarketNotifAvatar n={n} size={40} />}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                              {!n.read && <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.gold, flexShrink: 0 }} />}
+                              <div style={{ fontSize: 13, fontWeight: 700, color: T.paper, lineHeight: 1.35 }}>{n.title}</div>
+                            </div>
+                            <div style={{ fontSize: 12.5, color: T.muted, marginTop: 2, fontWeight: 500, lineHeight: 1.45 }}>{n.body}</div>
+                            <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>{notifTimeAgo(n)}</div>
+                          </div>
+                          <button onClick={() => setNotifToDelete(n)} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", padding: "2px 4px", flexShrink: 0, alignSelf: "flex-start" }}><X size={13} /></button>
+                        </div>
+                        );
+                      })}
+                    </div>
+                  ));
+                })()}
+              </BlurGate>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Notification delete confirmation modal ── */}
+      {notifToDelete && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:600, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px" }} onClick={() => setNotifToDelete(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:24, maxWidth:360, width:"100%" }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:10 }}>Delete notification?</div>
+            <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.7, marginBottom:20 }}>
+              This notification will be permanently removed from your list. You won't be able to recover it after deleting.
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={() => setNotifToDelete(null)} style={{ flex:1, background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, cursor:"pointer" }}>Cancel</button>
+              <button onClick={() => {
+                const n = notifToDelete;
+                setNotifToDelete(null);
+                setNotifications(list => list.filter(x => x.id !== n.id));
+                if (account?.id) supabase.from("user_notifications").delete().eq("id", n.id).then(() => {}, () => {});
+              }} style={{ flex:1, background:"#E53935", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer" }}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Clear all notifications confirmation modal ── */}
+      {showClearAllConfirm && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:600, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px" }} onClick={() => setShowClearAllConfirm(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:24, maxWidth:360, width:"100%" }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:10 }}>Clear all notifications?</div>
+            <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.7, marginBottom:20 }}>
+              This will permanently remove all notifications from your list. This action cannot be undone.
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={() => setShowClearAllConfirm(false)} style={{ flex:1, background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, cursor:"pointer" }}>Cancel</button>
+              <button onClick={() => {
+                setShowClearAllConfirm(false);
+                setNotifications([]);
+                if (account?.id) supabase.from("user_notifications").delete().eq("user_id", account.id).then(() => {}, () => {});
+              }} style={{ flex:1, background:"#E53935", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer" }}>Clear all</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Logout confirmation modal ── */}
+      {showLogoutConfirm && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px" }}>
+          <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:24, maxWidth:360, width:"100%" }}>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:10 }}>Log Out of RainX?</div>
+            <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.8, marginBottom:20 }}>
+              If you log out, you will stop receiving:<br/>
+              <span style={{ color:T.paper }}>• Live trading signals &amp; Raina AI alerts</span><br/>
+              <span style={{ color:T.paper }}>• TP / SL hit notifications</span><br/>
+              <span style={{ color:T.paper }}>• CPI, NFP &amp; economic news updates</span><br/>
+              <span style={{ color:T.paper }}>• Community mentions &amp; replies</span><br/><br/>
+              You can log back in at any time.
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={() => setShowLogoutConfirm(false)} style={{ flex:1, background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, cursor:"pointer" }}>Cancel</button>
+              <button onClick={() => { setShowLogoutConfirm(false); onLogout(); }} style={{ flex:1, background:"#E53935", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer" }}>Log Out</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!communityProfileOpen && !spaceCoinsScreen && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", zIndex: 100, background: T.card, opacity: 1, borderTop: `1px solid ${T.cardBorder}`, boxShadow: "0 -8px 24px rgba(0,0,0,0.12)", display: "flex", justifyContent: "space-around", padding: "6px 0 calc(20px + env(safe-area-inset-bottom))", "--rx-logo-bg": isDark ? "#000" : "#fff" }}>
+          {[
+            { key: "home", label: "Home", icon: (active) => (
+               <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "none" : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" fillRule="evenodd">
+                {/* House silhouette + door cutout so the door stays empty when filled */}
+                <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z M9 21V12h6v9z"/>
+              </svg>
+            )},
+            { key: "wallet", label: "Wallet", icon: (active) => (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "none" : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3.5 7.5A2.5 2.5 0 0 1 6 5h12.5A2.5 2.5 0 0 1 21 7.5v9A2.5 2.5 0 0 1 18.5 19H6a2.5 2.5 0 0 1-2.5-2.5z"/>
+                <path d="M3.5 8h14.5a3 3 0 0 1 3 3v1.5h-5.5a2 2 0 0 0 0 4H21"/>
+                <circle cx="16.5" cy="14.5" r="0.9" fill="currentColor"/>
+              </svg>
+            )},
+            { key: "space-coins", center: true },
+            { key: "community", label: "Community", icon: (active) => (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "none" : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="9" cy="7" r="3"/>
+                <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+                <circle cx="18" cy="8" r="2.2"/>
+                <path d="M21 21v-1.5a3 3 0 0 0-2.2-2.9"/>
+              </svg>
+            )},
+            { key: "more", label: "More", icon: (active) => (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "none" : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="4" y="4" width="6" height="6" rx="1.2"/>
+                <rect x="14" y="4" width="6" height="6" rx="1.2"/>
+                <rect x="4" y="14" width="6" height="6" rx="1.2"/>
+                <rect x="14" y="14" width="6" height="6" rx="1.2"/>
+              </svg>
+            )},
+          ].map(({ key, label, icon, center }) => {
+            // "More" only highlights on its landing menu (morePage === null).
+            // Inside a More sub-page (profile/security/wallet/settings) nothing highlights.
+            const insideMoreSub = tab === "more" && morePage;
+            const active = !profileFromHeader && !insideMoreSub && tab === key;
+            return (
+              center ? (
+                <CenterNavLogo
+                  key={key}
+                  active={active}
+                  onActivate={() => { setProfileFromHeader(false); setSpaceCoinsScreen("intro"); }}
+                />
+              ) : (
+                <button key={key} onClick={() => { if (key === "more") setMorePage(null); setProfileFromHeader(false); goTab(key); }} style={{ position: "relative", background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: active ? T.gold : T.muted, cursor: "pointer", minWidth: 52, padding: "4px 2px", transition: "color 0.15s" }}>
+                  {/* Shared deep-gold gradient used to fill active nav icons (fills the icon shape, not a box) */}
+                  <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
+                    <defs>
+                      <linearGradient id="rxNavGold" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#F4D35E"/>
+                        <stop offset="50%" stopColor="#F4D35E"/>
+                        <stop offset="100%" stopColor="#F4D35E"/>
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  {icon(active)}
+                  {navBadges[key] && <span className="rx-nav-badge">{navBadges[key]}</span>}
+                  <span style={{ fontSize: 11, fontFamily: FONT_HEAD, fontWeight: active ? 700 : 500, letterSpacing: 0.1, color: active ? T.gold : T.muted }}>{label}</span>
+                </button>
+              )
+            );
+          })}
+        </div>
+      )}
+      {spaceCoinsScreen === "intro" && (
+        <SpaceCoinsIntro
+          T={T}
+          onExplore={() => {
+            setSpaceCoinsScreen("dashboard");
+            routeWrite("space-coins", "dashboard", null);
+          }}
+          onBack={() => {
+            setSpaceCoinsScreen(null);
+            setTab("home");
+            routeWrite("home", null, null);
+          }}
+        />
+      )}
+      {spaceCoinsScreen === "dashboard" && (
+        <SpaceCoinsDashboard
+          T={T}
+          onBack={() => {
+            setSpaceCoinsScreen("intro");
+            routeWrite("space-coins", "intro", null);
+          }}
+        />
+      )}
+      </div>
+    </PullToRefresh>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
