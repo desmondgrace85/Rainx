@@ -52,27 +52,16 @@ export default function MoreLandingOverride({ account }) {
   const [analytics, setAnalytics] = useState({ views: 0, followers: 0, likes: 0 });
 
   useEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    const old = {
-      htmlOverflow: html.style.overflow,
-      htmlOverscroll: html.style.overscrollBehaviorY,
-      bodyOverflow: body.style.overflow,
-      bodyOverscroll: body.style.overscrollBehaviorY,
-    };
-
-    html.style.overscrollBehaviorY = "none";
-    body.style.overscrollBehaviorY = "none";
-    body.style.overflow = "hidden";
-
     let cancelled = false;
     if (account?.id) {
       loadCreatorAnalytics(account.id).then((data) => {
         if (!cancelled) setAnalytics(data);
       }).catch(() => {});
     }
+    return () => { cancelled = true; };
+  }, [account?.id]);
 
-    return () => {
+  return () => {
       cancelled = true;
       html.style.overflow = old.htmlOverflow;
       html.style.overscrollBehaviorY = old.htmlOverscroll;
@@ -99,6 +88,7 @@ export default function MoreLandingOverride({ account }) {
       <div
         style={{
           height: "100%",
+          minHeight: 0,
           width: "100%",
           boxSizing: "border-box",
           overflowY: "auto",
