@@ -75,6 +75,7 @@ export default function App() {
       setAuthReady(true)
     }).catch(()=>mounted&&setAuthReady(true));
 
+    const startupTimer=setTimeout(()=>mounted&&setAuthReady(true),8000);
     const {data:listener}=supabase.auth.onAuthStateChange((event,session)=>{
       if(!mounted)return;
       const u=session?.user,id=u?.id||null,changed=id&&id!==previousAccountId.current;
@@ -92,7 +93,7 @@ export default function App() {
       setAccount(u?{id:u.id,email:u.email}:null);
       setAuthReady(true)
     });
-    return()=>{mounted=false;listener?.subscription?.unsubscribe()}
+    return()=>{mounted=false;clearTimeout(startupTimer);listener?.subscription?.unsubscribe()}
   },[]);
 
   useEffect(()=>{
@@ -101,17 +102,18 @@ export default function App() {
     if(!account?.id){setLocked(false);setLockReady(true);return}
     let mounted=true;
     setLockReady(false);
+    const lockTimer=setTimeout(()=>{if(mounted){setLocked(false);setLockReady(true)}},8000);
     getNativeLockConfig(account.id).then(config=>{
       if(!mounted)return;
       const fresh=forceLockOnNextAccountLoad.current;
       forceLockOnNextAccountLoad.current=false;
       const already=hasNativeUnlockedSession(account.id);
       setLocked(!!config.appLock&&(fresh||!already));
-      setLockReady(true)
+      setLockReady(true);clearTimeout(lockTimer)
     }).catch(()=>{
-      if(mounted){setLocked(true);setLockReady(true)}
+      if(mounted){clearTimeout(lockTimer);setLocked(true);setLockReady(true)}
     });
-    return()=>{mounted=false}
+    return()=>{mounted=false;clearTimeout(lockTimer)}
   },[account?.id,authReady]);
 
   useEffect(()=>{
