@@ -6,12 +6,21 @@ import { SecureStorage, KeychainAccess } from "@aparajita/capacitor-secure-stora
 import { supabase } from "./supabaseClient";
 
 const PREFIX = "rainx_";
-const KEYS = {
+const LEGACY_KEYS = {
   pinHash: `${PREFIX}pin_hash`,
   pinEnabled: `${PREFIX}pin_enabled`,
   appLock: `${PREFIX}app_lock`,
   biometric: `${PREFIX}biometric_enabled`,
 };
+function keySet(accountId?: string) {
+  const scope = accountId ? accountId.replace(/[^a-zA-Z0-9_-]/g, "_") : "device";
+  return {
+    pinHash: `${PREFIX}${scope}_pin_hash`,
+    pinEnabled: `${PREFIX}${scope}_pin_enabled`,
+    appLock: `${PREFIX}${scope}_app_lock`,
+    biometric: `${PREFIX}${scope}_biometric_enabled`,
+  };
+}
 
 export type NativeLockConfig = {
   pinEnabled: boolean;
@@ -42,48 +51,60 @@ export async function sha256(value: string): Promise<string> {
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export async function getNativeLockConfig(): Promise<NativeLockConfig> {
+export async function getNativeLockConfig(accountId?: string): Promise<NativeLockConfig> {
   if (!native()) return { pinEnabled: false, appLock: false, biometricEnabled: false };
-  const [pinEnabled, appLock, biometricEnabled] = await Promise.all([
-    secureGet(KEYS.pinEnabled), secureGet(KEYS.appLock), secureGet(KEYS.biometric),
+  const keys = keySet(accountId);
+  let [pinEnabled, appLock, biometricEnabled] = await Promise.all([
+    secureGet(keys.pinEnabled), secureGet(keys.appLock), secureGet(keys.biometric),
   ]);
-  return {
-    pinEnabled: pinEnabled === "1",
-    appLock: appLock === "1",
-    biometricEnabled: biometricEnabled === "1",
-  };
+  // Migrate the pre-account-scoped device keys once, without exposing the PIN.
+  if (accountId && pinEnabled === null && appLock === null && biometricEnabled === null) {
+    const legacy = await Promise.all([secureGet(LEGACY_KEYS.pinEnabled), secureGet(LEGACY_KEYS.appLock), secureGet(LEGACY_KEYS.biometric)]);
+    if (legacy.some(v => v !== null)) {
+      [pinEnabled, appLock, biometricEnabled] = legacy;
+      if (legacy[0] !== null) await secureSet(keys.pinEnabled, legacy[0]);
+      if (legacy[1] !== null) await secureSet(keys.appLock, legacy[1]);
+      if (legacy[2] !== null) await secureSet(keys.biometric, legacy[2]);
+      await Promise.all(Object.values(LEGACY_KEYS).map(secureRemove));
+    }
+  }
+  return { pinEnabled: pinEnabled === "1", appLock: appLock === "1", biometricEnabled: biometricEnabled === "1" };
 }
 
-export async function saveNativePin(pin: string) {
+export async function saveNativePin(pin: string, accountId?: string) {
   if (!native()) throw new Error("PIN lock is available in the native app only.");
   if (!/^\d{4,6}$/.test(pin)) throw new Error("PIN must contain 4–6 digits.");
-  await secureSet(KEYS.pinHash, await sha256(pin));
-  await secureSet(KEYS.pinEnabled, "1");
-  await secureSet(KEYS.appLock, "1");
+  const keys = keySet(accountId);
+  await secureSet(keys.pinHash, await sha256(pin));
+  await secureSet(keys.pinEnabled, "1");
+  await secureSet(keys.appLock, "1");
 }
 
-export async function verifyNativePin(pin: string): Promise<boolean> {
+export async function verifyNativePin(pin: string, accountId?: string): Promise<boolean> {
   if (!native()) return false;
-  const hash = await secureGet(KEYS.pinHash);
+  const keys = keySet(accountId);
+  await getNativeLockConfig(accountId);
+  const hash = await secureGet(keys.pinHash);
   return !!hash && hash === await sha256(pin);
 }
 
-export async function disableNativePin(pin: string) {
-  if (!(await verifyNativePin(pin))) throw new Error("Incorrect PIN.");
-  await secureRemove(KEYS.pinHash);
-  await secureSet(KEYS.pinEnabled, "0");
-  await secureSet(KEYS.appLock, "0");
+export async function disableNativePin(pin: string, accountId?: string) {
+  if (!(await verifyNativePin(pin, accountId))) throw new Error("Incorrect PIN.");
+  const keys = keySet(accountId);
+  await secureRemove(keys.pinHash);
+  await secureSet(keys.pinEnabled, "0");
+  await secureSet(keys.appLock, "0");
 }
 
-export async function setNativeAppLock(enabled: boolean) {
-  const config = await getNativeLockConfig();
+export async function setNativeAppLock(enabled: boolean, accountId?: string) {
+  const config = await getNativeLockConfig(accountId);
   if (enabled && !config.pinEnabled && !config.biometricEnabled) {
     throw new Error("Set up a PIN or device biometric first.");
   }
-  await secureSet(KEYS.appLock, enabled ? "1" : "0");
+  await secureSet(keySet(accountId).appLock, enabled ? "1" : "0");
 }
 
-export async function setNativeBiometricEnabled(enabled: boolean) {
+export async function setNativeBiometricEnabled(enabled: boolean, accountId?: string) {
   if (!native()) throw new Error("Biometrics are available in the native app only.");
   if (enabled) {
     const result = await BiometricAuth.checkBiometry();
@@ -97,18 +118,20 @@ export async function setNativeBiometricEnabled(enabled: boolean) {
       androidSubtitle: "Confirm your device identity",
       androidConfirmationRequired: false,
     });
-    await secureSet(KEYS.biometric, "1");
-    await secureSet(KEYS.appLock, "1");
+    const keys = keySet(accountId);
+    await secureSet(keys.biometric, "1");
+    await secureSet(keys.appLock, "1");
   } else {
-    await secureSet(KEYS.biometric, "0");
-    const config = await getNativeLockConfig();
-    if (!config.pinEnabled) await secureSet(KEYS.appLock, "0");
+    const keys = keySet(accountId);
+    await secureSet(keys.biometric, "0");
+    const config = await getNativeLockConfig(accountId);
+    if (!config.pinEnabled) await secureSet(keys.appLock, "0");
   }
 }
 
-export async function authenticateNativeLock(): Promise<boolean> {
+export async function authenticateNativeLock(accountId?: string): Promise<boolean> {
   if (!native()) return true;
-  const config = await getNativeLockConfig();
+  const config = await getNativeLockConfig(accountId);
   if (!config.appLock) return true;
   if (!config.biometricEnabled) return false;
   try {
@@ -129,7 +152,7 @@ export async function authenticateNativeLock(): Promise<boolean> {
 
 export async function getNativeDeviceInfo() {
   if (!native()) return null;
-  const [id, info] = await Promise.all([Device.getId(), Device.getInfo()]);
+  const [id, info, app] = await Promise.all([Device.getId(), Device.getInfo(), App.getInfo()]);
   return {
     deviceId: id.identifier,
     platform: info.platform,
@@ -137,7 +160,7 @@ export async function getNativeDeviceInfo() {
     model: info.model || null,
     manufacturer: info.manufacturer || null,
     osVersion: info.osVersion || null,
-    appVersion: "1.0.0",
+    appVersion: app.version || app.build || "unknown",
   };
 }
 
@@ -173,12 +196,19 @@ export async function recordNativeLogin() {
   });
 }
 
-export async function attachNativeResumeListener(onLocked: () => void) {
+export async function attachNativeResumeListener(onLocked: () => void, accountId?: string) {
   if (!native()) return { remove: async () => {} };
+  let wasBackgrounded = false;
   return App.addListener("appStateChange", async ({ isActive }) => {
-    if (!isActive) return;
-    const config = await getNativeLockConfig();
-    if (config.appLock) onLocked();
+    if (!isActive) {
+      wasBackgrounded = true;
+      return;
+    }
+    if (wasBackgrounded) {
+      wasBackgrounded = false;
+      const config = await getNativeLockConfig(accountId);
+      if (config.appLock) onLocked();
+    }
     await registerNativeDeviceSession().catch(() => {});
   });
 }
