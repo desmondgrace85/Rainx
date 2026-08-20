@@ -36,7 +36,6 @@ async function loadCreatorAnalytics(accountId) {
     if (!received.error) likes = received.data || [];
   }
 
-  // Compatibility fallback for older data where post_likes was queried by liker_id.
   if (!likes.length && postIds.length) {
     const fallback = await supabase
       .from("post_likes")
@@ -58,9 +57,7 @@ async function loadCreatorAnalytics(accountId) {
   };
 }
 
-const metricStyle = {
-  minWidth: 0,
-};
+const metricStyle = { minWidth: 0 };
 
 export default function MoreLandingOverride({ account }) {
   const [analytics, setAnalytics] = useState({ views: 0, followers: 0, likes: 0 });
@@ -87,13 +84,13 @@ export default function MoreLandingOverride({ account }) {
         background: "#FFFFFF",
         color: "#111418",
         fontFamily: FONT,
-        padding: "0 26px 104px",
+        padding: "0 clamp(14px, 4vw, 24px) 104px",
         overflowX: "hidden",
       }}
     >
       <header
         style={{
-          height: 78,
+          height: 54,
           position: "relative",
           display: "flex",
           alignItems: "center",
@@ -107,9 +104,9 @@ export default function MoreLandingOverride({ account }) {
           style={{
             position: "absolute",
             left: -2,
-            top: 19,
-            width: 42,
-            height: 42,
+            top: 6,
+            width: 40,
+            height: 40,
             border: 0,
             background: "transparent",
             display: "grid",
@@ -119,20 +116,20 @@ export default function MoreLandingOverride({ account }) {
             cursor: "pointer",
           }}
         >
-          <ArrowLeft size={29} strokeWidth={2.15} />
+          <ArrowLeft size={27} strokeWidth={2.15} />
         </button>
-        <div style={{ fontSize: 22, lineHeight: 1, fontWeight: 800, letterSpacing: -0.75 }}>
+        <div style={{ fontSize: 18, lineHeight: 1, fontWeight: 800, letterSpacing: -0.55 }}>
           Trader’s Space
         </div>
       </header>
 
       <div
         style={{
-          height: 58,
+          height: 40,
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
           borderBottom: "1px solid #E7E8EA",
-          marginBottom: 26,
+          marginBottom: 13,
         }}
       >
         <div
@@ -140,8 +137,8 @@ export default function MoreLandingOverride({ account }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            borderBottom: "3px solid #111418",
-            fontSize: 17,
+            borderBottom: "2px solid #111418",
+            fontSize: 15,
             fontWeight: 800,
           }}
         >
@@ -153,7 +150,7 @@ export default function MoreLandingOverride({ account }) {
             alignItems: "center",
             justifyContent: "center",
             color: "#858A91",
-            fontSize: 17,
+            fontSize: 15,
             fontWeight: 700,
           }}
         >
@@ -165,10 +162,10 @@ export default function MoreLandingOverride({ account }) {
         style={{
           background: "#FFFFFF",
           border: "1px solid #F0F1F2",
-          borderRadius: 28,
-          boxShadow: "0 2px 15px rgba(17,20,24,0.055)",
-          padding: "27px 22px 25px",
-          marginBottom: 22,
+          borderRadius: 16,
+          boxShadow: "0 1px 8px rgba(17,20,24,0.055)",
+          padding: "14px 14px 13px",
+          marginBottom: 12,
         }}
       >
         <button
@@ -187,16 +184,16 @@ export default function MoreLandingOverride({ account }) {
             textAlign: "left",
           }}
         >
-          <span style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.45 }}>Analytics</span>
-          <ChevronRight size={27} strokeWidth={2.15} />
+          <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.35 }}>Analytics</span>
+          <ChevronRight size={23} strokeWidth={2.15} />
         </button>
 
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-            columnGap: 24,
-            marginTop: 25,
+            columnGap: 12,
+            marginTop: 18,
           }}
         >
           {[
@@ -207,28 +204,28 @@ export default function MoreLandingOverride({ account }) {
             <div key={label} style={metricStyle}>
               <div
                 style={{
-                  fontSize: 14,
+                  fontSize: 12,
                   lineHeight: 1.45,
                   fontWeight: 700,
-                  marginBottom: 5,
+                  marginBottom: 4,
                 }}
               >
                 {label}
               </div>
               <div
                 style={{
-                  fontSize: 31,
+                  fontSize: 25,
                   lineHeight: 1.05,
                   fontWeight: 800,
-                  letterSpacing: -1.2,
+                  letterSpacing: -0.9,
                 }}
               >
                 {value}
               </div>
               <div
                 style={{
-                  marginTop: 12,
-                  fontSize: 14,
+                  marginTop: 9,
+                  fontSize: 12,
                   lineHeight: 1,
                   color: "#329CE6",
                   fontWeight: 700,
@@ -249,9 +246,9 @@ export default function MoreLandingOverride({ account }) {
           display: "block",
           width: "100%",
           padding: 0,
-          margin: "0 0 22px",
+          margin: "0 0 12px",
           border: 0,
-          borderRadius: 24,
+          borderRadius: 16,
           background: "transparent",
           overflow: "hidden",
           cursor: "pointer",
@@ -273,10 +270,10 @@ export default function MoreLandingOverride({ account }) {
         style={{
           background: "#FFFFFF",
           border: "1px solid #F0F1F2",
-          borderRadius: 28,
-          boxShadow: "0 2px 15px rgba(17,20,24,0.055)",
-          padding: "27px 21px 22px",
-          marginBottom: 24,
+          borderRadius: 16,
+          boxShadow: "0 1px 8px rgba(17,20,24,0.055)",
+          padding: "14px 14px 12px",
+          marginBottom: 14,
         }}
       >
         <div
@@ -284,20 +281,20 @@ export default function MoreLandingOverride({ account }) {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            margin: "0 6px 23px",
+            margin: "0 2px 12px",
           }}
         >
-          <div style={{ fontSize: 21, fontWeight: 800, letterSpacing: -0.45 }}>
+          <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -0.35 }}>
             Monetisation
           </div>
-          <ChevronRight size={27} strokeWidth={2.15} />
+          <ChevronRight size={23} strokeWidth={2.15} />
         </div>
 
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
-            gap: 12,
+            gap: 8,
           }}
         >
           {[
@@ -314,7 +311,7 @@ export default function MoreLandingOverride({ account }) {
                 aspectRatio: "700 / 827",
                 padding: 0,
                 border: 0,
-                borderRadius: 22,
+                borderRadius: 14,
                 overflow: "hidden",
                 background: "#FFFFFF",
                 cursor: "pointer",
@@ -339,8 +336,8 @@ export default function MoreLandingOverride({ account }) {
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-            gap: 14,
-            marginTop: 19,
+            gap: 7,
+            marginTop: 10,
           }}
         >
           {[
@@ -354,25 +351,25 @@ export default function MoreLandingOverride({ account }) {
               onClick={() => go("#more/rewards")}
               style={{
                 minWidth: 0,
-                height: 148,
+                height: 74,
                 border: "1px solid #ECEEF0",
-                borderRadius: 22,
+                borderRadius: 12,
                 background: "#FFFFFF",
                 color: "#111418",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 11,
+                gap: 6,
                 fontFamily: FONT,
-                fontSize: 14,
-                lineHeight: 1.35,
+                fontSize: 12,
+                lineHeight: 1.3,
                 fontWeight: 600,
                 whiteSpace: "pre-line",
                 cursor: "pointer",
               }}
             >
-              <Icon size={31} strokeWidth={2.05} />
+              <Icon size={26} strokeWidth={2.05} />
               <span>{label}</span>
             </button>
           ))}
@@ -383,14 +380,14 @@ export default function MoreLandingOverride({ account }) {
           onClick={() => go("#more/rewards")}
           style={{
             width: "100%",
-            height: 62,
-            marginTop: 23,
+            height: 38,
+            marginTop: 12,
             border: 0,
-            borderRadius: 15,
+            borderRadius: 9,
             background: "#F1F2F3",
             color: "#111418",
             fontFamily: FONT,
-            fontSize: 18,
+            fontSize: 15,
             fontWeight: 800,
             cursor: "pointer",
           }}
@@ -399,24 +396,22 @@ export default function MoreLandingOverride({ account }) {
         </button>
       </section>
 
-      {/* Keep the existing scalping destination intact below the new landing.
-          It is deliberately not duplicated or redesigned here. */}
       <button
         type="button"
         onClick={() => go("#more/scalping")}
         style={{
           width: "100%",
-          height: 60,
-          margin: "0 0 22px",
+          height: 40,
+          margin: "0 0 14px",
           border: "1px solid #ECEEF0",
-          borderRadius: 18,
+          borderRadius: 12,
           background: "#FFFFFF",
           color: "#111418",
           fontFamily: FONT,
-          fontSize: 17,
+          fontSize: 14,
           fontWeight: 800,
           cursor: "pointer",
-          boxShadow: "0 2px 12px rgba(17,20,24,0.035)",
+          boxShadow: "0 1px 7px rgba(17,20,24,0.035)",
         }}
       >
         Scalping

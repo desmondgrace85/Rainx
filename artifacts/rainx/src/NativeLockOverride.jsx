@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Delete, Fingerprint } from "lucide-react";
+import { Delete, Fingerprint, ScanFace } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
 import {
   authenticateNativeLock,
+  getNativeBiometryInfo,
   getNativeLockConfig,
   verifyNativePin,
 } from "./nativeSecurity";
@@ -15,6 +16,14 @@ const LOCK_EVENT = "rainx:native-lock-state";
 function emitLockState(locked) {
   try {
     window.dispatchEvent(new CustomEvent(LOCK_EVENT, { detail: { locked } }));
+  } catch {}
+}
+
+function hapticTap() {
+  try {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate(12);
+    }
   } catch {}
 }
 
@@ -29,12 +38,20 @@ export default function NativeLockOverride({ account }) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [biometricRunning, setBiometricRunning] = useState(false);
+  const [biometryAvailable, setBiometryAvailable] = useState(false);
+  const [pressedKey, setPressedKey] = useState(null);
   const biometricAttempted = useRef(false);
 
-  const lockNow = async () => {
+  const refreshLockState = async () => {
     if (!Capacitor.isNativePlatform() || !account?.id) return;
-    const next = await getNativeLockConfig(account.id);
+
+    const [next, biometry] = await Promise.all([
+      getNativeLockConfig(account.id),
+      getNativeBiometryInfo(),
+    ]);
+
     setConfig(next);
+    setBiometryAvailable(!!biometry?.isAvailable);
 
     if (next.appLock) {
       setLocked(true);
@@ -46,6 +63,10 @@ export default function NativeLockOverride({ account }) {
       setLocked(false);
       emitLockState(false);
     }
+  };
+
+  const lockNow = async () => {
+    await refreshLockState();
   };
 
   useEffect(() => {
@@ -60,16 +81,20 @@ export default function NativeLockOverride({ account }) {
         return;
       }
 
-      const next = await getNativeLockConfig(account.id);
+      const [next, biometry] = await Promise.all([
+        getNativeLockConfig(account.id),
+        getNativeBiometryInfo(),
+      ]);
       if (!mounted) return;
 
       setConfig(next);
+      setBiometryAvailable(!!biometry?.isAvailable);
       setLocked(!!next.appLock);
       setPin("");
       setError("");
       biometricAttempted.current = false;
       emitLockState(!!next.appLock);
-    })();
+    })().catch(() => {});
 
     let listener;
     if (Capacitor.isNativePlatform()) {
@@ -86,7 +111,7 @@ export default function NativeLockOverride({ account }) {
   }, [account?.id]);
 
   useEffect(() => {
-    if (!locked || !config.biometricEnabled || biometricAttempted.current) return;
+    if (!locked || !config.biometricEnabled || !biometryAvailable || biometricAttempted.current) return;
 
     biometricAttempted.current = true;
     setBiometricRunning(true);
@@ -106,7 +131,7 @@ export default function NativeLockOverride({ account }) {
       setError("");
       emitLockState(false);
     })();
-  }, [locked, config.biometricEnabled, account?.id]);
+  }, [locked, config.biometricEnabled, biometryAvailable, account?.id]);
 
   const unlock = async (value = pin) => {
     setError("");
@@ -121,6 +146,7 @@ export default function NativeLockOverride({ account }) {
       return;
     }
 
+    hapticTap();
     setPin("");
     setError("Incorrect PIN. Try again.");
   };
@@ -135,6 +161,13 @@ export default function NativeLockOverride({ account }) {
     if (next.length === config.pinLength) {
       window.setTimeout(() => unlock(next), 70);
     }
+  };
+
+  const pressKey = (key, action) => {
+    hapticTap();
+    setPressedKey(key);
+    action();
+    window.setTimeout(() => setPressedKey(null), 90);
   };
 
   if (!locked) return null;
@@ -289,9 +322,13 @@ export default function NativeLockOverride({ account }) {
             <button
               key={digit}
               type="button"
-              onClick={() => addDigit(String(digit))}
+              onPointerDown={() => pressKey(String(digit), () => addDigit(String(digit)))}
+              onClick={() => {}}
               disabled={biometricRunning}
-              style={keyStyle}
+              style={{
+                ...keyStyle,
+                ...(pressedKey === String(digit) ? keyPressedStyle : null),
+              }}
             >
               {digit}
             </button>
@@ -299,26 +336,35 @@ export default function NativeLockOverride({ account }) {
 
           <button
             type="button"
-            onClick={() => setPin((value) => value.slice(0, -1))}
+            onPointerDown={() => pressKey("delete", () => setPin((value) => value.slice(0, -1)))}
+            onClick={() => {}}
             aria-label="Delete last digit"
             disabled={biometricRunning}
-            style={keyStyle}
+            style={{
+              ...keyStyle,
+              ...(pressedKey === "delete" ? keyPressedStyle : null),
+            }}
           >
             <Delete size={27} strokeWidth={2} />
           </button>
 
           <button
             type="button"
-            onClick={() => addDigit("0")}
+            onPointerDown={() => pressKey("0", () => addDigit("0"))}
+            onClick={() => {}}
             disabled={biometricRunning}
-            style={keyStyle}
+            style={{
+              ...keyStyle,
+              ...(pressedKey === "0" ? keyPressedStyle : null),
+            }}
           >
             0
           </button>
 
           <button
             type="button"
-            onClick={() => unlock()}
+            onPointerDown={() => pressKey("unlock", () => unlock())}
+            onClick={() => {}}
             disabled={biometricRunning || pin.length !== pinLength}
             style={{
               ...keyStyle,
@@ -329,6 +375,7 @@ export default function NativeLockOverride({ account }) {
               fontWeight: 900,
               letterSpacing: 0.2,
               opacity: pin.length === pinLength && !biometricRunning ? 1 : 0.78,
+              ...(pressedKey === "unlock" ? { transform: "scale(.96)" } : null),
             }}
           >
             UNLOCK
@@ -345,10 +392,11 @@ export default function NativeLockOverride({ account }) {
             flexShrink: 0,
           }}
         >
-          {config.biometricEnabled && !biometricRunning && (
+          {config.biometricEnabled && biometryAvailable && !biometricRunning && (
             <button
               type="button"
               onClick={async () => {
+                hapticTap();
                 biometricAttempted.current = true;
                 setBiometricRunning(true);
                 setError("");
@@ -369,22 +417,27 @@ export default function NativeLockOverride({ account }) {
                 padding: "9px 14px",
                 display: "flex",
                 alignItems: "center",
-                gap: 7,
+                gap: 8,
                 color: "#111418",
                 fontFamily: FONT,
                 fontWeight: 700,
                 fontSize: 11.5,
                 cursor: "pointer",
+                boxShadow: "0 2px 10px rgba(17,20,24,.04)",
               }}
             >
-              <Fingerprint size={17} />
+              <Fingerprint size={17} strokeWidth={2.1} />
+              <ScanFace size={17} strokeWidth={2.1} />
               Use biometrics
             </button>
           )}
 
           <button
             type="button"
-            onClick={() => setError("Use your configured PIN to unlock RainX.")}
+            onClick={() => {
+              hapticTap();
+              setError("Use your configured PIN to unlock RainX.");
+            }}
             style={{
               border: 0,
               background: "rgba(255,255,255,.58)",
@@ -421,4 +474,10 @@ const keyStyle = {
   cursor: "pointer",
   padding: 0,
   touchAction: "manipulation",
+  transition: "transform 90ms ease, box-shadow 90ms ease",
+};
+
+const keyPressedStyle = {
+  transform: "scale(.96)",
+  boxShadow: "0 3px 10px rgba(40,45,50,.10)",
 };
