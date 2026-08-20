@@ -34,22 +34,16 @@ function installRouteBridge() {
 }
 
 /*
- * Keep the app shell fixed to the viewport, but let the shell itself scroll.
- * RainXApp contains the Home, Community and Wallet surfaces. Previously this
- * shell used overflow:hidden, which clipped all content taller than the
- * viewport and prevented normal vertical touch scrolling on those tabs.
+ * Let the document own vertical scrolling. A fixed/contained scrolling shell
+ * makes fixed bottom navigation and profile controls scroll on Android WebView
+ * (CSS containment also changes the containing block for position: fixed).
  */
 const APP_SURFACE = {
-  position: "fixed",
-  inset: 0,
+  position: "relative",
   width: "100%",
-  height: "100%",
-  overflowY: "auto",
+  minHeight: "100dvh",
   overflowX: "hidden",
-  WebkitOverflowScrolling: "touch",
-  overscrollBehaviorY: "none",
   background: "#FFFFFF",
-  contain: "layout paint size",
   isolation: "isolate",
 } as const;
 
