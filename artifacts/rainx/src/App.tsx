@@ -50,6 +50,17 @@ function installRouteBridge() {
   };
 }
 
+const APP_SURFACE = {
+  position: "fixed",
+  inset: 0,
+  width: "100%",
+  height: "100%",
+  overflow: "hidden",
+  background: "#FFFFFF",
+  contain: "layout paint size",
+  isolation: "isolate",
+};
+
 export default function App() {
   const [route, setRoute] = useState(() => readHash());
   const [account, setAccount] = useState(null);
@@ -103,8 +114,6 @@ export default function App() {
         setLocked(false);
         setLockReady(true);
       } else if (event === "SIGNED_IN" && changedAccount) {
-        // A genuine new login must pass the app lock. INITIAL_SESSION is NOT
-        // treated as a new login because Supabase emits it on every app boot.
         clearNativeSessionUnlock();
         forceLockOnNextAccountLoad.current = true;
       }
@@ -151,7 +160,6 @@ export default function App() {
       })
       .catch(() => {
         if (!mounted) return;
-        // Fail closed only when a configured lock cannot be read.
         setLocked(true);
         setLockReady(true);
       });
@@ -218,31 +226,38 @@ export default function App() {
     };
   }, [account?.id, authReady]);
 
-  // Decide the More route directly from the browser location so the legacy
-  // More landing never gets a render opportunity before the override.
-  const liveRoute = readHash();
-  const isMoreLanding = liveRoute.tab === "more" && !liveRoute.sub;
+  // The route snapshot is the single render decision. This prevents the
+  // previous page from getting an extra render after a route-change event.
+  const isMoreLanding = route.tab === "more" && !route.sub;
 
   if (Capacitor.isNativePlatform() && !authReady) {
-    return <div style={{ position: "fixed", inset: 0, background: "#fff" }} />;
+    return <div style={APP_SURFACE} />;
   }
 
   if (Capacitor.isNativePlatform() && account?.id && !lockReady) {
-    return <div style={{ position: "fixed", inset: 0, background: "#fff" }} />;
+    return <div style={APP_SURFACE} />;
   }
 
   if (Capacitor.isNativePlatform() && account?.id && locked) {
-    return <NativeLockOverride account={account} initialLocked />;
+    return (
+      <div style={APP_SURFACE}>
+        <NativeLockOverride account={account} initialLocked />
+      </div>
+    );
   }
 
   if (account?.id && isMoreLanding) {
-    return <MoreLandingOverride account={account} />;
+    return (
+      <div style={APP_SURFACE}>
+        <MoreLandingOverride account={account} />
+      </div>
+    );
   }
 
   return (
-    <>
+    <div style={APP_SURFACE}>
       <RainXApp />
       {account?.id && <NativeLockOverride account={account} initialLocked={false} />}
-    </>
+    </div>
   );
 }
