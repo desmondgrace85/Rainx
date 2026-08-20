@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Delete, Fingerprint, ScanFace } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
-import { App as CapacitorApp } from "@capacitor/app";
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
 import {
   authenticateNativeLock,
@@ -12,10 +11,13 @@ import {
 
 const FONT = "'Montserrat', sans-serif";
 const LOCK_EVENT = "rainx:native-lock-state";
+const CONFIG_EVENT = "rainx:native-lock-config-changed";
 
 function emitLockState(locked) {
   try {
-    window.dispatchEvent(new CustomEvent(LOCK_EVENT, { detail: { locked } }));
+    window.dispatchEvent(
+      new CustomEvent(LOCK_EVENT, { detail: { locked } })
+    );
   } catch {}
 }
 
@@ -28,7 +30,7 @@ function hapticTap() {
 }
 
 export default function NativeLockOverride({ account }) {
-  const [locked, setLocked] = useState(false);
+  const [locked, setLocked] = useState(true);
   const [config, setConfig] = useState({
     pinEnabled: false,
     appLock: false,
@@ -42,7 +44,7 @@ export default function NativeLockOverride({ account }) {
   const [pressedKey, setPressedKey] = useState(null);
   const biometricAttempted = useRef(false);
 
-  const refreshLockState = async () => {
+  const refreshConfig = async () => {
     if (!Capacitor.isNativePlatform() || !account?.id) return;
 
     const [next, biometry] = await Promise.all([
@@ -53,20 +55,12 @@ export default function NativeLockOverride({ account }) {
     setConfig(next);
     setBiometryAvailable(!!biometry?.isAvailable);
 
-    if (next.appLock) {
-      setLocked(true);
+    if (!next.appLock) {
+      setLocked(false);
       setPin("");
       setError("");
-      biometricAttempted.current = false;
-      emitLockState(true);
-    } else {
-      setLocked(false);
       emitLockState(false);
     }
-  };
-
-  const lockNow = async () => {
-    await refreshLockState();
   };
 
   useEffect(() => {
@@ -81,37 +75,62 @@ export default function NativeLockOverride({ account }) {
         return;
       }
 
-      const [next, biometry] = await Promise.all([
-        getNativeLockConfig(account.id),
-        getNativeBiometryInfo(),
-      ]);
-      if (!mounted) return;
+      try {
+        const [next, biometry] = await Promise.all([
+          getNativeLockConfig(account.id),
+          getNativeBiometryInfo(),
+        ]);
 
-      setConfig(next);
-      setBiometryAvailable(!!biometry?.isAvailable);
-      setLocked(!!next.appLock);
-      setPin("");
-      setError("");
-      biometricAttempted.current = false;
-      emitLockState(!!next.appLock);
-    })().catch(() => {});
+        if (!mounted) return;
 
-    let listener;
-    if (Capacitor.isNativePlatform()) {
-      listener = CapacitorApp.addListener("appStateChange", async ({ isActive }) => {
-        if (!isActive || !account?.id) return;
-        await lockNow();
-      });
-    }
+        setConfig(next);
+        setBiometryAvailable(!!biometry?.isAvailable);
+        setLocked(!!next.appLock);
+        setPin("");
+        setError("");
+        biometricAttempted.current = false;
+        emitLockState(!!next.appLock);
+      } catch {
+        if (mounted) {
+          setLocked(true);
+          emitLockState(true);
+        }
+      }
+    })();
+
+    const onLockState = (event) => {
+      const nextLocked = !!event?.detail?.locked;
+      setLocked(nextLocked);
+      if (nextLocked) {
+        setPin("");
+        setError("");
+        biometricAttempted.current = false;
+      }
+    };
+
+    const onConfigChanged = () => {
+      refreshConfig().catch(() => {});
+    };
+
+    window.addEventListener(LOCK_EVENT, onLockState);
+    window.addEventListener(CONFIG_EVENT, onConfigChanged);
 
     return () => {
       mounted = false;
-      listener?.then((l) => l.remove()).catch(() => {});
+      window.removeEventListener(LOCK_EVENT, onLockState);
+      window.removeEventListener(CONFIG_EVENT, onConfigChanged);
     };
   }, [account?.id]);
 
   useEffect(() => {
-    if (!locked || !config.biometricEnabled || !biometryAvailable || biometricAttempted.current) return;
+    if (
+      !locked ||
+      !config.biometricEnabled ||
+      !biometryAvailable ||
+      biometricAttempted.current
+    ) {
+      return;
+    }
 
     biometricAttempted.current = true;
     setBiometricRunning(true);
@@ -119,9 +138,9 @@ export default function NativeLockOverride({ account }) {
 
     (async () => {
       const ok = await authenticateNativeLock(account?.id);
+
       if (!ok) {
         setBiometricRunning(false);
-        setError("");
         return;
       }
 
@@ -131,13 +150,20 @@ export default function NativeLockOverride({ account }) {
       setError("");
       emitLockState(false);
     })();
-  }, [locked, config.biometricEnabled, biometryAvailable, account?.id]);
+  }, [
+    locked,
+    config.biometricEnabled,
+    biometryAvailable,
+    account?.id,
+  ]);
 
   const unlock = async (value = pin) => {
     setError("");
+
     if (value.length !== config.pinLength) return;
 
     const ok = await verifyNativePin(value, account?.id);
+
     if (ok) {
       setLocked(false);
       setPin("");
@@ -172,7 +198,10 @@ export default function NativeLockOverride({ account }) {
 
   if (!locked) return null;
 
-  const pinLength = Math.max(4, Math.min(6, Number(config.pinLength) || 6));
+  const pinLength = Math.max(
+    4,
+    Math.min(6, Number(config.pinLength) || 6)
+  );
 
   return (
     <div
@@ -279,7 +308,8 @@ export default function NativeLockOverride({ account }) {
                 width: 10,
                 height: 10,
                 borderRadius: "50%",
-                background: index < pin.length ? "#C99A16" : "#E6E8EB",
+                background:
+                  index < pin.length ? "#C99A16" : "#E6E8EB",
                 boxShadow:
                   index < pin.length
                     ? "0 2px 7px rgba(201,154,22,.25)"
@@ -318,16 +348,22 @@ export default function NativeLockOverride({ account }) {
             flexShrink: 0,
           }}
         >
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
+          {[1,2,3,4,5,6,7,8,9].map((digit) => (
             <button
               key={digit}
               type="button"
-              onPointerDown={() => pressKey(String(digit), () => addDigit(String(digit)))}
+              onPointerDown={() =>
+                pressKey(String(digit), () =>
+                  addDigit(String(digit))
+                )
+              }
               onClick={() => {}}
               disabled={biometricRunning}
               style={{
                 ...keyStyle,
-                ...(pressedKey === String(digit) ? keyPressedStyle : null),
+                ...(pressedKey === String(digit)
+                  ? keyPressedStyle
+                  : null),
               }}
             >
               {digit}
@@ -336,13 +372,19 @@ export default function NativeLockOverride({ account }) {
 
           <button
             type="button"
-            onPointerDown={() => pressKey("delete", () => setPin((value) => value.slice(0, -1)))}
+            onPointerDown={() =>
+              pressKey("delete", () =>
+                setPin((value) => value.slice(0, -1))
+              )
+            }
             onClick={() => {}}
             aria-label="Delete last digit"
             disabled={biometricRunning}
             style={{
               ...keyStyle,
-              ...(pressedKey === "delete" ? keyPressedStyle : null),
+              ...(pressedKey === "delete"
+                ? keyPressedStyle
+                : null),
             }}
           >
             <Delete size={27} strokeWidth={2} />
@@ -350,7 +392,9 @@ export default function NativeLockOverride({ account }) {
 
           <button
             type="button"
-            onPointerDown={() => pressKey("0", () => addDigit("0"))}
+            onPointerDown={() =>
+              pressKey("0", () => addDigit("0"))
+            }
             onClick={() => {}}
             disabled={biometricRunning}
             style={{
@@ -363,9 +407,13 @@ export default function NativeLockOverride({ account }) {
 
           <button
             type="button"
-            onPointerDown={() => pressKey("unlock", () => unlock())}
+            onPointerDown={() =>
+              pressKey("unlock", () => unlock())
+            }
             onClick={() => {}}
-            disabled={biometricRunning || pin.length !== pinLength}
+            disabled={
+              biometricRunning || pin.length !== pinLength
+            }
             style={{
               ...keyStyle,
               background: "#11100D",
@@ -374,8 +422,13 @@ export default function NativeLockOverride({ account }) {
               fontSize: 12.5,
               fontWeight: 900,
               letterSpacing: 0.2,
-              opacity: pin.length === pinLength && !biometricRunning ? 1 : 0.78,
-              ...(pressedKey === "unlock" ? { transform: "scale(.96)" } : null),
+              opacity:
+                pin.length === pinLength && !biometricRunning
+                  ? 1
+                  : 0.78,
+              ...(pressedKey === "unlock"
+                ? { transform: "scale(.96)" }
+                : null),
             }}
           >
             UNLOCK
@@ -392,51 +445,63 @@ export default function NativeLockOverride({ account }) {
             flexShrink: 0,
           }}
         >
-          {config.biometricEnabled && biometryAvailable && !biometricRunning && (
-            <button
-              type="button"
-              onClick={async () => {
-                hapticTap();
-                biometricAttempted.current = true;
-                setBiometricRunning(true);
-                setError("");
-                const ok = await authenticateNativeLock(account?.id);
-                setBiometricRunning(false);
-                if (ok) {
-                  setLocked(false);
-                  setPin("");
-                  emitLockState(false);
-                } else {
-                  setError("Biometric authentication failed. Enter your PIN.");
-                }
-              }}
-              style={{
-                border: 0,
-                background: "rgba(255,255,255,.72)",
-                borderRadius: 999,
-                padding: "9px 14px",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                color: "#111418",
-                fontFamily: FONT,
-                fontWeight: 700,
-                fontSize: 11.5,
-                cursor: "pointer",
-                boxShadow: "0 2px 10px rgba(17,20,24,.04)",
-              }}
-            >
-              <Fingerprint size={17} strokeWidth={2.1} />
-              <ScanFace size={17} strokeWidth={2.1} />
-              Use biometrics
-            </button>
-          )}
+          {config.biometricEnabled &&
+            biometryAvailable &&
+            !biometricRunning && (
+              <button
+                type="button"
+                onClick={async () => {
+                  hapticTap();
+                  biometricAttempted.current = true;
+                  setBiometricRunning(true);
+                  setError("");
+
+                  const ok = await authenticateNativeLock(
+                    account?.id
+                  );
+
+                  setBiometricRunning(false);
+
+                  if (ok) {
+                    setLocked(false);
+                    setPin("");
+                    emitLockState(false);
+                  } else {
+                    setError(
+                      "Biometric authentication failed. Enter your PIN."
+                    );
+                  }
+                }}
+                style={{
+                  border: 0,
+                  background: "rgba(255,255,255,.72)",
+                  borderRadius: 999,
+                  padding: "9px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  color: "#111418",
+                  fontFamily: FONT,
+                  fontWeight: 700,
+                  fontSize: 11.5,
+                  cursor: "pointer",
+                  boxShadow:
+                    "0 2px 10px rgba(17,20,24,.04)",
+                }}
+              >
+                <Fingerprint size={17} strokeWidth={2.1} />
+                <ScanFace size={17} strokeWidth={2.1} />
+                Use biometrics
+              </button>
+            )}
 
           <button
             type="button"
             onClick={() => {
               hapticTap();
-              setError("Use your configured PIN to unlock RainX.");
+              setError(
+                "Use your configured PIN to unlock RainX."
+              );
             }}
             style={{
               border: 0,

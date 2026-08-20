@@ -6,6 +6,8 @@ import { SecureStorage, KeychainAccess } from "@aparajita/capacitor-secure-stora
 import { supabase } from "./supabaseClient";
 
 const PREFIX = "rainx_";
+const CONFIG_EVENT = "rainx:native-lock-config-changed";
+
 const LEGACY_KEYS = {
   pinHash: `${PREFIX}pin_hash`,
   pinEnabled: `${PREFIX}pin_enabled`,
@@ -34,6 +36,12 @@ export type NativeLockConfig = {
 
 const native = () => Capacitor.isNativePlatform();
 
+function emitConfigChanged() {
+  try {
+    window.dispatchEvent(new Event(CONFIG_EVENT));
+  } catch {}
+}
+
 async function secureSet(key: string, value: string) {
   if (!native()) return;
   await SecureStorage.set(
@@ -59,9 +67,7 @@ async function secureRemove(key: string) {
   if (!native()) return;
   try {
     await SecureStorage.remove(key);
-  } catch {
-    // already absent
-  }
+  } catch {}
 }
 
 export async function sha256(value: string): Promise<string> {
@@ -72,11 +78,6 @@ export async function sha256(value: string): Promise<string> {
     .join("");
 }
 
-/**
- * Move every older storage location into the currently signed-in account
- * namespace. This includes the device-scoped namespace used when a PIN was
- * created before the auth session had finished resolving.
- */
 async function migratePinStorage(accountId?: string) {
   if (!native() || !accountId) return;
 
@@ -116,26 +117,28 @@ async function migratePinStorage(accountId?: string) {
     return null;
   });
 
-  const writes = [
-    accountKeys.pinHash,
-    accountKeys.pinEnabled,
-    accountKeys.appLock,
-    accountKeys.biometric,
-    accountKeys.pinLength,
-  ].map((key, index) =>
-    merged[index] === null ? Promise.resolve() : secureSet(key, merged[index]!)
+  const accountHasData =
+    merged[0] !== null || merged[1] !== null || merged[2] !== null ||
+    merged[3] !== null || merged[4] !== null;
+
+  if (!accountHasData) return;
+
+  await Promise.all(
+    [
+      accountKeys.pinHash,
+      accountKeys.pinEnabled,
+      accountKeys.appLock,
+      accountKeys.biometric,
+      accountKeys.pinLength,
+    ].map((key, index) =>
+      merged[index] === null ? Promise.resolve() : secureSet(key, merged[index]!)
+    )
   );
 
-  if (merged[0] !== null || merged[1] !== null || merged[2] !== null) {
-    await Promise.all(writes);
-
-    // Once the account-scoped copy exists, remove only the old namespaces.
-    // The current account keys remain the single source of truth.
-    await Promise.all([
-      ...Object.values(deviceKeys).map(secureRemove),
-      ...Object.values(LEGACY_KEYS).map(secureRemove),
-    ]);
-  }
+  await Promise.all([
+    ...Object.values(deviceKeys).map(secureRemove),
+    ...Object.values(LEGACY_KEYS).map(secureRemove),
+  ]);
 }
 
 export async function getNativeLockConfig(
@@ -150,9 +153,10 @@ export async function getNativeLockConfig(
     };
   }
 
-  await migratePinStorage(accountId);
+  const resolvedAccountId = await resolveAccountId(accountId);
+  await migratePinStorage(resolvedAccountId);
 
-  const keys = keySet(accountId);
+  const keys = keySet(resolvedAccountId);
   const [pinEnabled, appLock, biometricEnabled, pinLength, pinHash] =
     await Promise.all([
       secureGet(keys.pinEnabled),
@@ -166,32 +170,36 @@ export async function getNativeLockConfig(
   const normalizedLength =
     parsedLength >= 4 && parsedLength <= 6 ? parsedLength : 6;
 
+  // Recover installs from older builds where the explicit enabled flag was
+  // lost. An explicit appLock="0" remains authoritative.
+  const hasStoredPin = !!pinHash;
+  const recoveredPinEnabled = pinEnabled === "1" || hasStoredPin;
+  const recoveredAppLock =
+    appLock === "1" ||
+    (appLock === null && (recoveredPinEnabled || biometricEnabled === "1"));
+
   return {
-    // A valid stored hash is treated as PIN-enabled even if an older build
-    // lost the boolean flag. This prevents the user having to recreate/change
-    // the PIN just to reactivate the lock after signing in.
-    pinEnabled: pinEnabled === "1" || !!pinHash,
-    appLock: appLock === "1",
+    pinEnabled: recoveredPinEnabled,
+    appLock: recoveredAppLock,
     biometricEnabled: biometricEnabled === "1",
     pinLength: normalizedLength,
   };
 }
 
 export async function saveNativePin(pin: string, accountId?: string) {
-  if (!native()) {
-    throw new Error("PIN lock is available in the native app only.");
-  }
-  if (!/^\d{4,6}$/.test(pin)) {
-    throw new Error("PIN must contain 4–6 digits.");
-  }
+  if (!native()) throw new Error("PIN lock is available in the native app only.");
+  if (!/^\d{4,6}$/.test(pin)) throw new Error("PIN must contain 4–6 digits.");
 
   const resolvedAccountId = await resolveAccountId(accountId);
+  if (!resolvedAccountId) throw new Error("Your account session is not ready.");
+
   const keys = keySet(resolvedAccountId);
 
   await secureSet(keys.pinHash, await sha256(pin));
   await secureSet(keys.pinLength, String(pin.length));
   await secureSet(keys.pinEnabled, "1");
   await secureSet(keys.appLock, "1");
+  emitConfigChanged();
 }
 
 async function resolveAccountId(accountId?: string) {
@@ -208,8 +216,6 @@ async function findMatchingPinKey(pin: string, accountId?: string) {
   const hash = await sha256(pin);
   const resolvedAccountId = await resolveAccountId(accountId);
 
-  // Prefer the current account, then older locations. This keeps existing
-  // installs compatible while migration converges storage to one namespace.
   const candidates = [
     keySet(resolvedAccountId),
     keySet(accountId),
@@ -218,6 +224,7 @@ async function findMatchingPinKey(pin: string, accountId?: string) {
   ];
 
   const seen = new Set<string>();
+
   for (const keys of candidates) {
     if (seen.has(keys.pinHash)) continue;
     seen.add(keys.pinHash);
@@ -240,10 +247,31 @@ export async function verifyNativePin(
   return !!(await findMatchingPinKey(pin, accountId));
 }
 
+/**
+ * Accept both historical call orders:
+ *   disableNativePin(pin, accountId)
+ *   disableNativePin(accountId, pin)
+ * This prevents older settings code from passing the account id where the PIN
+ * was expected and producing the old "invalid PIN" behaviour.
+ */
 export async function disableNativePin(
-  pin: string,
-  accountId?: string
+  first: string,
+  second?: string
 ) {
+  if (!native()) throw new Error("PIN lock is available in the native app only.");
+
+  let pin = first;
+  let accountId = second;
+
+  if (!/^\d{4,6}$/.test(first) && /^\d{4,6}$/.test(second || "")) {
+    accountId = first;
+    pin = second!;
+  }
+
+  if (!/^\d{4,6}$/.test(pin)) {
+    throw new Error("Enter your current PIN.");
+  }
+
   const matchingKeys = await findMatchingPinKey(pin, accountId);
   if (!matchingKeys) throw new Error("Incorrect PIN.");
 
@@ -266,6 +294,8 @@ export async function disableNativePin(
       secureRemove(keys.biometric),
     ])
   );
+
+  emitConfigChanged();
 }
 
 export async function setNativeAppLock(
@@ -273,6 +303,8 @@ export async function setNativeAppLock(
   accountId?: string
 ) {
   const resolvedAccountId = await resolveAccountId(accountId);
+  if (!resolvedAccountId) throw new Error("Your account session is not ready.");
+
   const config = await getNativeLockConfig(resolvedAccountId);
 
   if (enabled && !config.pinEnabled && !config.biometricEnabled) {
@@ -283,6 +315,8 @@ export async function setNativeAppLock(
     keySet(resolvedAccountId).appLock,
     enabled ? "1" : "0"
   );
+
+  emitConfigChanged();
 }
 
 export async function setNativeBiometricEnabled(
@@ -294,6 +328,8 @@ export async function setNativeBiometricEnabled(
   }
 
   const resolvedAccountId = await resolveAccountId(accountId);
+  if (!resolvedAccountId) throw new Error("Your account session is not ready.");
+
   const keys = keySet(resolvedAccountId);
 
   if (enabled) {
@@ -323,6 +359,8 @@ export async function setNativeBiometricEnabled(
       await secureSet(keys.appLock, "0");
     }
   }
+
+  emitConfigChanged();
 }
 
 export async function getNativeBiometryInfo() {
@@ -340,8 +378,7 @@ export async function authenticateNativeLock(
   if (!native()) return true;
 
   const config = await getNativeLockConfig(accountId);
-  if (!config.appLock) return true;
-  if (!config.biometricEnabled) return false;
+  if (!config.appLock || !config.biometricEnabled) return false;
 
   try {
     await BiometricAuth.authenticate({
@@ -430,11 +467,15 @@ export async function attachNativeResumeListener(
       return;
     }
 
-    if (wasBackgrounded) {
-      wasBackgrounded = false;
-      const config = await getNativeLockConfig(accountId);
-      if (config.appLock) onLocked();
+    if (!wasBackgrounded) {
+      await registerNativeDeviceSession().catch(() => {});
+      return;
     }
+
+    wasBackgrounded = false;
+
+    const config = await getNativeLockConfig(accountId);
+    if (config.appLock) onLocked();
 
     await registerNativeDeviceSession().catch(() => {});
   });
