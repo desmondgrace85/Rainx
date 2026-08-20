@@ -11,6 +11,7 @@ const LEGACY_KEYS = {
   pinEnabled: `${PREFIX}pin_enabled`,
   appLock: `${PREFIX}app_lock`,
   biometric: `${PREFIX}biometric_enabled`,
+  pinLength: `${PREFIX}pin_length`,
 };
 function keySet(accountId?: string) {
   const scope = accountId ? accountId.replace(/[^a-zA-Z0-9_-]/g, "_") : "device";
@@ -19,6 +20,7 @@ function keySet(accountId?: string) {
     pinEnabled: `${PREFIX}${scope}_pin_enabled`,
     appLock: `${PREFIX}${scope}_app_lock`,
     biometric: `${PREFIX}${scope}_biometric_enabled`,
+    pinLength: `${PREFIX}${scope}_pin_length`,
   };
 }
 
@@ -26,6 +28,7 @@ export type NativeLockConfig = {
   pinEnabled: boolean;
   appLock: boolean;
   biometricEnabled: boolean;
+  pinLength: number;
 };
 
 const native = () => Capacitor.isNativePlatform();
@@ -52,23 +55,34 @@ export async function sha256(value: string): Promise<string> {
 }
 
 export async function getNativeLockConfig(accountId?: string): Promise<NativeLockConfig> {
-  if (!native()) return { pinEnabled: false, appLock: false, biometricEnabled: false };
+  if (!native()) return { pinEnabled: false, appLock: false, biometricEnabled: false, pinLength: 6 };
   const keys = keySet(accountId);
-  let [pinEnabled, appLock, biometricEnabled] = await Promise.all([
-    secureGet(keys.pinEnabled), secureGet(keys.appLock), secureGet(keys.biometric),
+  let [pinEnabled, appLock, biometricEnabled, pinLength] = await Promise.all([
+    secureGet(keys.pinEnabled), secureGet(keys.appLock), secureGet(keys.biometric), secureGet(keys.pinLength),
   ]);
-  // Migrate the pre-account-scoped device keys once, without exposing the PIN.
   if (accountId && pinEnabled === null && appLock === null && biometricEnabled === null) {
-    const legacy = await Promise.all([secureGet(LEGACY_KEYS.pinEnabled), secureGet(LEGACY_KEYS.appLock), secureGet(LEGACY_KEYS.biometric)]);
+    const legacy = await Promise.all([
+      secureGet(LEGACY_KEYS.pinEnabled),
+      secureGet(LEGACY_KEYS.appLock),
+      secureGet(LEGACY_KEYS.biometric),
+      secureGet(LEGACY_KEYS.pinLength),
+    ]);
     if (legacy.some(v => v !== null)) {
-      [pinEnabled, appLock, biometricEnabled] = legacy;
+      [pinEnabled, appLock, biometricEnabled, pinLength] = legacy;
       if (legacy[0] !== null) await secureSet(keys.pinEnabled, legacy[0]);
       if (legacy[1] !== null) await secureSet(keys.appLock, legacy[1]);
       if (legacy[2] !== null) await secureSet(keys.biometric, legacy[2]);
+      if (legacy[3] !== null) await secureSet(keys.pinLength, legacy[3]);
       await Promise.all(Object.values(LEGACY_KEYS).map(secureRemove));
     }
   }
-  return { pinEnabled: pinEnabled === "1", appLock: appLock === "1", biometricEnabled: biometricEnabled === "1" };
+  const parsedLength = Number(pinLength);
+  return {
+    pinEnabled: pinEnabled === "1",
+    appLock: appLock === "1",
+    biometricEnabled: biometricEnabled === "1",
+    pinLength: parsedLength >= 4 && parsedLength <= 6 ? parsedLength : 6,
+  };
 }
 
 export async function saveNativePin(pin: string, accountId?: string) {
@@ -76,6 +90,7 @@ export async function saveNativePin(pin: string, accountId?: string) {
   if (!/^\d{4,6}$/.test(pin)) throw new Error("PIN must contain 4–6 digits.");
   const keys = keySet(accountId);
   await secureSet(keys.pinHash, await sha256(pin));
+  await secureSet(keys.pinLength, String(pin.length));
   await secureSet(keys.pinEnabled, "1");
   await secureSet(keys.appLock, "1");
 }
@@ -92,6 +107,7 @@ export async function disableNativePin(pin: string, accountId?: string) {
   if (!(await verifyNativePin(pin, accountId))) throw new Error("Incorrect PIN.");
   const keys = keySet(accountId);
   await secureRemove(keys.pinHash);
+  await secureRemove(keys.pinLength);
   await secureSet(keys.pinEnabled, "0");
   await secureSet(keys.appLock, "0");
 }
