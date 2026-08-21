@@ -1,195 +1,145 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  ArrowRight, BarChart3, Bell, Coins, House, Rocket, Sparkles,
-  TrendingUp, UserRound, WalletCards,
-} from "lucide-react";
-import planetReference from "./assets/space-coins-planet.jpg";
-import galaxyDogeImage from "./assets/space-coins-galaxy-doge.jpg";
-import moonCatImage from "./assets/space-coins-moon-cat.jpg";
-import planetPepeImage from "./assets/space-coins-planet-pepe.jpg";
+import { ArrowLeft, ArrowRight, ChevronDown, Plus } from "lucide-react";
+import rocketArtwork from "./assets/space-coins-rocket.png";
+import orbitArtwork from "./assets/space-coins-orbit.png";
+import platformArtwork from "./assets/space-coins-platform.png";
 
 function useEdgeBack(onBack) {
-  const swipeRef = useRef(null);
+  const ref = useRef(null);
   return {
-    onTouchStart: (event) => {
-      const x = event.touches[0].clientX;
-      swipeRef.current = x < 28 ? { x, y: event.touches[0].clientY } : null;
+    onTouchStart: (e) => {
+      const t = e.touches[0];
+      ref.current = t.clientX < 28 ? { x:t.clientX, y:t.clientY } : null;
     },
-    onTouchEnd: (event) => {
-      if (!swipeRef.current) return;
-      const dx = event.changedTouches[0].clientX - swipeRef.current.x;
-      const dy = Math.abs(event.changedTouches[0].clientY - swipeRef.current.y);
-      swipeRef.current = null;
-      if (dx > 45 && dy < 100) onBack();
+    onTouchEnd: (e) => {
+      if (!ref.current) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - ref.current.x;
+      const dy = Math.abs(t.clientY - ref.current.y);
+      ref.current = null;
+      if (dx > 48 && dy < 90) onBack?.();
     },
   };
 }
 
-const COINS = [
-  { name: "GALAXY DOGE", ticker: "GDOGE", price: "$0.000245", change: "+23.14%", image: galaxyDogeImage },
-  { name: "MOON CAT", ticker: "MCAT", price: "$0.000182", change: "+12.08%", image: moonCatImage },
-  { name: "PLANET PEPE", ticker: "PPEPE", price: "$0.000092", change: "+8.19%", image: planetPepeImage },
-];
-
-function PlanetScene({ T }) {
+function RocketStage() {
   return (
-    <div className="sc-planet-scene" aria-hidden="true">
-      <img className="sc-planet-reference" src={planetReference} alt="" />
+    <div className="sc-rocket-stage" aria-hidden="true">
+      <div className="sc-stage-glow" />
+      <img className="sc-platform" src={platformArtwork} alt="" draggable="false" />
+      <div className="sc-flame"><i /><i /><i /></div>
+      <img className="sc-orbit" src={orbitArtwork} alt="" draggable="false" />
+      <img className="sc-rocket" src={rocketArtwork} alt="" draggable="false" />
+      <div className="sc-particles"><b /><b /><b /><b /><b /></div>
     </div>
   );
 }
 
-function CoinMark({ coin }) {
-  return <img className="sc-coin-mark" src={coin.image} alt="" />;
-}
-
-export default function SpaceCoinsDashboard({ T, onBack }) {
-  const [toast, setToast] = useState("");
+export default function SpaceCoinsDashboard({ onBack }) {
+  const [logo, setLogo] = useState(null);
   const edgeBack = useEdgeBack(onBack);
 
-  const notify = (message) => {
-    setToast(message);
-    window.setTimeout(() => setToast(""), 1800);
-  };
-
   useEffect(() => {
-    document.title = "Space Coins | RainX";
+    document.title = "Create Your Space Coin | RainX";
     return () => { document.title = "RainX"; };
   }, []);
 
   return (
-    <main className="sc-screen sc-dashboard-screen" style={{ background: T.ink, color: T.paper }} {...edgeBack}>
+    <main className="sc-create-page" {...edgeBack}>
       <style>{`
-        .sc-dashboard-screen { animation:sc-dashboard-enter .42s cubic-bezier(.22,.75,.2,1) both; }
-         .sc-dashboard-shell { width:min(100%,480px); min-height:100%; margin:0 auto; padding:12px 8px 86px; }
-         .sc-dashboard-top { display:flex; align-items:center; gap:9px; margin-bottom:14px; }
-         .sc-dashboard-heading { flex:1; font-size:16px; font-weight:800; letter-spacing:-.04em; }
-          .sc-dashboard-mark { width:27px; height:27px; display:grid; place-items:center; border:0; border-radius:50%; color:var(--sc-ink); background:var(--sc-gold-gradient); box-shadow:0 4px 10px var(--sc-gold-shadow); }
-         .sc-bell { width:28px; height:28px; display:grid; place-items:center; border:0; border-radius:50%; background:transparent; color:var(--sc-paper); }
-         .sc-create-card { position:relative; min-height:136px; overflow:hidden; border:1px solid var(--sc-gold-border); border-radius:15px; padding:18px 14px; background:var(--sc-create-bg); }
-         .sc-create-copy { position:relative; z-index:2; width:61%; }
-         .sc-create-title { margin:0; font-size:15px; line-height:1.25; font-weight:800; white-space:nowrap; }
-         .sc-create-sub { margin:7px 0 0; color:var(--sc-muted); font-size:10px; line-height:1.45; }
-         .sc-create-button { display:flex; align-items:center; gap:10px; margin-top:14px; border:1px solid var(--sc-gold); border-radius:7px; padding:7px 8px 7px 10px; color:var(--sc-gold-bright); background:var(--sc-card); font:700 10px 'Montserrat',sans-serif; cursor:pointer; }
-          .sc-create-button span { display:grid; place-items:center; width:22px; height:22px; margin:-4px -4px -4px 1px; border-radius:6px; color:var(--sc-ink); background:var(--sc-gold-gradient); }
-         .sc-planet-scene { position:absolute; z-index:1; right:0; top:0; width:47%; height:100%; overflow:hidden; pointer-events:none; }
-         .sc-planet-reference { position:absolute; right:-7px; top:8px; width:165px; height:120px; object-fit:cover; object-position:right center; animation:sc-planet-turn 7s ease-in-out infinite; filter:drop-shadow(0 9px 11px rgba(244,211,94,.18)); }
-         .sc-quick-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin:14px 0 22px; }
-         .sc-quick { min-width:0; min-height:65px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; padding:8px 2px; color:var(--sc-paper); background:var(--sc-card); border:1px solid var(--sc-border); border-radius:11px; font:600 9px 'Montserrat',sans-serif; cursor:pointer; }
-         .sc-quick-icon { display:grid; place-items:center; width:27px; height:27px; border-radius:9px; color:var(--sc-gold-bright); background:var(--sc-gold-soft); }
-         .sc-section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-         .sc-section-title { font-size:15px; font-weight:800; letter-spacing:-.02em; }
-         .sc-view-all { border:0; padding:4px 0; color:var(--sc-gold-bright); background:transparent; font:700 10px 'Montserrat',sans-serif; cursor:pointer; }
-         .sc-coin-list { overflow:hidden; margin-bottom:22px; border:1px solid var(--sc-border); border-radius:12px; background:var(--sc-card); }
-         .sc-coin-row { width:100%; display:flex; align-items:center; gap:9px; padding:9px 10px; border:0; border-bottom:1px solid var(--sc-border); background:transparent; color:inherit; text-align:left; cursor:pointer; }
-         .sc-coin-row:last-child { border-bottom:0; }
-         .sc-coin-row:active, .sc-quick:active, .sc-create-button:active { transform:scale(.98); }
-         .sc-coin-mark { display:block; width:34px; height:34px; flex-shrink:0; border-radius:50%; object-fit:cover; }
-         .sc-coin-name { min-width:0; flex:1; }
-         .sc-coin-name strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; font-weight:800; }
-         .sc-coin-name small { display:block; margin-top:3px; color:var(--sc-muted); font-size:9px; font-weight:600; }
-         .sc-coin-value { text-align:right; }
-         .sc-coin-price, .sc-coin-change { display:block; }
-         .sc-coin-price { font-size:10px; font-weight:800; }
-         .sc-coin-change { margin-top:3px; color:var(--sc-sage); font-size:9px; font-weight:700; }
-         .sc-coin-change.is-negative { color:var(--sc-rust); }
-         .sc-trending { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; padding-bottom:10px; }
-         .sc-trend-chip { display:flex; align-items:center; gap:6px; min-width:0; padding:10px 8px; border:1px solid var(--sc-border); border-radius:10px; background:var(--sc-card); color:var(--sc-paper); cursor:pointer; }
-         .sc-trend-rank { color:var(--sc-gold-bright); font-size:9px; font-weight:800; }
-         .sc-trend-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; font-weight:700; }
-         .sc-bottom-nav { position:fixed; z-index:4; bottom:0; left:50%; width:min(100%,480px); display:grid; grid-template-columns:repeat(5,1fr); align-items:end; padding:8px 8px 7px; transform:translateX(-50%); border-top:1px solid var(--sc-border); background:color-mix(in srgb, var(--sc-ink) 94%, transparent); backdrop-filter:blur(12px); }
-         .sc-nav-item { display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0; border:0; padding:0; color:var(--sc-muted); background:transparent; font:600 8px 'Montserrat',sans-serif; cursor:pointer; }
-         .sc-nav-item.is-active { color:var(--sc-gold-bright); }
-          .sc-nav-center { width:40px; height:40px; display:grid; place-items:center; margin:-22px auto 0; border:3px solid var(--sc-ink); border-radius:50%; color:var(--sc-ink); background:var(--sc-gold-gradient); box-shadow:0 4px 14px var(--sc-gold-shadow); }
-         .sc-toast { position:fixed; z-index:5; left:50%; bottom:76px; transform:translateX(-50%); padding:11px 15px; border:1px solid var(--sc-gold-border); border-radius:999px; color:var(--sc-paper); background:var(--sc-card); box-shadow:0 8px 25px rgba(0,0,0,.28); font-size:11px; font-weight:700; white-space:nowrap; animation:sc-toast-in .2s ease-out; }
-         @keyframes sc-dashboard-enter { from { opacity:0; transform:translate3d(100%,0,0); } to { opacity:1; transform:translate3d(0,0,0); } }
-         @keyframes sc-planet-turn { 0%,100% { transform:rotate(-2deg) scale(1); } 50% { transform:rotate(2deg) scale(1.02); } }
-        @keyframes sc-toast-in { from { opacity:0; transform:translate(-50%,10px); } }
-        @media (max-width:340px) { .sc-create-copy { width:62%; } .sc-planet-scene { right:-32px; } .sc-quick { font-size:8px; } }
-        @media (prefers-reduced-motion:reduce) { .sc-screen *, .sc-screen { animation:none !important; transition:none !important; } }
+        .sc-create-page,
+        .sc-create-page * { box-sizing:border-box; }
+        .sc-create-page { position:fixed; inset:0; z-index:300; width:100%; height:100dvh; min-height:100dvh; overflow:hidden; background:#fff; color:#111418; font-family:'Montserrat',sans-serif; overscroll-behavior:none; animation:sc-create-in .24s cubic-bezier(.22,.8,.2,1) both; }
+        .sc-create-scroll { position:absolute; inset:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior-y:none; overscroll-behavior-x:none; -webkit-overflow-scrolling:touch; touch-action:pan-y; scrollbar-width:none; padding:calc(8px + env(safe-area-inset-top)) 18px calc(34px + env(safe-area-inset-bottom)); background:#fff; }
+        .sc-create-scroll::-webkit-scrollbar { display:none; }
+        .sc-create-inner { width:min(100%,680px); margin:0 auto; }
+        .sc-create-header { height:52px; display:flex; align-items:center; justify-content:center; position:relative; }
+        .sc-back { position:absolute; left:-4px; width:40px; height:40px; border:0; background:transparent; display:grid; place-items:center; color:#15181C; padding:0; }
+        .sc-form-title { margin:0; font-size:18px; line-height:1; font-weight:800; letter-spacing:-.45px; }
+        .sc-stage { height:345px; display:flex; align-items:flex-start; justify-content:center; }
+        .sc-rocket-stage { position:relative; width:min(100%,520px); height:330px; margin-top:2px; overflow:hidden; }
+        .sc-stage-glow { position:absolute; left:50%; bottom:36px; width:270px; height:150px; transform:translateX(-50%); border-radius:50%; background:radial-gradient(circle,rgba(230,168,28,.25),transparent 70%); filter:blur(14px); }
+        .sc-platform { position:absolute; z-index:2; left:50%; bottom:-42px; width:360px; height:260px; transform:translateX(-50%); object-fit:contain; filter:drop-shadow(0 13px 12px rgba(160,110,10,.13)); }
+        .sc-rocket { position:absolute; z-index:5; left:50%; top:34px; width:225px; height:225px; transform:translateX(-50%); object-fit:contain; filter:drop-shadow(0 12px 10px rgba(0,0,0,.12)); animation:sc-rocket-float 2.7s ease-in-out infinite; }
+        .sc-orbit { position:absolute; z-index:6; left:50%; top:36px; width:290px; height:220px; transform:translateX(-50%); object-fit:contain; opacity:.95; filter:drop-shadow(0 5px 8px rgba(220,164,28,.14)); animation:sc-orbit-spin 6s linear infinite; }
+        .sc-flame { position:absolute; z-index:4; left:50%; top:208px; width:34px; height:70px; transform:translateX(-50%); filter:blur(.25px); animation:sc-flame-pulse .17s ease-in-out infinite alternate; }
+        .sc-flame:before { content:""; position:absolute; inset:0 7px 8px; border-radius:55% 55% 45% 45%; background:linear-gradient(180deg,#FFF6B8 0%,#FFD54A 28%,#F0A31A 62%,rgba(240,163,26,0) 100%); filter:blur(2px); }
+        .sc-flame i { position:absolute; bottom:3px; width:6px; height:34px; border-radius:50%; background:#FFE989; opacity:.8; }
+        .sc-flame i:nth-child(1){left:5px;transform:rotate(8deg)} .sc-flame i:nth-child(2){left:14px;height:45px} .sc-flame i:nth-child(3){right:4px;transform:rotate(-8deg)}
+        .sc-particles b { position:absolute; z-index:3; width:4px; height:4px; border-radius:50%; background:#E3AB25; opacity:.65; animation:sc-particle 2.2s ease-in-out infinite; }
+        .sc-particles b:nth-child(1){left:31%;top:174px;animation-delay:-.4s}.sc-particles b:nth-child(2){left:38%;top:205px;animation-delay:-1.1s}.sc-particles b:nth-child(3){right:31%;top:188px;animation-delay:-.8s}.sc-particles b:nth-child(4){right:38%;top:155px;animation-delay:-1.5s}.sc-particles b:nth-child(5){left:48%;top:152px;animation-delay:-.2s}
+        .sc-progress-label { text-align:center; color:#70757B; font-size:13px; font-weight:600; margin-top:-3px; }
+        .sc-progress { display:grid; grid-template-columns:repeat(4,1fr); align-items:center; gap:0; margin:12px 8px 23px; }
+        .sc-progress-step { position:relative; height:4px; background:#E8EAED; }
+        .sc-progress-step:first-child { border-radius:999px 0 0 999px; } .sc-progress-step:last-child { border-radius:0 999px 999px 0; }
+        .sc-progress-step.is-active { background:#DCA41C; }
+        .sc-progress-step:before { content:""; position:absolute; left:0; top:50%; width:8px; height:8px; transform:translate(-50%,-50%); border-radius:50%; background:#E6E8EB; }
+        .sc-progress-step.is-active:before { background:#DCA41C; }
+        .sc-progress-step:last-child:after { content:""; position:absolute; right:0; top:50%; width:8px; height:8px; transform:translate(50%,-50%); border-radius:50%; background:#E6E8EB; }
+        .sc-upload { width:112px; margin:0 auto 24px; text-align:center; }
+        .sc-upload-circle { width:92px; height:92px; margin:0 auto; border:2px dashed #E5C86D; border-radius:50%; display:grid; place-items:center; color:#D6A21C; background:#FFFDF7; }
+        .sc-upload-title { margin-top:10px; font-size:14px; font-weight:800; white-space:nowrap; }
+        .sc-upload-sub { margin-top:4px; color:#92969B; font-size:11px; font-weight:500; white-space:nowrap; }
+        .sc-logo-preview { width:92px; height:92px; border-radius:50%; object-fit:cover; border:2px solid #E5C86D; }
+        .sc-fields { display:grid; gap:13px; }
+        .sc-field label { display:block; margin:0 0 6px 2px; color:#7A7F85; font-size:11px; font-weight:600; }
+        .sc-input,.sc-select { width:100%; height:50px; border:1px solid #E6E8EA; border-radius:12px; background:#fff; color:#171A1E; outline:none; padding:0 15px; font:600 13px 'Montserrat',sans-serif; box-shadow:0 1px 4px rgba(20,24,28,.025); }
+        .sc-input::placeholder { color:#B0B4B8; font-weight:500; }
+        .sc-input:focus,.sc-select:focus { border-color:#D9B04A; box-shadow:0 0 0 3px rgba(220,164,28,.10); }
+        .sc-two { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+        .sc-select-wrap { position:relative; }
+        .sc-select { appearance:none; padding-right:38px; }
+        .sc-select-icon { position:absolute; right:13px; top:50%; transform:translateY(-50%); pointer-events:none; color:#202328; }
+        .sc-next { width:100%; height:54px; margin-top:14px; border:0; border-radius:13px; background:#DDA51A; color:#fff; display:flex; align-items:center; justify-content:center; gap:14px; font:800 14px 'Montserrat',sans-serif; box-shadow:0 7px 18px rgba(221,165,26,.17); }
+        .sc-next:active { transform:scale(.99); }
+        .sc-create-page input,.sc-create-page select,.sc-create-page button { -webkit-tap-highlight-color:transparent; }
+        @keyframes sc-create-in { from { transform:translate3d(7%,0,0); } to { transform:translate3d(0,0,0); } }
+        @keyframes sc-rocket-float { 0%,100% { transform:translateX(-50%) translateY(0) rotate(-.8deg); } 50% { transform:translateX(-50%) translateY(-6px) rotate(.8deg); } }
+        @keyframes sc-orbit-spin { from { transform:translateX(-50%) rotate(0deg); } to { transform:translateX(-50%) rotate(360deg); } }
+        @keyframes sc-flame-pulse { from { transform:translateX(-50%) scaleY(.88); opacity:.86; } to { transform:translateX(-50%) scaleY(1.12); opacity:1; } }
+        @keyframes sc-particle { 0%,100% { transform:translateY(0) scale(.8); opacity:.15; } 50% { transform:translateY(20px) scale(1.25); opacity:.8; } }
+        @media (max-width:420px) { .sc-stage { height:315px; } .sc-rocket-stage { height:300px; } .sc-platform { width:330px; } .sc-rocket { width:205px; height:205px; top:28px; } .sc-orbit { width:270px; height:205px; top:29px; } .sc-flame { top:192px; } }
+        @media (prefers-reduced-motion:reduce) { .sc-create-page *, .sc-create-page { animation:none !important; transition:none !important; } }
       `}</style>
-      <div
-        className="sc-dashboard-shell"
-        style={{
-          "--sc-ink": T.ink,
-          "--sc-card": T.card,
-           "--sc-create-bg": T.ink === "#FFFFFF" ? "#fff8e8" : `${T.gold}12`,
-          "--sc-border": T.cardBorder,
-          "--sc-gold": T.gold,
-          "--sc-gold-bright": T.goldBright,
-          "--sc-gold-soft": `${T.gold}18`,
-          "--sc-gold-border": `${T.gold}45`,
-          "--sc-paper": T.paper,
-          "--sc-muted": T.muted,
-          "--sc-sage": T.sage,
-          "--sc-rust": T.rust,
-        }}
-      >
-        <header className="sc-dashboard-top">
-          <button type="button" className="sc-dashboard-mark" onClick={onBack} aria-label="Back to Space Coins intro"><Coins size={15} /></button>
-          <h1 className="sc-dashboard-heading">Space Coins</h1>
-           <button type="button" className="sc-bell" onClick={() => notify("No new notifications")} aria-label="Notifications"><Bell size={17} /></button>
-        </header>
 
-        <section className="sc-create-card">
-          <div className="sc-create-copy">
-            <h2 className="sc-create-title">Create Your Space Coin</h2>
-            <p className="sc-create-sub">Launch your own mini meme coin in just a few steps</p>
-            <button type="button" className="sc-create-button" onClick={() => notify("Coin creator is coming soon")}>
-              Create Coin <span><ArrowRight size={13} /></span>
-            </button>
-          </div>
-          <PlanetScene T={T} />
-        </section>
+      <div className="sc-create-scroll">
+        <div className="sc-create-inner">
+          <header className="sc-create-header">
+            <button type="button" className="sc-back" onClick={onBack} aria-label="Back to Space Coins"><ArrowLeft size={24} strokeWidth={2} /></button>
+            <h1 className="sc-form-title">Create Your Space Coin</h1>
+          </header>
 
-        <nav className="sc-quick-grid" aria-label="Space coin shortcuts">
-          {[
-            [BarChart3, "Top Tokens"],
-            [TrendingUp, "Trending"],
-            [Rocket, "New Launches"],
-            [WalletCards, "My Coins"],
-          ].map(([Icon, label]) => (
-            <button type="button" className="sc-quick" key={label} onClick={() => notify(`${label} selected`)}>
-              <span className="sc-quick-icon"><Icon size={15} /></span>{label}
-            </button>
-          ))}
-        </nav>
+          <section className="sc-stage">
+            <RocketStage />
+          </section>
 
-        <section>
-          <div className="sc-section-head">
-            <h2 className="sc-section-title">Top Space Coins</h2>
-            <button type="button" className="sc-view-all" onClick={() => notify("Showing all space coins")}>View All</button>
+          <div className="sc-progress-label">Step 1 of 4</div>
+          <div className="sc-progress" aria-label="Step 1 of 4">
+            <span className="sc-progress-step is-active" /><span className="sc-progress-step" /><span className="sc-progress-step" /><span className="sc-progress-step" />
           </div>
-          <div className="sc-coin-list">
-            {COINS.map((coin) => (
-              <button type="button" className="sc-coin-row" key={coin.ticker} onClick={() => notify(`${coin.name} selected`)}>
-                <CoinMark coin={coin} T={T} />
-                <span className="sc-coin-name"><strong>{coin.name}</strong><small>{coin.ticker}</small></span>
-                <span className="sc-coin-value"><span className="sc-coin-price">{coin.price}</span><span className={`sc-coin-change${coin.change.startsWith("-") ? " is-negative" : ""}`}>{coin.change}</span></span>
-              </button>
-            ))}
-          </div>
-        </section>
 
-        <section>
-          <div className="sc-section-head"><h2 className="sc-section-title">Trending</h2><button type="button" className="sc-view-all" onClick={() => notify("Showing trending coins")}>View All</button></div>
-          <div className="sc-trending">
-             {["STARINU", "COSMO", "MOONME"].map((coin, index) => (
-              <button type="button" className="sc-trend-chip" key={coin} onClick={() => notify(`${coin} selected`)}>
-                <span className="sc-trend-rank">#{index + 1}</span><span className="sc-trend-name">{coin}</span>
-              </button>
-            ))}
+          <div className="sc-upload">
+            <label className="sc-upload-circle" htmlFor="sc-logo-input">
+              {logo ? <img className="sc-logo-preview" src={logo} alt="Coin logo preview" /> : <Plus size={34} strokeWidth={1.7} />}
+            </label>
+            <input id="sc-logo-input" type="file" accept="image/png,image/jpeg" hidden onChange={(e) => { const file=e.target.files?.[0]; if(file) setLogo(URL.createObjectURL(file)); }} />
+            <div className="sc-upload-title">Upload Coin Logo</div>
+            <div className="sc-upload-sub">PNG, JPG (Max. 5MB)</div>
           </div>
-        </section>
+
+          <div className="sc-fields">
+            <div className="sc-field"><label htmlFor="coin-name">Coin Name</label><input id="coin-name" className="sc-input" placeholder="Enter coin name" /></div>
+            <div className="sc-field"><label htmlFor="coin-symbol">Symbol</label><input id="coin-symbol" className="sc-input" placeholder="Enter symbol (e.g. RXDOG)" /></div>
+            <div className="sc-field"><label htmlFor="coin-description">Description</label><input id="coin-description" className="sc-input" placeholder="Tell the world about your coin" /></div>
+            <div className="sc-two">
+              <div className="sc-field"><label htmlFor="coin-supply">Total Supply</label><input id="coin-supply" className="sc-input" defaultValue="1,000,000,000" /></div>
+              <div className="sc-field"><label htmlFor="coin-network">Network</label><div className="sc-select-wrap"><select id="coin-network" className="sc-select" defaultValue="Solana"><option>Solana</option><option>Ethereum</option><option>Base</option></select><ChevronDown className="sc-select-icon" size={18} /></div></div>
+            </div>
+          </div>
+
+          <button type="button" className="sc-next" >Next Step <ArrowRight size={19} strokeWidth={2} /></button>
+        </div>
       </div>
-       <nav className="sc-bottom-nav" aria-label="Primary navigation">
-         <button type="button" className="sc-nav-item" onClick={() => notify("Home selected")}><House size={15} /><span>Home</span></button>
-         <button type="button" className="sc-nav-item is-active" onClick={() => notify("Space Coins selected")}><Coins size={15} /><span>Space Coins</span></button>
-         <button type="button" className="sc-nav-center" onClick={() => notify("Create a coin")} aria-label="Create a coin"><Coins size={22} /></button>
-         <button type="button" className="sc-nav-item" onClick={() => notify("Wallet selected")}><WalletCards size={15} /><span>Wallet</span></button>
-         <button type="button" className="sc-nav-item" onClick={() => notify("Profile selected")}><UserRound size={15} /><span>Profile</span></button>
-       </nav>
-      {toast && <div className="sc-toast" role="status"><Sparkles size={12} style={{ verticalAlign: "middle", marginRight: 6 }} />{toast}</div>}
     </main>
   );
 }
