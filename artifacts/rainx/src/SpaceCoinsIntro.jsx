@@ -70,13 +70,13 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
           scrollbar-width:none;
           padding:
             calc(18px + env(safe-area-inset-top))
-            24px
+            48px
             calc(24px + env(safe-area-inset-bottom));
         }
         .sc-intro-scroll::-webkit-scrollbar { display:none; }
 
         .sc-intro-inner {
-          width:min(100%,480px);
+          width:min(100%,608px);
           min-height:100%;
           margin:0 auto;
         }
@@ -135,7 +135,7 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
 
         .sc-intro-cta {
           margin-top:41px;
-          width:100%;
+          width:min(100%,420px);
           height:68px;
           border:0;
           border-radius:36px;
@@ -163,7 +163,7 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
 
         .sc-intro-art {
           position:relative;
-          height:565px;
+          height:500px;
           margin:0 auto;
           overflow:hidden;
           pointer-events:none;
@@ -185,8 +185,8 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
           position:absolute;
           left:50%;
           bottom:-30px;
-          width:390px;
-          height:280px;
+          width:410px;
+          height:270px;
           transform:translateX(-50%);
           object-fit:contain;
           filter:drop-shadow(0 14px 14px rgba(198,145,18,.13));
@@ -195,9 +195,9 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
         .sc-intro-rocket {
           position:absolute;
           left:50%;
-          bottom:75px;
-          width:250px;
-          height:250px;
+          bottom:72px;
+          width:215px;
+          height:215px;
           transform:translateX(-50%);
           object-fit:contain;
           filter:drop-shadow(0 14px 13px rgba(198,145,18,.12));
@@ -207,9 +207,9 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
         .sc-intro-orbit {
           position:absolute;
           left:50%;
-          bottom:92px;
-          width:315px;
-          height:235px;
+          bottom:82px;
+          width:245px;
+          height:185px;
           transform:translateX(-50%);
           object-fit:contain;
           opacity:.96;
@@ -219,9 +219,9 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
         .sc-intro-coin {
           position:absolute;
           left:22%;
-          top:37%;
-          width:58px;
-          height:58px;
+          top:41%;
+          width:38px;
+          height:38px;
           object-fit:contain;
           filter:drop-shadow(0 7px 8px rgba(198,145,18,.16));
           animation:sc-intro-coin-float 3.2s ease-in-out infinite;
@@ -235,9 +235,9 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
           transform:rotate(45deg);
           animation:sc-intro-twinkle 2.3s ease-in-out infinite;
         }
-        .sc-intro-star.s1 { right:18%; top:42%; }
-        .sc-intro-star.s2 { left:30%; top:30%; width:7px; height:7px; animation-delay:-.7s; }
-        .sc-intro-star.s3 { right:29%; top:25%; width:6px; height:6px; animation-delay:-1.1s; }
+        .sc-intro-star.s1 { right:25%; top:44%; }
+        .sc-intro-star.s2 { left:35%; top:31%; width:7px; height:7px; animation-delay:-.7s; }
+        .sc-intro-star.s3 { right:31%; top:28%; width:6px; height:6px; animation-delay:-1.1s; }
 
         @keyframes sc-intro-rocket-float {
           0%,100% { transform:translateX(-50%) translateY(0); }
@@ -257,15 +257,16 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
         }
 
         @media (max-width:430px) {
+          .sc-intro-scroll { padding-left:24px; padding-right:24px; }
           .sc-intro-copy { padding-top:60px; }
           .sc-intro-title { font-size:39px; }
           .sc-intro-heading { margin-top:48px; font-size:24px; }
           .sc-intro-description { font-size:17px; }
           .sc-intro-cta { height:64px; font-size:16px; padding-left:25px; }
-          .sc-intro-art { height:530px; }
-          .sc-intro-platform { width:350px; height:250px; bottom:-20px; }
-          .sc-intro-rocket { width:225px; height:225px; bottom:66px; }
-          .sc-intro-orbit { width:285px; height:215px; bottom:82px; }
+          .sc-intro-art { height:430px; }
+          .sc-intro-platform { width:330px; height:220px; bottom:-12px; }
+          .sc-intro-rocket { width:185px; height:185px; bottom:55px; }
+          .sc-intro-orbit { width:220px; height:165px; bottom:68px; }
         }
 
         @media (prefers-reduced-motion:reduce) {

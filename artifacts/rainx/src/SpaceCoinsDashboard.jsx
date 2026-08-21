@@ -15,7 +15,8 @@ import coinArtwork from "./assets/space-coins-coin.png";
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
 
 const REAL_FLAME_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_3BHloZy6zhOMmqbVkiEIfVkbiDF/hf_20260821_145856_91a13b8e-c366-4951-be01-e7f1846cbbc6.mp4";
-const REAL_CLOUD_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_3BHloZy6zhOMmqbVkiDF/hf_20260821_145856_2a880cc5-7a9a-4fb1-8bed-53c812d2faac.mp4";
+const REAL_CLOUD_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_3BHloZy6zhOMmqbVkiDF/hf_20260821_153425_e7dbe97e-35f8-4ada-80e3-d11209f83006.mp4";
+const PLANET_SPIN_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_3BHloZy6zhOMmqbVkiEIfVkbiDF/hf_20260821_154409_8ad7a2c3-619d-434b-b585-1b558a570d4c.mp4";
 
 const COINS = [
   { name:"GALAXY DOGE", ticker:"GDOGE", price:"$0.000245", change:"+23.14%", image:galaxyDogeImage },
@@ -81,7 +82,7 @@ function DashboardPlanet() {
   return (
     <div className="sc2-planet-wrap" aria-hidden="true">
       <div className="sc2-planet-glow" />
-      <img src={planet3d} className="sc2-planet" alt="" draggable="false" />
+      <video className="sc2-planet" src={PLANET_SPIN_VIDEO} autoPlay muted loop playsInline preload="auto" />
     </div>
   );
 }
@@ -109,7 +110,7 @@ function Dashboard({ onCreate }) {
         .sc2-create-arrow{width:43px;display:grid;place-items:center;background:#E3A51B;color:#fff}
         .sc2-planet-wrap{position:absolute;z-index:2;right:-9px;top:2px;width:53%;height:100%;display:grid;place-items:center;pointer-events:none}
         .sc2-planet-glow{position:absolute;width:75%;height:70%;border-radius:50%;background:radial-gradient(circle,rgba(244,211,94,.22),transparent 68%);filter:blur(14px)}
-        .sc2-planet{width:158px;height:158px;object-fit:contain;filter:drop-shadow(0 10px 10px rgba(201,145,21,.18));animation:sc2-spin 10s linear infinite}
+        .sc2-planet{width:158px;height:158px;object-fit:contain;object-position:center;mix-blend-mode:multiply;filter:drop-shadow(0 10px 10px rgba(201,145,21,.18));animation:none;border:0;outline:0}
         .sc2-shortcuts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 22px}
         .sc2-shortcut{min-width:0;min-height:72px;padding:9px 4px;border:1px solid #E7E8EA;border-radius:13px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:#15181C;font:700 9px 'Montserrat',sans-serif;box-shadow:0 1px 5px rgba(20,24,28,.025);text-align:center}
         .sc2-shortcut svg{width:22px;height:22px;stroke-width:1.8;color:#111418}
@@ -126,7 +127,7 @@ function Dashboard({ onCreate }) {
         .sc2-nav{position:fixed;z-index:20;left:50%;bottom:0;width:min(100%,480px);height:74px;transform:translateX(-50%);padding:7px 7px calc(7px + env(safe-area-inset-bottom));background:rgba(255,255,255,.98);border-top:1px solid #ECEDEF;display:grid;grid-template-columns:repeat(5,1fr);align-items:end;box-shadow:0 -2px 10px rgba(20,24,28,.035);backdrop-filter:blur(10px)}
         .sc2-nav-item{border:0;background:transparent;color:#7B8086;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;padding:3px 0;font:600 8px 'Montserrat',sans-serif}.sc2-nav-item svg{width:19px;height:19px;stroke-width:1.8}.sc2-nav-item.active{color:#C9961A}
         .sc2-nav-center{width:48px;height:48px;margin:-15px auto 0;border:0;border-radius:50%;background:#DCA41C;display:grid;place-items:center;box-shadow:0 6px 16px rgba(201,150,26,.24);padding:0}.sc2-nav-center img{width:29px;height:29px;object-fit:contain;filter:brightness(0) invert(1)}
-        @keyframes sc2-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        
         @media(max-width:430px){.sc2-scroll{padding-left:16px;padding-right:16px}.sc2-hero{min-height:164px}.sc2-shortcuts{gap:8px}.sc2-nav{height:74px}}
         @media(prefers-reduced-motion:reduce){.sc2-page *{animation:none!important}}
       `}</style>
@@ -205,20 +206,22 @@ function CreateForm({ onBack }) {
     <NativePage className="sc3-create">
       <style>{`
         .sc3-create{background:#fff}
+        .sc3-create.sc2-page{position:fixed;inset:0;z-index:700;width:100%;height:100dvh;min-height:100dvh;overflow:hidden;background:#fff;color:#111418;font-family:'Montserrat',sans-serif;overscroll-behavior:none;isolation:isolate}
         .sc3-scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:none;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-width:none;padding:calc(8px + env(safe-area-inset-top)) 18px calc(30px + env(safe-area-inset-bottom))}
         .sc3-scroll::-webkit-scrollbar{display:none}
         .sc3-inner{width:min(100%,480px);margin:0 auto}
         .sc3-header{height:52px;display:flex;align-items:center;justify-content:center;position:relative}
         .sc3-back{position:absolute;left:-4px;width:40px;height:40px;border:0;background:transparent;color:#15181C;display:grid;place-items:center;padding:0}
         .sc3-title{margin:0;font-size:18px;line-height:1;font-weight:800;letter-spacing:-.45px}
-        .sc3-stage{height:350px;position:relative;overflow:hidden;margin-top:2px}
-        .sc3-platform{position:absolute;z-index:1;left:50%;bottom:-55px;width:365px;height:265px;transform:translateX(-50%);object-fit:contain;filter:drop-shadow(0 12px 12px rgba(160,110,10,.12))}
-        .sc3-rocket{position:absolute;z-index:4;left:50%;top:30px;width:220px;height:220px;transform:translateX(-50%);object-fit:contain;filter:drop-shadow(0 12px 10px rgba(0,0,0,.10));animation:sc3-float 2.8s ease-in-out infinite}
-        .sc3-orbit{position:absolute;z-index:5;left:50%;top:33px;width:285px;height:215px;transform:translateX(-50%);object-fit:contain;animation:sc3-orbit 7s linear infinite}
-        .sc3-stage-glow{position:absolute;left:50%;bottom:45px;width:78%;height:48%;transform:translateX(-50%);border-radius:50%;background:radial-gradient(circle,rgba(244,211,94,.22),transparent 70%);filter:blur(17px)}
-        .sc3-cloud-video{position:absolute;z-index:2;left:50%;bottom:0;width:430px;height:240px;transform:translateX(-50%);object-fit:cover;mix-blend-mode:screen;pointer-events:none}
-        .sc3-flame-video{position:absolute;z-index:3;left:50%;top:205px;width:92px;height:150px;transform:translateX(-50%);object-fit:cover;mix-blend-mode:screen;pointer-events:none}
-        .sc3-flame-note{position:absolute;left:50%;bottom:92px;transform:translateX(-50%);font-size:10px;color:transparent}
+        .sc3-stage{height:310px;position:relative;overflow:hidden;margin-top:2px}
+        .sc3-planet{position:absolute;z-index:4;left:50%;top:62px;width:128px;height:128px;transform:translateX(-50%);object-fit:contain;filter:drop-shadow(0 12px 12px rgba(160,110,10,.14))}
+        .sc3-platform{position:absolute;z-index:1;left:50%;bottom:-28px;width:300px;height:220px;transform:translateX(-50%);object-fit:contain;filter:drop-shadow(0 12px 12px rgba(160,110,10,.12))}
+        .sc3-rocket{position:absolute;z-index:6;left:50%;top:48px;width:126px;height:126px;transform:translateX(-50%);object-fit:contain;filter:drop-shadow(0 12px 10px rgba(0,0,0,.10));animation:sc3-float 2.8s ease-in-out infinite}
+        .sc3-orbit{position:absolute;z-index:7;left:50%;top:54px;width:175px;height:132px;transform:translateX(-50%);object-fit:contain;animation:sc3-orbit 7s linear infinite}
+        .sc3-stage-glow{position:absolute;left:50%;bottom:28px;width:70%;height:42%;transform:translateX(-50%);border-radius:50%;background:radial-gradient(circle,rgba(244,211,94,.22),transparent 70%);filter:blur(17px)}
+        .sc3-cloud-video{position:absolute;z-index:2;left:50%;bottom:4px;width:330px;height:180px;transform:translateX(-50%);object-fit:cover;mix-blend-mode:screen;filter:brightness(1.08) contrast(.9);opacity:.94;pointer-events:none;mask-image:radial-gradient(ellipse at center,black 55%,transparent 100%);-webkit-mask-image:radial-gradient(ellipse at center,black 55%,transparent 100%)}
+        .sc3-flame-video{position:absolute;z-index:6;left:50%;top:166px;width:62px;height:100px;transform:translateX(-50%);object-fit:cover;mix-blend-mode:screen;filter:brightness(1.15) saturate(1.08);opacity:.98;pointer-events:none;mask-image:radial-gradient(ellipse at center,black 42%,transparent 80%);-webkit-mask-image:radial-gradient(ellipse at center,black 42%,transparent 80%)}
+        .sc3-side-coin{position:absolute;z-index:8;top:126px;width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 7px 7px rgba(198,145,18,.16));animation:sc3-side-float 3.2s ease-in-out infinite}.sc3-side-left{left:calc(50% - 94px)}.sc3-side-right{right:calc(50% - 94px);animation-delay:-1.6s}
         .sc3-progress-label{text-align:center;color:#70757B;font-size:13px;font-weight:600}
         .sc3-progress{display:grid;grid-template-columns:repeat(4,1fr);margin:12px 8px 24px}
         .sc3-progress span{height:4px;background:#E8EAED;position:relative}.sc3-progress span.active{background:#DCA41C}.sc3-progress i{position:absolute;left:0;top:50%;width:8px;height:8px;transform:translate(-50%,-50%);border-radius:50%;background:#E6E8EB}.sc3-progress span.active i{background:#DCA41C}.sc3-progress span:last-child i{left:auto;right:0;transform:translate(50%,-50%)}
@@ -229,8 +232,8 @@ function CreateForm({ onBack }) {
         .sc3-review{border:1px solid #E7E9EB;border-radius:15px;padding:15px;display:grid;gap:11px;margin-bottom:16px}.sc3-review-row{display:flex;justify-content:space-between;gap:12px;font-size:12px}.sc3-review-row span{color:#737A80}.sc3-review-row strong{text-align:right;max-width:60%;word-break:break-word}
         .sc3-check{display:flex;gap:9px;align-items:flex-start;border:1px solid #E7E9EB;border-radius:12px;padding:12px;font-size:12px;line-height:1.45}
         .sc3-success{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}.sc3-success img{width:220px;max-width:75%;animation:sc3-launch 1.8s cubic-bezier(.18,.76,.25,1) both}.sc3-success h1{font-size:25px;margin:18px 0 0}.sc3-success p{font-size:14px;color:#737A80;line-height:1.5}.sc3-success button{margin-top:22px;height:50px;padding:0 22px;border:0;border-radius:25px;background:#F4D35E;color:#fff;font:800 13px 'Montserrat',sans-serif}
-        @keyframes sc3-float{0%,100%{transform:translateX(-50%) translateY(0) rotate(-.3deg)}50%{transform:translateX(-50%) translateY(-6px) rotate(.3deg)}}@keyframes sc3-orbit{from{transform:translateX(-50%) rotate(0deg)}to{transform:translateX(-50%) rotate(360deg)}}@keyframes sc3-launch{0%{transform:translateY(100px);opacity:0}20%{opacity:1}100%{transform:translateY(-70px);opacity:1}}
-        @media(max-width:430px){.sc3-scroll{padding-left:18px;padding-right:18px}.sc3-stage{height:335px}.sc3-platform{width:350px;height:250px}.sc3-rocket{width:205px;height:205px}.sc3-orbit{width:270px;height:205px}.sc3-two{grid-template-columns:1fr}}
+        @keyframes sc3-side-float{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-8px) rotate(3deg)}}@keyframes sc3-float{0%,100%{transform:translateX(-50%) translateY(0) rotate(-.3deg)}50%{transform:translateX(-50%) translateY(-6px) rotate(.3deg)}}@keyframes sc3-orbit{from{transform:translateX(-50%) rotate(0deg)}to{transform:translateX(-50%) rotate(360deg)}}@keyframes sc3-launch{0%{transform:translateY(100px);opacity:0}20%{opacity:1}100%{transform:translateY(-70px);opacity:1}}
+        @media(max-width:430px){.sc3-scroll{padding-left:18px;padding-right:18px}.sc3-stage{height:300px}.sc3-platform{width:300px;height:215px}.sc3-rocket{width:126px;height:126px}.sc3-orbit{width:175px;height:132px}.sc3-two{grid-template-columns:1fr}}
       `}</style>
 
       <div className="sc3-scroll" {...edge}>
@@ -242,6 +245,7 @@ function CreateForm({ onBack }) {
 
           <section className="sc3-stage" aria-hidden="true">
             <div className="sc3-stage-glow"/>
+            <video className="sc3-planet" src={PLANET_SPIN_VIDEO} autoPlay muted loop playsInline preload="auto" />
             <video
               className="sc3-cloud-video"
               src={REAL_CLOUD_VIDEO}
@@ -252,6 +256,8 @@ function CreateForm({ onBack }) {
               preload="auto"
             />
             <img src={platformArtwork} className="sc3-platform" alt="" />
+            <img src={coinArtwork} className="sc3-side-coin sc3-side-left" alt="" draggable="false" />
+            <img src={coinArtwork} className="sc3-side-coin sc3-side-right" alt="" draggable="false" />
             <video
               className="sc3-flame-video"
               src={REAL_FLAME_VIDEO}
