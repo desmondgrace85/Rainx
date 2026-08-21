@@ -62,30 +62,28 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
         .sc-intro-scroll {
           position:absolute;
           inset:0;
-          overflow-y:auto;
-          overflow-x:hidden;
-          overscroll-behavior:none;
-          -webkit-overflow-scrolling:touch;
-          touch-action:pan-y;
-          scrollbar-width:none;
+          overflow:hidden;
           padding:
-            calc(18px + env(safe-area-inset-top))
-            48px
-            calc(24px + env(safe-area-inset-bottom));
+            calc(16px + env(safe-area-inset-top))
+            24px
+            calc(8px + env(safe-area-inset-bottom));
         }
-        .sc-intro-scroll::-webkit-scrollbar { display:none; }
 
         .sc-intro-inner {
           width:min(100%,608px);
-          min-height:100%;
+          height:100%;
           margin:0 auto;
+          display:flex;
+          flex-direction:column;
+          min-height:0;
         }
 
         .sc-intro-back {
-          width:52px;
-          height:52px;
+          width:48px;
+          height:48px;
+          flex:0 0 48px;
           border:1px solid #EEF0F1;
-          border-radius:17px;
+          border-radius:16px;
           background:#F8FAFA;
           color:#15181C;
           display:grid;
@@ -94,65 +92,66 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
         }
 
         .sc-intro-copy {
-          padding-top:58px;
+          padding-top:42px;
+          flex:0 0 auto;
         }
 
         .sc-intro-eyebrow {
-          margin:0 0 7px;
+          margin:0 0 6px;
           color:#E5C55A;
-          font-size:20px;
+          font-size:18px;
           line-height:1.15;
           font-weight:400;
-          letter-spacing:-.45px;
+          letter-spacing:-.35px;
         }
 
         .sc-intro-title {
           margin:0;
           color:#F4D35E;
-          font-size:43px;
+          font-size:39px;
           line-height:.98;
           font-weight:800;
-          letter-spacing:-2.4px;
+          letter-spacing:-2.2px;
           text-shadow:0 4px 20px rgba(244,211,94,.18);
         }
 
         .sc-intro-heading {
-          margin:52px 0 0;
-          font-size:26px;
+          margin:30px 0 0;
+          font-size:24px;
           line-height:1.1;
           font-weight:700;
-          letter-spacing:-1px;
+          letter-spacing:-.9px;
         }
 
         .sc-intro-description {
-          margin:22px 0 0;
+          margin:17px 0 0;
           color:#747A80;
-          font-size:19px;
+          font-size:17px;
           line-height:1.55;
           font-weight:400;
-          letter-spacing:-.25px;
+          letter-spacing:-.2px;
         }
 
         .sc-intro-cta {
-          margin-top:41px;
+          margin-top:28px;
           width:min(100%,420px);
-          height:68px;
+          height:58px;
           border:0;
-          border-radius:36px;
+          border-radius:31px;
           background:#F4D35E;
           color:#fff;
           display:flex;
           align-items:center;
           justify-content:space-between;
-          padding:0 9px 0 28px;
-          font:800 17px 'Montserrat',sans-serif;
+          padding:0 8px 0 24px;
+          font:800 16px 'Montserrat',sans-serif;
           box-shadow:0 12px 30px rgba(244,211,94,.20);
           -webkit-tap-highlight-color:transparent;
         }
 
         .sc-intro-cta-arrow {
-          width:50px;
-          height:50px;
+          width:44px;
+          height:44px;
           border-radius:50%;
           background:#fff;
           color:#D8B33F;
@@ -163,8 +162,11 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
 
         .sc-intro-art {
           position:relative;
-          height:500px;
+          flex:1 1 auto;
+          min-height:275px;
+          height:auto;
           margin:0 auto;
+          width:100%;
           overflow:hidden;
           pointer-events:none;
         }
@@ -172,21 +174,22 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
         .sc-intro-glow {
           position:absolute;
           left:50%;
-          bottom:35px;
-          width:80%;
-          height:42%;
+          bottom:10px;
+          width:88%;
+          height:58%;
           transform:translateX(-50%);
           border-radius:50%;
-          background:radial-gradient(circle,rgba(244,211,94,.24),transparent 68%);
-          filter:blur(20px);
+          background:radial-gradient(circle,rgba(244,211,94,.22),transparent 68%);
+          filter:blur(18px);
         }
 
         .sc-intro-platform {
           position:absolute;
           left:50%;
-          bottom:-30px;
-          width:410px;
-          height:270px;
+          bottom:-18px;
+          width:min(92%,360px);
+          height:auto;
+          aspect-ratio:410 / 270;
           transform:translateX(-50%);
           object-fit:contain;
           filter:drop-shadow(0 14px 14px rgba(198,145,18,.13));
@@ -195,9 +198,10 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
         .sc-intro-rocket {
           position:absolute;
           left:50%;
-          bottom:72px;
-          width:215px;
-          height:215px;
+          bottom:56px;
+          width:min(52%,190px);
+          height:auto;
+          aspect-ratio:1;
           transform:translateX(-50%);
           object-fit:contain;
           filter:drop-shadow(0 14px 13px rgba(198,145,18,.12));
@@ -207,21 +211,22 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
         .sc-intro-orbit {
           position:absolute;
           left:50%;
-          bottom:82px;
-          width:245px;
-          height:185px;
+          bottom:67px;
+          width:min(61%,220px);
+          height:auto;
+          aspect-ratio:245 / 185;
           transform:translateX(-50%);
           object-fit:contain;
           opacity:.96;
-          animation:sc-intro-orbit-spin 8s linear infinite;
+          animation:none;
         }
 
         .sc-intro-coin {
           position:absolute;
-          left:22%;
-          top:41%;
-          width:38px;
-          height:38px;
+          left:13%;
+          bottom:42%;
+          width:39px;
+          height:39px;
           object-fit:contain;
           filter:drop-shadow(0 7px 8px rgba(198,145,18,.16));
           animation:sc-intro-coin-float 3.2s ease-in-out infinite;
@@ -229,44 +234,53 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
 
         .sc-intro-star {
           position:absolute;
-          width:11px;
-          height:11px;
+          width:10px;
+          height:10px;
           background:#E7B42E;
           transform:rotate(45deg);
           animation:sc-intro-twinkle 2.3s ease-in-out infinite;
         }
-        .sc-intro-star.s1 { right:25%; top:44%; }
-        .sc-intro-star.s2 { left:35%; top:31%; width:7px; height:7px; animation-delay:-.7s; }
-        .sc-intro-star.s3 { right:31%; top:28%; width:6px; height:6px; animation-delay:-1.1s; }
+        .sc-intro-star.s1 { right:19%; bottom:43%; width:11px; height:11px; }
+        .sc-intro-star.s2 { left:31%; bottom:63%; width:7px; height:7px; animation-delay:-.7s; }
+        .sc-intro-star.s3 { right:27%; bottom:69%; width:6px; height:6px; animation-delay:-1.1s; }
 
         @keyframes sc-intro-rocket-float {
           0%,100% { transform:translateX(-50%) translateY(0); }
-          50% { transform:translateX(-50%) translateY(-7px); }
-        }
-        @keyframes sc-intro-orbit-spin {
-          from { transform:translateX(-50%) rotate(0deg); }
-          to { transform:translateX(-50%) rotate(360deg); }
+          50% { transform:translateX(-50%) translateY(-6px); }
         }
         @keyframes sc-intro-coin-float {
           0%,100% { transform:translateY(0) rotate(-3deg); }
-          50% { transform:translateY(-9px) rotate(3deg); }
+          50% { transform:translateY(-7px) rotate(3deg); }
         }
         @keyframes sc-intro-twinkle {
           0%,100% { opacity:.45; transform:rotate(45deg) scale(.82); }
           50% { opacity:1; transform:rotate(45deg) scale(1.12); }
         }
 
-        @media (max-width:430px) {
-          .sc-intro-scroll { padding-left:24px; padding-right:24px; }
-          .sc-intro-copy { padding-top:60px; }
-          .sc-intro-title { font-size:39px; }
-          .sc-intro-heading { margin-top:48px; font-size:24px; }
-          .sc-intro-description { font-size:17px; }
-          .sc-intro-cta { height:64px; font-size:16px; padding-left:25px; }
-          .sc-intro-art { height:430px; }
-          .sc-intro-platform { width:330px; height:220px; bottom:-12px; }
-          .sc-intro-rocket { width:185px; height:185px; bottom:55px; }
-          .sc-intro-orbit { width:220px; height:165px; bottom:68px; }
+        @media (min-width:600px) {
+          .sc-intro-scroll { padding-left:48px; padding-right:48px; }
+          .sc-intro-copy { padding-top:58px; }
+          .sc-intro-eyebrow { font-size:20px; }
+          .sc-intro-title { font-size:43px; }
+          .sc-intro-heading { margin-top:34px; font-size:26px; }
+          .sc-intro-description { font-size:19px; }
+          .sc-intro-cta { height:68px; font-size:17px; padding-left:28px; }
+          .sc-intro-cta-arrow { width:50px; height:50px; }
+          .sc-intro-art { min-height:360px; }
+          .sc-intro-platform { width:410px; bottom:-20px; }
+          .sc-intro-rocket { width:215px; bottom:72px; }
+          .sc-intro-orbit { width:245px; bottom:82px; }
+        }
+
+        @media (max-height:720px) and (max-width:599px) {
+          .sc-intro-copy { padding-top:34px; }
+          .sc-intro-heading { margin-top:25px; }
+          .sc-intro-description { margin-top:14px; }
+          .sc-intro-cta { margin-top:22px; height:54px; }
+          .sc-intro-art { min-height:245px; }
+          .sc-intro-rocket { width:165px; bottom:46px; }
+          .sc-intro-orbit { width:195px; bottom:57px; }
+          .sc-intro-platform { width:320px; }
         }
 
         @media (prefers-reduced-motion:reduce) {
@@ -277,7 +291,7 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
       <div className="sc-intro-scroll">
         <div className="sc-intro-inner">
           <button type="button" className="sc-intro-back" onClick={onBack} aria-label="Back">
-            <ArrowLeft size={28} strokeWidth={1.9} />
+            <ArrowLeft size={25} strokeWidth={1.9} />
           </button>
 
           <section className="sc-intro-copy">
@@ -291,7 +305,7 @@ export default function SpaceCoinsIntro({ onExplore, onBack }) {
             <button type="button" className="sc-intro-cta" onClick={onExplore}>
               <span>Explore Space Coins</span>
               <span className="sc-intro-cta-arrow">
-                <ArrowRight size={24} strokeWidth={2.1} />
+                <ArrowRight size={23} strokeWidth={2.1} />
               </span>
             </button>
           </section>

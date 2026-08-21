@@ -16,7 +16,6 @@ import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
 
 const REAL_FLAME_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_3BHloZy6zhOMmqbVkiEIfVkbiDF/hf_20260821_145856_91a13b8e-c366-4951-be01-e7f1846cbbc6.mp4";
 const REAL_CLOUD_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_3BHloZy6zhOMmqbVkiDF/hf_20260821_153425_e7dbe97e-35f8-4ada-80e3-d11209f83006.mp4";
-const PLANET_SPIN_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_3BHloZy6zhOMmqbVkiEIfVkbiDF/hf_20260821_154409_8ad7a2c3-619d-434b-b585-1b558a570d4c.mp4";
 
 const COINS = [
   { name:"GALAXY DOGE", ticker:"GDOGE", price:"$0.000245", change:"+23.14%", image:galaxyDogeImage },
@@ -82,7 +81,7 @@ function DashboardPlanet() {
   return (
     <div className="sc2-planet-wrap" aria-hidden="true">
       <div className="sc2-planet-glow" />
-      <video className="sc2-planet" src={PLANET_SPIN_VIDEO} autoPlay muted loop playsInline preload="auto" />
+      <img className="sc2-planet" src={planet3d} alt="" draggable="false" />
     </div>
   );
 }
@@ -105,29 +104,29 @@ function Dashboard({ onCreate }) {
         .sc2-copy{position:relative;z-index:4;width:58%}
         .sc2-title{margin:0;font-size:19px;line-height:1.18;font-weight:800;letter-spacing:-.6px}
         .sc2-sub{margin:10px 0 0;max-width:220px;color:#7A7D83;font-size:11px;line-height:1.45;font-weight:500}
-        .sc2-create{margin-top:15px;display:inline-flex;align-items:stretch;overflow:hidden;padding:0;border:1px solid #E2B53B;border-radius:9px;background:#fff;color:#C18B13;font:800 11px 'Montserrat',sans-serif;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+        .sc2-create{margin-top:15px;display:inline-flex;align-items:stretch;overflow:hidden;padding:0;border:1px solid #F4D35E;border-radius:9px;background:#fff;color:#C28F18;font:800 11px 'Montserrat',sans-serif;box-shadow:0 1px 2px rgba(0,0,0,.03)}
         .sc2-create-label{display:flex;align-items:center;padding:10px 14px}
-        .sc2-create-arrow{width:43px;display:grid;place-items:center;background:#E3A51B;color:#fff}
-        .sc2-planet-wrap{position:absolute;z-index:2;right:-9px;top:2px;width:53%;height:100%;display:grid;place-items:center;pointer-events:none}
-        .sc2-planet-glow{position:absolute;width:75%;height:70%;border-radius:50%;background:radial-gradient(circle,rgba(244,211,94,.22),transparent 68%);filter:blur(14px)}
-        .sc2-planet{width:158px;height:158px;object-fit:contain;object-position:center;mix-blend-mode:multiply;filter:drop-shadow(0 10px 10px rgba(201,145,21,.18));animation:none;border:0;outline:0}
+        .sc2-create-arrow{width:43px;display:grid;place-items:center;background:#F4D35E;color:#fff}
+        .sc2-planet-wrap{position:absolute;z-index:2;right:-9px;top:2px;width:53%;height:100%;display:grid;place-items:center;pointer-events:none;perspective:500px}
+        .sc2-planet-glow{position:absolute;width:75%;height:70%;border-radius:50%;background:radial-gradient(circle,rgba(244,211,94,.18),transparent 68%);filter:blur(14px)}
+        .sc2-planet{position:relative;width:158px;height:158px;object-fit:contain;object-position:center;filter:drop-shadow(0 10px 10px rgba(201,145,21,.18));animation:sc2-planet-side-spin 7s linear infinite;transform-style:preserve-3d;backface-visibility:hidden;border:0;outline:0}
+        @keyframes sc2-planet-side-spin{from{transform:rotateY(0deg)}to{transform:rotateY(360deg)}}
         .sc2-shortcuts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 22px}
         .sc2-shortcut{min-width:0;min-height:72px;padding:9px 4px;border:1px solid #E7E8EA;border-radius:13px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:#15181C;font:700 9px 'Montserrat',sans-serif;box-shadow:0 1px 5px rgba(20,24,28,.025);text-align:center}
         .sc2-shortcut svg{width:22px;height:22px;stroke-width:1.8;color:#111418}
         .sc2-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
         .sc2-section-title{margin:0;font-size:16px;line-height:1;font-weight:800;letter-spacing:-.35px}
-        .sc2-view{border:0;background:transparent;color:#C28B16;padding:4px 0;font:700 11px 'Montserrat',sans-serif}
+        .sc2-view{border:0;background:transparent;color:#C28F18;padding:4px 0;font:700 11px 'Montserrat',sans-serif}
         .sc2-coins{overflow:hidden;border:1px solid #E8EAEC;border-radius:15px;background:#fff;box-shadow:0 1px 5px rgba(20,24,28,.025);margin-bottom:23px}
         .sc2-coin-row{width:100%;min-height:68px;padding:10px 12px;display:flex;align-items:center;gap:10px;border:0;border-bottom:1px solid #ECEDEF;background:#fff;color:#12151A;text-align:left}
         .sc2-coin-row:last-child{border-bottom:0}
         .sc2-coin-img{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:0 0 auto}
         .sc2-coin-name{min-width:0;flex:1}.sc2-coin-name strong{display:block;font-size:11px;line-height:1.2;font-weight:800}.sc2-coin-name small{display:block;margin-top:4px;color:#747A81;font-size:10px;font-weight:600}
         .sc2-value{text-align:right;flex:0 0 auto}.sc2-price{display:block;font-size:11px;font-weight:800}.sc2-change{display:block;margin-top:4px;color:#43A57C;font-size:10px;font-weight:800}
-        .sc2-trending{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-bottom:4px}.sc2-trend{height:46px;border:1px solid #E8EAEC;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;gap:5px;color:#14171B;font:800 10px 'Montserrat',sans-serif}.sc2-rank{color:#C89518}
+        .sc2-trending{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-bottom:4px}.sc2-trend{height:46px;border:1px solid #E8EAEC;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;gap:5px;color:#14171B;font:800 10px 'Montserrat',sans-serif}.sc2-rank{color:#C28F18}
         .sc2-nav{position:fixed;z-index:20;left:50%;bottom:0;width:min(100%,480px);height:74px;transform:translateX(-50%);padding:7px 7px calc(7px + env(safe-area-inset-bottom));background:rgba(255,255,255,.98);border-top:1px solid #ECEDEF;display:grid;grid-template-columns:repeat(5,1fr);align-items:end;box-shadow:0 -2px 10px rgba(20,24,28,.035);backdrop-filter:blur(10px)}
-        .sc2-nav-item{border:0;background:transparent;color:#7B8086;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;padding:3px 0;font:600 8px 'Montserrat',sans-serif}.sc2-nav-item svg{width:19px;height:19px;stroke-width:1.8}.sc2-nav-item.active{color:#C9961A}
-        .sc2-nav-center{width:48px;height:48px;margin:-15px auto 0;border:0;border-radius:50%;background:#DCA41C;display:grid;place-items:center;box-shadow:0 6px 16px rgba(201,150,26,.24);padding:0}.sc2-nav-center img{width:29px;height:29px;object-fit:contain;filter:brightness(0) invert(1)}
-        
+        .sc2-nav-item{border:0;background:transparent;color:#7B8086;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;padding:3px 0;font:600 8px 'Montserrat',sans-serif}.sc2-nav-item svg{width:19px;height:19px;stroke-width:1.8}.sc2-nav-item.active{color:#C28F18}
+        .sc2-nav-center{width:48px;height:48px;margin:-15px auto 0;border:0;border-radius:50%;background:#F4D35E;display:grid;place-items:center;box-shadow:0 6px 16px rgba(244,211,94,.24);padding:0}.sc2-nav-center img{width:29px;height:29px;object-fit:contain;filter:brightness(0) invert(1)}
         @media(max-width:430px){.sc2-scroll{padding-left:16px;padding-right:16px}.sc2-hero{min-height:164px}.sc2-shortcuts{gap:8px}.sc2-nav{height:74px}}
         @media(prefers-reduced-motion:reduce){.sc2-page *{animation:none!important}}
       `}</style>
@@ -198,8 +197,6 @@ function CreateForm({ onBack }) {
   useEffect(()=>()=>{if(logoUrl)URL.revokeObjectURL(logoUrl)},[logoUrl]);
 
   const valid = form.name.trim().length>=2 && /^[A-Za-z0-9]{2,10}$/.test(form.symbol.trim());
-  const next = () => setStep(s => Math.min(4,s+1));
-
   const edge = useEdgeBack(onBack);
 
   return (
@@ -214,26 +211,31 @@ function CreateForm({ onBack }) {
         .sc3-back{position:absolute;left:-4px;width:40px;height:40px;border:0;background:transparent;color:#15181C;display:grid;place-items:center;padding:0}
         .sc3-title{margin:0;font-size:18px;line-height:1;font-weight:800;letter-spacing:-.45px}
         .sc3-stage{height:310px;position:relative;overflow:hidden;margin-top:2px}
-        .sc3-planet{position:absolute;z-index:4;left:50%;top:62px;width:128px;height:128px;transform:translateX(-50%);object-fit:contain;filter:drop-shadow(0 12px 12px rgba(160,110,10,.14))}
-        .sc3-platform{position:absolute;z-index:1;left:50%;bottom:-28px;width:300px;height:220px;transform:translateX(-50%);object-fit:contain;filter:drop-shadow(0 12px 12px rgba(160,110,10,.12))}
-        .sc3-rocket{position:absolute;z-index:6;left:50%;top:48px;width:126px;height:126px;transform:translateX(-50%);object-fit:contain;filter:drop-shadow(0 12px 10px rgba(0,0,0,.10));animation:sc3-float 2.8s ease-in-out infinite}
-        .sc3-orbit{position:absolute;z-index:7;left:50%;top:54px;width:175px;height:132px;transform:translateX(-50%);object-fit:contain;animation:sc3-orbit 7s linear infinite}
         .sc3-stage-glow{position:absolute;left:50%;bottom:28px;width:70%;height:42%;transform:translateX(-50%);border-radius:50%;background:radial-gradient(circle,rgba(244,211,94,.22),transparent 70%);filter:blur(17px)}
-        .sc3-cloud-video{position:absolute;z-index:2;left:50%;bottom:4px;width:330px;height:180px;transform:translateX(-50%);object-fit:cover;mix-blend-mode:screen;filter:brightness(1.08) contrast(.9);opacity:.94;pointer-events:none;mask-image:radial-gradient(ellipse at center,black 55%,transparent 100%);-webkit-mask-image:radial-gradient(ellipse at center,black 55%,transparent 100%)}
-        .sc3-flame-video{position:absolute;z-index:6;left:50%;top:166px;width:62px;height:100px;transform:translateX(-50%);object-fit:cover;mix-blend-mode:screen;filter:brightness(1.15) saturate(1.08);opacity:.98;pointer-events:none;mask-image:radial-gradient(ellipse at center,black 42%,transparent 80%);-webkit-mask-image:radial-gradient(ellipse at center,black 42%,transparent 80%)}
-        .sc3-side-coin{position:absolute;z-index:8;top:126px;width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 7px 7px rgba(198,145,18,.16));animation:sc3-side-float 3.2s ease-in-out infinite}.sc3-side-left{left:calc(50% - 94px)}.sc3-side-right{right:calc(50% - 94px);animation-delay:-1.6s}
+        .sc3-platform{position:absolute;z-index:1;left:50%;bottom:-28px;width:300px;height:220px;transform:translateX(-50%);object-fit:contain;filter:drop-shadow(0 12px 12px rgba(160,110,10,.12))}
+        .sc3-cloud-video{position:absolute;z-index:2;left:50%;bottom:8px;width:330px;height:180px;transform:translateX(-50%);object-fit:cover;mix-blend-mode:screen;filter:brightness(1.08) contrast(.9);opacity:.96;pointer-events:none;mask-image:radial-gradient(ellipse at center,black 55%,transparent 100%);-webkit-mask-image:radial-gradient(ellipse at center,black 55%,transparent 100%)}
+        .sc3-rocket-crop{position:absolute;z-index:5;left:50%;top:43px;width:126px;height:104px;transform:translateX(-50%);overflow:hidden;pointer-events:none;filter:drop-shadow(0 12px 10px rgba(0,0,0,.10));animation:sc3-float 2.8s ease-in-out infinite}
+        .sc3-rocket-crop img{display:block;width:126px;height:150px;object-fit:contain;object-position:top center}
+        .sc3-flame-video{position:absolute;z-index:4;left:50%;top:145px;width:64px;height:118px;transform:translateX(-50%);object-fit:cover;mix-blend-mode:screen;filter:brightness(1.15) saturate(1.08);opacity:.99;pointer-events:none;mask-image:radial-gradient(ellipse at center,black 42%,transparent 80%);-webkit-mask-image:radial-gradient(ellipse at center,black 42%,transparent 80%)}
+        .sc3-side-coin{position:absolute;z-index:7;top:116px;width:30px;height:30px;object-fit:contain;filter:drop-shadow(0 7px 7px rgba(198,145,18,.16));animation:sc3-side-float 3.2s ease-in-out infinite}
+        .sc3-side-left{left:calc(50% - 112px)}
+        .sc3-side-right{right:calc(50% - 112px);animation-delay:-1.6s}
+        .sc3-side-art{position:absolute;z-index:3;right:calc(50% - 112px);top:104px;width:86px;height:86px;object-fit:contain;opacity:.98;filter:drop-shadow(0 7px 7px rgba(198,145,18,.14))}
         .sc3-progress-label{text-align:center;color:#70757B;font-size:13px;font-weight:600}
         .sc3-progress{display:grid;grid-template-columns:repeat(4,1fr);margin:12px 8px 24px}
-        .sc3-progress span{height:4px;background:#E8EAED;position:relative}.sc3-progress span.active{background:#DCA41C}.sc3-progress i{position:absolute;left:0;top:50%;width:8px;height:8px;transform:translate(-50%,-50%);border-radius:50%;background:#E6E8EB}.sc3-progress span.active i{background:#DCA41C}.sc3-progress span:last-child i{left:auto;right:0;transform:translate(50%,-50%)}
-        .sc3-upload{width:160px;margin:0 auto 27px;text-align:center}.sc3-upload-circle{width:108px;height:108px;margin:0 auto;border:2px dashed #E5C86D;border-radius:50%;display:grid;place-items:center;color:#D6A21C;background:#FFFDF7;overflow:hidden}.sc3-preview{width:100%;height:100%;object-fit:cover}.sc3-upload-title{margin-top:12px;font-size:15px;font-weight:800}.sc3-upload-sub{margin-top:5px;color:#92969B;font-size:11px;font-weight:500}
+        .sc3-progress span{height:4px;background:#E8EAED;position:relative}.sc3-progress span.active{background:#F4D35E}.sc3-progress i{position:absolute;left:0;top:50%;width:8px;height:8px;transform:translate(-50%,-50%);border-radius:50%;background:#E6E8EB}.sc3-progress span.active i{background:#F4D35E}.sc3-progress span:last-child i{left:auto;right:0;transform:translate(50%,-50%)}
+        .sc3-upload{width:160px;margin:0 auto 27px;text-align:center}.sc3-upload-circle{width:92px;height:92px;margin:0 auto;border:2px dashed #F4D35E;border-radius:50%;display:grid;place-items:center;color:#D6A21C;background:#FFFDF7;overflow:hidden}.sc3-preview{width:100%;height:100%;object-fit:cover}.sc3-upload-title{margin-top:11px;font-size:15px;font-weight:800}.sc3-upload-sub{margin-top:5px;color:#92969B;font-size:11px;font-weight:500}
         .sc3-fields{display:grid;gap:13px}.sc3-field span{display:block;margin:0 0 6px 2px;color:#7A7F85;font-size:11px;font-weight:600}.sc3-field input,.sc3-field select{width:100%;height:50px;border:1px solid #E6E8EA;border-radius:12px;background:#fff;color:#171A1E;outline:none;padding:0 15px;font:600 13px 'Montserrat',sans-serif;box-shadow:0 1px 4px rgba(20,24,28,.025)}.sc3-field input::placeholder{color:#B0B4B8;font-weight:500}
-        .sc3-select{appearance:none;padding-right:38px!important}.sc3-two{display:grid;grid-template-columns:1fr 1fr;gap:13px}.sc3-select-wrap{position:relative}.sc3-select{appearance:none;padding-right:38px!important}.sc3-chevron{position:absolute;right:13px;top:50%;transform:translateY(-50%);pointer-events:none}
-        .sc3-actions{display:flex;gap:10px;margin-top:14px}.sc3-btn{height:52px;border:0;border-radius:13px;font:800 14px 'Montserrat',sans-serif;display:flex;align-items:center;justify-content:center;gap:10px}.sc3-next,.sc3-launch{flex:1;background:#DDA51A;color:#fff;box-shadow:0 7px 18px rgba(221,165,26,.15)}.sc3-back-btn{flex:0 0 100px;background:#F5F6F7;color:#111418}
+        .sc3-select{appearance:none;padding-right:38px!important}.sc3-two{display:grid;grid-template-columns:1fr 1fr;gap:13px}.sc3-select-wrap{position:relative}.sc3-chevron{position:absolute;right:13px;top:50%;transform:translateY(-50%);pointer-events:none}
+        .sc3-actions{display:flex;gap:10px;margin-top:14px}.sc3-btn{height:52px;border:0;border-radius:13px;font:800 14px 'Montserrat',sans-serif;display:flex;align-items:center;justify-content:center;gap:10px}.sc3-next,.sc3-launch{flex:1;background:#F4D35E;color:#fff;box-shadow:0 7px 18px rgba(244,211,94,.15)}.sc3-back-btn{flex:0 0 100px;background:#F5F6F7;color:#111418}
         .sc3-review{border:1px solid #E7E9EB;border-radius:15px;padding:15px;display:grid;gap:11px;margin-bottom:16px}.sc3-review-row{display:flex;justify-content:space-between;gap:12px;font-size:12px}.sc3-review-row span{color:#737A80}.sc3-review-row strong{text-align:right;max-width:60%;word-break:break-word}
         .sc3-check{display:flex;gap:9px;align-items:flex-start;border:1px solid #E7E9EB;border-radius:12px;padding:12px;font-size:12px;line-height:1.45}
         .sc3-success{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}.sc3-success img{width:220px;max-width:75%;animation:sc3-launch 1.8s cubic-bezier(.18,.76,.25,1) both}.sc3-success h1{font-size:25px;margin:18px 0 0}.sc3-success p{font-size:14px;color:#737A80;line-height:1.5}.sc3-success button{margin-top:22px;height:50px;padding:0 22px;border:0;border-radius:25px;background:#F4D35E;color:#fff;font:800 13px 'Montserrat',sans-serif}
-        @keyframes sc3-side-float{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-8px) rotate(3deg)}}@keyframes sc3-float{0%,100%{transform:translateX(-50%) translateY(0) rotate(-.3deg)}50%{transform:translateX(-50%) translateY(-6px) rotate(.3deg)}}@keyframes sc3-orbit{from{transform:translateX(-50%) rotate(0deg)}to{transform:translateX(-50%) rotate(360deg)}}@keyframes sc3-launch{0%{transform:translateY(100px);opacity:0}20%{opacity:1}100%{transform:translateY(-70px);opacity:1}}
-        @media(max-width:430px){.sc3-scroll{padding-left:18px;padding-right:18px}.sc3-stage{height:300px}.sc3-platform{width:300px;height:215px}.sc3-rocket{width:126px;height:126px}.sc3-orbit{width:175px;height:132px}.sc3-two{grid-template-columns:1fr}}
+        @keyframes sc3-side-float{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-6px) rotate(3deg)}}
+        @keyframes sc3-float{0%,100%{transform:translateX(-50%) translateY(0) rotate(-.3deg)}50%{transform:translateX(-50%) translateY(-5px) rotate(.3deg)}}
+        @keyframes sc3-launch{0%{transform:translateY(100px);opacity:0}20%{opacity:1}100%{transform:translateY(-70px);opacity:1}}
+        @media(max-width:430px){.sc3-scroll{padding-left:18px;padding-right:18px}.sc3-stage{height:300px}.sc3-platform{width:300px;height:215px}.sc3-rocket-crop{width:120px;height:100px}.sc3-rocket-crop img{width:120px;height:143px}.sc3-flame-video{top:140px;width:60px;height:112px}.sc3-cloud-video{width:320px;height:174px}.sc3-side-coin{width:29px;height:29px}.sc3-side-left{left:calc(50% - 106px)}.sc3-side-right{right:calc(50% - 106px)}.sc3-side-art{right:calc(50% - 106px);top:99px;width:82px;height:82px}.sc3-two{grid-template-columns:1fr}}
+        @media(prefers-reduced-motion:reduce){.sc3-create *{animation:none!important}}
       `}</style>
 
       <div className="sc3-scroll" {...edge}>
@@ -245,30 +247,15 @@ function CreateForm({ onBack }) {
 
           <section className="sc3-stage" aria-hidden="true">
             <div className="sc3-stage-glow"/>
-            <video className="sc3-planet" src={PLANET_SPIN_VIDEO} autoPlay muted loop playsInline preload="auto" />
-            <video
-              className="sc3-cloud-video"
-              src={REAL_CLOUD_VIDEO}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-            />
-            <img src={platformArtwork} className="sc3-platform" alt="" />
+            <video className="sc3-cloud-video" src={REAL_CLOUD_VIDEO} autoPlay muted loop playsInline preload="auto" />
+            <img src={platformArtwork} className="sc3-platform" alt="" draggable="false" />
             <img src={coinArtwork} className="sc3-side-coin sc3-side-left" alt="" draggable="false" />
             <img src={coinArtwork} className="sc3-side-coin sc3-side-right" alt="" draggable="false" />
-            <video
-              className="sc3-flame-video"
-              src={REAL_FLAME_VIDEO}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-            />
-            <img src={orbitArtwork} className="sc3-orbit" alt="" />
-            <img src={rocketArtwork} className="sc3-rocket" alt="" />
+            <img src={orbitArtwork} className="sc3-side-art" alt="" draggable="false" />
+            <video className="sc3-flame-video" src={REAL_FLAME_VIDEO} autoPlay muted loop playsInline preload="auto" />
+            <div className="sc3-rocket-crop">
+              <img src={rocketArtwork} alt="" draggable="false" />
+            </div>
           </section>
 
           <div className="sc3-progress-label">Step {step} of 4</div>
@@ -277,7 +264,7 @@ function CreateForm({ onBack }) {
           {step===1 && <>
             <div className="sc3-upload">
               <label className="sc3-upload-circle" htmlFor="sc3-logo">
-                {logo ? <img src={logoUrl} className="sc3-preview" alt="" /> : <Plus size={34} strokeWidth={1.7}/>}
+                {logo ? <img src={logoUrl} className="sc3-preview" alt="" /> : <Plus size={30} strokeWidth={1.7}/>}
               </label>
               <input id="sc3-logo" type="file" accept="image/png,image/jpeg" hidden onChange={e=>{const f=e.target.files?.[0];if(f)setLogo(f)}}/>
               <div className="sc3-upload-title">Upload Coin Logo</div>
@@ -313,10 +300,6 @@ function CreateForm({ onBack }) {
 
 export default function SpaceCoinsDashboard({ onBack }) {
   const [view,setView]=useState("dashboard");
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {});
-    return () => cancelAnimationFrame(id);
-  }, []);
   return view==="create"
     ? <CreateForm onBack={()=>setView("dashboard")} />
     : <Dashboard onCreate={()=>setView("create")} />;
