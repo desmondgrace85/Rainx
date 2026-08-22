@@ -4,7 +4,6 @@ import {
   Home, Plus, Rocket, ShieldCheck, TrendingUp, UserRound, WalletCards
 } from "lucide-react";
 
-import planet3d from "./assets/space-coins-planet-3d.png";
 import galaxyDogeImage from "./assets/space-coins-galaxy-doge.jpg";
 import moonCatImage from "./assets/space-coins-moon-cat.jpg";
 import planetPepeImage from "./assets/space-coins-planet-pepe.jpg";
@@ -81,7 +80,6 @@ function DashboardPlanet() {
   return (
     <div className="sc2-planet-wrap" aria-hidden="true">
       <div className="sc2-planet-glow" />
-      <img className="sc2-planet" src={planet3d} alt="" draggable="false" />
     </div>
   );
 }
@@ -134,7 +132,6 @@ function Dashboard({ onCreate }) {
       <div className="sc2-scroll">
         <div className="sc2-inner">
           <header className="sc2-header">
-            <div className="sc2-brand"><img src={planet3d} alt="" /><h1>Space Coins</h1></div>
             <button type="button" className="sc2-bell" aria-label="Notifications"><Bell size={24} strokeWidth={1.8}/></button>
           </header>
 
