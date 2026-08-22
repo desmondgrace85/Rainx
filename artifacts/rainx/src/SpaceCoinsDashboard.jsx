@@ -1,6 +1,18 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Bell, Menu, Home, Plus, Rocket, ShieldCheck, TrendingUp, WalletCards } from "lucide-react";
-import CoinDashboardScreens from "./CoinDashboardScreens";
+import React, { useMemo, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bell,
+  Check,
+  Menu,
+  Plus,
+  Rocket,
+  ShieldCheck,
+  TrendingUp,
+  WalletCards,
+  X,
+} from "lucide-react";
+
 import galaxyDogeImage from "./assets/space-coins-galaxy-doge.jpg";
 import moonCatImage from "./assets/space-coins-moon-cat.jpg";
 import planetPepeImage from "./assets/space-coins-planet-pepe.jpg";
@@ -9,48 +21,705 @@ import orbitArtwork from "./assets/space-coins-orbit.png";
 import platformArtwork from "./assets/space-coins-platform.png";
 import coinArtwork from "./assets/space-coins-coin.png";
 import externalBanner from "./assets/space-coins-external-banner.png";
-import walletSecurityArtwork from "./assets/space-coins-wallet-3d.png";
 
-const GOLD="#D7A21A", PALE_GOLD="#F4D35E", INK="#111418", MUTED="#747A80", BORDER="#E7E8EA", ASH="#F4F4F5", GREEN="#43A57C";
-const COINS=[
- {name:"GALAXY DOGE",ticker:"GDOGE",price:"$0.000245",change:"+23.14%",image:galaxyDogeImage},
- {name:"MOON CAT",ticker:"MCAT",price:"$0.000182",change:"+12.08%",image:moonCatImage},
- {name:"PLANET PEPE",ticker:"PPEPE",price:"$0.000092",change:"+8.19%",image:planetPepeImage},
+const COINS = [
+  { name: "GALAXY DOGE", ticker: "GDOGE", price: "$0.000245", change: "+23.14%", image: galaxyDogeImage },
+  { name: "MOON CAT", ticker: "MCAT", price: "$0.000182", change: "+12.08%", image: moonCatImage },
+  { name: "PLANET PEPE", ticker: "PPEPE", price: "$0.000092", change: "+8.19%", image: planetPepeImage },
 ];
 
-function stop(e){e.stopPropagation()}
-function useSwipe(onLeft,onRight){const s=useRef(null);return {onTouchStart:e=>{stop(e);const t=e.touches[0];s.current={x:t.clientX,y:t.clientY}},onTouchEnd:e=>{stop(e);if(!s.current)return;const t=e.changedTouches[0],dx=t.clientX-s.current.x,dy=Math.abs(t.clientY-s.current.y);s.current=null;if(Math.abs(dx)>60&&dy<100)(dx<0?onLeft:onRight)?.()},onTouchCancel:()=>{s.current=null}}}
-function Sheet({children,onClose,initial="half",title}){const [full,setFull]=useState(initial==="full"), start=useRef(null);return <div className="sheet-backdrop" onClick={onClose}><div className={`sheet ${full?"full":"half"}`} onClick={e=>e.stopPropagation()} onTouchStart={e=>{e.stopPropagation();const t=e.touches[0];start.current=t.clientY}} onTouchEnd={e=>{e.stopPropagation();if(start.current==null)return;const y=e.changedTouches[0].clientY;const dy=y-start.current;start.current=null;if(dy<-45)setFull(true);if(dy>45&&full)setFull(false)}}><div className="sheet-handle"/><div className="sheet-head">{title&&<h3>{title}</h3>}<button onClick={onClose} aria-label="Close">×</button></div>{children}</div></div>}
+const TRENDING = ["STARINU", "COSMO", "MOONME"];
 
-function TopMenuSheet({onClose,onCoinDashboard}){return <Sheet onClose={onClose} title="Space Coins"><div className="menu-cards"><button onClick={onCoinDashboard} className="menu-card"><span className="menu-card-icon">◈</span><strong>Coin Dashboard</strong><small>Manage and monitor your launched coin</small></button><button className="menu-card"><span className="menu-card-icon">◉</span><strong>Space Wallet</strong><small>Wallet tools coming next</small></button></div></Sheet>}
+function stop(e) {
+  e.stopPropagation();
+}
 
-function SpaceToggle({active,onSpace,onExternal}){return <div className="space-toggle"><button className={active==="space"?"active":""} onClick={onSpace}><img src={coinArtwork} alt=""/><span>Space Coins</span></button><button className={active==="external"?"active":""} onClick={onExternal}><img src={coinArtwork} alt=""/><span>External Coins</span></button></div>}
+function Shell({ children }) {
+  return (
+    <main
+      className="rx-space-shell"
+      onTouchStart={stop}
+      onTouchMove={stop}
+      onTouchEnd={stop}
+      onTouchCancel={stop}
+    >
+      {children}
+    </main>
+  );
+}
 
-function Banner({onCreate}){return <section className="sc-banner"><img src={externalBanner} alt=""/><div className="sc-banner-copy"><h2>Create Your<br/>Space Coin</h2><p>Launch your own mini meme coin<br/>in just a few steps.</p><button onClick={onCreate}><span>Create Coin</span><ArrowRight size={17}/></button></div></section>}
-function Shortcuts(){const items=[[ShieldCheck,"Top Tokens"],[TrendingUp,"Trending"],[Rocket,"New Launches"],[WalletCards,"My Coins"]];return <div className="sc-shortcuts">{items.map(([Icon,label])=><button key={label}><Icon/><span>{label}</span></button>)}</div>}
+function Header({ onMenu, onBack, title = "Space Coins" }) {
+  return (
+    <header className="rx-space-header">
+      {onBack ? (
+        <button className="rx-icon-btn rx-left" onClick={onBack} aria-label="Back">
+          <ArrowLeft size={23} />
+        </button>
+      ) : (
+        <button className="rx-icon-btn rx-left" onClick={onMenu} aria-label="Space Coins menu">
+          <Menu size={24} />
+        </button>
+      )}
+      <h1>{title}</h1>
+      <button className="rx-icon-btn rx-right" aria-label="Notifications">
+        <Bell size={21} />
+      </button>
+    </header>
+  );
+}
 
-function SpaceDashboard({onCreate,onExternal,onMenu,onSeeAll}){const swipe=useSwipe(onExternal,null);return <div className="sc-scroll" {...swipe}><div className="sc-inner"><header className="sc-header"><button className="sc-menu" onClick={onMenu} aria-label="More"><Menu size={27}/></button></header><Banner onCreate={onCreate}/><SpaceToggle active="space" onSpace={()=>{}} onExternal={onExternal}/><Shortcuts/><div className="section-head"><h2>Top Space Coins</h2><button onClick={onSeeAll}>See All</button></div><div className="coin-table">{COINS.map(c=><div className="coin-row" key={c.ticker}><img src={c.image} alt=""/><div className="coin-name"><strong>{c.name}</strong><small>{c.ticker}</small></div><div className="coin-value"><strong>{c.price}</strong><span>{c.change}</span></div></div>)}</div><div className="section-head trending-head"><h2>Trending</h2><button>View All</button></div><div className="trend-row">{["STARINU","COSMO","MOONME"].map((n,i)=><div key={n}>#{i+1} {n}</div>)}</div></div></div>}
+function ModeToggle({ mode, setMode }) {
+  return (
+    <div className="rx-mode-toggle">
+      <button
+        className={mode === "space" ? "active" : ""}
+        onClick={() => setMode("space")}
+      >
+        <img src={coinArtwork} alt="" />
+        <span>Space Coins</span>
+      </button>
+      <button
+        className={mode === "external" ? "active" : ""}
+        onClick={() => setMode("external")}
+      >
+        <img src={coinArtwork} alt="" />
+        <span>External Coins</span>
+      </button>
+    </div>
+  );
+}
 
-function ExternalCoinsView({onBack,onConnect,onSpace}){const swipe=useSwipe(null,onSpace);return <div className="sc-scroll" {...swipe}><div className="sc-inner"><div className="ext-header"><button onClick={onBack}><ArrowLeft size={25}/></button><h1>Space Coins</h1></div><SpaceToggle active="external" onSpace={onSpace} onExternal={()=>{}}/><h2 className="ext-title">Explore<br/>External Coins</h2><p className="ext-copy">Trade popular coins from across<br/>the universe.</p><div className="ext-art"><img src={coinArtwork} alt=""/></div><div className="ext-wallet-card"><div className="wallet-icon"><img src={walletSecurityArtwork} alt=""/></div><div><strong>Connect External Wallet</strong><p>Connect your external wallet to trade external coins. Your funds stay in your wallet.</p></div><button onClick={onConnect}>Connect Wallet</button></div></div></div>}
+function CreateBanner({ onCreate }) {
+  return (
+    <section className="rx-space-banner">
+      <img src={externalBanner} alt="" draggable="false" />
+      <div className="rx-space-banner-copy">
+        <h2>Create Your<br />Space Coin</h2>
+        <p>Launch your own mini meme coin<br />in just a few steps.</p>
+        <button onClick={onCreate}>
+          Create Coin <ArrowRight size={16} />
+        </button>
+      </div>
+    </section>
+  );
+}
 
-function MySpaceCoinsSheet({onClose}){return <Sheet onClose={onClose} initial="half" title="My Space Coins"><div className="sheet-tabs"><button className="active">Created</button><button>Participated</button></div><div className="mycoins-list">{[["STAR DOGE","SDOGE","$0.00241","+18.27%","$2.41M","2,845","$184K"],["COSMO CAT","CCAT","$0.00102","+11.09%","$1.02M","1,256","$96K"],["MOON PEPE","MPEPE","$0.00081","-3.21%","$810K","985","$48K"]].map(r=><div className="mycoin-card" key={r[1]}><div className="avatar">●</div><div className="mycoin-main"><strong>{r[0]}</strong><small>{r[1]}</small><div className="mycoin-stats"><span>Market Cap<strong>{r[4]}</strong></span><span>Holders<strong>{r[5]}</strong></span><span>Liquidity<strong>{r[6]}</strong></span></div></div><div className="mycoin-price"><strong>{r[2]}</strong><span className={r[3].startsWith("-")?"red":"green"}>{r[3]}</span></div></div>)}</div></Sheet>}
+function Shortcuts({ onMyCoins }) {
+  const items = [
+    [ShieldCheck, "Top Tokens"],
+    [TrendingUp, "Trending"],
+    [Rocket, "New Launches"],
+    [WalletCards, "My Coins"],
+  ];
 
-function WalletSheet({onClose}){return <Sheet onClose={onClose} initial="half" title="Connect Wallet"><div className="wallet-sheet-list">{[["🦊","MetaMask"],["🔷","Trust Wallet"],["◉","Phantom"],["◉","Coinbase Wallet"],["≋","WalletConnect"]].map(w=><div className="wallet-sheet-row" key={w[1]}><span>{w[0]}</span><strong>{w[1]}</strong><button>Connect</button></div>)}</div></Sheet>}
+  return (
+    <nav className="rx-shortcuts">
+      {items.map(([Icon, label]) => (
+        <button
+          key={label}
+          onClick={label === "My Coins" ? onMyCoins : undefined}
+        >
+          <Icon />
+          <span>{label}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}
 
-function CreateForm({onBack}){const [step,setStep]=useState(1);const [form,setForm]=useState({name:"",symbol:"",description:"",supply:"1,000,000,000",network:"Solana"});const [logo,setLogo]=useState(null);const valid=form.name.trim().length>=2&&/^[A-Za-z0-9]{2,10}$/.test(form.symbol.trim());const logoUrl=useMemo(()=>logo?URL.createObjectURL(logo):null,[logo]);useEffect(()=>()=>{if(logoUrl)URL.revokeObjectURL(logoUrl)},[logoUrl]);const swipe=useSwipe(null,onBack);return <div className="create-scroll" {...swipe}><div className="create-inner"><div className="create-head"><button onClick={onBack}><ArrowLeft size={25}/></button><h1>Create Your Space Coin</h1></div><div className="create-stage"><video className="create-cloud" src="https://d8j0ntlcm91z4.cloudfront.net/user_3BHloZy6zhOMmqbVkiDF/hf_20260821_153425_e7dbe97e-35f8-4ada-80e3-d11209f83006.mp4" autoPlay muted loop playsInline preload="auto"/><img src={platformArtwork} className="create-platform" alt=""/><img src={coinArtwork} className="side side-left" alt=""/><img src={coinArtwork} className="side side-right" alt=""/><img src={orbitArtwork} className="side-star" alt=""/><img src={rocketArtwork} className="create-rocket" alt=""/></div><div className="step-label">Step {step} of 4</div><div className="steps">{[1,2,3,4].map(i=><span className={step>=i?"on":""} key={i}/>)}</div>{step===1&&<><label className="upload"><input type="file" accept="image/png,image/jpeg" onChange={e=>setLogo(e.target.files?.[0]||null)}/><div className="upload-circle">{logo?<img src={logoUrl} alt=""/>:<Plus size={34}/>}</div><strong>Upload Coin Logo</strong><small>PNG, JPG (Max. 5MB)</small></label><div className="fields"><label>Coin Name<input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Enter coin name"/></label><label>Symbol<input value={form.symbol} onChange={e=>setForm({...form,symbol:e.target.value})} placeholder="Enter symbol (e.g. RXDOG)"/></label><label>Description<input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder="Tell the world about your coin"/></label><div className="two"><label>Total Supply<input value={form.supply} onChange={e=>setForm({...form,supply:e.target.value})}/></label><label>Network<select value={form.network} onChange={e=>setForm({...form,network:e.target.value})}><option>Solana</option><option>Ethereum</option><option>Base</option></select></label></div></div></>}{step>1&&<div className="review"><div><span>Coin</span><strong>{form.name||"Your Space Coin"}</strong></div><div><span>Symbol</span><strong>{form.symbol||"—"}</strong></div><div><span>Description</span><strong>{form.description||"—"}</strong></div><div><span>Total Supply</span><strong>{form.supply}</strong></div><div><span>Network</span><strong>{form.network}</strong></div></div>}<div className="create-actions">{step>1&&<button className="back-btn" onClick={()=>setStep(s=>s-1)}>Back</button>}{step<4?<button className="next-btn" disabled={step===1&&!valid} onClick={()=>setStep(s=>s+1)}>Next Step <ArrowRight size={18}/></button>:<button className="next-btn" onClick={()=>setStep(5)}>Launch Coin <Rocket size={18}/></button>}</div>{step===5&&<div className="launched"><img src={rocketArtwork} alt=""/><h2>Your Space Coin is launched!</h2><p>Your launch flow is complete.</p></div>}</div></div>}
+function CoinList() {
+  return (
+    <section className="rx-space-section">
+      <div className="rx-section-head">
+        <h2>Top Space Coins</h2>
+        <button>View All</button>
+      </div>
+      <div className="rx-coin-list">
+        {COINS.map((coin) => (
+          <button className="rx-coin-row" key={coin.ticker}>
+            <img src={coin.image} alt="" />
+            <span className="rx-coin-name">
+              <strong>{coin.name}</strong>
+              <small>{coin.ticker}</small>
+            </span>
+            <span className="rx-coin-value">
+              <strong>{coin.price}</strong>
+              <small>{coin.change}</small>
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-export default function SpaceCoinsDashboard({onBack}){const [mode,setMode]=useState("space");const [overlay,setOverlay]=useState(null);const [create,setCreate]=useState(false);if(create)return <div className="sc-root"><style>{styles}</style><CreateForm onBack={()=>setCreate(false)}/></div>;return <div className="sc-root"><style>{styles}</style><div className="mode-viewport"><div className="mode-track" style={{transform:`translateX(${mode==="space"?0:-50}%)`}}><div className="mode-panel"><SpaceDashboard onCreate={()=>setCreate(true)} onExternal={()=>setMode("external")} onMenu={()=>setOverlay("menu")} onSeeAll={()=>setOverlay("see-all")}/></div><div className="mode-panel"><ExternalCoinsView onBack={()=>setMode("space")} onConnect={()=>setOverlay("wallet")} onSpace={()=>setMode("space")}/></div></div></div>{overlay==="menu"&&<TopMenuSheet onClose={()=>setOverlay(null)} onCoinDashboard={()=>setOverlay("coin-dashboard")}/>} {overlay==="see-all"&&<MySpaceCoinsSheet onClose={()=>setOverlay(null)}/>} {overlay==="wallet"&&<WalletSheet onClose={()=>setOverlay(null)}/>} {overlay==="coin-dashboard"&&<CoinDashboardScreens onBack={()=>setOverlay("menu")}/>}</div>}
+function Trending() {
+  return (
+    <section className="rx-space-section">
+      <div className="rx-section-head">
+        <h2>Trending</h2>
+        <button>View All</button>
+      </div>
+      <div className="rx-trending">
+        {TRENDING.map((name, index) => (
+          <button key={name}>
+            <b>#{index + 1}</b>
+            {name}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-const styles=`
-.sc-root,.sc-root *{box-sizing:border-box}.sc-root{position:fixed;inset:0;z-index:700;background:#fff;color:${INK};font-family:'Montserrat',sans-serif;overflow:hidden;overscroll-behavior:none}
-.mode-viewport{position:absolute;inset:0;overflow:hidden}.mode-track{width:200%;height:100%;display:flex;transition:transform .32s cubic-bezier(.22,.61,.36,1);will-change:transform}.mode-panel{width:50%;height:100%;flex:0 0 50%;position:relative}.sc-scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:none;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-width:none;padding:calc(10px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}.sc-scroll::-webkit-scrollbar{display:none}.sc-inner{width:min(100%,480px);margin:0 auto}
-.sc-header{height:58px;display:flex;justify-content:flex-end;align-items:center}.sc-menu{width:42px;height:42px;border:0;background:transparent;color:${INK};display:grid;place-items:center}
-.sc-banner{position:relative;width:100%;margin:0 0 18px;overflow:hidden;border-radius:18px}.sc-banner>img{display:block;width:100%;height:auto;max-width:100%;object-fit:contain}.sc-banner-copy{position:absolute;left:7%;top:10%;width:52%;color:#fff;text-shadow:0 1px 7px rgba(0,0,0,.12)}.sc-banner-copy h2{margin:0;font-size:22px;line-height:1.02;font-weight:800;letter-spacing:-.7px}.sc-banner-copy p{margin:10px 0 0;font-size:11px;line-height:1.45;font-weight:600}.sc-banner-copy button{margin-top:12px;height:42px;padding:0 15px;border-radius:13px;border:1px solid rgba(255,255,255,.72);background:rgba(255,255,255,.17);backdrop-filter:blur(8px);display:inline-flex;gap:8px;align-items:center;color:#fff;font:800 11px 'Montserrat'}.space-toggle{height:64px;display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;margin-bottom:14px;border:1px solid ${BORDER};border-radius:18px;background:#fff;box-shadow:0 3px 12px rgba(20,24,28,.04)}.space-toggle button{border:0;background:transparent;border-radius:15px;display:flex;align-items:center;justify-content:center;gap:9px;color:#696F75;font:800 12px 'Montserrat'}.space-toggle button.active{background:${PALE_GOLD};color:#fff;box-shadow:0 4px 11px rgba(244,211,94,.20)}.space-toggle img{width:33px;height:33px;object-fit:contain}
-.sc-shortcuts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:27px}.sc-shortcuts button{height:68px;border:1px solid ${BORDER};border-radius:13px;background:${ASH};color:${INK};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;font:800 9px 'Montserrat'}.sc-shortcuts svg{width:18px;height:18px;stroke-width:2.4;fill:${INK}}.sc-shortcuts button:nth-child(2) svg{fill:none}.section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}.section-head h2{margin:0;font-size:16px;font-weight:800}.section-head button{border:0;background:transparent;color:${GOLD};font:800 11px 'Montserrat'}.coin-table{border:1px solid ${BORDER};border-radius:16px;overflow:hidden;background:#fff}.coin-row{display:flex;align-items:center;gap:10px;min-height:76px;padding:10px 13px;border-bottom:1px solid #EFF0F2}.coin-row:last-child{border-bottom:0}.coin-row img{width:42px;height:42px;border-radius:50%;object-fit:cover;image-rendering:auto}.coin-name{flex:1;min-width:0}.coin-name strong{display:block;font-size:12px;line-height:1.2;font-weight:800;white-space:nowrap}.coin-name small{display:block;margin-top:5px;color:${MUTED};font-size:10px;font-weight:600}.coin-value{text-align:right}.coin-value strong{font-size:12px;font-weight:800}.coin-value span{display:block;margin-top:5px;color:${GREEN};font-size:10px;font-weight:800}.trending-head{margin-top:24px}.trend-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.trend-row div{height:45px;border:1px solid ${BORDER};border-radius:12px;background:#fff;display:grid;place-items:center;font:800 10px 'Montserrat';color:${INK}}
-.ext-header{height:54px;display:flex;align-items:center;justify-content:center;position:relative}.ext-header button{position:absolute;left:0;border:0;background:transparent}.ext-header h1{font-size:21px;margin:0;font-weight:800}.ext-title{font-size:29px;line-height:1.04;margin:18px 0 0}.ext-copy{font-size:14px;line-height:1.45;color:${MUTED}.ext-art{height:270px;display:grid;place-items:center;position:relative}.ext-art::before{content:"";position:absolute;width:205px;height:78px;border:3px solid rgba(215,162,26,.62);border-radius:50%;transform:rotate(-18deg)}.ext-art img{width:170px;height:170px;object-fit:contain;position:relative;z-index:2}.ext-wallet-card{display:grid;grid-template-columns:46px 1fr;gap:11px;padding:16px;border:1px solid ${BORDER};border-radius:17px;background:#fff;box-shadow:0 5px 18px rgba(20,24,28,.05)}.wallet-icon{width:46px;height:46px;border-radius:12px;background:#FFF6D9;border:1px solid #F2D783;display:grid;place-items:center;overflow:hidden}.wallet-icon img{width:42px;height:42px;object-fit:contain}.ext-wallet-card strong{font-size:14px}.ext-wallet-card p{margin:6px 0 0;color:${MUTED};font-size:11px;line-height:1.45}.ext-wallet-card button{grid-column:1/-1;height:45px;border:0;border-radius:10px;background:${GOLD};color:#fff;font:800 12px 'Montserrat'}
-.create-scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:none;padding:calc(8px + env(safe-area-inset-top)) 18px 28px;touch-action:pan-y;-webkit-overflow-scrolling:touch}.create-inner{width:min(100%,480px);margin:0 auto}.create-head{height:54px;display:flex;align-items:center;justify-content:center;position:relative}.create-head button{position:absolute;left:-4px;border:0;background:transparent}.create-head h1{font-size:18px;margin:0;font-weight:800}.create-stage{height:300px;position:relative;overflow:hidden}.create-platform{position:absolute;z-index:1;left:50%;bottom:-28px;width:300px;transform:translateX(-50%)}.create-rocket{position:absolute;z-index:5;left:50%;top:54px;width:145px;transform:translateX(-50%);animation:float 3s ease-in-out infinite}.create-cloud{position:absolute;z-index:2;left:50%;bottom:12px;width:320px;height:175px;object-fit:cover;transform:translateX(-50%);opacity:.72;mix-blend-mode:multiply}.side{position:absolute;z-index:7;width:31px;height:31px;object-fit:contain;top:124px}.side-left{left:calc(50% - 112px)}.side-right{right:calc(50% - 112px)}.side-star{position:absolute;z-index:6;right:calc(50% - 112px);top:110px;width:76px;object-fit:contain}.step-label{text-align:center;color:${MUTED};font-size:13px;font-weight:600}.steps{display:grid;grid-template-columns:repeat(4,1fr);margin:12px 8px 23px}.steps span{height:4px;background:#E8EAED;position:relative}.steps span:before{content:"";position:absolute;left:0;top:50%;width:8px;height:8px;background:#E7E8EA;border-radius:50%;transform:translate(-50%,-50%)}.steps span.on{background:${PALE_GOLD}}.steps span.on:before{background:${PALE_GOLD}}.upload{text-align:center;display:grid;justify-items:center;gap:7px;margin-bottom:24px}.upload input{display:none}.upload-circle{width:96px;height:96px;border:2px dashed ${PALE_GOLD};border-radius:50%;display:grid;place-items:center;color:${GOLD};background:#FFFDF7;overflow:hidden}.upload-circle img{width:100%;height:100%;object-fit:cover}.upload strong{font-size:15px}.upload small{color:#92969B;font-size:11px}.fields{display:grid;gap:13px}.fields label{display:grid;gap:6px;font-size:11px;font-weight:600;color:#7A7F85}.fields input,.fields select{height:50px;border:1px solid ${BORDER};border-radius:12px;background:#fff;padding:0 14px;font:600 13px 'Montserrat';outline:none}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.review{display:grid;gap:10px;border:1px solid ${BORDER};border-radius:14px;padding:14px}.review>div{display:flex;justify-content:space-between;gap:14px;font-size:10px}.review span{color:${MUTED}}.review strong{text-align:right}.create-actions{display:flex;gap:9px;margin-top:14px}.create-actions button{height:50px;border:0;border-radius:12px;font:800 13px 'Montserrat'}.back-btn{width:95px;background:#F4F4F5}.next-btn{flex:1;background:${GOLD};color:#fff}.next-btn:disabled{opacity:.45}.launched{text-align:center;padding:20px}.launched img{width:190px}.launched h2{font-size:22px}
-.sheet-backdrop{position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,.25);display:flex;align-items:flex-end}.sheet{width:100%;background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -12px 28px rgba(0,0,0,.16);padding:8px 16px calc(14px + env(safe-area-inset-bottom));transform:translateY(0);transition:height .24s ease}.sheet.half{height:52dvh}.sheet.full{height:94dvh}.sheet-handle{width:42px;height:4px;background:#D5D7DA;border-radius:999px;margin:4px auto 8px}.sheet-head{height:40px;display:flex;align-items:center;justify-content:space-between}.sheet-head h3{margin:0;font-size:18px}.sheet-head button{border:0;background:transparent;font-size:28px;color:#73777C}.menu-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.menu-card{min-height:128px;border:1px solid ${BORDER};border-radius:16px;background:${ASH};padding:13px;text-align:left;display:grid;align-content:start;gap:6px}.menu-card-icon{width:36px;height:36px;border-radius:10px;background:#fff;display:grid;place-items:center;font-size:20px;color:${GOLD}.menu-card strong{font-size:12px}.menu-card small{font-size:9px;line-height:1.35;color:${MUTED}}.sheet-tabs{display:grid;grid-template-columns:1fr 1fr;background:#F3F3F4;padding:3px;border-radius:10px}.sheet-tabs button{height:35px;border:0;background:transparent;border-radius:8px;font:800 9px 'Montserrat';color:${MUTED}}.sheet-tabs .active{background:#fff;color:${GOLD}}.mycoins-list{display:grid;gap:8px;margin-top:10px}.mycoin-card{display:grid;grid-template-columns:35px 1fr auto;gap:9px;padding:10px;border:1px solid ${BORDER};border-radius:12px;background:#fff}.avatar{width:35px;height:35px;border-radius:50%;background:${LIGHT_GOLD};display:grid;place-items:center;color:${GOLD}}.mycoin-main strong{font-size:11px}.mycoin-main small{display:block;color:${MUTED};font-size:8px;margin-top:2px}.mycoin-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:7px}.mycoin-stats span{font-size:7px;color:${MUTED}}.mycoin-stats strong{display:block;font-size:8px;color:${INK};margin-top:2px}.mycoin-price{text-align:right}.mycoin-price strong{font-size:10px}.mycoin-price span{display:block;margin-top:3px;font-size:8px;font-weight:800}.green{color:${GREEN}}.red{color:#D94C4C}.wallet-sheet-list{display:grid}.wallet-sheet-row{height:58px;border-bottom:1px solid #EFF0F2;display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px}.wallet-sheet-row strong{font-size:12px}.wallet-sheet-row button{height:34px;padding:0 12px;border:1px solid #E8D9A6;border-radius:8px;background:#fff;color:${GOLD};font:800 10px 'Montserrat'}
-@keyframes float{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-5px)}}
-@media(max-width:430px){.sc-banner-copy{left:7%;top:10%;width:53%}.sc-banner-copy h2{font-size:20px}.sc-banner-copy p{font-size:10px}.sc-banner-copy button{height:40px;font-size:10px}.sc-shortcuts{gap:7px}.sc-shortcuts button{height:65px;font-size:8px}.sc-shortcuts svg{width:18px;height:18px}.coin-row img{width:40px;height:40px}.coin-name strong{font-size:11px}.coin-value strong{font-size:11px}.space-toggle{height:60px}.space-toggle button{font-size:11px}.space-toggle img{width:30px;height:30px}.create-stage{height:300px}.create-rocket{width:138px}.side{width:29px;height:29px}.side-star{width:72px}}
-@media(prefers-reduced-motion:reduce){.sc-root *{animation:none!important;transition:none!important}}
+function Dashboard({ setMode, onCreate, onMenu, onMyCoins }) {
+  return (
+    <Shell>
+      <style>{styles}</style>
+      <div className="rx-space-scroll">
+        <div className="rx-space-inner">
+          <Header onMenu={onMenu} />
+          <CreateBanner onCreate={onCreate} />
+          <ModeToggle mode="space" setMode={setMode} />
+          <Shortcuts onMyCoins={onMyCoins} />
+          <CoinList />
+          <Trending />
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
+function ExternalCoins({ setMode, onBack, onConnect }) {
+  return (
+    <Shell>
+      <style>{styles}</style>
+      <div className="rx-space-scroll">
+        <div className="rx-space-inner">
+          <Header title="External Coins" onBack={onBack} />
+          <ModeToggle mode="external" setMode={setMode} />
+
+          <section className="rx-external-hero">
+            <h2>Explore<br />External Coins</h2>
+            <p>Trade popular coins from across the universe.</p>
+            <img src={coinArtwork} alt="" />
+          </section>
+
+          <div className="rx-wallet-card">
+            <div className="rx-wallet-art">
+              <img src={orbitArtwork} alt="" />
+            </div>
+            <div>
+              <strong>Connect External Wallet</strong>
+              <p>Your funds stay in your wallet while you explore external coins.</p>
+            </div>
+            <button onClick={onConnect}>Connect Wallet</button>
+          </div>
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
+function CreateCoin({ onBack }) {
+  const [step, setStep] = useState(1);
+  const [logo, setLogo] = useState(null);
+  const [form, setForm] = useState({
+    name: "",
+    symbol: "",
+    description: "",
+    supply: "1,000,000,000",
+    network: "Solana",
+  });
+
+  const logoUrl = useMemo(() => (logo ? URL.createObjectURL(logo) : null), [logo]);
+  const valid =
+    form.name.trim().length >= 2 &&
+    /^[A-Za-z0-9]{2,10}$/.test(form.symbol.trim());
+
+  const set = (key, value) => setForm((old) => ({ ...old, [key]: value }));
+
+  return (
+    <Shell>
+      <style>{styles + createStyles}</style>
+      <div className="rx-space-scroll">
+        <div className="rx-space-inner">
+          <Header title="Create Your Space Coin" onBack={onBack} />
+
+          <div className="rx-create-art">
+            <div className="rx-create-glow" />
+            <img className="rx-platform" src={platformArtwork} alt="" />
+            <img className="rx-orbit" src={orbitArtwork} alt="" />
+            <img className="rx-rocket" src={rocketArtwork} alt="" />
+          </div>
+
+          <div className="rx-step">Step {Math.min(step, 4)} of 4</div>
+          <div className="rx-progress">
+            {[1, 2, 3, 4].map((n) => (
+              <span key={n} className={step >= n ? "on" : ""} />
+            ))}
+          </div>
+
+          {step === 1 && (
+            <>
+              <label className="rx-upload">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  onChange={(e) => setLogo(e.target.files?.[0] || null)}
+                />
+                <span className="rx-upload-circle">
+                  {logo ? (
+                    <img src={logoUrl} alt="" />
+                  ) : (
+                    <Plus size={30} />
+                  )}
+                </span>
+                <strong>Upload Coin Logo</strong>
+                <small>PNG or JPG · Max 5MB</small>
+              </label>
+
+              <div className="rx-fields">
+                <label>
+                  Coin Name
+                  <input
+                    value={form.name}
+                    onChange={(e) => set("name", e.target.value)}
+                    placeholder="Enter coin name"
+                  />
+                </label>
+                <label>
+                  Symbol
+                  <input
+                    value={form.symbol}
+                    onChange={(e) => set("symbol", e.target.value)}
+                    placeholder="e.g. RXDOG"
+                  />
+                </label>
+                <label>
+                  Description
+                  <input
+                    value={form.description}
+                    onChange={(e) => set("description", e.target.value)}
+                    placeholder="Tell the world about your coin"
+                  />
+                </label>
+                <div className="rx-two-fields">
+                  <label>
+                    Total Supply
+                    <input
+                      value={form.supply}
+                      onChange={(e) => set("supply", e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Network
+                    <select
+                      value={form.network}
+                      onChange={(e) => set("network", e.target.value)}
+                    >
+                      <option>Solana</option>
+                      <option>Ethereum</option>
+                      <option>Base</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+            </>
+          )}
+
+          {step > 1 && (
+            <div className="rx-review">
+              <div><span>Coin</span><strong>{form.name || "Your Space Coin"}</strong></div>
+              <div><span>Symbol</span><strong>{form.symbol || "—"}</strong></div>
+              <div><span>Description</span><strong>{form.description || "—"}</strong></div>
+              <div><span>Total Supply</span><strong>{form.supply}</strong></div>
+              <div><span>Network</span><strong>{form.network}</strong></div>
+            </div>
+          )}
+
+          <div className="rx-create-actions">
+            {step > 1 && (
+              <button className="secondary" onClick={() => setStep((s) => s - 1)}>
+                Back
+              </button>
+            )}
+            {step < 4 ? (
+              <button
+                className="primary"
+                disabled={step === 1 && !valid}
+                onClick={() => setStep((s) => s + 1)}
+              >
+                Next Step <ArrowRight size={16} />
+              </button>
+            ) : (
+              <button className="primary" onClick={() => setStep(5)}>
+                Launch Coin <Rocket size={16} />
+              </button>
+            )}
+          </div>
+
+          {step === 5 && (
+            <div className="rx-launched">
+              <Check size={30} />
+              <h2>Your Space Coin is launched!</h2>
+              <p>The launch flow is complete.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
+function WalletSheet({ onClose }) {
+  const wallets = ["MetaMask", "Trust Wallet", "Phantom", "Coinbase Wallet", "WalletConnect"];
+
+  return (
+    <div className="rx-overlay" onClick={onClose}>
+      <div className="rx-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="rx-sheet-handle" />
+        <div className="rx-sheet-head">
+          <h3>Connect Wallet</h3>
+          <button onClick={onClose}><X size={20} /></button>
+        </div>
+        {wallets.map((wallet) => (
+          <div className="rx-wallet-row" key={wallet}>
+            <span>{wallet.slice(0, 1)}</span>
+            <strong>{wallet}</strong>
+            <button onClick={onClose}>Connect</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MyCoinsSheet({ onClose }) {
+  const rows = [
+    ["STAR DOGE", "SDOGE", "$0.00241", "+18.27%", "$2.41M", "2,845"],
+    ["COSMO CAT", "CCAT", "$0.00102", "+11.09%", "$1.02M", "1,256"],
+    ["MOON PEPE", "MPEPE", "$0.00081", "-3.21%", "$810K", "985"],
+  ];
+
+  return (
+    <div className="rx-overlay" onClick={onClose}>
+      <div className="rx-sheet rx-sheet-tall" onClick={(e) => e.stopPropagation()}>
+        <div className="rx-sheet-handle" />
+        <div className="rx-sheet-head">
+          <h3>My Space Coins</h3>
+          <button onClick={onClose}><X size={20} /></button>
+        </div>
+        {rows.map((row) => (
+          <div className="rx-mycoin" key={row[1]}>
+            <img src={coinArtwork} alt="" />
+            <div>
+              <strong>{row[0]}</strong>
+              <small>{row[1]}</small>
+              <span>{row[4]} · {row[5]} holders</span>
+            </div>
+            <div className="rx-mycoin-price">
+              <strong>{row[2]}</strong>
+              <small className={row[3].startsWith("-") ? "red" : ""}>{row[3]}</small>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MenuSheet({ onClose, onMyCoins }) {
+  return (
+    <div className="rx-overlay" onClick={onClose}>
+      <div className="rx-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="rx-sheet-handle" />
+        <div className="rx-sheet-head">
+          <h3>Space Coins</h3>
+          <button onClick={onClose}><X size={20} /></button>
+        </div>
+        <button className="rx-menu-card" onClick={onMyCoins}>
+          <span><WalletCards size={20} /></span>
+          <strong>My Space Coins</strong>
+          <small>View coins you created and joined</small>
+        </button>
+        <button className="rx-menu-card" onClick={onClose}>
+          <span><Rocket size={20} /></span>
+          <strong>New Launches</strong>
+          <small>Explore newly launched space coins</small>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const styles = `
+.rx-space-shell,.rx-space-shell *{box-sizing:border-box}
+.rx-space-shell{
+  position:fixed;inset:0;z-index:700;width:100%;height:100dvh;
+  overflow:hidden;background:#fff;color:#111418;
+  font-family:'Montserrat',sans-serif;overscroll-behavior:none;isolation:isolate
+}
+.rx-space-scroll{
+  position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:none;
+  touch-action:pan-y;scrollbar-width:none;
+  padding:calc(10px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom))
+}
+.rx-space-scroll::-webkit-scrollbar{display:none}
+.rx-space-inner{width:min(100%,480px);margin:0 auto}
+.rx-space-header{
+  height:52px;display:flex;align-items:center;justify-content:center;
+  position:relative;margin-bottom:8px
+}
+.rx-space-header h1{margin:0;font-size:18px;font-weight:800;letter-spacing:-.4px}
+.rx-icon-btn{
+  position:absolute;width:40px;height:40px;border:0;background:transparent;
+  color:#111418;display:grid;place-items:center;padding:0
+}
+.rx-icon-btn.rx-left{left:0}
+.rx-icon-btn.rx-right{right:0}
+
+.rx-space-banner{
+  position:relative;width:100%;overflow:hidden;border-radius:18px;margin-bottom:12px
+}
+.rx-space-banner>img{display:block;width:100%;height:auto;max-width:100%}
+.rx-space-banner-copy{
+  position:absolute;left:7%;top:11%;width:53%;color:#fff;
+  text-shadow:0 2px 8px rgba(0,0,0,.14)
+}
+.rx-space-banner-copy h2{
+  margin:0;font-size:21px;line-height:1.04;font-weight:800;letter-spacing:-.7px
+}
+.rx-space-banner-copy p{margin:9px 0 0;font-size:10.5px;line-height:1.4;font-weight:600}
+.rx-space-banner-copy button{
+  margin-top:12px;height:40px;padding:0 13px;border:1px solid rgba(255,255,255,.7);
+  border-radius:12px;background:rgba(255,255,255,.18);color:#fff;
+  display:inline-flex;align-items:center;gap:8px;font:800 10.5px 'Montserrat',sans-serif;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)
+}
+
+.rx-mode-toggle{
+  height:62px;display:grid;grid-template-columns:1fr 1fr;gap:3px;
+  padding:3px;margin-bottom:14px;border:1px solid #E7E8EA;
+  border-radius:18px;background:#fff;box-shadow:0 3px 12px rgba(20,24,28,.04)
+}
+.rx-mode-toggle button{
+  border:0;background:transparent;border-radius:15px;color:#6E747A;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  font:800 11.5px 'Montserrat',sans-serif
+}
+.rx-mode-toggle button.active{background:#F4D35E;color:#fff;box-shadow:0 4px 12px rgba(244,211,94,.2)}
+.rx-mode-toggle img{width:30px;height:30px;object-fit:contain}
+
+.rx-shortcuts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:22px}
+.rx-shortcuts button{
+  height:66px;border:1px solid #E3E5E7;border-radius:13px;background:#fff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  color:#111418;font:800 8.5px 'Montserrat',sans-serif
+}
+.rx-shortcuts svg{width:19px;height:19px;stroke-width:2.2}
+.rx-shortcuts button:first-child svg,.rx-shortcuts button:nth-child(3) svg,.rx-shortcuts button:nth-child(4) svg{fill:#111418}
+
+.rx-space-section{margin-bottom:22px}
+.rx-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.rx-section-head h2{margin:0;font-size:16px;font-weight:800;letter-spacing:-.3px}
+.rx-section-head button{border:0;background:transparent;color:#C28F18;font:700 11px 'Montserrat',sans-serif}
+.rx-coin-list{overflow:hidden;border:1px solid #E8EAEC;border-radius:15px;background:#fff}
+.rx-coin-row{
+  width:100%;min-height:68px;padding:10px 12px;display:flex;align-items:center;gap:10px;
+  border:0;border-bottom:1px solid #ECEDEF;background:#fff;color:#12151A;text-align:left
+}
+.rx-coin-row:last-child{border-bottom:0}
+.rx-coin-row>img{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none}
+.rx-coin-name{min-width:0;flex:1}
+.rx-coin-name strong,.rx-coin-name small,.rx-coin-value strong,.rx-coin-value small{display:block}
+.rx-coin-name strong{font-size:11px;font-weight:800}
+.rx-coin-name small{margin-top:4px;color:#747A81;font-size:10px;font-weight:600}
+.rx-coin-value{text-align:right}
+.rx-coin-value strong{font-size:11px;font-weight:800}
+.rx-coin-value small{margin-top:4px;color:#43A57C;font-size:10px;font-weight:800}
+
+.rx-trending{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rx-trending button{
+  height:46px;border:1px solid #E8EAEC;border-radius:12px;background:#fff;
+  color:#14171B;font:800 10px 'Montserrat',sans-serif
+}
+.rx-trending b{color:#C28F18;margin-right:5px}
+
+.rx-external-hero{
+  position:relative;min-height:330px;border-radius:20px;
+  background:linear-gradient(145deg,#fffdf2,#fff 60%);
+  border:1px solid #ECEDEE;padding:28px 22px;overflow:hidden
+}
+.rx-external-hero h2{margin:0;font-size:28px;line-height:1.03;font-weight:800}
+.rx-external-hero p{width:58%;margin:12px 0 0;color:#747A80;font-size:12px;line-height:1.5}
+.rx-external-hero>img{
+  position:absolute;width:205px;height:205px;object-fit:contain;right:-12px;bottom:-18px;
+  filter:drop-shadow(0 18px 25px rgba(0,0,0,.12))
+}
+.rx-wallet-card{
+  margin-top:14px;padding:16px;border:1px solid #E7E8EA;border-radius:16px;
+  display:grid;grid-template-columns:48px 1fr;gap:10px;background:#fff
+}
+.rx-wallet-art{width:48px;height:48px;border-radius:14px;background:#F8F8F8;display:grid;place-items:center;overflow:hidden}
+.rx-wallet-art img{width:42px;height:42px;object-fit:contain}
+.rx-wallet-card strong{font-size:12px}
+.rx-wallet-card p{margin:5px 0 0;color:#747A80;font-size:10px;line-height:1.4}
+.rx-wallet-card button{
+  grid-column:1/-1;height:42px;border:0;border-radius:11px;background:#D7A21A;color:#fff;
+  font:800 11px 'Montserrat',sans-serif
+}
+
+.rx-overlay{
+  position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.48);
+  display:flex;align-items:flex-end;justify-content:center
+}
+.rx-sheet{
+  width:min(100%,480px);background:#fff;color:#111418;border-radius:22px 22px 0 0;
+  padding:9px 16px calc(22px + env(safe-area-inset-bottom));max-height:80dvh;overflow:auto
+}
+.rx-sheet-tall{max-height:86dvh}
+.rx-sheet-handle{width:42px;height:4px;border-radius:9px;background:#D8DADC;margin:0 auto 12px}
+.rx-sheet-head{height:38px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.rx-sheet-head h3{margin:0;font-size:16px;font-weight:800}
+.rx-sheet-head button{border:0;background:transparent;color:#111418;padding:5px}
+
+.rx-wallet-row{
+  min-height:58px;border-bottom:1px solid #ECEDEF;display:grid;
+  grid-template-columns:34px 1fr auto;align-items:center;gap:10px
+}
+.rx-wallet-row>span{width:32px;height:32px;border-radius:50%;background:#F4D35E;display:grid;place-items:center;font-weight:800}
+.rx-wallet-row strong{font-size:12px}
+.rx-wallet-row button{border:0;border-radius:9px;background:#F4D35E;color:#fff;padding:9px 11px;font:800 10px 'Montserrat',sans-serif}
+
+.rx-mycoin{
+  display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;
+  padding:12px 0;border-bottom:1px solid #ECEDEF
+}
+.rx-mycoin>img{width:40px;height:40px;border-radius:50%}
+.rx-mycoin strong,.rx-mycoin small,.rx-mycoin span{display:block}
+.rx-mycoin strong{font-size:11px}
+.rx-mycoin small{margin-top:3px;color:#747A80;font-size:9px}
+.rx-mycoin span{margin-top:5px;color:#747A80;font-size:9px}
+.rx-mycoin-price{text-align:right}
+.rx-mycoin-price strong{font-size:10px}
+.rx-mycoin-price small{color:#43A57C;font-weight:800}
+.rx-mycoin-price small.red{color:#D94C4C}
+
+.rx-menu-card{
+  width:100%;text-align:left;border:1px solid #E8EAEC;background:#fff;
+  border-radius:13px;padding:14px;margin:5px 0;display:grid;
+  grid-template-columns:40px 1fr;column-gap:10px
+}
+.rx-menu-card>span{grid-row:span 2;width:40px;height:40px;border-radius:11px;background:#FFF7DA;display:grid;place-items:center;color:#C28F18}
+.rx-menu-card strong{font-size:12px;align-self:end}
+.rx-menu-card small{font-size:9px;color:#747A80;margin-top:4px}
+
+@media(max-width:430px){
+  .rx-space-banner-copy{left:7%;top:10%;width:53%}
+  .rx-space-banner-copy h2{font-size:19px}
+  .rx-space-banner-copy p{font-size:10px}
+  .rx-space-banner-copy button{height:37px;font-size:10px}
+  .rx-mode-toggle{height:60px}
+  .rx-shortcuts{gap:7px}
+  .rx-shortcuts button{height:64px;font-size:8px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .rx-space-shell *{animation:none!important;transition:none!important}
+}
 `;
+
+const createStyles = `
+.rx-create-art{height:265px;position:relative;overflow:hidden;margin-bottom:5px}
+.rx-create-glow{position:absolute;left:50%;bottom:10px;width:70%;height:45%;transform:translateX(-50%);border-radius:50%;background:radial-gradient(circle,rgba(244,211,94,.24),transparent 70%);filter:blur(18px)}
+.rx-platform{position:absolute;left:50%;bottom:-30px;transform:translateX(-50%);width:290px;height:210px;object-fit:contain}
+.rx-orbit{position:absolute;left:50%;top:30px;transform:translateX(-50%);width:220px;height:150px;object-fit:contain;opacity:.9}
+.rx-rocket{position:absolute;right:18px;top:22px;width:95px;height:95px;object-fit:contain;transform:rotate(8deg)}
+.rx-step{text-align:center;color:#747A80;font-size:10px;font-weight:700}
+.rx-progress{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0 18px}
+.rx-progress span{height:4px;border-radius:8px;background:#E7E8EA}
+.rx-progress span.on{background:#F4D35E}
+.rx-upload{
+  border:1px dashed #D8DADC;border-radius:15px;padding:16px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#FAFAFA;cursor:pointer
+}
+.rx-upload input{display:none}
+.rx-upload-circle{
+  width:72px;height:72px;border-radius:50%;display:grid;place-items:center;
+  background:#FFF7DA;color:#D7A21A;overflow:hidden;margin-bottom:8px
+}
+.rx-upload-circle img{width:100%;height:100%;object-fit:cover}
+.rx-upload strong{font-size:12px}
+.rx-upload small{margin-top:4px;color:#747A80;font-size:9px}
+.rx-fields{display:grid;gap:10px;margin-top:14px}
+.rx-fields label{display:grid;gap:5px;color:#535A60;font-size:9px;font-weight:700}
+.rx-fields input,.rx-fields select{
+  width:100%;height:42px;border:1px solid #E4E6E8;border-radius:10px;
+  padding:0 11px;background:#fff;outline:none;color:#111418;
+  font:600 11px 'Montserrat',sans-serif
+}
+.rx-two-fields{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.rx-create-actions{display:flex;gap:9px;margin:16px 0}
+.rx-create-actions button{
+  height:44px;border-radius:11px;font:800 11px 'Montserrat',sans-serif
+}
+.rx-create-actions .primary{flex:1;border:0;background:#D7A21A;color:#fff}
+.rx-create-actions .primary:disabled{opacity:.45}
+.rx-create-actions .secondary{width:90px;border:1px solid #E1E3E5;background:#fff;color:#111418}
+.rx-review{border:1px solid #E7E8EA;border-radius:15px;overflow:hidden}
+.rx-review div{display:flex;justify-content:space-between;gap:15px;padding:12px;border-bottom:1px solid #ECEDEF}
+.rx-review div:last-child{border-bottom:0}
+.rx-review span{color:#747A80;font-size:10px}.rx-review strong{font-size:10px;text-align:right}
+.rx-launched{text-align:center;padding:25px 10px;border:1px solid #E7E8EA;border-radius:16px}
+.rx-launched>svg{color:#43A57C}
+.rx-launched h2{font-size:17px;margin:9px 0 5px}.rx-launched p{font-size:10px;color:#747A80;margin:0}
+`;
+
+export default function SpaceCoinsDashboard({ onBack }) {
+  const [mode, setMode] = useState("space");
+  const [screen, setScreen] = useState("dashboard");
+  const [overlay, setOverlay] = useState(null);
+
+  if (screen === "create") {
+    return <CreateCoin onBack={() => setScreen("dashboard")} />;
+  }
+
+  if (screen === "external") {
+    return (
+      <ExternalCoins
+        setMode={(next) => {
+          setMode(next);
+          if (next === "space") setScreen("dashboard");
+        }}
+        onBack={() => setScreen("dashboard")}
+        onConnect={() => setOverlay("wallet")}
+      />
+    );
+  }
+
+  return (
+    <>
+      <style>{styles}</style>
+      <Dashboard
+        setMode={(next) => {
+          setMode(next);
+          if (next === "external") setScreen("external");
+        }}
+        onCreate={() => setScreen("create")}
+        onMenu={() => setOverlay("menu")}
+        onMyCoins={() => setOverlay("coins")}
+      />
+      {overlay === "wallet" && <WalletSheet onClose={() => setOverlay(null)} />}
+      {overlay === "coins" && <MyCoinsSheet onClose={() => setOverlay(null)} />}
+      {overlay === "menu" && (
+        <MenuSheet
+          onClose={() => setOverlay(null)}
+          onMyCoins={() => setOverlay("coins")}
+        />
+      )}
+    </>
+  );
+}
