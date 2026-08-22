@@ -1,10 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowLeft, ArrowRight, Bell, ChevronDown, Home, Plus, Rocket,
-  ShieldCheck, TrendingUp, WalletCards
-} from "lucide-react";
-import ExternalWalletScreens from "./ExternalWalletScreens";
-
+import { ArrowLeft, ArrowRight, Bell, Menu, Home, Plus, Rocket, ShieldCheck, TrendingUp, WalletCards } from "lucide-react";
+import CoinDashboardScreens from "./CoinDashboardScreens";
 import galaxyDogeImage from "./assets/space-coins-galaxy-doge.jpg";
 import moonCatImage from "./assets/space-coins-moon-cat.jpg";
 import planetPepeImage from "./assets/space-coins-planet-pepe.jpg";
@@ -13,236 +9,48 @@ import orbitArtwork from "./assets/space-coins-orbit.png";
 import platformArtwork from "./assets/space-coins-platform.png";
 import coinArtwork from "./assets/space-coins-coin.png";
 import externalBanner from "./assets/space-coins-external-banner.png";
+import walletSecurityArtwork from "./assets/space-coins-wallet-3d.png";
 
-const REAL_FLAME_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_3BHloZy6zhOMmqbVkiEIfVkbiDF/hf_20260821_145856_91a13b8e-c366-4951-be01-e7f1846cbbc6.mp4";
-const REAL_CLOUD_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_3BHloZy6zhOMmqbVkiDF/hf_20260821_153425_e7dbe97e-35f8-4ada-80e3-d11209f83006.mp4";
-
-const COINS = [
-  { name:"GALAXY DOGE", ticker:"GDOGE", price:"$0.000245", change:"+23.14%", image:galaxyDogeImage },
-  { name:"MOON CAT", ticker:"MCAT", price:"$0.000182", change:"+12.08%", image:moonCatImage },
-  { name:"PLANET PEPE", ticker:"PPEPE", price:"$0.000092", change:"+8.19%", image:planetPepeImage },
+const GOLD="#D7A21A", PALE_GOLD="#F4D35E", INK="#111418", MUTED="#747A80", BORDER="#E7E8EA", ASH="#F4F4F5", GREEN="#43A57C";
+const COINS=[
+ {name:"GALAXY DOGE",ticker:"GDOGE",price:"$0.000245",change:"+23.14%",image:galaxyDogeImage},
+ {name:"MOON CAT",ticker:"MCAT",price:"$0.000182",change:"+12.08%",image:moonCatImage},
+ {name:"PLANET PEPE",ticker:"PPEPE",price:"$0.000092",change:"+8.19%",image:planetPepeImage},
 ];
 
-function stopPull(e){ e.stopPropagation(); }
+function stop(e){e.stopPropagation()}
+function useSwipe(onLeft,onRight){const s=useRef(null);return {onTouchStart:e=>{stop(e);const t=e.touches[0];s.current={x:t.clientX,y:t.clientY}},onTouchEnd:e=>{stop(e);if(!s.current)return;const t=e.changedTouches[0],dx=t.clientX-s.current.x,dy=Math.abs(t.clientY-s.current.y);s.current=null;if(Math.abs(dx)>60&&dy<100)(dx<0?onLeft:onRight)?.()},onTouchCancel:()=>{s.current=null}}}
+function Sheet({children,onClose,initial="half",title}){const [full,setFull]=useState(initial==="full"), start=useRef(null);return <div className="sheet-backdrop" onClick={onClose}><div className={`sheet ${full?"full":"half"}`} onClick={e=>e.stopPropagation()} onTouchStart={e=>{e.stopPropagation();const t=e.touches[0];start.current=t.clientY}} onTouchEnd={e=>{e.stopPropagation();if(start.current==null)return;const y=e.changedTouches[0].clientY;const dy=y-start.current;start.current=null;if(dy<-45)setFull(true);if(dy>45&&full)setFull(false)}}><div className="sheet-handle"/><div className="sheet-head">{title&&<h3>{title}</h3>}<button onClick={onClose} aria-label="Close">×</button></div>{children}</div></div>}
 
-function NativePage({children,className=""}){
-  return (
-    <main className={`sc2-page ${className}`} onTouchStart={stopPull} onTouchMove={stopPull} onTouchEnd={stopPull} onTouchCancel={stopPull}>
-      {children}
-    </main>
-  );
-}
+function TopMenuSheet({onClose,onCoinDashboard}){return <Sheet onClose={onClose} title="Space Coins"><div className="menu-cards"><button onClick={onCoinDashboard} className="menu-card"><span className="menu-card-icon">◈</span><strong>Coin Dashboard</strong><small>Manage and monitor your launched coin</small></button><button className="menu-card"><span className="menu-card-icon">◉</span><strong>Space Wallet</strong><small>Wallet tools coming next</small></button></div></Sheet>}
 
-function useEdgeBack(onBack){
-  const ref=useRef(null);
-  return {
-    onTouchStart:e=>{stopPull(e);const t=e.touches[0];ref.current=t.clientX<28?{x:t.clientX,y:t.clientY}:null;},
-    onTouchEnd:e=>{stopPull(e);if(!ref.current)return;const t=e.changedTouches[0];const dx=t.clientX-ref.current.x;const dy=Math.abs(t.clientY-ref.current.y);ref.current=null;if(dx>48&&dy<90)onBack?.();},
-    onTouchCancel:e=>{stopPull(e);ref.current=null;}
-  };
-}
+function SpaceToggle({active,onSpace,onExternal}){return <div className="space-toggle"><button className={active==="space"?"active":""} onClick={onSpace}><img src={coinArtwork} alt=""/><span>Space Coins</span></button><button className={active==="external"?"active":""} onClick={onExternal}><img src={coinArtwork} alt=""/><span>External Coins</span></button></div>}
 
-function SpaceCoinToggle({active,onSpace,onExternal}){
-  return (
-    <div className="sc2-toggle" role="tablist" aria-label="Coin type">
-      <button type="button" className={`sc2-toggle-btn ${active==="space"?"active":""}`} onClick={onSpace}>
-        <img src={coinArtwork} alt="" />
-        <span>Space Coins</span>
-      </button>
-      <button type="button" className={`sc2-toggle-btn ${active==="external"?"active":""}`} onClick={onExternal}>
-        <img src={coinArtwork} alt="" />
-        <span>External Coins</span>
-      </button>
-    </div>
-  );
-}
+function Banner({onCreate}){return <section className="sc-banner"><img src={externalBanner} alt=""/><div className="sc-banner-copy"><h2>Create Your<br/>Space Coin</h2><p>Launch your own mini meme coin<br/>in just a few steps.</p><button onClick={onCreate}><span>Create Coin</span><ArrowRight size={17}/></button></div></section>}
+function Shortcuts(){const items=[[ShieldCheck,"Top Tokens"],[TrendingUp,"Trending"],[Rocket,"New Launches"],[WalletCards,"My Coins"]];return <div className="sc-shortcuts">{items.map(([Icon,label])=><button key={label}><Icon/><span>{label}</span></button>)}</div>}
 
-function Banner({onCreate}){
-  return (
-    <section className="sc2-banner">
-      <img className="sc2-banner-image" src={externalBanner} alt="" draggable="false" />
-      <div className="sc2-banner-copy">
-        <h2>Create Your<br/>Space Coin</h2>
-        <p>Launch your own mini meme coin<br/>in just a few steps.</p>
-        <button type="button" className="sc2-banner-create" onClick={onCreate}>
-          <span>Create Coin</span><ArrowRight size={18} strokeWidth={2.4}/>
-        </button>
-      </div>
-    </section>
-  );
-}
+function SpaceDashboard({onCreate,onExternal,onMenu,onSeeAll}){const swipe=useSwipe(onExternal,null);return <div className="sc-scroll" {...swipe}><div className="sc-inner"><header className="sc-header"><button className="sc-menu" onClick={onMenu} aria-label="More"><Menu size={27}/></button></header><Banner onCreate={onCreate}/><SpaceToggle active="space" onSpace={()=>{}} onExternal={onExternal}/><Shortcuts/><div className="section-head"><h2>Top Space Coins</h2><button onClick={onSeeAll}>See All</button></div><div className="coin-table">{COINS.map(c=><div className="coin-row" key={c.ticker}><img src={c.image} alt=""/><div className="coin-name"><strong>{c.name}</strong><small>{c.ticker}</small></div><div className="coin-value"><strong>{c.price}</strong><span>{c.change}</span></div></div>)}</div><div className="section-head trending-head"><h2>Trending</h2><button>View All</button></div><div className="trend-row">{["STARINU","COSMO","MOONME"].map((n,i)=><div key={n}>#{i+1} {n}</div>)}</div></div></div>}
 
-function Shortcuts(){
-  const items=[[ShieldCheck,"Top Tokens"],[TrendingUp,"Trending"],[Rocket,"New Launches"],[WalletCards,"My Coins"]];
-  return (
-    <nav className="sc2-shortcuts">
-      {items.map(([Icon,label])=>(
-        <button type="button" className="sc2-shortcut" key={label}>
-          <Icon/><span>{label}</span>
-        </button>
-      ))}
-    </nav>
-  );
-}
+function ExternalCoinsView({onBack,onConnect,onSpace}){const swipe=useSwipe(null,onSpace);return <div className="sc-scroll" {...swipe}><div className="sc-inner"><div className="ext-header"><button onClick={onBack}><ArrowLeft size={25}/></button><h1>Space Coins</h1></div><SpaceToggle active="external" onSpace={onSpace} onExternal={()=>{}}/><h2 className="ext-title">Explore<br/>External Coins</h2><p className="ext-copy">Trade popular coins from across<br/>the universe.</p><div className="ext-art"><img src={coinArtwork} alt=""/></div><div className="ext-wallet-card"><div className="wallet-icon"><img src={walletSecurityArtwork} alt=""/></div><div><strong>Connect External Wallet</strong><p>Connect your external wallet to trade external coins. Your funds stay in your wallet.</p></div><button onClick={onConnect}>Connect Wallet</button></div></div></div>}
 
-function Dashboard({onCreate,onExternal}){
-  return (
-    <NativePage className="sc2-dashboard">
-      <style>{`
-        .sc2-page,.sc2-page *{box-sizing:border-box}
-        .sc2-page{position:fixed;inset:0;z-index:700;width:100%;height:100dvh;overflow:hidden;background:#fff;color:#111418;font-family:'Montserrat',sans-serif;overscroll-behavior:none;isolation:isolate}
-        .sc2-scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:none;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-width:none;padding:calc(10px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}
-        .sc2-scroll::-webkit-scrollbar{display:none}
-        .sc2-inner{width:min(100%,480px);margin:0 auto}
-        .sc2-header{height:48px;display:flex;align-items:center;justify-content:flex-end;margin-bottom:12px}
-        .sc2-bell{width:38px;height:38px;border:0;background:transparent;color:#111418;display:grid;place-items:center;padding:0}
-        .sc2-banner{position:relative;width:100%;margin:0 0 8px;overflow:hidden}
-        .sc2-banner-image{display:block;width:100%;height:auto;max-width:100%;object-fit:contain}
-        .sc2-banner-copy{position:absolute;left:6%;top:11%;width:48%;z-index:2;color:#fff}
-        .sc2-banner-copy h2{margin:0;font-size:20px;line-height:1.05;font-weight:800;letter-spacing:-.7px;text-shadow:0 2px 8px rgba(0,0,0,.14)}
-        .sc2-banner-copy p{margin:9px 0 0;font-size:11px;line-height:1.4;font-weight:600;text-shadow:0 2px 7px rgba(0,0,0,.14)}
-        .sc2-banner-create{margin-top:12px;height:40px;padding:0 14px;border:1px solid rgba(255,255,255,.72);border-radius:13px;background:rgba(255,255,255,.20);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;display:inline-flex;align-items:center;gap:9px;font:800 11px 'Montserrat',sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.65),0 5px 14px rgba(0,0,0,.10)}
-        .sc2-toggle{display:grid;grid-template-columns:1fr 1fr;gap:3px;width:100%;height:62px;padding:3px;margin:4px 0 12px;border:1px solid #E7E8EA;border-radius:18px;background:#fff;box-shadow:0 3px 12px rgba(20,24,28,.04)}
-        .sc2-toggle-btn{border:0;border-radius:15px;background:transparent;color:#6E747A;display:flex;align-items:center;justify-content:center;gap:9px;font:800 12px 'Montserrat',sans-serif;min-width:0}
-        .sc2-toggle-btn img{width:32px;height:32px;object-fit:contain;flex:0 0 auto}
-        .sc2-toggle-btn.active{background:#F4D35E;color:#fff;box-shadow:0 4px 12px rgba(244,211,94,.22)}
-        .sc2-shortcuts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 22px}
-        .sc2-shortcut{min-width:0;height:68px;padding:7px 3px;border:1px solid #E3E5E7;border-radius:13px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#111418;font:800 9px 'Montserrat',sans-serif;box-shadow:0 1px 5px rgba(20,24,28,.025);text-align:center}
-        .sc2-shortcut svg{width:19px;height:19px;stroke-width:2.2;color:#111418;fill:#111418}
-        .sc2-shortcut:nth-child(2) svg{fill:none}
-        .sc2-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
-        .sc2-section-title{margin:0;font-size:16px;line-height:1;font-weight:800;letter-spacing:-.35px}
-        .sc2-view{border:0;background:transparent;color:#C28F18;padding:4px 0;font:700 11px 'Montserrat',sans-serif}
-        .sc2-coins{overflow:hidden;border:1px solid #E8EAEC;border-radius:15px;background:#fff;box-shadow:0 1px 5px rgba(20,24,28,.025);margin-bottom:23px}
-        .sc2-coin-row{width:100%;min-height:68px;padding:10px 12px;display:flex;align-items:center;gap:10px;border:0;border-bottom:1px solid #ECEDEF;background:#fff;color:#12151A;text-align:left}
-        .sc2-coin-row:last-child{border-bottom:0}
-        .sc2-coin-img{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:0 0 auto}
-        .sc2-coin-name{min-width:0;flex:1}.sc2-coin-name strong{display:block;font-size:11px;line-height:1.2;font-weight:800}.sc2-coin-name small{display:block;margin-top:4px;color:#747A81;font-size:10px;font-weight:600}
-        .sc2-value{text-align:right;flex:0 0 auto}.sc2-price{display:block;font-size:11px;font-weight:800}.sc2-change{display:block;margin-top:4px;color:#43A57C;font-size:10px;font-weight:800}
-        .sc2-trending{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-bottom:4px}.sc2-trend{height:46px;border:1px solid #E8EAEC;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;gap:5px;color:#14171B;font:800 10px 'Montserrat',sans-serif}.sc2-rank{color:#C28F18}
-        @media(max-width:430px){.sc2-scroll{padding-left:16px;padding-right:16px}.sc2-banner-copy{left:7%;top:11%;width:48%}.sc2-banner-copy h2{font-size:19px}.sc2-banner-copy p{font-size:10px}.sc2-banner-create{height:38px;font-size:10px}.sc2-toggle{height:60px}.sc2-toggle-btn{font-size:11px}.sc2-toggle-btn img{width:29px;height:29px}.sc2-shortcuts{gap:7px}.sc2-shortcut{height:66px;font-size:8px}.sc2-shortcut svg{width:18px;height:18px}}
-        @media(prefers-reduced-motion:reduce){.sc2-page *{animation:none!important}}
-      `}</style>
-      <div className="sc2-scroll">
-        <div className="sc2-inner">
-          <header className="sc2-header"><button type="button" className="sc2-bell" aria-label="Notifications"><Bell size={24} strokeWidth={1.8}/></button></header>
-          <Banner onCreate={onCreate}/>
-          <SpaceCoinToggle active="space" onSpace={()=>{}} onExternal={onExternal}/>
-          <Shortcuts/>
-          <section>
-            <div className="sc2-section-head"><h2 className="sc2-section-title">Top Space Coins</h2><button className="sc2-view">View All</button></div>
-            <div className="sc2-coins">
-              {COINS.map(c=>(
-                <button type="button" className="sc2-coin-row" key={c.ticker}>
-                  <img className="sc2-coin-img" src={c.image} alt="" />
-                  <span className="sc2-coin-name"><strong>{c.name}</strong><small>{c.ticker}</small></span>
-                  <span className="sc2-value"><span className="sc2-price">{c.price}</span><span className="sc2-change">{c.change}</span></span>
-                </button>
-              ))}
-            </div>
-          </section>
-          <section>
-            <div className="sc2-section-head"><h2 className="sc2-section-title">Trending</h2><button className="sc2-view">View All</button></div>
-            <div className="sc2-trending">{["STARINU","COSMO","MOONME"].map((n,i)=><button className="sc2-trend" key={n}><span className="sc2-rank">#{i+1}</span>{n}</button>)}</div>
-          </section>
-        </div>
-      </div>
-    </NativePage>
-  );
-}
+function MySpaceCoinsSheet({onClose}){return <Sheet onClose={onClose} initial="half" title="My Space Coins"><div className="sheet-tabs"><button className="active">Created</button><button>Participated</button></div><div className="mycoins-list">{[["STAR DOGE","SDOGE","$0.00241","+18.27%","$2.41M","2,845","$184K"],["COSMO CAT","CCAT","$0.00102","+11.09%","$1.02M","1,256","$96K"],["MOON PEPE","MPEPE","$0.00081","-3.21%","$810K","985","$48K"]].map(r=><div className="mycoin-card" key={r[1]}><div className="avatar">●</div><div className="mycoin-main"><strong>{r[0]}</strong><small>{r[1]}</small><div className="mycoin-stats"><span>Market Cap<strong>{r[4]}</strong></span><span>Holders<strong>{r[5]}</strong></span><span>Liquidity<strong>{r[6]}</strong></span></div></div><div className="mycoin-price"><strong>{r[2]}</strong><span className={r[3].startsWith("-")?"red":"green"}>{r[3]}</span></div></div>)}</div></Sheet>}
 
-function Field({label,value,onChange,placeholder}){
-  return <label className="sc3-field"><span>{label}</span><input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/></label>;
-}
+function WalletSheet({onClose}){return <Sheet onClose={onClose} initial="half" title="Connect Wallet"><div className="wallet-sheet-list">{[["🦊","MetaMask"],["🔷","Trust Wallet"],["◉","Phantom"],["◉","Coinbase Wallet"],["≋","WalletConnect"]].map(w=><div className="wallet-sheet-row" key={w[1]}><span>{w[0]}</span><strong>{w[1]}</strong><button>Connect</button></div>)}</div></Sheet>}
 
-function CreateForm({onBack}){
-  const [step,setStep]=useState(1);
-  const [logo,setLogo]=useState(null);
-  const [form,setForm]=useState({name:"",symbol:"",description:"",supply:"1,000,000,000",network:"Solana"});
-  const logoUrl=useMemo(()=>logo?URL.createObjectURL(logo):null,[logo]);
-  useEffect(()=>()=>{if(logoUrl)URL.revokeObjectURL(logoUrl)},[logoUrl]);
-  const valid=form.name.trim().length>=2&&/^[A-Za-z0-9]{2,10}$/.test(form.symbol.trim());
-  const edge=useEdgeBack(onBack);
+function CreateForm({onBack}){const [step,setStep]=useState(1);const [form,setForm]=useState({name:"",symbol:"",description:"",supply:"1,000,000,000",network:"Solana"});const [logo,setLogo]=useState(null);const valid=form.name.trim().length>=2&&/^[A-Za-z0-9]{2,10}$/.test(form.symbol.trim());const logoUrl=useMemo(()=>logo?URL.createObjectURL(logo):null,[logo]);useEffect(()=>()=>{if(logoUrl)URL.revokeObjectURL(logoUrl)},[logoUrl]);const swipe=useSwipe(null,onBack);return <div className="create-scroll" {...swipe}><div className="create-inner"><div className="create-head"><button onClick={onBack}><ArrowLeft size={25}/></button><h1>Create Your Space Coin</h1></div><div className="create-stage"><video className="create-cloud" src="https://d8j0ntlcm91z4.cloudfront.net/user_3BHloZy6zhOMmqbVkiDF/hf_20260821_153425_e7dbe97e-35f8-4ada-80e3-d11209f83006.mp4" autoPlay muted loop playsInline preload="auto"/><img src={platformArtwork} className="create-platform" alt=""/><img src={coinArtwork} className="side side-left" alt=""/><img src={coinArtwork} className="side side-right" alt=""/><img src={orbitArtwork} className="side-star" alt=""/><img src={rocketArtwork} className="create-rocket" alt=""/></div><div className="step-label">Step {step} of 4</div><div className="steps">{[1,2,3,4].map(i=><span className={step>=i?"on":""} key={i}/>)}</div>{step===1&&<><label className="upload"><input type="file" accept="image/png,image/jpeg" onChange={e=>setLogo(e.target.files?.[0]||null)}/><div className="upload-circle">{logo?<img src={logoUrl} alt=""/>:<Plus size={34}/>}</div><strong>Upload Coin Logo</strong><small>PNG, JPG (Max. 5MB)</small></label><div className="fields"><label>Coin Name<input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Enter coin name"/></label><label>Symbol<input value={form.symbol} onChange={e=>setForm({...form,symbol:e.target.value})} placeholder="Enter symbol (e.g. RXDOG)"/></label><label>Description<input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder="Tell the world about your coin"/></label><div className="two"><label>Total Supply<input value={form.supply} onChange={e=>setForm({...form,supply:e.target.value})}/></label><label>Network<select value={form.network} onChange={e=>setForm({...form,network:e.target.value})}><option>Solana</option><option>Ethereum</option><option>Base</option></select></label></div></div></>}{step>1&&<div className="review"><div><span>Coin</span><strong>{form.name||"Your Space Coin"}</strong></div><div><span>Symbol</span><strong>{form.symbol||"—"}</strong></div><div><span>Description</span><strong>{form.description||"—"}</strong></div><div><span>Total Supply</span><strong>{form.supply}</strong></div><div><span>Network</span><strong>{form.network}</strong></div></div>}<div className="create-actions">{step>1&&<button className="back-btn" onClick={()=>setStep(s=>s-1)}>Back</button>}{step<4?<button className="next-btn" disabled={step===1&&!valid} onClick={()=>setStep(s=>s+1)}>Next Step <ArrowRight size={18}/></button>:<button className="next-btn" onClick={()=>setStep(5)}>Launch Coin <Rocket size={18}/></button>}</div>{step===5&&<div className="launched"><img src={rocketArtwork} alt=""/><h2>Your Space Coin is launched!</h2><p>Your launch flow is complete.</p></div>}</div></div>}
 
-  return (
-    <NativePage className="sc3-create">
-      <style>{`
-        .sc3-create{background:#fff}
-        .sc3-create.sc2-page{position:fixed;inset:0;z-index:700;width:100%;height:100dvh;min-height:100dvh;overflow:hidden;background:#fff;color:#111418;font-family:'Montserrat',sans-serif;overscroll-behavior:none;isolation:isolate}
-        .sc3-scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:none;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-width:none;padding:calc(8px + env(safe-area-inset-top)) 18px calc(30px + env(safe-area-inset-bottom))}
-        .sc3-scroll::-webkit-scrollbar{display:none}
-        .sc3-inner{width:min(100%,480px);margin:0 auto}
-        .sc3-header{height:52px;display:flex;align-items:center;justify-content:center;position:relative}
-        .sc3-back{position:absolute;left:-4px;width:40px;height:40px;border:0;background:transparent;color:#15181C;display:grid;place-items:center;padding:0}
-        .sc3-title{margin:0;font-size:18px;line-height:1;font-weight:800;letter-spacing:-.45px}
-        .sc3-stage{height:300px;position:relative;overflow:hidden;margin-top:2px}
-        .sc3-stage-glow{position:absolute;left:50%;bottom:28px;width:70%;height:42%;transform:translateX(-50%);border-radius:50%;background:radial-gradient(circle,rgba(244,211,94,.22),transparent 70%);filter:blur(17px)}
-        .sc3-platform{position:absolute;z-index:1;left:50%;bottom:-28px;width:300px;height:220px;transform:translateX(-50%);object-fit:contain;filter:drop-shadow(0 12px 12px rgba(160,110,10,.12))}
-        .sc3-cloud-video{position:absolute;z-index:2;left:50%;bottom:8px;width:320px;height:174px;transform:translateX(-50%);object-fit:cover;mix-blend-mode:screen;filter:brightness(1.08) contrast(.9);opacity:.96;pointer-events:none;mask-image:radial-gradient(ellipse at center,black 55%,transparent 100%);-webkit-mask-image:radial-gradient(ellipse at center,black 55%,transparent 100%)}
-        .sc3-rocket{position:absolute;z-index:5;left:50%;top:25px;width:120px;height:120px;transform:translateX(-50%);object-fit:contain;pointer-events:none;filter:drop-shadow(0 12px 10px rgba(0,0,0,.10));animation:sc3-float 2.8s ease-in-out infinite}
-        .sc3-flame-video{position:absolute;z-index:4;left:50%;top:140px;width:60px;height:112px;transform:translateX(-50%);object-fit:cover;mix-blend-mode:screen;filter:brightness(1.15) saturate(1.08);opacity:.99;pointer-events:none;mask-image:radial-gradient(ellipse at center,black 42%,transparent 80%);-webkit-mask-image:radial-gradient(ellipse at center,black 42%,transparent 80%)}
-        .sc3-side-coin{position:absolute;z-index:7;top:116px;width:29px;height:29px;object-fit:contain;filter:drop-shadow(0 7px 7px rgba(198,145,18,.16));animation:sc3-side-float 3.2s ease-in-out infinite}
-        .sc3-side-left{left:calc(50% - 106px)}.sc3-side-right{right:calc(50% - 106px);animation-delay:-1.6s}
-        .sc3-side-art{position:absolute;z-index:3;right:calc(50% - 106px);top:99px;width:82px;height:82px;object-fit:contain;opacity:.98;filter:drop-shadow(0 7px 7px rgba(198,145,18,.14))}
-        .sc3-progress-label{text-align:center;color:#70757B;font-size:13px;font-weight:600}
-        .sc3-progress{display:grid;grid-template-columns:repeat(4,1fr);margin:12px 8px 24px}.sc3-progress span{height:4px;background:#E8EAED;position:relative}.sc3-progress span.active{background:#F4D35E}.sc3-progress i{position:absolute;left:0;top:50%;width:8px;height:8px;transform:translate(-50%,-50%);border-radius:50%;background:#E6E8EB}.sc3-progress span.active i{background:#F4D35E}.sc3-progress span:last-child i{left:auto;right:0;transform:translate(50%,-50%)}
-        .sc3-upload{width:160px;margin:0 auto 27px;text-align:center}.sc3-upload-circle{width:92px;height:92px;margin:0 auto;border:2px dashed #F4D35E;border-radius:50%;display:grid;place-items:center;color:#D6A21C;background:#FFFDF7;overflow:hidden}.sc3-preview{width:100%;height:100%;object-fit:cover}.sc3-upload-title{margin-top:11px;font-size:15px;font-weight:800}.sc3-upload-sub{margin-top:5px;color:#92969B;font-size:11px;font-weight:500}
-        .sc3-fields{display:grid;gap:13px}.sc3-field span{display:block;margin:0 0 6px 2px;color:#7A7F85;font-size:11px;font-weight:600}.sc3-field input,.sc3-field select{width:100%;height:50px;border:1px solid #E6E8EA;border-radius:12px;background:#fff;color:#171A1E;outline:none;padding:0 15px;font:600 13px 'Montserrat',sans-serif;box-shadow:0 1px 4px rgba(20,24,28,.025)}.sc3-field input::placeholder{color:#B0B4B8;font-weight:500}.sc3-select{appearance:none;padding-right:38px!important}.sc3-select-wrap{position:relative}.sc3-chevron{position:absolute;right:13px;top:50%;transform:translateY(-50%);pointer-events:none}.sc3-two{display:grid;grid-template-columns:1fr 1fr;gap:13px}
-        .sc3-actions{display:flex;gap:10px;margin-top:14px}.sc3-btn{height:52px;border:0;border-radius:13px;font:800 14px 'Montserrat',sans-serif;display:flex;align-items:center;justify-content:center;gap:10px}.sc3-next,.sc3-launch{flex:1;background:#F4D35E;color:#fff;box-shadow:0 7px 18px rgba(244,211,94,.15)}.sc3-back-btn{flex:0 0 100px;background:#F5F6F7;color:#111418}
-        .sc3-review{border:1px solid #E7E9EB;border-radius:15px;padding:15px;display:grid;gap:11px;margin-bottom:16px}.sc3-review-row{display:flex;justify-content:space-between;gap:12px;font-size:12px}.sc3-review-row span{color:#737A80}.sc3-review-row strong{text-align:right;max-width:60%;word-break:break-word}.sc3-check{display:flex;gap:9px;align-items:flex-start;border:1px solid #E7E9EB;border-radius:12px;padding:12px;font-size:12px;line-height:1.45}
-        .sc3-success{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}.sc3-success img{width:220px;max-width:75%;animation:sc3-launch 1.8s cubic-bezier(.18,.76,.25,1) both}.sc3-success h1{font-size:25px;margin:18px 0 0}.sc3-success p{font-size:14px;color:#737A80;line-height:1.5}.sc3-success button{margin-top:22px;height:50px;padding:0 22px;border:0;border-radius:25px;background:#F4D35E;color:#fff;font:800 13px 'Montserrat',sans-serif}
-        @keyframes sc3-side-float{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-6px) rotate(3deg)}}@keyframes sc3-float{0%,100%{transform:translateX(-50%) translateY(0) rotate(-.3deg)}50%{transform:translateX(-50%) translateY(-5px) rotate(.3deg)}}@keyframes sc3-launch{0%{transform:translateY(100px);opacity:0}20%{opacity:1}100%{transform:translateY(-70px);opacity:1}}
-        @media(max-width:430px){.sc3-scroll{padding-left:18px;padding-right:18px}.sc3-stage{height:300px}.sc3-platform{width:300px;height:215px}.sc3-rocket{width:120px;height:120px;top:25px}.sc3-flame-video{top:140px;width:60px;height:112px}.sc3-cloud-video{width:320px;height:174px}.sc3-side-coin{width:29px;height:29px}.sc3-side-left{left:calc(50% - 106px)}.sc3-side-right{right:calc(50% - 106px)}.sc3-side-art{right:calc(50% - 106px);top:99px;width:82px;height:82px}.sc3-two{grid-template-columns:1fr}}
-        @media(prefers-reduced-motion:reduce){.sc3-create *{animation:none!important}}
-      `}</style>
-      <div className="sc3-scroll" {...edge}>
-        <div className="sc3-inner">
-          <header className="sc3-header"><button type="button" className="sc3-back" onClick={onBack}><ArrowLeft size={24} strokeWidth={1.9}/></button><h1 className="sc3-title">Create Your Space Coin</h1></header>
-          <section className="sc3-stage" aria-hidden="true">
-            <div className="sc3-stage-glow"/>
-            <video className="sc3-cloud-video" src={REAL_CLOUD_VIDEO} autoPlay muted loop playsInline preload="auto"/>
-            <img src={platformArtwork} className="sc3-platform" alt="" draggable="false"/>
-            <img src={coinArtwork} className="sc3-side-coin sc3-side-left" alt="" draggable="false"/>
-            <img src={coinArtwork} className="sc3-side-coin sc3-side-right" alt="" draggable="false"/>
-            <img src={orbitArtwork} className="sc3-side-art" alt="" draggable="false"/>
-            <video className="sc3-flame-video" src={REAL_FLAME_VIDEO} autoPlay muted loop playsInline preload="auto"/>
-            <img src={rocketArtwork} className="sc3-rocket" alt="" draggable="false"/>
-          </section>
-          <div className="sc3-progress-label">Step {step} of 4</div>
-          <div className="sc3-progress">{[0,1,2,3].map(i=><span key={i} className={step>=i+1?"active":""}><i/></span>)}</div>
-          {step===1&&<>
-            <div className="sc3-upload">
-              <label className="sc3-upload-circle" htmlFor="sc3-logo">{logo?<img src={logoUrl} className="sc3-preview" alt=""/>:<Plus size={30} strokeWidth={1.7}/>}</label>
-              <input id="sc3-logo" type="file" accept="image/png,image/jpeg" hidden onChange={e=>{const f=e.target.files?.[0];if(f)setLogo(f)}}/>
-              <div className="sc3-upload-title">Upload Coin Logo</div><div className="sc3-upload-sub">PNG, JPG (Max. 5MB)</div>
-            </div>
-            <div className="sc3-fields">
-              <Field label="Coin Name" value={form.name} onChange={v=>setForm(f=>({...f,name:v}))} placeholder="Enter coin name"/>
-              <Field label="Symbol" value={form.symbol} onChange={v=>setForm(f=>({...f,symbol:v}))} placeholder="Enter symbol (e.g. RXDOG)"/>
-              <Field label="Description" value={form.description} onChange={v=>setForm(f=>({...f,description:v}))} placeholder="Tell the world about your coin"/>
-              <div className="sc3-two">
-                <Field label="Total Supply" value={form.supply} onChange={v=>setForm(f=>({...f,supply:v}))} placeholder="1,000,000,000"/>
-                <label className="sc3-field"><span>Network</span><div className="sc3-select-wrap"><select className="sc3-select" value={form.network} onChange={e=>setForm(f=>({...f,network:e.target.value}))}><option>Solana</option><option>Ethereum</option><option>Base</option></select><ChevronDown className="sc3-chevron" size={18}/></div></label>
-              </div>
-            </div>
-          </>}
-          {step===2&&<div className="sc3-review"><div className="sc3-review-row"><span>Coin</span><strong>{form.name||"Your Space Coin"}</strong></div><div className="sc3-review-row"><span>Symbol</span><strong>{form.symbol||"—"}</strong></div><div className="sc3-review-row"><span>Network</span><strong>{form.network}</strong></div></div>}
-          {step===3&&<><div className="sc3-review"><div className="sc3-review-row"><span>Description</span><strong>{form.description||"—"}</strong></div><div className="sc3-review-row"><span>Total Supply</span><strong>{form.supply}</strong></div><div className="sc3-review-row"><span>Network</span><strong>{form.network}</strong></div></div><label className="sc3-check"><input type="checkbox"/>I confirm the launch details are correct.</label></>}
-          {step===4&&<div className="sc3-review"><div className="sc3-review-row"><span>Status</span><strong>Ready to launch</strong></div><div className="sc3-review-row"><span>Coin</span><strong>{form.name||"Your Space Coin"}</strong></div></div>}
-          <div className="sc3-actions">
-            {step>1&&<button type="button" className="sc3-btn sc3-back-btn" onClick={()=>setStep(s=>s-1)}>Back</button>}
-            {step<4?<button type="button" className="sc3-btn sc3-next" onClick={()=>{if(step===1&&!valid)return;setStep(s=>s+1)}}>Next Step <ArrowRight size={19}/></button>:<button type="button" className="sc3-btn sc3-launch" onClick={()=>setStep(5)}>Launch Coin <Rocket size={18}/></button>}
-          </div>
-          {step===5&&<div className="sc3-success"><img src={rocketArtwork} alt=""/><h1>Your Space Coin is launched!</h1><p>Your launch flow is complete.</p><button type="button" onClick={onBack}>Back to Space Coins</button></div>}
-        </div>
-      </div>
-    </NativePage>
-  );
-}
+export default function SpaceCoinsDashboard({onBack}){const [mode,setMode]=useState("space");const [overlay,setOverlay]=useState(null);const [create,setCreate]=useState(false);if(create)return <div className="sc-root"><style>{styles}</style><CreateForm onBack={()=>setCreate(false)}/></div>;return <div className="sc-root"><style>{styles}</style><div className="mode-viewport"><div className="mode-track" style={{transform:`translateX(${mode==="space"?0:-50}%)`}}><div className="mode-panel"><SpaceDashboard onCreate={()=>setCreate(true)} onExternal={()=>setMode("external")} onMenu={()=>setOverlay("menu")} onSeeAll={()=>setOverlay("see-all")}/></div><div className="mode-panel"><ExternalCoinsView onBack={()=>setMode("space")} onConnect={()=>setOverlay("wallet")} onSpace={()=>setMode("space")}/></div></div></div>{overlay==="menu"&&<TopMenuSheet onClose={()=>setOverlay(null)} onCoinDashboard={()=>setOverlay("coin-dashboard")}/>} {overlay==="see-all"&&<MySpaceCoinsSheet onClose={()=>setOverlay(null)}/>} {overlay==="wallet"&&<WalletSheet onClose={()=>setOverlay(null)}/>} {overlay==="coin-dashboard"&&<CoinDashboardScreens onBack={()=>setOverlay("menu")}/>}</div>}
 
-export default function SpaceCoinsDashboard({onBack}){
-  const [view,setView]=useState("dashboard");
-  if(view==="external") return <ExternalWalletScreens initialScreen="external" onBack={()=>setView("dashboard")}/>;
-  if(view==="create") return <CreateForm onBack={()=>setView("dashboard")}/>;
-  return <Dashboard onCreate={()=>setView("create")} onExternal={()=>setView("external")}/>;
-}
+const styles=`
+.sc-root,.sc-root *{box-sizing:border-box}.sc-root{position:fixed;inset:0;z-index:700;background:#fff;color:${INK};font-family:'Montserrat',sans-serif;overflow:hidden;overscroll-behavior:none}
+.mode-viewport{position:absolute;inset:0;overflow:hidden}.mode-track{width:200%;height:100%;display:flex;transition:transform .32s cubic-bezier(.22,.61,.36,1);will-change:transform}.mode-panel{width:50%;height:100%;flex:0 0 50%;position:relative}.sc-scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:none;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-width:none;padding:calc(10px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}.sc-scroll::-webkit-scrollbar{display:none}.sc-inner{width:min(100%,480px);margin:0 auto}
+.sc-header{height:58px;display:flex;justify-content:flex-end;align-items:center}.sc-menu{width:42px;height:42px;border:0;background:transparent;color:${INK};display:grid;place-items:center}
+.sc-banner{position:relative;width:100%;margin:0 0 18px;overflow:hidden;border-radius:18px}.sc-banner>img{display:block;width:100%;height:auto;max-width:100%;object-fit:contain}.sc-banner-copy{position:absolute;left:7%;top:10%;width:52%;color:#fff;text-shadow:0 1px 7px rgba(0,0,0,.12)}.sc-banner-copy h2{margin:0;font-size:22px;line-height:1.02;font-weight:800;letter-spacing:-.7px}.sc-banner-copy p{margin:10px 0 0;font-size:11px;line-height:1.45;font-weight:600}.sc-banner-copy button{margin-top:12px;height:42px;padding:0 15px;border-radius:13px;border:1px solid rgba(255,255,255,.72);background:rgba(255,255,255,.17);backdrop-filter:blur(8px);display:inline-flex;gap:8px;align-items:center;color:#fff;font:800 11px 'Montserrat'}.space-toggle{height:64px;display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;margin-bottom:14px;border:1px solid ${BORDER};border-radius:18px;background:#fff;box-shadow:0 3px 12px rgba(20,24,28,.04)}.space-toggle button{border:0;background:transparent;border-radius:15px;display:flex;align-items:center;justify-content:center;gap:9px;color:#696F75;font:800 12px 'Montserrat'}.space-toggle button.active{background:${PALE_GOLD};color:#fff;box-shadow:0 4px 11px rgba(244,211,94,.20)}.space-toggle img{width:33px;height:33px;object-fit:contain}
+.sc-shortcuts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:27px}.sc-shortcuts button{height:68px;border:1px solid ${BORDER};border-radius:13px;background:${ASH};color:${INK};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;font:800 9px 'Montserrat'}.sc-shortcuts svg{width:18px;height:18px;stroke-width:2.4;fill:${INK}}.sc-shortcuts button:nth-child(2) svg{fill:none}.section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}.section-head h2{margin:0;font-size:16px;font-weight:800}.section-head button{border:0;background:transparent;color:${GOLD};font:800 11px 'Montserrat'}.coin-table{border:1px solid ${BORDER};border-radius:16px;overflow:hidden;background:#fff}.coin-row{display:flex;align-items:center;gap:10px;min-height:76px;padding:10px 13px;border-bottom:1px solid #EFF0F2}.coin-row:last-child{border-bottom:0}.coin-row img{width:42px;height:42px;border-radius:50%;object-fit:cover;image-rendering:auto}.coin-name{flex:1;min-width:0}.coin-name strong{display:block;font-size:12px;line-height:1.2;font-weight:800;white-space:nowrap}.coin-name small{display:block;margin-top:5px;color:${MUTED};font-size:10px;font-weight:600}.coin-value{text-align:right}.coin-value strong{font-size:12px;font-weight:800}.coin-value span{display:block;margin-top:5px;color:${GREEN};font-size:10px;font-weight:800}.trending-head{margin-top:24px}.trend-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.trend-row div{height:45px;border:1px solid ${BORDER};border-radius:12px;background:#fff;display:grid;place-items:center;font:800 10px 'Montserrat';color:${INK}}
+.ext-header{height:54px;display:flex;align-items:center;justify-content:center;position:relative}.ext-header button{position:absolute;left:0;border:0;background:transparent}.ext-header h1{font-size:21px;margin:0;font-weight:800}.ext-title{font-size:29px;line-height:1.04;margin:18px 0 0}.ext-copy{font-size:14px;line-height:1.45;color:${MUTED}.ext-art{height:270px;display:grid;place-items:center;position:relative}.ext-art::before{content:"";position:absolute;width:205px;height:78px;border:3px solid rgba(215,162,26,.62);border-radius:50%;transform:rotate(-18deg)}.ext-art img{width:170px;height:170px;object-fit:contain;position:relative;z-index:2}.ext-wallet-card{display:grid;grid-template-columns:46px 1fr;gap:11px;padding:16px;border:1px solid ${BORDER};border-radius:17px;background:#fff;box-shadow:0 5px 18px rgba(20,24,28,.05)}.wallet-icon{width:46px;height:46px;border-radius:12px;background:#FFF6D9;border:1px solid #F2D783;display:grid;place-items:center;overflow:hidden}.wallet-icon img{width:42px;height:42px;object-fit:contain}.ext-wallet-card strong{font-size:14px}.ext-wallet-card p{margin:6px 0 0;color:${MUTED};font-size:11px;line-height:1.45}.ext-wallet-card button{grid-column:1/-1;height:45px;border:0;border-radius:10px;background:${GOLD};color:#fff;font:800 12px 'Montserrat'}
+.create-scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:none;padding:calc(8px + env(safe-area-inset-top)) 18px 28px;touch-action:pan-y;-webkit-overflow-scrolling:touch}.create-inner{width:min(100%,480px);margin:0 auto}.create-head{height:54px;display:flex;align-items:center;justify-content:center;position:relative}.create-head button{position:absolute;left:-4px;border:0;background:transparent}.create-head h1{font-size:18px;margin:0;font-weight:800}.create-stage{height:300px;position:relative;overflow:hidden}.create-platform{position:absolute;z-index:1;left:50%;bottom:-28px;width:300px;transform:translateX(-50%)}.create-rocket{position:absolute;z-index:5;left:50%;top:54px;width:145px;transform:translateX(-50%);animation:float 3s ease-in-out infinite}.create-cloud{position:absolute;z-index:2;left:50%;bottom:12px;width:320px;height:175px;object-fit:cover;transform:translateX(-50%);opacity:.72;mix-blend-mode:multiply}.side{position:absolute;z-index:7;width:31px;height:31px;object-fit:contain;top:124px}.side-left{left:calc(50% - 112px)}.side-right{right:calc(50% - 112px)}.side-star{position:absolute;z-index:6;right:calc(50% - 112px);top:110px;width:76px;object-fit:contain}.step-label{text-align:center;color:${MUTED};font-size:13px;font-weight:600}.steps{display:grid;grid-template-columns:repeat(4,1fr);margin:12px 8px 23px}.steps span{height:4px;background:#E8EAED;position:relative}.steps span:before{content:"";position:absolute;left:0;top:50%;width:8px;height:8px;background:#E7E8EA;border-radius:50%;transform:translate(-50%,-50%)}.steps span.on{background:${PALE_GOLD}}.steps span.on:before{background:${PALE_GOLD}}.upload{text-align:center;display:grid;justify-items:center;gap:7px;margin-bottom:24px}.upload input{display:none}.upload-circle{width:96px;height:96px;border:2px dashed ${PALE_GOLD};border-radius:50%;display:grid;place-items:center;color:${GOLD};background:#FFFDF7;overflow:hidden}.upload-circle img{width:100%;height:100%;object-fit:cover}.upload strong{font-size:15px}.upload small{color:#92969B;font-size:11px}.fields{display:grid;gap:13px}.fields label{display:grid;gap:6px;font-size:11px;font-weight:600;color:#7A7F85}.fields input,.fields select{height:50px;border:1px solid ${BORDER};border-radius:12px;background:#fff;padding:0 14px;font:600 13px 'Montserrat';outline:none}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.review{display:grid;gap:10px;border:1px solid ${BORDER};border-radius:14px;padding:14px}.review>div{display:flex;justify-content:space-between;gap:14px;font-size:10px}.review span{color:${MUTED}}.review strong{text-align:right}.create-actions{display:flex;gap:9px;margin-top:14px}.create-actions button{height:50px;border:0;border-radius:12px;font:800 13px 'Montserrat'}.back-btn{width:95px;background:#F4F4F5}.next-btn{flex:1;background:${GOLD};color:#fff}.next-btn:disabled{opacity:.45}.launched{text-align:center;padding:20px}.launched img{width:190px}.launched h2{font-size:22px}
+.sheet-backdrop{position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,.25);display:flex;align-items:flex-end}.sheet{width:100%;background:#fff;border-radius:22px 22px 0 0;box-shadow:0 -12px 28px rgba(0,0,0,.16);padding:8px 16px calc(14px + env(safe-area-inset-bottom));transform:translateY(0);transition:height .24s ease}.sheet.half{height:52dvh}.sheet.full{height:94dvh}.sheet-handle{width:42px;height:4px;background:#D5D7DA;border-radius:999px;margin:4px auto 8px}.sheet-head{height:40px;display:flex;align-items:center;justify-content:space-between}.sheet-head h3{margin:0;font-size:18px}.sheet-head button{border:0;background:transparent;font-size:28px;color:#73777C}.menu-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.menu-card{min-height:128px;border:1px solid ${BORDER};border-radius:16px;background:${ASH};padding:13px;text-align:left;display:grid;align-content:start;gap:6px}.menu-card-icon{width:36px;height:36px;border-radius:10px;background:#fff;display:grid;place-items:center;font-size:20px;color:${GOLD}.menu-card strong{font-size:12px}.menu-card small{font-size:9px;line-height:1.35;color:${MUTED}}.sheet-tabs{display:grid;grid-template-columns:1fr 1fr;background:#F3F3F4;padding:3px;border-radius:10px}.sheet-tabs button{height:35px;border:0;background:transparent;border-radius:8px;font:800 9px 'Montserrat';color:${MUTED}}.sheet-tabs .active{background:#fff;color:${GOLD}}.mycoins-list{display:grid;gap:8px;margin-top:10px}.mycoin-card{display:grid;grid-template-columns:35px 1fr auto;gap:9px;padding:10px;border:1px solid ${BORDER};border-radius:12px;background:#fff}.avatar{width:35px;height:35px;border-radius:50%;background:${LIGHT_GOLD};display:grid;place-items:center;color:${GOLD}}.mycoin-main strong{font-size:11px}.mycoin-main small{display:block;color:${MUTED};font-size:8px;margin-top:2px}.mycoin-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:7px}.mycoin-stats span{font-size:7px;color:${MUTED}}.mycoin-stats strong{display:block;font-size:8px;color:${INK};margin-top:2px}.mycoin-price{text-align:right}.mycoin-price strong{font-size:10px}.mycoin-price span{display:block;margin-top:3px;font-size:8px;font-weight:800}.green{color:${GREEN}}.red{color:#D94C4C}.wallet-sheet-list{display:grid}.wallet-sheet-row{height:58px;border-bottom:1px solid #EFF0F2;display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px}.wallet-sheet-row strong{font-size:12px}.wallet-sheet-row button{height:34px;padding:0 12px;border:1px solid #E8D9A6;border-radius:8px;background:#fff;color:${GOLD};font:800 10px 'Montserrat'}
+@keyframes float{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-5px)}}
+@media(max-width:430px){.sc-banner-copy{left:7%;top:10%;width:53%}.sc-banner-copy h2{font-size:20px}.sc-banner-copy p{font-size:10px}.sc-banner-copy button{height:40px;font-size:10px}.sc-shortcuts{gap:7px}.sc-shortcuts button{height:65px;font-size:8px}.sc-shortcuts svg{width:18px;height:18px}.coin-row img{width:40px;height:40px}.coin-name strong{font-size:11px}.coin-value strong{font-size:11px}.space-toggle{height:60px}.space-toggle button{font-size:11px}.space-toggle img{width:30px;height:30px}.create-stage{height:300px}.create-rocket{width:138px}.side{width:29px;height:29px}.side-star{width:72px}}
+@media(prefers-reduced-motion:reduce){.sc-root *{animation:none!important;transition:none!important}}
+`;
