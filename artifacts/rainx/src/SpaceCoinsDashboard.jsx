@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft, ArrowRight, Bell, ChevronDown, Home, Plus, Rocket,
+  ArrowLeft, ArrowRight, Bell, ChevronDown, Plus, Rocket,
   ShieldCheck, TrendingUp, WalletCards
 } from "lucide-react";
 import ExternalWalletScreens from "./ExternalWalletScreens";
@@ -13,6 +13,7 @@ import orbitArtwork from "./assets/space-coins-orbit.png";
 import platformArtwork from "./assets/space-coins-platform.png";
 import coinArtwork from "./assets/space-coins-coin.png";
 import externalBanner from "./assets/space-coins-external-banner.png";
+import walletSecurityArtwork from "./assets/space-coins-wallet-3d.png";
 
 const REAL_FLAME_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_3BHloZy6zhOMmqbVkiEIfVkbiDF/hf_20260821_145856_91a13b8e-c366-4951-be01-e7f1846cbbc6.mp4";
 const REAL_CLOUD_VIDEO = "https://d8j0ntlcm91z4.cloudfront.net/user_3BHloZy6zhOMmqbVkiDF/hf_20260821_153425_e7dbe97e-35f8-4ada-80e3-d11209f83006.mp4";
@@ -27,7 +28,7 @@ function stopPull(e){ e.stopPropagation(); }
 
 function NativePage({children,className=""}){
   return (
-    <main className={`sc2-page ${className}`} onTouchStart={stopPull} onTouchMove={stopPull} onTouchEnd={stopPull} onTouchCancel={stopPull}>
+    <main className={`sc2-page ${className}`}>
       {children}
     </main>
   );
@@ -36,9 +37,9 @@ function NativePage({children,className=""}){
 function useEdgeBack(onBack){
   const ref=useRef(null);
   return {
-    onTouchStart:e=>{stopPull(e);const t=e.touches[0];ref.current=t.clientX<28?{x:t.clientX,y:t.clientY}:null;},
-    onTouchEnd:e=>{stopPull(e);if(!ref.current)return;const t=e.changedTouches[0];const dx=t.clientX-ref.current.x;const dy=Math.abs(t.clientY-ref.current.y);ref.current=null;if(dx>48&&dy<90)onBack?.();},
-    onTouchCancel:e=>{stopPull(e);ref.current=null;}
+    onTouchStart:e=>{const t=e.touches[0];ref.current=t.clientX<28?{x:t.clientX,y:t.clientY}:null;},
+    onTouchEnd:e=>{if(!ref.current)return;const t=e.changedTouches[0];const dx=t.clientX-ref.current.x;const dy=Math.abs(t.clientY-ref.current.y);ref.current=null;if(dx>48&&dy<90)onBack?.();},
+    onTouchCancel:()=>{ref.current=null;}
   };
 }
 
@@ -90,38 +91,70 @@ function Dashboard({onCreate,onExternal}){
     <NativePage className="sc2-dashboard">
       <style>{`
         .sc2-page,.sc2-page *{box-sizing:border-box}
-        .sc2-page{position:fixed;inset:0;z-index:700;width:100%;height:100dvh;overflow:hidden;background:#fff;color:#111418;font-family:'Montserrat',sans-serif;overscroll-behavior:none;isolation:isolate}
+        .sc2-page{position:absolute;inset:0;z-index:700;width:100%;height:100dvh;overflow:hidden;background:#fff;color:#111418;font-family:'Montserrat',sans-serif;overscroll-behavior:none;isolation:isolate}
         .sc2-scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:none;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-width:none;padding:calc(10px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}
         .sc2-scroll::-webkit-scrollbar{display:none}
         .sc2-inner{width:min(100%,480px);margin:0 auto}
         .sc2-header{height:48px;display:flex;align-items:center;justify-content:flex-end;margin-bottom:12px}
         .sc2-bell{width:38px;height:38px;border:0;background:transparent;color:#111418;display:grid;place-items:center;padding:0}
-        .sc2-banner{position:relative;width:100%;margin:0 0 8px;overflow:hidden}
-        .sc2-banner-image{display:block;width:100%;height:auto;max-width:100%;object-fit:contain}
+        .sc2-banner{position:relative;width:calc(100% + 36px);margin:0 -18px 10px;overflow:hidden}
+        .sc2-banner-image{display:block;width:100%;height:auto;max-width:none;object-fit:contain}
         .sc2-banner-copy{position:absolute;left:6%;top:11%;width:48%;z-index:2;color:#fff}
-        .sc2-banner-copy h2{margin:0;font-size:20px;line-height:1.05;font-weight:800;letter-spacing:-.7px;text-shadow:0 2px 8px rgba(0,0,0,.14)}
-        .sc2-banner-copy p{margin:9px 0 0;font-size:11px;line-height:1.4;font-weight:600;text-shadow:0 2px 7px rgba(0,0,0,.14)}
-        .sc2-banner-create{margin-top:12px;height:40px;padding:0 14px;border:1px solid rgba(255,255,255,.72);border-radius:13px;background:rgba(255,255,255,.20);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;display:inline-flex;align-items:center;gap:9px;font:800 11px 'Montserrat',sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.65),0 5px 14px rgba(0,0,0,.10)}
+        .sc2-banner-copy h2{margin:0;font-size:22px;line-height:1.05;font-weight:800;letter-spacing:-.7px;text-shadow:0 2px 8px rgba(0,0,0,.14)}
+        .sc2-banner-copy p{margin:10px 0 0;font-size:12px;line-height:1.4;font-weight:600;text-shadow:0 2px 7px rgba(0,0,0,.14)}
+        .sc2-banner-create{margin-top:13px;height:42px;padding:0 15px;border:1px solid rgba(255,255,255,.72);border-radius:13px;background:rgba(255,255,255,.20);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;display:inline-flex;align-items:center;gap:9px;font:800 11px 'Montserrat',sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.65),0 5px 14px rgba(0,0,0,.10)}
         .sc2-toggle{display:grid;grid-template-columns:1fr 1fr;gap:3px;width:100%;height:62px;padding:3px;margin:4px 0 12px;border:1px solid #E7E8EA;border-radius:18px;background:#fff;box-shadow:0 3px 12px rgba(20,24,28,.04)}
-        .sc2-toggle-btn{border:0;border-radius:15px;background:transparent;color:#6E747A;display:flex;align-items:center;justify-content:center;gap:9px;font:800 12px 'Montserrat',sans-serif;min-width:0}
+        .sc2-toggle-btn{border:0;border-radius:15px;background:transparent;color:#6E747A;display:flex;align-items:center;justify-content:center;gap:9px;font:800 12px 'Montserrat',sans-serif;min-width:0;transition:background .28s ease,color .28s ease,box-shadow .28s ease}
         .sc2-toggle-btn img{width:32px;height:32px;object-fit:contain;flex:0 0 auto}
         .sc2-toggle-btn.active{background:#F4D35E;color:#fff;box-shadow:0 4px 12px rgba(244,211,94,.22)}
-        .sc2-shortcuts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 22px}
-        .sc2-shortcut{min-width:0;height:68px;padding:7px 3px;border:1px solid #E3E5E7;border-radius:13px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#111418;font:800 9px 'Montserrat',sans-serif;box-shadow:0 1px 5px rgba(20,24,28,.025);text-align:center}
-        .sc2-shortcut svg{width:19px;height:19px;stroke-width:2.2;color:#111418;fill:#111418}
-        .sc2-shortcut:nth-child(2) svg{fill:none}
+        .sc2-shortcuts{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:0 0 22px}
+        .sc2-shortcut{min-width:0;height:62px;padding:6px 2px;border:1px solid #E3E4E6;border-radius:14px;background:#F5F6F7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#111418;font:800 8.5px 'Montserrat',sans-serif;box-shadow:0 1px 4px rgba(20,24,28,.025);text-align:center;transition:transform .22s ease,background .22s ease}
+        .sc2-shortcut:active{transform:scale(.97);background:#F0F1F2}
+        .sc2-shortcut svg{width:18px;height:18px;stroke-width:2.2;color:#111418;fill:#111418}
+        .sc2-shortcut:nth-child(2) svg{fill:#111418}
         .sc2-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
         .sc2-section-title{margin:0;font-size:16px;line-height:1;font-weight:800;letter-spacing:-.35px}
         .sc2-view{border:0;background:transparent;color:#C28F18;padding:4px 0;font:700 11px 'Montserrat',sans-serif}
         .sc2-coins{overflow:hidden;border:1px solid #E8EAEC;border-radius:15px;background:#fff;box-shadow:0 1px 5px rgba(20,24,28,.025);margin-bottom:23px}
         .sc2-coin-row{width:100%;min-height:68px;padding:10px 12px;display:flex;align-items:center;gap:10px;border:0;border-bottom:1px solid #ECEDEF;background:#fff;color:#12151A;text-align:left}
         .sc2-coin-row:last-child{border-bottom:0}
-        .sc2-coin-img{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:0 0 auto}
-        .sc2-coin-name{min-width:0;flex:1}.sc2-coin-name strong{display:block;font-size:11px;line-height:1.2;font-weight:800}.sc2-coin-name small{display:block;margin-top:4px;color:#747A81;font-size:10px;font-weight:600}
-        .sc2-value{text-align:right;flex:0 0 auto}.sc2-price{display:block;font-size:11px;font-weight:800}.sc2-change{display:block;margin-top:4px;color:#43A57C;font-size:10px;font-weight:800}
+        .sc2-coin-img{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:0 0 auto;image-rendering:auto}
+        .sc2-coin-name{min-width:0;flex:1}.sc2-coin-name strong{display:block;font-size:11px;line-height:1.2;font-weight:800;letter-spacing:0}.sc2-coin-name small{display:block;margin-top:4px;color:#747A81;font-size:10px;font-weight:600;letter-spacing:0}
+        .sc2-value{text-align:right;flex:0 0 auto}.sc2-price{display:block;font-size:11px;font-weight:800;letter-spacing:0}.sc2-change{display:block;margin-top:4px;color:#43A57C;font-size:10px;font-weight:800;letter-spacing:0}
         .sc2-trending{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-bottom:4px}.sc2-trend{height:46px;border:1px solid #E8EAEC;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;gap:5px;color:#14171B;font:800 10px 'Montserrat',sans-serif}.sc2-rank{color:#C28F18}
-        @media(max-width:430px){.sc2-scroll{padding-left:16px;padding-right:16px}.sc2-banner-copy{left:7%;top:11%;width:48%}.sc2-banner-copy h2{font-size:19px}.sc2-banner-copy p{font-size:10px}.sc2-banner-create{height:38px;font-size:10px}.sc2-toggle{height:60px}.sc2-toggle-btn{font-size:11px}.sc2-toggle-btn img{width:29px;height:29px}.sc2-shortcuts{gap:7px}.sc2-shortcut{height:66px;font-size:8px}.sc2-shortcut svg{width:18px;height:18px}}
-        @media(prefers-reduced-motion:reduce){.sc2-page *{animation:none!important}}
+        .sc2-external-shell{position:absolute;inset:0;overflow:hidden;background:#fff}
+        .sc2-pan-track{display:flex;width:200%;height:100%;transform:translateX(0);transition:transform .42s cubic-bezier(.22,.75,.25,1);will-change:transform}
+        .sc2-pane{width:50%;height:100%;flex:0 0 50%;position:relative;overflow:hidden}
+        .sc2-external-pane{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:none;padding:calc(8px + env(safe-area-inset-top)) 16px 24px}
+        .sc2-external-inner{width:100%;max-width:480px;margin:auto}
+        .sc2-external-header{height:58px;display:flex;align-items:center;justify-content:center;position:relative}
+        .sc2-external-back{position:absolute;left:0;width:38px;height:38px;border:0;background:transparent;display:grid;place-items:center}
+        .sc2-external-title{font-size:21px;font-weight:800;margin:0}
+        .sc2-external-tabs{display:grid;grid-template-columns:1fr 1fr;gap:3px;height:40px;padding:3px;border-radius:9px;background:#F4F4F5;margin:2px 0 20px}
+        .sc2-external-tab{border:0;border-radius:10px;background:transparent;color:#676C72;font:700 12px 'Montserrat',sans-serif;transition:background .28s ease,color .28s ease}
+        .sc2-external-tab.active{background:#D7A21A;color:#fff}
+        .sc2-external-kicker{font-size:27px;line-height:1.05;font-weight:800;margin:0}
+        .sc2-external-copy{margin:12px 0 0;color:#72777D;font-size:14px;line-height:1.45}
+        .sc2-external-hero{height:230px;position:relative;margin:0}
+        .sc2-external-coin{position:absolute;left:50%;top:34px;width:150px;height:150px;object-fit:contain;transform:translateX(-50%) rotate(-8deg);filter:drop-shadow(0 12px 10px rgba(176,123,10,.20))}
+        .sc2-external-ring{position:absolute;left:50%;top:105px;width:188px;height:58px;border:3px solid rgba(215,162,26,.72);border-radius:50%;transform:translate(-50%,-50%) rotate(-18deg)}
+        .sc2-external-ring-b{width:168px;height:138px;border-width:2px;transform:translate(-50%,-50%) rotate(52deg);opacity:.52}
+        .sc2-external-star{position:absolute;background:#D7A21A;width:6px;height:6px;transform:rotate(45deg)}
+        .sc2-external-star-a{left:19%;top:50px}.sc2-external-star-b{right:13%;top:25px}.sc2-external-star-c{left:31%;bottom:18px;width:7px;height:7px}
+        .sc2-external-card{background:#fff;border:1px solid #E9EAEC;border-radius:18px;box-shadow:0 6px 18px rgba(22,25,29,.055);padding:18px;display:grid;grid-template-columns:46px 1fr;gap:12px}
+        .sc2-external-lock{width:46px;height:46px;border-radius:12px;background:#FFF6D9;border:1px solid #F2D783;display:grid;place-items:center;overflow:hidden}
+        .sc2-external-lock img{width:42px;height:42px;object-fit:contain}
+        .sc2-external-card-title{font-size:15px;font-weight:800}.sc2-external-card-copy{margin-top:6px;color:#72777D;font-size:12px;line-height:1.45}
+        .sc2-external-connect{grid-column:1/-1;height:44px;border:0;border-radius:8px;background:#D7A21A;color:#fff;font:800 13px 'Montserrat',sans-serif}
+        @media(max-width:430px){
+          .sc2-scroll{padding-left:16px;padding-right:16px}
+          .sc2-banner{width:calc(100% + 28px);margin-left:-14px;margin-right:-14px}
+          .sc2-banner-copy{left:7%;top:11%;width:48%}.sc2-banner-copy h2{font-size:20px}.sc2-banner-copy p{font-size:10.5px}.sc2-banner-create{height:39px;font-size:10px}
+          .sc2-toggle{height:60px}.sc2-toggle-btn{font-size:11px}.sc2-toggle-btn img{width:29px;height:29px}
+          .sc2-shortcuts{gap:6px}.sc2-shortcut{height:60px;font-size:8px}.sc2-shortcut svg{width:17px;height:17px}
+          .sc2-external-kicker{font-size:26px}.sc2-external-hero{height:225px}.sc2-external-coin{width:145px;height:145px}
+        }
+        @media(prefers-reduced-motion:reduce){.sc2-page *{transition:none!important;animation:none!important}}
       `}</style>
       <div className="sc2-scroll">
         <div className="sc2-inner">
@@ -132,22 +165,34 @@ function Dashboard({onCreate,onExternal}){
           <section>
             <div className="sc2-section-head"><h2 className="sc2-section-title">Top Space Coins</h2><button className="sc2-view">View All</button></div>
             <div className="sc2-coins">
-              {COINS.map(c=>(
-                <button type="button" className="sc2-coin-row" key={c.ticker}>
-                  <img className="sc2-coin-img" src={c.image} alt="" />
-                  <span className="sc2-coin-name"><strong>{c.name}</strong><small>{c.ticker}</small></span>
-                  <span className="sc2-value"><span className="sc2-price">{c.price}</span><span className="sc2-change">{c.change}</span></span>
-                </button>
-              ))}
+              {COINS.map(c=><button type="button" className="sc2-coin-row" key={c.ticker}><img className="sc2-coin-img" src={c.image} alt="" /><span className="sc2-coin-name"><strong>{c.name}</strong><small>{c.ticker}</small></span><span className="sc2-value"><span className="sc2-price">{c.price}</span><span className="sc2-change">{c.change}</span></span></button>)}
             </div>
           </section>
-          <section>
-            <div className="sc2-section-head"><h2 className="sc2-section-title">Trending</h2><button className="sc2-view">View All</button></div>
-            <div className="sc2-trending">{["STARINU","COSMO","MOONME"].map((n,i)=><button className="sc2-trend" key={n}><span className="sc2-rank">#{i+1}</span>{n}</button>)}</div>
-          </section>
+          <section><div className="sc2-section-head"><h2 className="sc2-section-title">Trending</h2><button className="sc2-view">View All</button></div><div className="sc2-trending">{["STARINU","COSMO","MOONME"].map((n,i)=><button className="sc2-trend" key={n}><span className="sc2-rank">#{i+1}</span>{n}</button>)}</div></section>
         </div>
       </div>
     </NativePage>
+  );
+}
+
+function ExternalPane({onBack,onConnect}){
+  return (
+    <section className="sc2-pane sc2-external-pane">
+      <div className="sc2-external-inner">
+        <header className="sc2-external-header"><button className="sc2-external-back" onClick={onBack} aria-label="Back"><ArrowLeft size={24}/></button><h1 className="sc2-external-title">Space Coins</h1></header>
+        <div className="sc2-external-tabs">
+          <button className="sc2-external-tab" onClick={onBack}>Space Coins</button>
+          <button className="sc2-external-tab active">External Coins</button>
+        </div>
+        <section><h2 className="sc2-external-kicker">Explore<br/>External Coins</h2><p className="sc2-external-copy">Trade popular coins from across<br/>the universe.</p></section>
+        <div className="sc2-external-hero"><div className="sc2-external-ring"/><div className="sc2-external-ring sc2-external-ring-b"/><img src={coinArtwork} className="sc2-external-coin" alt=""/><span className="sc2-external-star sc2-external-star-a"/><span className="sc2-external-star sc2-external-star-b"/><span className="sc2-external-star sc2-external-star-c"/></div>
+        <section className="sc2-external-card">
+          <div className="sc2-external-lock"><img src={walletSecurityArtwork} alt=""/></div>
+          <div><div className="sc2-external-card-title">Connect External Wallet</div><p className="sc2-external-card-copy">Connect your external wallet to trade external coins. Your funds stay in your wallet.</p></div>
+          <button className="sc2-external-connect" onClick={onConnect}>Connect Wallet</button>
+        </section>
+      </div>
+    </section>
   );
 }
 
@@ -168,7 +213,7 @@ function CreateForm({onBack}){
     <NativePage className="sc3-create">
       <style>{`
         .sc3-create{background:#fff}
-        .sc3-create.sc2-page{position:fixed;inset:0;z-index:700;width:100%;height:100dvh;min-height:100dvh;overflow:hidden;background:#fff;color:#111418;font-family:'Montserrat',sans-serif;overscroll-behavior:none;isolation:isolate}
+        .sc3-create.sc2-page{position:absolute;inset:0;z-index:700;width:100%;height:100dvh;min-height:100dvh;overflow:hidden;background:#fff;color:#111418;font-family:'Montserrat',sans-serif;overscroll-behavior:none;isolation:isolate}
         .sc3-scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:none;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-width:none;padding:calc(8px + env(safe-area-inset-top)) 18px calc(30px + env(safe-area-inset-bottom))}
         .sc3-scroll::-webkit-scrollbar{display:none}
         .sc3-inner{width:min(100%,480px);margin:0 auto}
@@ -242,7 +287,43 @@ function CreateForm({onBack}){
 
 export default function SpaceCoinsDashboard({onBack}){
   const [view,setView]=useState("dashboard");
-  if(view==="external") return <ExternalWalletScreens initialScreen="external" onBack={()=>setView("dashboard")}/>;
-  if(view==="create") return <CreateForm onBack={()=>setView("dashboard")}/>;
-  return <Dashboard onCreate={()=>setView("create")} onExternal={()=>setView("external")}/>;
+  const [touchStart,setTouchStart]=useState(null);
+  const [externalWalletOpen,setExternalWalletOpen]=useState(false);
+
+  const goExternal=()=>setView("external");
+  const goSpace=()=>setView("dashboard");
+
+  if(view==="create") return <CreateForm onBack={goSpace}/>;
+
+  return (
+    <div style={{position:"fixed",inset:0,overflow:"hidden",background:"#fff"}}>
+      <div
+        style={{
+          display:"flex",
+          width:"200%",
+          height:"100%",
+          transform:view==="external"?"translateX(-50%)":"translateX(0)",
+          transition:"transform .42s cubic-bezier(.22,.75,.25,1)",
+          willChange:"transform"
+        }}
+        onTouchStart={e=>setTouchStart(e.touches[0].clientX)}
+        onTouchEnd={e=>{
+          if(touchStart==null)return;
+          const dx=e.changedTouches[0].clientX-touchStart;
+          setTouchStart(null);
+          if(Math.abs(dx)>55){
+            if(dx<0)goExternal();
+            else goSpace();
+          }
+        }}
+      >
+        <div style={{width:"50%",height:"100%",flex:"0 0 50%"}}>
+          <Dashboard onCreate={()=>setView("create")} onExternal={goExternal}/>
+        </div>
+        <div style={{width:"50%",height:"100%",flex:"0 0 50%"}}>
+          <ExternalPane onBack={goSpace} onConnect={()=>setExternalWalletOpen(true)}/>
+        </div>
+      </div>
+    </div>
+  );
 }
