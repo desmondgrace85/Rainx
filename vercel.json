@@ -1,4 +1,5 @@
 {
+  "framework": "vite",
   "installCommand": "npm install -g pnpm@9 && pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm --filter @workspace/rainx run build:vercel",
   "outputDirectory": "artifacts/rainx/dist",
