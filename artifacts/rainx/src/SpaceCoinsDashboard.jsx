@@ -9,14 +9,12 @@ import {
   Rocket,
   ShieldCheck,
   TrendingUp,
+  Wallet,
   WalletCards,
   X,
 } from "lucide-react";
 import {
   SiCoinbase,
-  SiMetamask,
-  SiPhantom,
-  SiTrustwallet,
   SiWalletconnect,
 } from "react-icons/si";
 
@@ -604,9 +602,9 @@ function WalletSheet({ onClose }) {
   const [expanded, setExpanded] = useState(false);
   const touchStart = useRef(null);
   const wallets = [
-    ["MetaMask", SiMetamask],
-    ["Trust Wallet", SiTrustwallet],
-    ["Phantom", SiPhantom],
+    ["MetaMask", Wallet],
+    ["Trust Wallet", Wallet],
+    ["Phantom", Wallet],
     ["Coinbase Wallet", SiCoinbase],
     ["WalletConnect", SiWalletconnect],
   ];
