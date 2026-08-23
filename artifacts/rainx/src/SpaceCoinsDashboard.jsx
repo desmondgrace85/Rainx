@@ -649,6 +649,7 @@ function CreateCoin({ onBack }) {
 function WalletSheet({ onClose }) {
   const [expanded, setExpanded] = useState(false);
   const [dragY, setDragY] = useState(0);
+  const sheetHeight = Math.min(window.innerHeight * 0.8, 640);
   const [dragging, setDragging] = useState(false);
   const pointerStart = useRef(null);
   const dragYRef = useRef(0);
@@ -697,8 +698,8 @@ function WalletSheet({ onClose }) {
         style={dragging ? {
           height: `${expanded
             ? window.innerHeight - Math.max(0, Math.min(window.innerHeight * 0.8, dragY))
-            : Math.min(window.innerHeight * 0.8, 640) - Math.min(0, Math.max(-window.innerHeight * 0.72, dragY))}px`,
-          transform: "translate3d(0,0,0)",
+            : sheetHeight - Math.min(0, Math.max(-window.innerHeight * 0.72, dragY))}px`,
+          transform: `translate3d(0,${expanded ? Math.max(0, dragY) : 0}px,0)`,
         } : undefined}
         onClick={(e) => e.stopPropagation()}
         onPointerDown={onPointerDown}
@@ -839,7 +840,7 @@ const styles = `
   object-fit:contain;object-position:center;background:transparent
 }
 .rx-space-banner-copy{
-  position:absolute;left:7%;right:25%;top:12%;width:auto;color:#111418;
+  position:absolute;left:7%;right:25%;top:15%;width:auto;color:#111418;
   text-shadow:none
 }
 .rx-space-banner-copy h2{
@@ -1020,7 +1021,7 @@ const styles = `
   transition:transform .38s cubic-bezier(.22,.8,.2,1),max-height .38s ease;will-change:transform;
   touch-action:none
 }
-.rx-wallet-sheet{height:min(80dvh,640px)}
+.rx-wallet-sheet{height:min(80dvh,640px);animation:rx-wallet-sheet-enter .42s cubic-bezier(.16,1,.3,1) both}
 .rx-sheet.expanded{height:100dvh;max-height:100dvh}
 .rx-sheet.dragging{transition:none}
 .rx-sheet img{display:block}
@@ -1085,7 +1086,7 @@ const styles = `
 
 @media(max-width:430px){
   .rx-space-banner{width:100%;height:auto;aspect-ratio:2000 / 1414}
-  .rx-space-banner-copy{left:7%;right:25%;top:11%;width:auto}
+  .rx-space-banner-copy{left:7%;right:25%;top:13%;width:auto}
   .rx-space-banner-copy h2{font-size:19px}
   .rx-space-banner-copy p{margin-top:9px;font-size:10px}
   .rx-space-banner-copy button{margin-top:9px;height:35px;font-size:9.5px}
@@ -1100,7 +1101,7 @@ const styles = `
 
 @media(prefers-reduced-motion:reduce){
   .rx-space-shell *{animation:none!important;transition:none!important}
-  .rx-space-shell .rx-wallet-sheet{animation:rx-sheet-enter .28s cubic-bezier(.22,.8,.2,1) both!important}
+  .rx-space-shell .rx-wallet-sheet{animation:rx-wallet-sheet-enter .42s cubic-bezier(.16,1,.3,1) both!important}
 }
 `;
 
@@ -1258,6 +1259,10 @@ const createStyles = `
   to{opacity:1}
 }
 @keyframes rx-sheet-enter{
+  from{transform:translate3d(0,100%,0)}
+  to{transform:translate3d(0,0,0)}
+}
+@keyframes rx-wallet-sheet-enter{
   from{transform:translate3d(0,100%,0)}
   to{transform:translate3d(0,0,0)}
 }
