@@ -256,11 +256,11 @@ function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress, onSwipeSta
     if (!start.current) return;
     const width = e.currentTarget.getBoundingClientRect().width || 1;
     if (start.current.axis === "x") {
-      const progress = mode === "external"
-        ? 1 + (e.clientX - start.current.x) / width
-        : -(e.clientX - start.current.x) / width;
-      if (progress > 0.5) setMode("external");
-      else setMode("space");
+      if (mode === "space" && dragProgressRef.current > 0.5) {
+        setMode("external");
+      } else if (mode === "external" && dragProgressRef.current < 0.5) {
+        setMode("space");
+      }
     }
     e.currentTarget.releasePointerCapture?.(e.pointerId);
     start.current = null;
@@ -650,6 +650,7 @@ function WalletSheet({ onClose }) {
   const [expanded, setExpanded] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [closing, setClosing] = useState(false);
   const pointerStart = useRef(null);
   const dragYRef = useRef(0);
   const wallets = [
@@ -682,7 +683,13 @@ function WalletSheet({ onClose }) {
   const onPointerEnd = (e) => {
     if (pointerStart.current == null) return;
     if (dragYRef.current < -45) setExpanded(true);
-    else if (dragYRef.current > 45) setExpanded(false);
+    else if (dragYRef.current > 45) {
+      if (expanded) setExpanded(false);
+      else {
+        setClosing(true);
+        window.setTimeout(onClose, 220);
+      }
+    }
     e.currentTarget.releasePointerCapture?.(e.pointerId);
     pointerStart.current = null;
     dragYRef.current = 0;
@@ -693,7 +700,7 @@ function WalletSheet({ onClose }) {
   return (
     <div className="rx-overlay" onClick={onClose}>
       <div
-        className={`rx-sheet rx-wallet-sheet ${expanded ? "expanded" : ""} ${dragging ? "dragging" : ""}`}
+        className={`rx-sheet rx-wallet-sheet ${expanded ? "expanded" : ""} ${closing ? "closing" : ""} ${dragging ? "dragging" : ""}`}
         style={dragging ? {
           height: `${expanded
             ? window.innerHeight - Math.max(0, Math.min(window.innerHeight * 0.8, dragY))
@@ -839,18 +846,18 @@ const styles = `
   object-fit:contain;object-position:center;background:transparent
 }
 .rx-space-banner-copy{
-  position:absolute;left:6%;top:10%;width:72%;color:#111418;
+  position:absolute;left:5%;right:25%;top:10%;width:auto;color:#111418;
   text-shadow:none
 }
 .rx-space-banner-copy h2{
-  margin:0;font-size:27px;line-height:1.02;font-weight:900;letter-spacing:-1px
+  margin:0;font-size:23px;line-height:1.02;font-weight:900;letter-spacing:-.8px
 }
 .rx-banner-title-light{color:#fff}
 .rx-space-banner-copy p{
-  margin:12px 0 0;color:#111418;font-size:13.5px;line-height:1.3;font-weight:600
+  margin:10px 0 0;color:#111418;font-size:11px;line-height:1.3;font-weight:600
 }
 .rx-space-banner-copy button{
-  margin-top:14px;height:43px;padding:0 15px;
+  margin-top:11px;height:37px;padding:0 13px;
   border:1px solid rgba(255,255,255,.7);border-radius:12px;
   background:rgba(255,255,255,.8);color:#111418;
   display:inline-flex;align-items:center;gap:8px;
@@ -1023,6 +1030,7 @@ const styles = `
 .rx-wallet-sheet{height:min(80dvh,640px)}
 .rx-sheet.expanded{height:100dvh;max-height:100dvh}
 .rx-sheet.dragging{transition:none}
+.rx-sheet.closing{animation:rx-sheet-exit .22s ease-in both}
 .rx-sheet img{display:block}
 .rx-sheet-tall{max-height:86dvh}
 .rx-sheet-handle{
@@ -1085,10 +1093,10 @@ const styles = `
 
 @media(max-width:430px){
   .rx-space-banner{width:100%;height:auto;aspect-ratio:2000 / 1414}
-  .rx-space-banner-copy{left:6%;top:9%;width:72%}
-  .rx-space-banner-copy h2{font-size:23px}
-  .rx-space-banner-copy p{margin-top:9px;font-size:11px}
-  .rx-space-banner-copy button{margin-top:10px;height:38px;font-size:10px}
+  .rx-space-banner-copy{left:5%;right:25%;top:9%;width:auto}
+  .rx-space-banner-copy h2{font-size:20px}
+  .rx-space-banner-copy p{margin-top:9px;font-size:10px}
+  .rx-space-banner-copy button{margin-top:9px;height:35px;font-size:9.5px}
   .rx-mode-toggle{height:60px}
   .rx-shortcuts{gap:2px}
   .rx-shortcuts button{height:68px;font-size:7.5px}
@@ -1259,6 +1267,10 @@ const createStyles = `
 @keyframes rx-sheet-enter{
   from{transform:translate3d(0,100%,0)}
   to{transform:translate3d(0,0,0)}
+}
+@keyframes rx-sheet-exit{
+  from{transform:translate3d(0,0,0)}
+  to{transform:translate3d(0,100%,0)}
 }
 @keyframes rx-float{
   0%,100%{transform:translateX(-50%) translateY(0) rotate(-.3deg)}
