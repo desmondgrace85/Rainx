@@ -789,7 +789,7 @@ const styles = `
 
 .rx-space-banner{
   position:relative;width:100%;max-width:100%;height:auto;
-  overflow:visible;border-radius:20px;margin:0 0 14px;background:transparent;aspect-ratio:2.08
+  overflow:visible;border-radius:20px;margin:0 0 14px;background:transparent;aspect-ratio:2000 / 1414
 }
 .rx-space-banner>img{
   display:block;width:100%;height:100%;max-width:100%;
@@ -1021,7 +1021,7 @@ const styles = `
 .rx-menu-card small{font-size:9px;color:#747A80;margin-top:4px}
 
 @media(max-width:430px){
-  .rx-space-banner{height:auto;aspect-ratio:2.08}
+  .rx-space-banner{height:auto;aspect-ratio:2000 / 1414}
   .rx-mode-toggle{height:60px}
   .rx-shortcuts{gap:2px}
   .rx-shortcuts button{height:68px;font-size:7.5px}
