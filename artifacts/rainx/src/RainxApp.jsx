@@ -1619,6 +1619,8 @@ function MainAppContent({ account, onLogout }) {
   const tabDirRef  = useRef(1);    // 1 = slide from right, −1 = from left
   const swipeRef   = useRef(null); // horizontal swipe touch tracking
   const [swipeX, setSwipeX] = useState(0);
+  const communityRouteRef = useRef(null);
+  const [communityRouteSwipeX, setCommunityRouteSwipeX] = useState(0);
 
   const goTab = (key, forcedDir) => {
     const ORDER = { home: 0, wallet: 1, community: 2, more: 3, history: 3, scalping: 3, subscribe: 3 };
@@ -2710,7 +2712,13 @@ function MainAppContent({ account, onLogout }) {
 
       {/* Community — lazy keep-alive: mounts on first visit, never unmounts again */}
       {communityMounted && (
-        <div style={{ display: tab === "community" ? "block" : "none", paddingBottom: 78 }}>
+        <div
+          style={{ display: tab === "community" ? "block" : "none", paddingBottom: 78, overscrollBehaviorY: "none", transform: communityRouteSwipeX ? `translate3d(${communityRouteSwipeX}px, 0, 0)` : "translate3d(0, 0, 0)", transition: communityRouteSwipeX === 0 ? "transform 180ms cubic-bezier(.22,.8,.3,1)" : "none", willChange: "transform", touchAction: "pan-y" }}
+          onTouchStart={(e) => { if (e.target.closest?.("button, input, textarea, select, [contenteditable=\"true\"], canvas, svg, video, a")) { communityRouteRef.current = null; return; } communityRouteRef.current = { x:e.touches[0].clientX, y:e.touches[0].clientY, axis:null }; }}
+          onTouchMove={(e) => { const s=communityRouteRef.current; if (!s) return; const dx=e.touches[0].clientX-s.x, dy=e.touches[0].clientY-s.y; if (!s.axis && (Math.abs(dx)>8 || Math.abs(dy)>8)) s.axis=Math.abs(dx)>Math.abs(dy)?"x":"y"; if (s.axis === "x") setCommunityRouteSwipeX(Math.max(-window.innerWidth*.7, Math.min(window.innerWidth*.7, dx))); }}
+          onTouchEnd={(e) => { const s=communityRouteRef.current; communityRouteRef.current=null; if (!s || s.axis !== "x") { setCommunityRouteSwipeX(0); return; } const dx=e.changedTouches[0].clientX-s.x; if (dx < -Math.min(100, window.innerWidth*.2)) goTab("more"); setCommunityRouteSwipeX(0); }}
+          onTouchCancel={() => { communityRouteRef.current=null; setCommunityRouteSwipeX(0); }}
+        >
           <CommunityTab account={account} entitlement={entitlement} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />
         </div>
       )}
@@ -2728,6 +2736,7 @@ function MainAppContent({ account, onLogout }) {
         className={tabDirRef.current >= 0 ? "rx-slide-right" : "rx-slide-left"}
         style={{ paddingBottom: 78, transform: swipeX ? `translate3d(${swipeX}px, 0, 0)` : "translate3d(0, 0, 0)", transition: swipeX === 0 ? "transform 180ms cubic-bezier(.22,.8,.3,1)" : "none", willChange: "transform", touchAction: "pan-y" }}
         onTouchStart={(e) => {
+          if (e.target.closest?.("canvas, [data-no-route-swipe]")) { swipeRef.current = null; return; }
           swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, axis: null };
         }}
         onTouchMove={(e) => {
