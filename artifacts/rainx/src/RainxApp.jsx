@@ -1377,6 +1377,23 @@ function MainApp({ account, onLogout }) {
   return <MainAppContent account={account} onLogout={onLogout} />;
 }
 
+class HomeTabErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { console.error("HomeTab crash:", error, info); }
+  render() {
+    if (this.state.error) return (
+      <div style={{ minHeight: "60vh", padding: "48px 20px", background: "#F8F9FA", color: "#0F1419", textAlign: "center", fontFamily: FONT_BODY }}>
+        <div style={{ fontSize: 30, marginBottom: 12 }}>RainX</div>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>The home screen could not be refreshed.</div>
+        <div style={{ fontSize: 12, color: "#536471", marginBottom: 18 }}>Your account and other screens are safe.</div>
+        <button onClick={() => this.setState({ error: null })} style={{ border: 0, borderRadius: 10, padding: "11px 18px", background: "#F4D35E", color: "#0F1419", fontWeight: 700 }}>Retry</button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
 class MoreTabErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(e) { return { error: String(e) }; }
@@ -2712,7 +2729,7 @@ function MainAppContent({ account, onLogout }) {
           else if (dx > 0 && ci > 0)          goTab(tabs[ci - 1]);
         }}
       >
-        {tab === "home" && <HomeTab account={account} inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessions={sessions} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} seriesMap={seriesMap} signalsMap={signalsMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} />}
+        {tab === "home" && <HomeTabErrorBoundary><HomeTab account={account} inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessions={sessions} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} seriesMap={seriesMap} signalsMap={signalsMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} /></HomeTabErrorBoundary>}
         {tab === "wallet" && <WalletTab account={account} />}
         {tab === "history" && <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />}
         {tab === "subscribe" && <SubscribeScreen account={account} entitlement={entitlement} onBack={() => goTab("more", -1)} />}
