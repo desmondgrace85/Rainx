@@ -1617,7 +1617,8 @@ function MainAppContent({ account, onLogout }) {
   // ── Telegram-style animated navigation ───────────────────────────────────
   const prevTabRef = useRef("home");
   const tabDirRef  = useRef(1);    // 1 = slide from right, −1 = from left
-  const swipeRef   = useRef(null); // edge-swipe touch tracking
+  const swipeRef   = useRef(null); // horizontal swipe touch tracking
+  const [swipeX, setSwipeX] = useState(0);
 
   const goTab = (key, forcedDir) => {
     const ORDER = { home: 0, wallet: 1, community: 2, more: 3, history: 3, scalping: 3, subscribe: 3 };
@@ -2725,23 +2726,32 @@ function MainAppContent({ account, onLogout }) {
       <div
         key={tab}
         className={tabDirRef.current >= 0 ? "rx-slide-right" : "rx-slide-left"}
-        style={{ paddingBottom: 78 }}
+        style={{ paddingBottom: 78, transform: swipeX ? `translate3d(${swipeX}px, 0, 0)` : "translate3d(0, 0, 0)`, transition: swipeX === 0 ? "transform 180ms cubic-bezier(.22,.8,.3,1)" : "none", willChange: "transform", touchAction: "pan-y" }}
         onTouchStart={(e) => {
-          const x = e.touches[0].clientX;
-          swipeRef.current = (x < 28 || x > window.innerWidth - 28)
-            ? { x, y: e.touches[0].clientY } : null;
+          swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, axis: null };
+        }}
+        onTouchMove={(e) => {
+          const s = swipeRef.current;
+          if (!s) return;
+          const dx = e.touches[0].clientX - s.x;
+          const dy = e.touches[0].clientY - s.y;
+          if (!s.axis && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) s.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+          if (s.axis === "x") setSwipeX(Math.max(-window.innerWidth * 0.72, Math.min(window.innerWidth * 0.72, dx)));
         }}
         onTouchEnd={(e) => {
-          if (!swipeRef.current) return;
-          const dx = e.changedTouches[0].clientX - swipeRef.current.x;
-          const dy = Math.abs(e.changedTouches[0].clientY - swipeRef.current.y);
+          const s = swipeRef.current;
           swipeRef.current = null;
-          if (Math.abs(dx) < 45 || dy > 100) return;
+          if (!s || s.axis !== "x") { setSwipeX(0); return; }
+          const dx = e.changedTouches[0].clientX - s.x;
           const tabs = ["home", "wallet", "community", "more"];
           const ci = tabs.indexOf(tab);
-          if (dx < 0 && ci < tabs.length - 1) goTab(tabs[ci + 1]);
-          else if (dx > 0 && ci > 0)          goTab(tabs[ci - 1]);
+          const shouldSwitch = Math.abs(dx) > Math.min(110, window.innerWidth * 0.22);
+          if (shouldSwitch && ((dx < 0 && ci < tabs.length - 1) || (dx > 0 && ci > 0))) {
+            setSwipeX(0);
+            goTab(dx < 0 ? tabs[ci + 1] : tabs[ci - 1]);
+          } else setSwipeX(0);
         }}
+        onTouchCancel={() => { swipeRef.current = null; setSwipeX(0); }}
       >
         {tab === "home" && <HomeTabErrorBoundary><HomeTab account={account} inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessions={sessions} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} seriesMap={seriesMap} signalsMap={signalsMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} /></HomeTabErrorBoundary>}
         {tab === "wallet" && <WalletTab account={account} />}
@@ -6095,6 +6105,15 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [profilePosts, setProfilePosts] = useState([]);
   const [profileTab, setProfileTab] = useState("posts");
+  const [profileSwipeX, setProfileSwipeX] = useState(0);
+  const profileSwipeRef = useRef(null);
+  const finishProfileSwipe = (dx) => {
+    if (Math.abs(dx) >= Math.min(100, window.innerWidth * 0.2)) {
+      if (dx < 0 && profileTab === "posts") setProfileTab("reposts");
+      if (dx > 0 && profileTab === "reposts") setProfileTab("posts");
+    }
+    setProfileSwipeX(0);
+  };
   const [profilePostsLoading, setProfilePostsLoading] = useState(false);
   const [profileComposerText, setProfileComposerText] = useState("");
   const [profileComposerPosting, setProfileComposerPosting] = useState(false);
@@ -6335,7 +6354,13 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       </svg>
     );
     return (
-      <div style={{ minHeight:"100%", background:T.ink }}>
+      <div
+        style={{ minHeight:"100%", background:T.ink, overscrollBehaviorY:"none", touchAction:"pan-y", transform: profileSwipeX ? `translate3d(${profileSwipeX}px, 0, 0)` : "translate3d(0, 0, 0)", transition: profileSwipeX === 0 ? "transform 180ms cubic-bezier(.22,.8,.3,1)" : "none", willChange:"transform" }}
+        onTouchStart={(e) => { profileSwipeRef.current = { x:e.touches[0].clientX, y:e.touches[0].clientY, axis:null }; }}
+        onTouchMove={(e) => { const s=profileSwipeRef.current; if (!s) return; const dx=e.touches[0].clientX-s.x, dy=e.touches[0].clientY-s.y; if (!s.axis && (Math.abs(dx)>8 || Math.abs(dy)>8)) s.axis=Math.abs(dx)>Math.abs(dy)?"x":"y"; if (s.axis === "x") setProfileSwipeX(Math.max(-window.innerWidth*.7, Math.min(window.innerWidth*.7, dx))); }}
+        onTouchEnd={(e) => { const s=profileSwipeRef.current; profileSwipeRef.current=null; if (!s || s.axis !== "x") { setProfileSwipeX(0); return; } finishProfileSwipe(e.changedTouches[0].clientX-s.x); }}
+        onTouchCancel={() => { profileSwipeRef.current=null; setProfileSwipeX(0); }}
+      >
         <style>{"@keyframes slideInRight { from { transform:translateX(24px); opacity:0 } to { transform:translateX(0); opacity:1 } } @keyframes sheetUp { from { transform:translateY(100%) } to { transform:translateY(0) } }"}</style>
 
         {/* ── Bug 2 fix: Followers/Following modal for own profile ── */}
