@@ -839,7 +839,7 @@ const styles = `
   object-fit:contain;object-position:center;background:transparent
 }
 .rx-space-banner-copy{
-  position:absolute;left:7%;right:25%;top:10%;width:auto;color:#111418;
+  position:absolute;left:7%;right:25%;top:12%;width:auto;color:#111418;
   text-shadow:none
 }
 .rx-space-banner-copy h2{
@@ -1085,7 +1085,7 @@ const styles = `
 
 @media(max-width:430px){
   .rx-space-banner{width:100%;height:auto;aspect-ratio:2000 / 1414}
-  .rx-space-banner-copy{left:7%;right:25%;top:9%;width:auto}
+  .rx-space-banner-copy{left:7%;right:25%;top:11%;width:auto}
   .rx-space-banner-copy h2{font-size:19px}
   .rx-space-banner-copy p{margin-top:9px;font-size:10px}
   .rx-space-banner-copy button{margin-top:9px;height:35px;font-size:9.5px}
@@ -1100,6 +1100,7 @@ const styles = `
 
 @media(prefers-reduced-motion:reduce){
   .rx-space-shell *{animation:none!important;transition:none!important}
+  .rx-space-shell .rx-wallet-sheet{animation:rx-sheet-enter .28s cubic-bezier(.22,.8,.2,1) both!important}
 }
 `;
 
