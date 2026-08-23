@@ -794,28 +794,29 @@ function MyCoinsSheet({ onClose }) {
   );
 }
 
-function useHorizontalSwipe(onLeft, onRight) {
+function useHorizontalSwipe(onLeft, onRight, onProgress) {
   const startX = useRef(null);
   const startY = useRef(null);
+  const axis = useRef(null);
   const onPointerDown = (e) => {
-    startX.current = e.clientX;
-    startY.current = e.clientY;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    startX.current = e.clientX; startY.current = e.clientY; axis.current = null;
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
-  const onPointerUp = (e) => {
+  const onPointerMove = (e) => {
     if (startX.current == null) return;
-    const dx = e.clientX - startX.current;
-    const dy = e.clientY - startY.current;
-    if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.2) {
-      if (dx < 0) onLeft?.();
-      else onRight?.();
-    }
-    startX.current = null;
-    startY.current = null;
+    const dx = e.clientX - startX.current; const dy = e.clientY - startY.current;
+    if (!axis.current && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) axis.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+    if (axis.current === "x") { if (e.cancelable) e.preventDefault(); onProgress?.(dx); }
   };
-  return { onPointerDown, onPointerUp, onPointerCancel: () => { startX.current = null; startY.current = null; } };
+  const finish = (e) => {
+    if (startX.current == null) return;
+    const dx = e.clientX - startX.current; const dy = e.clientY - startY.current;
+    if (axis.current === "x" && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.15) { if (dx < 0) onLeft?.(); else onRight?.(); } else onProgress?.(0);
+    e.currentTarget.releasePointerCapture?.(e.pointerId); startX.current = null; startY.current = null; axis.current = null;
+  };
+  return { onPointerDown, onPointerMove, onPointerUp: finish, onPointerCancel: finish };
 }
-
 function NativeHeader({ title, onBack, right }) {
   return (
     <header className="rx-native-header">
@@ -864,11 +865,13 @@ function CreatorDashboard({ onBack, onManage }) {
   return <><style>{styles}</style><div className="rx-native-screen rx-creator-screen" {...swipe}><NativeHeader title="Creator Dashboard" onBack={onBack} right={<Bell size={18} />} /><div className="rx-native-scroll"><div className="rx-creator-title"><span className="rx-creator-number">1</span><div><strong>STAR DOGE</strong><small>SDOGE</small></div><span className="rx-live-pill">Live</span></div><div className="rx-creator-price"><strong>$0.00241</strong><span>+18.27%</span><small>(24h)</small></div><div className="rx-creator-chart"><svg viewBox="0 0 360 115" preserveAspectRatio="none" aria-label="Token price chart"><path d="M0 92 L14 82 L26 88 L38 72 L50 77 L63 61 L74 69 L88 52 L101 60 L114 45 L128 57 L141 40 L153 48 L165 31 L178 43 L190 34 L202 50 L214 35 L225 42 L237 26 L250 35 L263 18 L276 31 L288 15 L302 23 L316 8 L330 18 L345 3 L360 12" /></svg></div><div className="rx-range"><span>1H</span><b>24H</b><span>7D</span><span>30D</span><span>ALL</span></div><div className="rx-creator-metrics"><Metric label="Market Cap" value="$2.41M" /><Metric label="Holders" value="2,845" /><Metric label="24h Volume" value="$254.8K" /><Metric label="Liquidity" value="$184K" /><Metric label="Transactions" value="12,458" /><Metric label="Circulating Supply" value="420.6M" /></div><div className="rx-overview"><h3>Overview</h3><p><span>Total Supply</span><b>1,000,000,000 SDOGE</b></p><p><span>Creator Fee</span><b>2%</b></p><p><span>Created On</span><b>May 12, 2025</b></p><p><span>Network</span><b>Solana</b></p></div><button className="rx-gold-cta" onClick={onManage}>Manage Your Coin <ArrowUpRight size={16} /></button></div><NativeTabs active="Home" /></div></>;
 }
 
-function LiquidityScreen({ onBack, remove = false, onToggle }) {
-  const swipe = useHorizontalSwipe(() => onToggle(!remove), onBack);
-  return <><style>{styles}</style><div className="rx-native-screen rx-liquidity-screen" {...swipe}><NativeHeader title={remove ? "Remove Liquidity" : "Manage Liquidity"} onBack={onBack} right={<CircleHelp size={18} />} /><div className="rx-native-scroll">{!remove && <div className="rx-liquidity-tabs"><button className="active" onClick={() => onToggle(false)}>Add Liquidity</button><button onClick={() => onToggle(true)}>Remove Liquidity</button></div>}{remove ? <RemoveLiquidity /> : <AddLiquidity />}</div><NativeTabs active="Space Coins" /></div></>;
+function LiquidityScreen({ onBack, remove = false }) {
+  const [activeRemove, setActiveRemove] = useState(remove);
+  const [dragX, setDragX] = useState(0);
+  const swipe = useHorizontalSwipe(() => { setActiveRemove(true); setDragX(0); }, () => { setActiveRemove(false); setDragX(0); }, (dx) => setDragX(Math.max(-window.innerWidth, Math.min(window.innerWidth, dx))));
+  const trackStyle = { transform: "translate3d(calc(" + (activeRemove ? -50 : 0) + "% + " + dragX + "px),0,0)", transition: dragX === 0 ? "transform .28s cubic-bezier(.2,.8,.2,1)" : "none" };
+  return <><style>{styles}</style><div className="rx-native-screen rx-liquidity-screen" {...swipe}><NativeHeader title="Manage Liquidity" onBack={onBack} right={<CircleHelp size={18} />} /><div className="rx-native-scroll"><div className="rx-liquidity-tabs"><button className={!activeRemove ? "active" : ""} onClick={() => { setActiveRemove(false); setDragX(0); }}>Add Liquidity</button><button className={activeRemove ? "active" : ""} onClick={() => { setActiveRemove(true); setDragX(0); }}>Remove Liquidity</button></div><div className="rx-liquidity-swipe"><div className="rx-liquidity-track" style={trackStyle}><div className="rx-liquidity-panel"><AddLiquidity /></div><div className="rx-liquidity-panel"><RemoveLiquidity /></div></div></div></div><NativeTabs active="Space Coins" /></div></>;
 }
-
 function AddLiquidity() { return <><div className="rx-liquidity-art"><strong>Your Liquidity Pool</strong><small>SDOGE / USDT</small><div className="rx-orbit-art"><Droplets size={58} /></div></div><div className="rx-pool-card"><h3>Pool Balance</h3><div><p><small>SDOGE</small><strong>102.45M</strong></p><p><small>USDT</small><strong>45,678.56</strong></p><p><small>LP Tokens</small><strong>8,945.32</strong></p><p><small>Pool Share</small><strong>24.58%</strong></p></div></div><div className="rx-form-card"><h3>Add Liquidity</h3><label>Amount of SDOGE <span>Balance: 12,460,000</span><input value="10,000,000" readOnly /></label><label>Amount of USDT <span>Balance: 3,210</span><input value="2,450" readOnly /></label><small>1 SDOGE = 0.000245 USDT</small><button className="rx-gold-cta">Add Liquidity</button></div></>; }
 function RemoveLiquidity() { return <><div className="rx-warning"><ShieldCheck size={17} /><span>Removing liquidity will reduce your pool share and may affect price stability.</span></div><div className="rx-pool-card"><h3>Your Liquidity</h3><small>SDOGE / USDT</small><div><p><small>Pool Share</small><strong>24.58%</strong></p><p><small>LP Tokens</small><strong>8,945.32</strong></p></div></div><div className="rx-form-card"><h3>You Will Receive</h3><div className="rx-receive"><p><small>SDOGE</small><strong>10,000,000</strong><em>~$2,450.00</em></p><p><small>USDT</small><strong>2,450</strong><em>~$2,450.00</em></p></div><div className="rx-slider"><span /><b>50%</b></div><div className="rx-slider-labels"><span>25%</span><span>50%</span><span>75%</span><span>MAX</span></div><button className="rx-danger-cta">Remove Liquidity</button></div></>; }
 
@@ -1162,6 +1165,11 @@ const styles = `
 
 .rx-menu-screen{background:#fff}.rx-menu-topbar{height:66px;flex:0 0 66px;display:flex;align-items:flex-end;padding:0 14px 13px;border-bottom:0}.rx-menu-topbar .rx-native-back{padding:4px}.rx-menu-content{padding:16px 20px 30px;overflow:auto}.rx-menu-feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:28px}.rx-menu-feature{height:92px;border:0;background:#f4f4f4;border-radius:15px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;box-shadow:none;text-align:center;color:#111}.rx-menu-feature-icon{width:auto;height:auto;border-radius:0;background:transparent;color:#111;display:grid;place-items:center}.rx-menu-feature strong{font-size:15px;font-weight:500}.rx-menu-groups{border-top:1px solid #e6e6e6}.rx-menu-groups .rx-menu-list{border-top:0;border-bottom:1px solid #e6e6e6}.rx-menu-list button{height:64px;grid-template-columns:42px 1fr 24px;color:#171717;font:500 16px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif;border-bottom:0}.rx-menu-list-icon{color:#111;justify-content:start}.rx-menu-list button svg:last-child{color:#707070}.rx-creator-screen .rx-native-header{height:55px;flex-basis:55px;padding-left:13px;padding-right:13px}.rx-creator-screen .rx-native-scroll{padding:12px 13px 82px}.rx-creator-screen .rx-creator-price{margin-top:16px}.rx-creator-screen .rx-creator-chart{height:105px}.rx-creator-screen .rx-creator-metrics{gap:6px}.rx-creator-screen .rx-creator-metric{padding:9px 7px}.rx-creator-screen .rx-creator-metric small{font-size:7px}.rx-creator-screen .rx-creator-metric strong{font-size:9px}.rx-creator-screen .rx-overview{margin-top:17px}
 
+.rx-native-screen{position:fixed;inset:0;width:min(100%,480px);height:100dvh;min-height:100dvh;margin:0 auto;z-index:950;background:#fff;display:flex;flex-direction:column;overflow:hidden;overscroll-behavior:none;isolation:isolate;touch-action:pan-y;animation:rx-native-in .3s cubic-bezier(.2,.8,.2,1) both}
+.rx-native-screen .rx-native-scroll{flex:1;min-height:0;width:100%;max-width:480px;margin:0 auto;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:12px 16px calc(82px + env(safe-area-inset-bottom))}
+.rx-native-screen button{touch-action:manipulation;transition:background-color .16s ease,color .16s ease,border-color .16s ease}.rx-native-screen button:active{transform:none}
+.rx-menu-screen{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif}.rx-menu-content{width:100%;max-width:480px;margin:0 auto;padding:14px 18px calc(30px + env(safe-area-inset-bottom));overflow:visible}.rx-menu-feature-grid{gap:10px;margin-bottom:22px}.rx-menu-feature{height:72px;border-radius:12px;padding:8px}.rx-menu-feature-icon svg{width:22px;height:22px}.rx-menu-feature strong{font-size:13px;font-weight:600;color:#111}.rx-menu-section-label{margin:18px 0 7px;color:#85898d;font-size:13px;font-weight:500;letter-spacing:.01em}.rx-menu-list{border-top:0!important;border-bottom:1px solid #e6e6e6}.rx-menu-list button{height:52px;grid-template-columns:34px 1fr 20px;color:#111;font-size:15px;font-weight:500}.rx-menu-list-icon,.rx-menu-list-icon svg,.rx-menu-list button svg:last-child{color:#85898d}.rx-menu-list-icon svg{stroke-width:2}.rx-creator-screen .rx-creator-title{gap:10px}.rx-creator-screen .rx-creator-number{width:30px;height:30px;font-size:14px}.rx-creator-screen .rx-creator-title strong{font-size:16px}.rx-creator-screen .rx-creator-title small{font-size:11px}.rx-creator-screen .rx-live-pill{font-size:11px;padding:7px 11px}.rx-creator-screen .rx-creator-price{margin-top:20px}.rx-creator-screen .rx-creator-price strong{font-size:25px}.rx-creator-screen .rx-creator-price span{font-size:12px}.rx-creator-screen .rx-creator-price small{font-size:11px}.rx-creator-screen .rx-creator-chart{height:125px;margin:10px 0}.rx-creator-screen .rx-range{font-size:11px;margin:8px 18px 18px}.rx-creator-screen .rx-creator-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.rx-creator-screen .rx-creator-metric{min-width:0;padding:11px 10px;border-radius:12px}.rx-creator-screen .rx-creator-metric small{font-size:10px}.rx-creator-screen .rx-creator-metric strong{font-size:13px}.rx-creator-screen .rx-overview{margin-top:22px}.rx-creator-screen .rx-overview h3{font-size:16px}.rx-creator-screen .rx-overview p{font-size:12px;margin:11px 0}.rx-creator-screen .rx-overview p b{font-size:12px}.rx-creator-screen .rx-gold-cta{height:48px;font-size:13px;margin-top:24px}.rx-liquidity-swipe{width:100%;overflow:hidden;touch-action:pan-y;overscroll-behavior:contain}.rx-liquidity-track{display:flex;width:200%;will-change:transform}.rx-liquidity-panel{width:50%;min-width:50%;padding:0 5px}.rx-liquidity-screen .rx-liquidity-tabs{margin-left:0;margin-right:0}.rx-liquidity-screen .rx-liquidity-tabs button{font-size:12px}.rx-liquidity-screen .rx-liquidity-art,.rx-liquidity-screen .rx-pool-card,.rx-liquidity-screen .rx-form-card{width:100%;max-width:none}.rx-liquidity-screen .rx-liquidity-art{height:165px;padding:20px}.rx-liquidity-screen .rx-liquidity-art strong{font-size:15px}.rx-liquidity-screen .rx-liquidity-art small{font-size:11px}.rx-liquidity-screen .rx-pool-card,.rx-liquidity-screen .rx-form-card{padding:18px}.rx-liquidity-screen .rx-pool-card h3,.rx-liquidity-screen .rx-form-card h3{font-size:15px}.rx-liquidity-screen .rx-pool-card>div{gap:18px 28px}.rx-liquidity-screen .rx-pool-card p small,.rx-liquidity-screen .rx-form-card label,.rx-liquidity-screen .rx-form-card>small{font-size:11px}.rx-liquidity-screen .rx-pool-card p strong,.rx-liquidity-screen .rx-receive strong{font-size:14px}.rx-liquidity-screen .rx-form-card input{height:44px;font-size:13px}.rx-liquidity-screen .rx-gold-cta,.rx-liquidity-screen .rx-danger-cta{height:46px;font-size:13px}.rx-wallet-sheet.dragging{transition:none}
+
 @media(max-width:430px){
   .rx-space-banner{width:100%;height:auto;aspect-ratio:2000 / 1414}
   .rx-space-banner-copy{left:7%;right:25%;top:17%;width:auto}
@@ -1370,10 +1378,10 @@ export default function SpaceCoinsDashboard({ onBack }) {
     return <CreatorDashboard onBack={() => setScreen("menu")} onManage={() => setScreen("liquidity-manage")} />;
   }
   if (screen === "liquidity-manage") {
-    return <LiquidityScreen onBack={() => setScreen("creator")} onToggle={(remove) => setScreen(remove ? "liquidity-remove" : "liquidity-manage")} />;
+    return <LiquidityScreen onBack={() => setScreen("creator")} onToggle={() => {}} />;
   }
   if (screen === "liquidity-remove") {
-    return <LiquidityScreen remove onBack={() => setScreen("liquidity-manage")} onToggle={() => setScreen("liquidity-manage")} />;
+    return <LiquidityScreen remove onBack={() => setScreen("liquidity-manage")} onToggle={() => {}} />;
   }
   return (
     <>
