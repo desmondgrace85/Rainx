@@ -2673,8 +2673,8 @@ function MainAppContent({ account, onLogout }) {
         .hide-scroll::-webkit-scrollbar { display:none; }
         .hide-scroll { -ms-overflow-style:none; scrollbar-width:none; }
         /* Disable rubber-band overscroll only; scrolling and pull-to-refresh remain enabled. */
-        .rx-app-root, .rx-app-root * { overscroll-behavior-y: none; }
-        .rx-standalone-route, .rx-standalone-route * { overscroll-behavior-y: none; }
+        .rx-app-root { overscroll-behavior-y: none; }
+        .rx-standalone-route { overscroll-behavior-y: none; }
         .scroll-hint::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,rgba(244,211,94,0.5),transparent); opacity:0; transition:opacity 0.3s; pointer-events:none; }
         .scroll-hint.scrolling::after { opacity:1; }
       `}</style>
