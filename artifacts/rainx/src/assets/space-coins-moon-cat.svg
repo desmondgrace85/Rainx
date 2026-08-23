@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<defs>
+<radialGradient id="g" cx="34%" cy="25%"><stop stop-color="#dff7ff"/><stop offset=".34" stop-color="#82bde8"/><stop offset=".72" stop-color="#4962a6"/><stop offset="1" stop-color="#242d62"/></radialGradient>
+</defs>
+<circle cx="128" cy="128" r="119" fill="#fff"/>
+<circle cx="128" cy="128" r="108" fill="url(#g)" stroke="#2f477f" stroke-width="5"/>
+<circle cx="128" cy="128" r="88" fill="none" stroke="#c9eaff" stroke-width="3" opacity=".7"/>
+<path d="M73 115c2-43 28-70 55-70s53 27 55 70c0 44-24 74-55 74s-55-30-55-74Z" fill="#f1f4fa"/>
+<path d="M82 102 61 77l37 10M174 87l38-10-21 25" fill="#dbe4f3" stroke="#b7c9df" stroke-width="4"/>
+<ellipse cx="104" cy="119" rx="12" ry="15" fill="#24365f"/><ellipse cx="152" cy="119" rx="12" ry="15" fill="#24365f"/>
+<circle cx="108" cy="116" r="4" fill="#fff"/><circle cx="156" cy="116" r="4" fill="#fff"/>
+<path d="M118 141h20l-10 9Z" fill="#e6a9bb"/>
+<path d="M103 153c14 12 36 12 50 0" fill="none" stroke="#2d3b62" stroke-width="5" stroke-linecap="round"/>
+<circle cx="86" cy="151" r="8" fill="#f2b6c6" opacity=".55"/><circle cx="170" cy="151" r="8" fill="#f2b6c6" opacity=".55"/>
+<text x="128" y="205" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="800" fill="#e9f5ff">MCAT</text>
+</svg>
