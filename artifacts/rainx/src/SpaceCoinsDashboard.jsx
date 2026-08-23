@@ -221,12 +221,14 @@ function ExternalPanel({ onConnect }) {
 
 function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress }) {
   const start = useRef(null);
+  const dragXRef = useRef(0);
   const [dragX, setDragX] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const onPointerDown = (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     e.currentTarget.setPointerCapture?.(e.pointerId);
     start.current = { x: e.clientX, y: e.clientY };
+    dragXRef.current = 0;
     setSwiping(true);
     setDragX(0);
   };
@@ -238,6 +240,7 @@ function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress }) {
     if (e.cancelable) e.preventDefault();
     const width = e.currentTarget.getBoundingClientRect().width || window.innerWidth;
     const bounded = Math.max(-width, Math.min(width, dx));
+    dragXRef.current = bounded;
     setDragX(bounded);
     const progress = Math.max(0, Math.min(1, (mode === "external" ? 1 : 0) + bounded / width));
     onProgress?.(progress);
@@ -245,9 +248,10 @@ function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress }) {
   const onPointerEnd = () => {
     if (!start.current) return;
     const width = window.innerWidth;
-    if (dragX < -width * 0.16) setMode("external");
-    else if (dragX > width * 0.16) setMode("space");
+    if (dragXRef.current < -width * 0.16) setMode("external");
+    else if (dragXRef.current > width * 0.16) setMode("space");
     start.current = null;
+    dragXRef.current = 0;
     setDragX(0);
     setSwiping(false);
     onProgress?.(null);
@@ -630,6 +634,7 @@ function WalletSheet({ onClose }) {
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const pointerStart = useRef(null);
+  const dragYRef = useRef(0);
   const wallets = [
     ["MetaMask", metamaskLogo],
     ["Trust Wallet", trustWalletLogo],
@@ -642,6 +647,7 @@ function WalletSheet({ onClose }) {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     e.currentTarget.setPointerCapture?.(e.pointerId);
     pointerStart.current = e.clientY;
+    dragYRef.current = 0;
     setDragging(true);
     setDragY(0);
   };
@@ -649,13 +655,16 @@ function WalletSheet({ onClose }) {
   const onPointerMove = (e) => {
     if (pointerStart.current == null) return;
     if (e.cancelable) e.preventDefault();
-    setDragY(e.clientY - pointerStart.current);
+    const nextDragY = e.clientY - pointerStart.current;
+    dragYRef.current = nextDragY;
+    setDragY(nextDragY);
   };
   const onPointerEnd = () => {
     if (pointerStart.current == null) return;
-    if (dragY < -45) setExpanded(true);
-    else if (dragY > 45) setExpanded(false);
+    if (dragYRef.current < -45) setExpanded(true);
+    else if (dragYRef.current > 45) setExpanded(false);
     pointerStart.current = null;
+    dragYRef.current = 0;
     setDragging(false);
     setDragY(0);
   };
