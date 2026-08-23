@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { ChevronRight, ExternalLink, RefreshCw } from "lucide-react";
+import { ChevronRight, ExternalLink, RefreshCw, Newspaper } from "lucide-react";
 
 const GOOGLE_NEWS_URL = "https://news.google.com/rss/search?q=(crypto%20OR%20bitcoin%20OR%20ethereum%20OR%20solana%20OR%20forex%20OR%20gold)&hl=en-US&gl=US&ceid=US:en";
 const RSS_PROXY = "https://api.rss2json.com/v1/api.json?rss_url=";
