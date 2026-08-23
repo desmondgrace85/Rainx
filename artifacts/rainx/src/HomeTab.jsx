@@ -319,6 +319,63 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// Native-feeling interactive sheet behavior. Dragging is intentionally limited to the
+// handle so the market list keeps its normal vertical scrolling behavior.
+function useBottomSheet(onClose) {
+  const restOffset = Math.max(72, Math.round(window.innerHeight * 0.14));
+  const [offset, setOffset] = useState(restOffset + 56);
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef(null);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setOffset(restOffset));
+    return () => cancelAnimationFrame(frame);
+  }, [restOffset]);
+
+  const finish = (clientY, time) => {
+    const start = dragRef.current;
+    if (!start) return;
+    const elapsed = Math.max(1, time - start.lastTime);
+    const velocity = (clientY - start.lastY) / elapsed;
+    const current = start.offset + (clientY - start.startY);
+    setDragging(false);
+    dragRef.current = null;
+
+    if (current > restOffset + 120 || velocity > 0.85) {
+      setOffset(window.innerHeight);
+      window.setTimeout(onClose, 260);
+    } else if (current < restOffset * 0.45 || velocity < -0.6) {
+      setOffset(0);
+    } else {
+      setOffset(restOffset);
+    }
+  };
+
+  const bind = {
+    onPointerDown: (event) => {
+      if (!event.target.closest?.("[data-sheet-handle]")) return;
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+      dragRef.current = { startY: event.clientY, lastY: event.clientY, lastTime: performance.now(), offset };
+      setDragging(true);
+      event.preventDefault();
+    },
+    onPointerMove: (event) => {
+      const start = dragRef.current;
+      if (!start) return;
+      const now = performance.now();
+      const next = Math.max(-restOffset, Math.min(window.innerHeight, start.offset + event.clientY - start.startY));
+      start.lastY = event.clientY;
+      start.lastTime = now;
+      setOffset(next);
+      event.preventDefault();
+    },
+    onPointerUp: (event) => finish(event.clientY, performance.now()),
+    onPointerCancel: (event) => finish(event.clientY, performance.now()),
+  };
+
+  return { bind, style: { transform: `translate3d(0, ${offset}px, 0)`, willChange: "transform", transition: dragging ? "none" : "transform 360ms cubic-bezier(0.22, 0.8, 0.2, 1)" } };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Add Market bottom sheet — supports add, replace when full, and manage active
 // ─────────────────────────────────────────────────────────────────────────────
@@ -328,13 +385,14 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
   const [mode, setMode] = useState(null);
   const [managedAsset, setManagedAsset] = useState(null);   // asset being managed or new asset wanting a slot
   const atLimit = activeMarkets.length >= maxActiveMarkets;
+  const sheet = useBottomSheet(onClose);
 
   // ── Manage already-active market: Replace or Delete ─────────────────────
   if (mode === "manage" && managedAsset) {
     return (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} style={{ background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
-          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
+        <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
+          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} /></div>
           <div style={{ padding:"0 20px 20px" }}>
             <button onClick={() => { setMode(null); setManagedAsset(null); }} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
               <ChevronLeft size={16} /><span style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:700 }}>Back</span>
@@ -363,8 +421,8 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
     if (!category) {
       return (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-          <div onClick={e => e.stopPropagation()} style={{ background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
-            <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
+          <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
+            <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} /></div>
             <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:10 }}>
               <button onClick={() => { setMode(backMode === "pick_category_for_replace" ? "manage" : null); }} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
               <div>
@@ -389,8 +447,8 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
     }
     return (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} style={{ background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
-          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
+        <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
+          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} /></div>
           <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:12 }}>
             <button onClick={() => setCategory(null)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
             <div>
@@ -437,8 +495,8 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
   if (mode === "pick_who_to_replace" && managedAsset) {
     return (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} style={{ background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
-          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
+        <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
+          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} /></div>
           <div style={{ padding:"0 20px 20px" }}>
             <button onClick={() => setMode("pick_new_when_full")} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
               <ChevronLeft size={16} /><span style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:700 }}>Back</span>
@@ -469,9 +527,9 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
   // ── Default: category grid + asset list ─────────────────────────────────
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
+      <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
         <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}>
-          <div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} />
+          <div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} />
         </div>
         {!category ? (
           <>
