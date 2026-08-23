@@ -838,7 +838,7 @@ const menuItems = [
 
 function MenuScreen({ onBack, onDashboard }) {
   return (
-    <div className="rx-native-screen rx-menu-screen">
+    <><style>{styles}</style><div className="rx-native-screen rx-menu-screen">
       <NativeHeader title="Space Coins" onBack={onBack} />
       <div className="rx-menu-content">
         <div className="rx-menu-intro"><span>SPACE COINS</span><h2>Manage your token</h2><p>Everything you need to run your creator dashboard.</p></div>
@@ -847,7 +847,7 @@ function MenuScreen({ onBack, onDashboard }) {
         <div className="rx-menu-section-label">Token tools</div>
         <div className="rx-menu-list">{menuItems.map(([Icon, label]) => <button key={label} onClick={() => {}}><span className="rx-menu-list-icon"><Icon size={20} /></span><span>{label}</span><ChevronRight size={18} /></button>)}</div>
       </div>
-    </div>
+    </div></>
   );
 }
 
@@ -857,12 +857,12 @@ function NativeTabs({ active }) { return <nav className="rx-native-tabs">{["Home
 
 function CreatorDashboard({ onBack, onManage }) {
   const swipe = useHorizontalSwipe(undefined, onBack);
-  return <div className="rx-native-screen rx-creator-screen" {...swipe}><NativeHeader title="Creator Dashboard" onBack={onBack} right={<Bell size={18} />} /><div className="rx-native-scroll"><div className="rx-creator-title"><span className="rx-creator-number">1</span><div><strong>STAR DOGE</strong><small>SDOGE</small></div><span className="rx-live-pill">Live</span></div><div className="rx-creator-price"><strong>$0.00241</strong><span>+18.27%</span><small>(24h)</small></div><div className="rx-creator-chart"><svg viewBox="0 0 360 115" preserveAspectRatio="none" aria-label="Token price chart"><path d="M0 92 L14 82 L26 88 L38 72 L50 77 L63 61 L74 69 L88 52 L101 60 L114 45 L128 57 L141 40 L153 48 L165 31 L178 43 L190 34 L202 50 L214 35 L225 42 L237 26 L250 35 L263 18 L276 31 L288 15 L302 23 L316 8 L330 18 L345 3 L360 12" /></svg></div><div className="rx-range"><span>1H</span><b>24H</b><span>7D</span><span>30D</span><span>ALL</span></div><div className="rx-creator-metrics"><Metric label="Market Cap" value="$2.41M" /><Metric label="Holders" value="2,845" /><Metric label="24h Volume" value="$254.8K" /><Metric label="Liquidity" value="$184K" /><Metric label="Transactions" value="12,458" /><Metric label="Circulating Supply" value="420.6M" /></div><div className="rx-overview"><h3>Overview</h3><p><span>Total Supply</span><b>1,000,000,000 SDOGE</b></p><p><span>Creator Fee</span><b>2%</b></p><p><span>Created On</span><b>May 12, 2025</b></p><p><span>Network</span><b>Solana</b></p></div><button className="rx-gold-cta" onClick={onManage}>Manage Your Coin <ArrowUpRight size={16} /></button></div><NativeTabs active="Home" /></div>;
+  return <><style>{styles}</style><div className="rx-native-screen rx-creator-screen" {...swipe}><NativeHeader title="Creator Dashboard" onBack={onBack} right={<Bell size={18} />} /><div className="rx-native-scroll"><div className="rx-creator-title"><span className="rx-creator-number">1</span><div><strong>STAR DOGE</strong><small>SDOGE</small></div><span className="rx-live-pill">Live</span></div><div className="rx-creator-price"><strong>$0.00241</strong><span>+18.27%</span><small>(24h)</small></div><div className="rx-creator-chart"><svg viewBox="0 0 360 115" preserveAspectRatio="none" aria-label="Token price chart"><path d="M0 92 L14 82 L26 88 L38 72 L50 77 L63 61 L74 69 L88 52 L101 60 L114 45 L128 57 L141 40 L153 48 L165 31 L178 43 L190 34 L202 50 L214 35 L225 42 L237 26 L250 35 L263 18 L276 31 L288 15 L302 23 L316 8 L330 18 L345 3 L360 12" /></svg></div><div className="rx-range"><span>1H</span><b>24H</b><span>7D</span><span>30D</span><span>ALL</span></div><div className="rx-creator-metrics"><Metric label="Market Cap" value="$2.41M" /><Metric label="Holders" value="2,845" /><Metric label="24h Volume" value="$254.8K" /><Metric label="Liquidity" value="$184K" /><Metric label="Transactions" value="12,458" /><Metric label="Circulating Supply" value="420.6M" /></div><div className="rx-overview"><h3>Overview</h3><p><span>Total Supply</span><b>1,000,000,000 SDOGE</b></p><p><span>Creator Fee</span><b>2%</b></p><p><span>Created On</span><b>May 12, 2025</b></p><p><span>Network</span><b>Solana</b></p></div><button className="rx-gold-cta" onClick={onManage}>Manage Your Coin <ArrowUpRight size={16} /></button></div><NativeTabs active="Home" /></div></>;
 }
 
 function LiquidityScreen({ onBack, remove = false, onToggle }) {
   const swipe = useHorizontalSwipe(() => onToggle(!remove), onBack);
-  return <div className="rx-native-screen rx-liquidity-screen" {...swipe}><NativeHeader title={remove ? "Remove Liquidity" : "Manage Liquidity"} onBack={onBack} right={<CircleHelp size={18} />} /><div className="rx-native-scroll">{!remove && <div className="rx-liquidity-tabs"><button className="active" onClick={() => onToggle(false)}>Add Liquidity</button><button onClick={() => onToggle(true)}>Remove Liquidity</button></div>}{remove ? <RemoveLiquidity /> : <AddLiquidity />}</div><NativeTabs active="Space Coins" /></div>;
+  return <><style>{styles}</style><div className="rx-native-screen rx-liquidity-screen" {...swipe}><NativeHeader title={remove ? "Remove Liquidity" : "Manage Liquidity"} onBack={onBack} right={<CircleHelp size={18} />} /><div className="rx-native-scroll">{!remove && <div className="rx-liquidity-tabs"><button className="active" onClick={() => onToggle(false)}>Add Liquidity</button><button onClick={() => onToggle(true)}>Remove Liquidity</button></div>}{remove ? <RemoveLiquidity /> : <AddLiquidity />}</div><NativeTabs active="Space Coins" /></div></>;
 }
 
 function AddLiquidity() { return <><div className="rx-liquidity-art"><strong>Your Liquidity Pool</strong><small>SDOGE / USDT</small><div className="rx-orbit-art"><Droplets size={58} /></div></div><div className="rx-pool-card"><h3>Pool Balance</h3><div><p><small>SDOGE</small><strong>102.45M</strong></p><p><small>USDT</small><strong>45,678.56</strong></p><p><small>LP Tokens</small><strong>8,945.32</strong></p><p><small>Pool Share</small><strong>24.58%</strong></p></div></div><div className="rx-form-card"><h3>Add Liquidity</h3><label>Amount of SDOGE <span>Balance: 12,460,000</span><input value="10,000,000" readOnly /></label><label>Amount of USDT <span>Balance: 3,210</span><input value="2,450" readOnly /></label><small>1 SDOGE = 0.000245 USDT</small><button className="rx-gold-cta">Add Liquidity</button></div></>; }
