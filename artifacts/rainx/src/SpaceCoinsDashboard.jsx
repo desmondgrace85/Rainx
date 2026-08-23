@@ -837,7 +837,7 @@ const menuItems = [
 ];
 
 function MenuScreen({ onBack, onDashboard }) {
-  const groups = [menuItems.slice(0, 3), menuItems.slice(3, 6), menuItems.slice(6)];
+  const groups = [menuItems.slice(0, 2), menuItems.slice(2, 5), menuItems.slice(5)];
   return (
     <div className="rx-native-screen rx-menu-screen">
       <style>{styles}</style>
