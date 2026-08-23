@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
-  Bell,
   Check,
   ChevronDown,
   Menu,
@@ -13,10 +12,17 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
+import {
+  SiCoinbase,
+  SiMetamask,
+  SiPhantom,
+  SiTrustwallet,
+  SiWalletconnect,
+} from "react-icons/si";
 
-import galaxyDogeImage from "./assets/space-coins-galaxy-doge.svg";
-import moonCatImage from "./assets/space-coins-moon-cat.svg";
-import planetPepeImage from "./assets/space-coins-planet-pepe.svg";
+import galaxyDogeImage from "./assets/space-coins-galaxy-doge.jpg";
+import moonCatImage from "./assets/space-coins-moon-cat.jpg";
+import planetPepeImage from "./assets/space-coins-planet-pepe.jpg";
 import rocketArtwork from "./assets/space-coins-rocket.png";
 import orbitArtwork from "./assets/space-coins-orbit.png";
 import platformArtwork from "./assets/space-coins-platform.png";
@@ -62,14 +68,14 @@ function Header({ onMenu, onBack, title = "Space Coins" }) {
           <ArrowLeft size={23} />
         </button>
       ) : (
-        <button className="rx-icon-btn rx-left" onClick={onMenu} aria-label="Space Coins menu">
+        <span className="rx-header-spacer" aria-hidden="true" />
+      )}
+      <h1>{title}</h1>
+      {!onBack && (
+        <button className="rx-icon-btn rx-right" onClick={onMenu} aria-label="Space Coins menu">
           <Menu size={24} />
         </button>
       )}
-      <h1>{title}</h1>
-      <button className="rx-icon-btn rx-right" aria-label="Notifications">
-        <Bell size={21} />
-      </button>
     </header>
   );
 }
@@ -130,7 +136,7 @@ function Shortcuts({ onMyCoins }) {
           <span className="rx-shortcut-icon">
             <Icon />
           </span>
-          <span>{label}</span>
+          <span className="rx-shortcut-label">{label}</span>
         </button>
       ))}
     </nav>
@@ -320,6 +326,7 @@ function useEdgeBack(onBack) {
 function CreateCoin({ onBack }) {
   const [step, setStep] = useState(1);
   const [logo, setLogo] = useState(null);
+  const [networkOpen, setNetworkOpen] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -487,19 +494,34 @@ function CreateCoin({ onBack }) {
                   <label className="rx-create-field">
                     <span>Network</span>
 
-                    <div className="rx-select-wrap">
-                      <select
-                        value={form.network}
-                        onChange={(e) =>
-                          set("network", e.target.value)
-                        }
+                    <div className="rx-network-select">
+                      <button
+                        type="button"
+                        className={`rx-network-trigger ${networkOpen ? "open" : ""}`}
+                        onClick={() => setNetworkOpen((open) => !open)}
+                        aria-expanded={networkOpen}
                       >
-                        <option>Solana</option>
-                        <option>Ethereum</option>
-                        <option>Base</option>
-                      </select>
-
-                      <ChevronDown className="rx-chevron" size={18} />
+                        <span>{form.network}</span>
+                        <ChevronDown
+                          className={`rx-chevron ${networkOpen ? "rotated" : ""}`}
+                          size={18}
+                        />
+                      </button>
+                      <div className={`rx-network-menu ${networkOpen ? "open" : ""}`}>
+                        {["Solana", "Ethereum", "Base"].map((network) => (
+                          <button
+                            type="button"
+                            key={network}
+                            className={form.network === network ? "selected" : ""}
+                            onClick={() => {
+                              set("network", network);
+                              setNetworkOpen(false);
+                            }}
+                          >
+                            {network}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </label>
                 </div>
@@ -552,7 +574,8 @@ function CreateCoin({ onBack }) {
                 disabled={step === 1 && !valid}
                 onClick={() => setStep((s) => s + 1)}
               >
-                Next Step <ArrowRight size={16} />
+                <ArrowRight className="rx-action-arrow" size={16} />
+                <span>Next Step</span>
               </button>
             ) : (
               <button
@@ -578,27 +601,53 @@ function CreateCoin({ onBack }) {
 }
 
 function WalletSheet({ onClose }) {
+  const [expanded, setExpanded] = useState(false);
+  const touchStart = useRef(null);
   const wallets = [
-    "MetaMask",
-    "Trust Wallet",
-    "Phantom",
-    "Coinbase Wallet",
-    "WalletConnect",
+    ["MetaMask", SiMetamask],
+    ["Trust Wallet", SiTrustwallet],
+    ["Phantom", SiPhantom],
+    ["Coinbase Wallet", SiCoinbase],
+    ["WalletConnect", SiWalletconnect],
   ];
+
+  const onTouchStart = (e) => {
+    const touch = e.touches[0];
+    touchStart.current = { y: touch.clientY };
+  };
+
+  const onTouchEnd = (e) => {
+    if (!touchStart.current) return;
+    const dy = e.changedTouches[0].clientY - touchStart.current.y;
+    touchStart.current = null;
+    if (Math.abs(dy) < 35) return;
+    if (dy < 0) setExpanded(true);
+    if (dy > 0) setExpanded(false);
+  };
 
   return (
     <div className="rx-overlay" onClick={onClose}>
-      <div className="rx-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="rx-sheet-handle" />
+      <div
+        className={`rx-sheet ${expanded ? "expanded" : ""}`}
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
+        <button
+          type="button"
+          className="rx-sheet-handle"
+          onClick={() => setExpanded((open) => !open)}
+          aria-label={expanded ? "Collapse wallet sheet" : "Expand wallet sheet"}
+        />
 
         <div className="rx-sheet-head">
           <h3>Connect Wallet</h3>
           <button onClick={onClose}><X size={20} /></button>
         </div>
 
-        {wallets.map((wallet) => (
+        {wallets.map(([wallet, Icon]) => (
           <div className="rx-wallet-row" key={wallet}>
-            <span>{wallet.slice(0, 1)}</span>
+            <span><Icon /></span>
             <strong>{wallet}</strong>
             <button onClick={onClose}>Connect</button>
           </div>
@@ -699,6 +748,7 @@ const styles = `
   position:relative;margin-bottom:8px
 }
 .rx-space-header h1{margin:0;font-size:18px;font-weight:800;letter-spacing:-.4px}
+.rx-header-spacer{width:40px;height:40px}
 .rx-icon-btn{
   position:absolute;width:40px;height:40px;border:0;background:transparent;
   color:#111418;display:grid;place-items:center;padding:0
@@ -707,12 +757,12 @@ const styles = `
 .rx-icon-btn.rx-right{right:0}
 
 .rx-space-banner{
-  position:relative;width:100%;max-width:100%;height:176px;
+  position:relative;width:100%;max-width:100%;height:192px;
   overflow:hidden;border-radius:18px;margin-bottom:12px
 }
 .rx-space-banner>img{
   display:block;width:100%;height:100%;max-width:100%;
-  object-fit:cover;object-position:center
+  object-fit:contain;object-position:center;background:#dcae29
 }
 .rx-space-banner-copy{
   position:absolute;left:7%;top:11%;width:53%;color:#fff;
@@ -762,30 +812,31 @@ const styles = `
 
 .rx-shortcuts{
   display:grid;grid-template-columns:repeat(4,1fr);
-  gap:7px;margin-bottom:20px
+  gap:4px;margin-bottom:20px
 }
 .rx-shortcuts button{
-  height:58px;min-width:0;border:1px solid #E4E5E7;
-  border-radius:15px;background:#F4F5F5;
+  height:70px;min-width:0;border:0;
+  border-radius:0;background:transparent;
   display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:5px;color:#111418;
-  font:800 8px 'Montserrat',sans-serif;
-  box-shadow:0 1px 5px rgba(20,24,28,.025);
+  justify-content:center;gap:7px;color:#555B61;
+  font:700 8px 'Montserrat',sans-serif;
   text-align:center
 }
 .rx-shortcut-icon{
-  width:25px;height:25px;border-radius:8px;
-  background:#E9EAEB;display:grid;place-items:center
+  width:42px;height:42px;border-radius:50%;
+  background:#F1F2F3;display:grid;place-items:center;
+  box-shadow:0 2px 7px rgba(20,24,28,.07)
 }
 .rx-shortcut-icon svg{
-  width:17px;height:17px;stroke-width:2.5;color:#111418
+  width:18px;height:18px;stroke-width:2.2;color:#343A40
 }
 .rx-shortcuts button:first-child .rx-shortcut-icon svg,
 .rx-shortcuts button:nth-child(3) .rx-shortcut-icon svg,
 .rx-shortcuts button:nth-child(4) .rx-shortcut-icon svg{
   fill:#111418
 }
-.rx-shortcuts button:nth-child(2) .rx-shortcut-icon svg{stroke-width:3}
+.rx-shortcuts button:nth-child(2) .rx-shortcut-icon svg{stroke-width:2.5}
+.rx-shortcut-label{white-space:nowrap}
 
 .rx-space-section{margin-bottom:22px}
 .rx-section-head{
@@ -793,8 +844,8 @@ const styles = `
   margin-bottom:9px
 }
 .rx-section-head h2{
-  margin:0;font-size:17px;line-height:1.05;
-  font-weight:800;letter-spacing:-.35px
+  margin:0;font-size:16px;line-height:1.05;
+  font-weight:800;letter-spacing:-.55px
 }
 .rx-section-head button{
   border:0;background:transparent;color:#C28F18;
@@ -881,18 +932,27 @@ const styles = `
 
 .rx-overlay{
   position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.48);
-  display:flex;align-items:flex-end;justify-content:center
+  display:flex;align-items:flex-end;justify-content:center;
+  animation:rx-overlay-fade .2s ease-out both
 }
 .rx-sheet{
   width:min(100%,480px);background:#fff;color:#111418;
   border-radius:22px 22px 0 0;
   padding:9px 16px calc(22px + env(safe-area-inset-bottom));
-  max-height:80dvh;overflow:auto
+  max-height:80dvh;overflow:auto;
+  transform:translate3d(0,0,0);
+  animation:rx-sheet-enter .28s cubic-bezier(.22,.8,.2,1) both;
+  transition:max-height .28s ease
 }
+.rx-sheet.expanded{max-height:96dvh}
 .rx-sheet-tall{max-height:86dvh}
 .rx-sheet-handle{
-  width:42px;height:4px;border-radius:9px;background:#D8DADC;
-  margin:0 auto 12px
+  width:100%;height:22px;border:0;border-radius:0;background:transparent;
+  margin:0 auto 4px;display:grid;place-items:start center;cursor:grab
+}
+.rx-sheet-handle::after{
+  content:"";display:block;width:42px;height:4px;border-radius:9px;
+  background:#D8DADC;margin-top:3px
 }
 .rx-sheet-head{
   height:38px;display:flex;align-items:center;
@@ -907,14 +967,15 @@ const styles = `
   align-items:center;gap:10px
 }
 .rx-wallet-row>span{
-  width:32px;height:32px;border-radius:50%;
-  background:#F4D35E;display:grid;place-items:center;font-weight:800
+  width:34px;height:34px;border-radius:50%;
+  background:#F7F7F7;display:grid;place-items:center;font-size:21px
 }
 .rx-wallet-row strong{font-size:12px}
 .rx-wallet-row button{
   border:0;border-radius:9px;background:#F4D35E;color:#fff;
   padding:9px 11px;font:800 10px 'Montserrat',sans-serif
 }
+.rx-wallet-row>span svg{width:21px;height:21px}
 
 .rx-mycoin{
   display:grid;grid-template-columns:40px 1fr auto;
@@ -944,14 +1005,15 @@ const styles = `
 .rx-menu-card small{font-size:9px;color:#747A80;margin-top:4px}
 
 @media(max-width:430px){
-  .rx-space-banner{height:166px}
+  .rx-space-banner{height:182px}
   .rx-space-banner-copy{left:7%;top:10%;width:55%}
   .rx-space-banner-copy h2{font-size:19px}
   .rx-space-banner-copy p{font-size:10px}
   .rx-space-banner-copy button{height:37px;font-size:10px}
   .rx-mode-toggle{height:60px}
-  .rx-shortcuts{gap:6px}
-  .rx-shortcuts button{height:56px;font-size:7.5px}
+  .rx-shortcuts{gap:2px}
+  .rx-shortcuts button{height:68px;font-size:7.5px}
+  .rx-shortcut-icon{width:40px;height:40px}
   .rx-coin-row{min-height:70px;padding-left:10px;padding-right:10px}
   .rx-coin-row>img{width:42px;height:42px}
   .rx-coin-value{min-width:78px}
@@ -987,18 +1049,18 @@ const createStyles = `
   -webkit-mask-image:radial-gradient(ellipse at center,black 55%,transparent 100%)
 }
 .rx-rocket-crop{
-  position:absolute;z-index:5;left:50%;top:43px;width:126px;height:104px;
-  transform:translateX(-50%);overflow:hidden;pointer-events:none;
+  position:absolute;z-index:5;left:50%;top:48px;width:108px;height:106px;
+  transform:translateX(-50%);overflow:visible;pointer-events:none;
   filter:drop-shadow(0 12px 10px rgba(0,0,0,.10));
   animation:rx-float 2.8s ease-in-out infinite
 }
 .rx-rocket-crop img{
-  display:block;width:126px;height:150px;
+  display:block;width:108px;height:112px;
   object-fit:contain;object-position:top center
 }
 .rx-flame-video{
-  position:absolute;z-index:4;left:50%;top:145px;
-  width:64px;height:118px;transform:translateX(-50%);
+  position:absolute;z-index:4;left:50%;top:151px;
+  width:58px;height:112px;transform:translateX(-50%);
   object-fit:cover;mix-blend-mode:screen;
   filter:brightness(1.15) saturate(1.08);opacity:.99;
   pointer-events:none;
@@ -1048,12 +1110,44 @@ const createStyles = `
 .rx-two-fields{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .rx-select-wrap{position:relative}
 .rx-select-wrap select{appearance:none;padding-right:35px}
-.rx-chevron{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none}
+.rx-network-select{position:relative}
+.rx-network-trigger{
+  width:100%;height:42px;border:1px solid #E4E6E8;border-radius:10px;
+  padding:0 11px;background:#fff;color:#111418;
+  display:flex;align-items:center;justify-content:space-between;
+  font:600 11px 'Montserrat',sans-serif
+}
+.rx-network-trigger.open{border-color:#D7A21A}
+.rx-network-trigger .rx-chevron{position:static;transform:none;pointer-events:none;transition:transform .22s ease}
+.rx-network-trigger .rx-chevron.rotated{transform:rotate(180deg)}
+.rx-network-menu{
+  position:absolute;z-index:30;left:0;right:0;bottom:calc(100% + 8px);
+  padding:5px;border:1px solid #E4E6E8;border-radius:12px;
+  background:#fff;box-shadow:0 12px 30px rgba(20,24,28,.12);
+  opacity:0;visibility:hidden;transform:translateY(8px) scale(.985);
+  transform-origin:bottom center;
+  transition:opacity .22s ease,transform .22s ease,visibility .22s ease;
+  pointer-events:none
+}
+.rx-network-menu.open{
+  opacity:1;visibility:visible;transform:translateY(0) scale(1);
+  pointer-events:auto
+}
+.rx-network-menu button{
+  width:100%;height:38px;border:0;border-radius:8px;
+  background:transparent;text-align:left;padding:0 10px;
+  color:#111418;font:600 10.5px 'Montserrat',sans-serif
+}
+.rx-network-menu button.selected,.rx-network-menu button:active{background:#FFF7DA}
 
 .rx-create-actions{display:flex;gap:9px;margin:16px 0}
 .rx-create-actions button{height:44px;border-radius:11px;font:800 11px 'Montserrat',sans-serif}
 .rx-create-actions .primary{flex:1;border:0;background:#D7A21A;color:#fff}
+.rx-create-actions .primary{
+  position:relative;display:flex;align-items:center;justify-content:center;gap:8px
+}
 .rx-create-actions .primary:disabled{opacity:.45}
+.rx-action-arrow{position:absolute;left:12px}
 .rx-create-actions .secondary{
   width:90px;border:1px solid #E1E3E5;background:#fff;color:#111418
 }
@@ -1079,6 +1173,14 @@ const createStyles = `
   0%,100%{transform:translateY(0) rotate(-3deg)}
   50%{transform:translateY(-6px) rotate(3deg)}
 }
+@keyframes rx-overlay-fade{
+  from{opacity:0}
+  to{opacity:1}
+}
+@keyframes rx-sheet-enter{
+  from{transform:translate3d(0,100%,0)}
+  to{transform:translate3d(0,0,0)}
+}
 @keyframes rx-float{
   0%,100%{transform:translateX(-50%) translateY(0) rotate(-.3deg)}
   50%{transform:translateX(-50%) translateY(-5px) rotate(.3deg)}
@@ -1087,9 +1189,9 @@ const createStyles = `
 @media(max-width:430px){
   .rx-create-stage{height:300px}
   .rx-platform{width:300px;height:215px}
-  .rx-rocket-crop{width:120px;height:100px}
-  .rx-rocket-crop img{width:120px;height:143px}
-  .rx-flame-video{top:140px;width:60px;height:112px}
+  .rx-rocket-crop{top:51px;width:98px;height:102px}
+  .rx-rocket-crop img{width:98px;height:102px}
+  .rx-flame-video{top:148px;width:54px;height:106px}
   .rx-cloud-video{width:320px;height:174px}
   .rx-side-coin{width:29px;height:29px}
   .rx-side-left{left:calc(50% - 106px)}
