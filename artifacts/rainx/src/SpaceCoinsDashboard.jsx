@@ -720,7 +720,7 @@ function WalletSheet({ onClose }) {
     <div className="rx-overlay" onClick={onClose}>
       <div
         className={"rx-sheet rx-wallet-sheet " + (entered ? " entered" : "") + (expanded ? " expanded" : "") + (dragging ? " dragging" : "")}
-        style={entered ? { transform: "translate3d(0," + (baseOffset + dragOffset) + "px,0)" } : undefined}
+        style={dragging ? { transform: "translate3d(0," + (baseOffset + dragOffset) + "px,0)" } : undefined}
         onClick={(e) => e.stopPropagation()}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -828,10 +828,10 @@ function NativeHeader({ title, onBack, right }) {
 
 const menuItems = [
   [Contact, "Contact Support"],
+  [Bell, "Notifications"],
   [Settings, "Token Settings"],
   [BarChart3, "Analytics"],
   [CircleDollarSign, "Holdings"],
-  [Bell, "Notifications"],
   [ReceiptText, "Transactions"],
   [Share2, "Share Token"],
 ];
@@ -848,7 +848,7 @@ function MenuScreen({ onBack, onDashboard }) {
           <button className="rx-menu-feature" onClick={onDashboard}><span className="rx-menu-feature-icon"><BriefcaseBusiness size={25} /></span><strong>Funds</strong></button>
         </div>
         <div className="rx-menu-groups">
-          {groups.map((group, groupIndex) => <div className="rx-menu-list" key={groupIndex}>{group.map(([Icon, label]) => <button key={label} onClick={() => {}}><span className="rx-menu-list-icon"><Icon size={22} strokeWidth={2.2} /></span><span>{label}</span><ChevronRight size={21} /></button>)}</div>)}
+          {groups.map((group, groupIndex) => <section className="rx-menu-group" key={groupIndex}><h2 className="rx-menu-section-label">{["Support", "Token", "Activity"][groupIndex]}</h2><div className="rx-menu-list">{group.map(([Icon, label]) => <button key={label} onClick={() => {}}><span className="rx-menu-list-icon"><Icon size={22} strokeWidth={2.2} /></span><span>{label}</span><ChevronRight size={21} /></button>)}</div></section>)}
         </div>
       </div>
     </div>
@@ -877,7 +877,7 @@ const styles = `
 .rx-space-shell{
   position:fixed;inset:0;z-index:700;width:100%;height:100dvh;
   overflow:hidden;background:#fff;color:#111418;
-  font-family:'Montserrat',sans-serif;overscroll-behavior:none;isolation:isolate
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif;overscroll-behavior:none;isolation:isolate
 }
 .rx-space-scroll{
   position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
@@ -926,7 +926,7 @@ const styles = `
   border:1px solid rgba(255,255,255,.7);border-radius:12px;
   background:rgba(255,255,255,.8);color:#111418;
   display:inline-flex;align-items:center;gap:8px;
-  font:800 10.5px 'Montserrat',sans-serif;
+  font:800 10.5px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif;
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)
 }
 
@@ -938,7 +938,7 @@ const styles = `
 .rx-mode-indicator{position:absolute;z-index:0;left:3px;top:3px;width:calc(50% - 3px);height:calc(100% - 6px);border-radius:15px;background:#F4D35E;box-shadow:0 4px 12px rgba(244,211,94,.2);transition:transform .34s cubic-bezier(.22,.8,.2,1);pointer-events:none}
 .rx-mode-toggle button{position:relative;z-index:1;border:0;background:transparent;border-radius:15px;color:#6E747A;
   display:flex;align-items:center;justify-content:center;gap:8px;
-  font:800 11.5px 'Montserrat',sans-serif
+  font:800 11.5px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif
 }
 .rx-mode-toggle button.active{
   background:transparent;color:#fff;box-shadow:none
@@ -966,7 +966,7 @@ const styles = `
   border-radius:0;background:transparent;
   display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:7px;color:#555B61;
-  font:700 8px 'Montserrat',sans-serif;
+  font:700 8px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif;
   text-align:center
 }
 .rx-shortcut-icon{
@@ -996,7 +996,7 @@ const styles = `
 }
 .rx-section-head button{
   border:0;background:transparent;color:#C28F18;
-  font:700 10.5px 'Montserrat',sans-serif
+  font:700 10.5px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif
 }
 .rx-coin-list{
   overflow:hidden;border:1px solid #E8EAEC;
@@ -1037,7 +1037,7 @@ const styles = `
 .rx-trending{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .rx-trending button{
   height:46px;border:1px solid #E8EAEC;border-radius:12px;
-  background:#fff;color:#14171B;font:800 10px 'Montserrat',sans-serif
+  background:#fff;color:#14171B;font:800 10px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif
 }
 .rx-trending b{color:#C28F18;margin-right:5px}
 
@@ -1074,7 +1074,7 @@ const styles = `
 }
 .rx-wallet-card button{
   grid-column:1/-1;height:42px;border:0;border-radius:11px;
-  background:#D7A21A;color:#fff;font:800 11px 'Montserrat',sans-serif
+  background:#D7A21A;color:#fff;font:800 11px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif
 }
 
 .rx-overlay{
@@ -1124,7 +1124,7 @@ const styles = `
 .rx-wallet-row strong{font-size:12px}
 .rx-wallet-row button{
   border:0;border-radius:9px;background:#F4D35E;color:#fff;
-  padding:9px 11px;font:800 10px 'Montserrat',sans-serif
+  padding:9px 11px;font:800 10px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif
 }
 .rx-wallet-row>span svg,.rx-wallet-row>span img{width:21px;height:21px;object-fit:contain}
 
@@ -1156,11 +1156,11 @@ const styles = `
 .rx-menu-card small{font-size:9px;color:#747A80;margin-top:4px}
 
 
-.rx-native-screen{position:fixed;inset:0;z-index:950;background:#fff;color:#17191c;font-family:'Montserrat',sans-serif;display:flex;flex-direction:column;overflow:hidden;animation:rx-native-in .42s cubic-bezier(.22,.8,.2,1) both;touch-action:pan-y}.rx-native-header{height:58px;flex:0 0 58px;display:grid;grid-template-columns:42px 1fr 42px;align-items:center;padding:calc(8px + env(safe-area-inset-top)) 16px 0;border-bottom:1px solid #f0f0f0}.rx-native-header h1{margin:0;text-align:center;font-size:16px;font-weight:800}.rx-native-back{border:0;background:none;padding:7px;display:grid;place-items:center;color:#16181b}.rx-native-header-space{width:24px}.rx-menu-screen{background:linear-gradient(180deg,#fffdf7 0%,#fff 45%)}.rx-menu-content{padding:22px 18px 30px;overflow:auto}.rx-menu-intro span{font-size:9px;font-weight:800;letter-spacing:1.4px;color:#bf8e17}.rx-menu-intro h2{margin:7px 0 5px;font-size:27px;letter-spacing:-.7px}.rx-menu-intro p{margin:0 0 22px;color:#73777b;font-size:11px}.rx-menu-feature{width:100%;border:1px solid #eee9d8;background:#fff;border-radius:16px;padding:15px 13px;margin-bottom:10px;display:grid;grid-template-columns:44px 1fr 20px;align-items:center;gap:10px;text-align:left;box-shadow:0 5px 18px rgba(29,24,11,.05);color:#222}.rx-menu-feature-icon{width:40px;height:40px;border-radius:12px;background:#f8e7a5;color:#b17e0b;display:grid;place-items:center}.rx-menu-feature strong,.rx-menu-feature small{display:block}.rx-menu-feature strong{font-size:13px}.rx-menu-feature small{margin-top:4px;color:#838589;font-size:10px}.rx-menu-section-label{margin:24px 3px 8px;color:#7a7d81;font-size:11px;font-weight:700}.rx-menu-list{border-top:1px solid #ededed}.rx-menu-list button{width:100%;height:56px;border:0;border-bottom:1px solid #ededed;background:#fff;display:grid;grid-template-columns:36px 1fr 20px;align-items:center;text-align:left;color:#25272a;font:600 12px 'Montserrat',sans-serif}.rx-menu-list-icon{color:#b17e0b;display:grid;place-items:center}.rx-native-scroll{flex:1;overflow:auto;padding:14px 16px 86px;overscroll-behavior:contain}.rx-creator-title{display:flex;align-items:center;gap:10px}.rx-creator-number{width:23px;height:23px;border-radius:6px;background:#d79a08;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800}.rx-creator-title strong,.rx-creator-title small{display:block}.rx-creator-title strong{font-size:13px}.rx-creator-title small{margin-top:3px;color:#777;font-size:9px}.rx-live-pill{margin-left:auto;background:#e5f5ed;color:#31966d;padding:5px 9px;border-radius:10px;font-size:9px}.rx-creator-price{display:flex;align-items:baseline;gap:8px;margin-top:21px}.rx-creator-price strong{font-size:21px}.rx-creator-price span{color:#31966d;font-size:10px;font-weight:800}.rx-creator-price small{color:#909398;font-size:9px}.rx-creator-chart{height:118px;margin:7px -2px 0}.rx-creator-chart svg{width:100%;height:100%}.rx-creator-chart path{fill:none;stroke:#c18c13;stroke-width:1.8;vector-effect:non-scaling-stroke}.rx-range{display:flex;justify-content:space-between;align-items:center;color:#73777b;font-size:9px;margin:4px 17px 16px}.rx-range b{border:1px solid #e6d5a0;border-radius:7px;color:#b17e0b;padding:6px 13px}.rx-creator-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.rx-creator-metric{border:1px solid #eee;padding:10px 8px;border-radius:10px}.rx-creator-metric small,.rx-creator-metric strong{display:block}.rx-creator-metric small{color:#85888c;font-size:8px}.rx-creator-metric strong{margin-top:5px;font-size:10px}.rx-overview{margin-top:20px}.rx-overview h3{font-size:12px;margin:0 0 10px}.rx-overview p{display:flex;justify-content:space-between;margin:8px 0;font-size:9px}.rx-overview p span{color:#73777b}.rx-overview p b{font-weight:700}.rx-gold-cta,.rx-danger-cta{width:100%;height:42px;border:0;border-radius:9px;color:#fff;font:800 11px 'Montserrat',sans-serif;display:flex;align-items:center;justify-content:center;gap:7px}.rx-gold-cta{margin-top:20px;background:linear-gradient(180deg,#dda716,#c68d08);box-shadow:0 4px 12px rgba(198,141,8,.22)}.rx-native-tabs{height:62px;flex:0 0 62px;padding:8px 12px calc(8px + env(safe-area-inset-bottom));border-top:1px solid #ececec;background:#fff;display:flex;justify-content:space-around;align-items:center;color:#73777b;font-size:8px}.rx-native-tabs span{display:flex;flex-direction:column;align-items:center;gap:5px}.rx-native-tabs .active{color:#b17e0b;font-weight:800}.rx-tab-dot{width:14px;height:14px;border:1.5px solid currentColor;border-radius:4px}.rx-liquidity-screen .rx-native-scroll{padding-top:10px}.rx-liquidity-tabs{height:42px;display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #ececec;margin-bottom:13px}.rx-liquidity-tabs button{border:0;background:#fff;color:#71757a;font:600 10px 'Montserrat',sans-serif;position:relative}.rx-liquidity-tabs .active{color:#1d1f22}.rx-liquidity-tabs .active:after{content:"";position:absolute;bottom:-1px;left:0;right:0;height:2px;background:#c89112}.rx-liquidity-art,.rx-pool-card,.rx-form-card{border:1px solid #ececec;border-radius:13px;background:#fff;margin-bottom:12px}.rx-liquidity-art{height:138px;padding:16px;position:relative;overflow:hidden}.rx-liquidity-art strong,.rx-liquidity-art small{display:block}.rx-liquidity-art strong{font-size:12px}.rx-liquidity-art small{margin-top:5px;color:#767a7e;font-size:9px}.rx-orbit-art{position:absolute;right:33px;bottom:17px;color:#c89316;opacity:.85;transform:rotate(-12deg)}.rx-pool-card,.rx-form-card{padding:14px}.rx-pool-card h3,.rx-form-card h3{font-size:11px;margin:0 0 12px}.rx-pool-card>small{font-size:9px;color:#777}.rx-pool-card>div{display:grid;grid-template-columns:1fr 1fr;gap:15px 24px;margin-top:15px}.rx-pool-card p{margin:0}.rx-pool-card p small,.rx-pool-card p strong{display:block}.rx-pool-card p small{color:#777;font-size:8px}.rx-pool-card p strong{margin-top:4px;font-size:11px}.rx-form-card label{display:block;margin:13px 0;color:#707478;font-size:8px}.rx-form-card label span{float:right}.rx-form-card input{display:block;width:100%;height:35px;margin-top:5px;border:1px solid #e4e5e6;border-radius:8px;padding:0 10px;color:#282a2c;font:600 10px 'Montserrat',sans-serif}.rx-form-card>small{color:#999;font-size:8px}.rx-form-card .rx-gold-cta{margin-top:12px}.rx-warning{display:flex;gap:8px;align-items:flex-start;padding:12px;background:#fff0f0;border:1px solid #f4d2d2;border-radius:10px;color:#a54f4f;font-size:9px;line-height:1.5;margin-bottom:13px}.rx-receive{display:grid;grid-template-columns:1fr 1fr;gap:12px}.rx-receive p{margin:0;padding:9px;background:#fbfbfb;border-radius:8px}.rx-receive small,.rx-receive strong,.rx-receive em{display:block}.rx-receive small{font-size:8px;color:#777}.rx-receive strong{margin-top:6px;font-size:11px}.rx-receive em{margin-top:5px;font-style:normal;color:#888;font-size:8px}.rx-slider{height:9px;margin:26px 3px 8px;background:#e4e6e8;border-radius:10px;position:relative}.rx-slider span{display:block;width:50%;height:100%;background:#c38e13;border-radius:10px}.rx-slider b{position:absolute;left:50%;top:-12px;transform:translateX(-50%);background:#26282a;color:#fff;border-radius:12px;padding:6px 9px;font-size:8px}.rx-slider-labels{display:flex;justify-content:space-between;color:#888;font-size:8px}.rx-danger-cta{margin-top:18px;background:#d92828}.rx-native-screen button{cursor:pointer;-webkit-tap-highlight-color:transparent}.rx-native-screen button:active{transform:scale(.99)}
+.rx-native-screen{position:fixed;inset:0;z-index:950;background:#fff;color:#17191c;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif;display:flex;flex-direction:column;overflow:hidden;animation:rx-native-in .42s cubic-bezier(.22,.8,.2,1) both;touch-action:pan-y}.rx-native-header{height:58px;flex:0 0 58px;display:grid;grid-template-columns:42px 1fr 42px;align-items:center;padding:calc(8px + env(safe-area-inset-top)) 16px 0;border-bottom:1px solid #f0f0f0}.rx-native-header h1{margin:0;text-align:center;font-size:16px;font-weight:800}.rx-native-back{border:0;background:none;padding:7px;display:grid;place-items:center;color:#16181b}.rx-native-header-space{width:24px}.rx-menu-screen{background:linear-gradient(180deg,#fffdf7 0%,#fff 45%)}.rx-menu-content{padding:22px 18px 30px;overflow:auto}.rx-menu-intro span{font-size:9px;font-weight:800;letter-spacing:1.4px;color:#bf8e17}.rx-menu-intro h2{margin:7px 0 5px;font-size:27px;letter-spacing:-.7px}.rx-menu-intro p{margin:0 0 22px;color:#73777b;font-size:11px}.rx-menu-feature{width:100%;border:1px solid #eee9d8;background:#fff;border-radius:16px;padding:15px 13px;margin-bottom:10px;display:grid;grid-template-columns:44px 1fr 20px;align-items:center;gap:10px;text-align:left;box-shadow:0 5px 18px rgba(29,24,11,.05);color:#222}.rx-menu-feature-icon{width:40px;height:40px;border-radius:12px;background:#f8e7a5;color:#b17e0b;display:grid;place-items:center}.rx-menu-feature strong,.rx-menu-feature small{display:block}.rx-menu-feature strong{font-size:13px}.rx-menu-feature small{margin-top:4px;color:#838589;font-size:10px}.rx-menu-section-label{margin:24px 3px 8px;color:#7a7d81;font-size:11px;font-weight:700}.rx-menu-list{border-top:1px solid #ededed}.rx-menu-list button{width:100%;height:56px;border:0;border-bottom:1px solid #ededed;background:#fff;display:grid;grid-template-columns:36px 1fr 20px;align-items:center;text-align:left;color:#25272a;font:600 12px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif}.rx-menu-list-icon{color:#b17e0b;display:grid;place-items:center}.rx-native-scroll{flex:1;overflow:auto;padding:14px 16px 86px;overscroll-behavior:contain}.rx-creator-title{display:flex;align-items:center;gap:10px}.rx-creator-number{width:23px;height:23px;border-radius:6px;background:#d79a08;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800}.rx-creator-title strong,.rx-creator-title small{display:block}.rx-creator-title strong{font-size:13px}.rx-creator-title small{margin-top:3px;color:#777;font-size:9px}.rx-live-pill{margin-left:auto;background:#e5f5ed;color:#31966d;padding:5px 9px;border-radius:10px;font-size:9px}.rx-creator-price{display:flex;align-items:baseline;gap:8px;margin-top:21px}.rx-creator-price strong{font-size:21px}.rx-creator-price span{color:#31966d;font-size:10px;font-weight:800}.rx-creator-price small{color:#909398;font-size:9px}.rx-creator-chart{height:118px;margin:7px -2px 0}.rx-creator-chart svg{width:100%;height:100%}.rx-creator-chart path{fill:none;stroke:#c18c13;stroke-width:1.8;vector-effect:non-scaling-stroke}.rx-range{display:flex;justify-content:space-between;align-items:center;color:#73777b;font-size:9px;margin:4px 17px 16px}.rx-range b{border:1px solid #e6d5a0;border-radius:7px;color:#b17e0b;padding:6px 13px}.rx-creator-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.rx-creator-metric{border:1px solid #eee;padding:10px 8px;border-radius:10px}.rx-creator-metric small,.rx-creator-metric strong{display:block}.rx-creator-metric small{color:#85888c;font-size:8px}.rx-creator-metric strong{margin-top:5px;font-size:10px}.rx-overview{margin-top:20px}.rx-overview h3{font-size:12px;margin:0 0 10px}.rx-overview p{display:flex;justify-content:space-between;margin:8px 0;font-size:9px}.rx-overview p span{color:#73777b}.rx-overview p b{font-weight:700}.rx-gold-cta,.rx-danger-cta{width:100%;height:42px;border:0;border-radius:9px;color:#fff;font:800 11px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif;display:flex;align-items:center;justify-content:center;gap:7px}.rx-gold-cta{margin-top:20px;background:linear-gradient(180deg,#dda716,#c68d08);box-shadow:0 4px 12px rgba(198,141,8,.22)}.rx-native-tabs{height:62px;flex:0 0 62px;padding:8px 12px calc(8px + env(safe-area-inset-bottom));border-top:1px solid #ececec;background:#fff;display:flex;justify-content:space-around;align-items:center;color:#73777b;font-size:8px}.rx-native-tabs span{display:flex;flex-direction:column;align-items:center;gap:5px}.rx-native-tabs .active{color:#b17e0b;font-weight:800}.rx-tab-dot{width:14px;height:14px;border:1.5px solid currentColor;border-radius:4px}.rx-liquidity-screen .rx-native-scroll{padding-top:10px}.rx-liquidity-tabs{height:42px;display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #ececec;margin-bottom:13px}.rx-liquidity-tabs button{border:0;background:#fff;color:#71757a;font:600 10px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif;position:relative}.rx-liquidity-tabs .active{color:#1d1f22}.rx-liquidity-tabs .active:after{content:"";position:absolute;bottom:-1px;left:0;right:0;height:2px;background:#c89112}.rx-liquidity-art,.rx-pool-card,.rx-form-card{border:1px solid #ececec;border-radius:13px;background:#fff;margin-bottom:12px}.rx-liquidity-art{height:138px;padding:16px;position:relative;overflow:hidden}.rx-liquidity-art strong,.rx-liquidity-art small{display:block}.rx-liquidity-art strong{font-size:12px}.rx-liquidity-art small{margin-top:5px;color:#767a7e;font-size:9px}.rx-orbit-art{position:absolute;right:33px;bottom:17px;color:#c89316;opacity:.85;transform:rotate(-12deg)}.rx-pool-card,.rx-form-card{padding:14px}.rx-pool-card h3,.rx-form-card h3{font-size:11px;margin:0 0 12px}.rx-pool-card>small{font-size:9px;color:#777}.rx-pool-card>div{display:grid;grid-template-columns:1fr 1fr;gap:15px 24px;margin-top:15px}.rx-pool-card p{margin:0}.rx-pool-card p small,.rx-pool-card p strong{display:block}.rx-pool-card p small{color:#777;font-size:8px}.rx-pool-card p strong{margin-top:4px;font-size:11px}.rx-form-card label{display:block;margin:13px 0;color:#707478;font-size:8px}.rx-form-card label span{float:right}.rx-form-card input{display:block;width:100%;height:35px;margin-top:5px;border:1px solid #e4e5e6;border-radius:8px;padding:0 10px;color:#282a2c;font:600 10px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif}.rx-form-card>small{color:#999;font-size:8px}.rx-form-card .rx-gold-cta{margin-top:12px}.rx-warning{display:flex;gap:8px;align-items:flex-start;padding:12px;background:#fff0f0;border:1px solid #f4d2d2;border-radius:10px;color:#a54f4f;font-size:9px;line-height:1.5;margin-bottom:13px}.rx-receive{display:grid;grid-template-columns:1fr 1fr;gap:12px}.rx-receive p{margin:0;padding:9px;background:#fbfbfb;border-radius:8px}.rx-receive small,.rx-receive strong,.rx-receive em{display:block}.rx-receive small{font-size:8px;color:#777}.rx-receive strong{margin-top:6px;font-size:11px}.rx-receive em{margin-top:5px;font-style:normal;color:#888;font-size:8px}.rx-slider{height:9px;margin:26px 3px 8px;background:#e4e6e8;border-radius:10px;position:relative}.rx-slider span{display:block;width:50%;height:100%;background:#c38e13;border-radius:10px}.rx-slider b{position:absolute;left:50%;top:-12px;transform:translateX(-50%);background:#26282a;color:#fff;border-radius:12px;padding:6px 9px;font-size:8px}.rx-slider-labels{display:flex;justify-content:space-between;color:#888;font-size:8px}.rx-danger-cta{margin-top:18px;background:#d92828}.rx-native-screen button{cursor:pointer;-webkit-tap-highlight-color:transparent}.rx-native-screen button:active{transform:scale(.99)}
 @keyframes rx-native-in{from{transform:translate3d(100%,0,0)}to{transform:translate3d(0,0,0)}}
 
 
-.rx-menu-screen{background:#fff}.rx-menu-topbar{height:66px;flex:0 0 66px;display:flex;align-items:flex-end;padding:0 14px 13px;border-bottom:0}.rx-menu-topbar .rx-native-back{padding:4px}.rx-menu-content{padding:16px 20px 30px;overflow:auto}.rx-menu-feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:28px}.rx-menu-feature{height:92px;border:0;background:#f4f4f4;border-radius:15px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;box-shadow:none;text-align:center;color:#111}.rx-menu-feature-icon{width:auto;height:auto;border-radius:0;background:transparent;color:#111;display:grid;place-items:center}.rx-menu-feature strong{font-size:15px;font-weight:500}.rx-menu-groups{border-top:1px solid #e6e6e6}.rx-menu-groups .rx-menu-list{border-top:0;border-bottom:1px solid #e6e6e6}.rx-menu-list button{height:64px;grid-template-columns:42px 1fr 24px;color:#171717;font:500 16px 'Montserrat',sans-serif;border-bottom:0}.rx-menu-list-icon{color:#111;justify-content:start}.rx-menu-list button svg:last-child{color:#707070}.rx-creator-screen .rx-native-header{height:55px;flex-basis:55px;padding-left:13px;padding-right:13px}.rx-creator-screen .rx-native-scroll{padding:12px 13px 82px}.rx-creator-screen .rx-creator-price{margin-top:16px}.rx-creator-screen .rx-creator-chart{height:105px}.rx-creator-screen .rx-creator-metrics{gap:6px}.rx-creator-screen .rx-creator-metric{padding:9px 7px}.rx-creator-screen .rx-creator-metric small{font-size:7px}.rx-creator-screen .rx-creator-metric strong{font-size:9px}.rx-creator-screen .rx-overview{margin-top:17px}
+.rx-menu-screen{background:#fff}.rx-menu-topbar{height:66px;flex:0 0 66px;display:flex;align-items:flex-end;padding:0 14px 13px;border-bottom:0}.rx-menu-topbar .rx-native-back{padding:4px}.rx-menu-content{padding:16px 20px 30px;overflow:auto}.rx-menu-feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:28px}.rx-menu-feature{height:92px;border:0;background:#f4f4f4;border-radius:15px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;box-shadow:none;text-align:center;color:#111}.rx-menu-feature-icon{width:auto;height:auto;border-radius:0;background:transparent;color:#111;display:grid;place-items:center}.rx-menu-feature strong{font-size:15px;font-weight:500}.rx-menu-groups{border-top:1px solid #e6e6e6}.rx-menu-groups .rx-menu-list{border-top:0;border-bottom:1px solid #e6e6e6}.rx-menu-list button{height:64px;grid-template-columns:42px 1fr 24px;color:#171717;font:500 16px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif;border-bottom:0}.rx-menu-list-icon{color:#111;justify-content:start}.rx-menu-list button svg:last-child{color:#707070}.rx-creator-screen .rx-native-header{height:55px;flex-basis:55px;padding-left:13px;padding-right:13px}.rx-creator-screen .rx-native-scroll{padding:12px 13px 82px}.rx-creator-screen .rx-creator-price{margin-top:16px}.rx-creator-screen .rx-creator-chart{height:105px}.rx-creator-screen .rx-creator-metrics{gap:6px}.rx-creator-screen .rx-creator-metric{padding:9px 7px}.rx-creator-screen .rx-creator-metric small{font-size:7px}.rx-creator-screen .rx-creator-metric strong{font-size:9px}.rx-creator-screen .rx-overview{margin-top:17px}
 
 @media(max-width:430px){
   .rx-space-banner{width:100%;height:auto;aspect-ratio:2000 / 1414}
@@ -1177,9 +1177,6 @@ const styles = `
   .rx-coin-value{min-width:78px}
 }
 
-@media(prefers-reduced-motion:reduce){
-  .rx-space-shell *{animation:none!important;transition:none!important}
-}
 `;
 
 const createStyles = `
@@ -1262,7 +1259,7 @@ const createStyles = `
 .rx-create-field input,.rx-create-field select{
   width:100%;height:42px;border:1px solid #E4E6E8;border-radius:10px;
   padding:0 11px;background:#fff;outline:none;color:#111418;
-  font:600 11px 'Montserrat',sans-serif
+  font:600 11px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif
 }
 .rx-create-field input::placeholder{color:#B0B4B8}
 .rx-two-fields{display:grid;grid-template-columns:1fr 1fr;gap:9px}
@@ -1273,7 +1270,7 @@ const createStyles = `
   width:100%;height:42px;border:1px solid #E4E6E8;border-radius:10px;
   padding:0 11px;background:#fff;color:#111418;
   display:flex;align-items:center;justify-content:space-between;
-  font:600 11px 'Montserrat',sans-serif
+  font:600 11px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif
 }
 .rx-network-trigger.open{border-color:#D7A21A}
 .rx-network-trigger .rx-chevron{position:static;transform:none;pointer-events:none;transition:transform .22s ease}
@@ -1294,12 +1291,12 @@ const createStyles = `
 .rx-network-menu button{
   width:100%;height:38px;border:0;border-radius:8px;
   background:transparent;text-align:left;padding:0 10px;
-  color:#111418;font:600 10.5px 'Montserrat',sans-serif
+  color:#111418;font:600 10.5px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif
 }
 .rx-network-menu button.selected,.rx-network-menu button:active{background:#FFF7DA}
 
 .rx-create-actions{display:flex;gap:9px;margin:16px 0}
-.rx-create-actions button{height:44px;border-radius:11px;font:800 11px 'Montserrat',sans-serif}
+.rx-create-actions button{height:44px;border-radius:11px;font:800 11px -apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif}
 .rx-create-actions .primary{flex:1;border:0;background:#D7A21A;color:#fff}
 .rx-create-actions .primary{
   position:relative;display:flex;align-items:center;justify-content:center;gap:8px
@@ -1378,19 +1375,6 @@ export default function SpaceCoinsDashboard({ onBack }) {
   if (screen === "liquidity-remove") {
     return <LiquidityScreen remove onBack={() => setScreen("liquidity-manage")} onToggle={() => setScreen("liquidity-manage")} />;
   }
-  if (screen === "menu") {
-    return <MenuScreen onBack={() => setScreen("dashboard")} onDashboard={() => setScreen("creator")} />;
-  }
-  if (screen === "creator") {
-    return <CreatorDashboard onBack={() => setScreen("menu")} onManage={() => setScreen("liquidity-manage")} />;
-  }
-  if (screen === "liquidity-manage") {
-    return <LiquidityScreen onBack={() => setScreen("creator")} onToggle={(remove) => setScreen(remove ? "liquidity-remove" : "liquidity-manage")} />;
-  }
-  if (screen === "liquidity-remove") {
-    return <LiquidityScreen remove onBack={() => setScreen("liquidity-manage")} onToggle={() => setScreen("liquidity-manage")} />;
-  }
-
   return (
     <>
       <style>{styles}</style>
