@@ -662,6 +662,12 @@ function CreateCoin({ onBack }) {
 
 function WalletSheet({ onClose }) {
   const [expanded, setExpanded] = useState(false);
+  const [entered, setEntered] = useState(false);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
   const [dragging, setDragging] = useState(false);
   const pointerStart = useRef(null);
   const dragYRef = useRef(0);
@@ -713,8 +719,8 @@ function WalletSheet({ onClose }) {
   return (
     <div className="rx-overlay" onClick={onClose}>
       <div
-        className={"rx-sheet rx-wallet-sheet " + (expanded ? "expanded" : "") + (dragging ? " dragging" : "")}
-        style={{ transform: "translate3d(0," + (baseOffset + dragOffset) + "px,0)" }}
+        className={"rx-sheet rx-wallet-sheet " + (entered ? " entered" : "") + (expanded ? " expanded" : "") + (dragging ? " dragging" : "")}
+        style={entered ? { transform: "translate3d(0," + (baseOffset + dragOffset) + "px,0)" } : undefined}
         onClick={(e) => e.stopPropagation()}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -1082,7 +1088,7 @@ const styles = `
   transition:transform .38s cubic-bezier(.22,.8,.2,1),max-height .38s ease;will-change:transform;
   touch-action:none
 }
-.rx-wallet-sheet{height:100dvh;max-height:100dvh;transform:translate3d(0,calc(100% - min(80dvh,640px)),0);animation:rx-wallet-sheet-enter .6s cubic-bezier(.16,1,.3,1) both}
+.rx-wallet-sheet{height:100dvh;max-height:100dvh;transform:translate3d(0,100%,0);transition:transform .62s cubic-bezier(.16,1,.3,1)}.rx-wallet-sheet.entered{transform:translate3d(0,calc(100% - min(80dvh,640px)),0)}
 .rx-sheet.expanded{height:100dvh;max-height:100dvh}
 .rx-sheet.dragging{transition:none;cursor:grabbing}
 .rx-sheet img{display:block}
@@ -1166,7 +1172,6 @@ const styles = `
 
 @media(prefers-reduced-motion:reduce){
   .rx-space-shell *{animation:none!important;transition:none!important}
-  .rx-space-shell .rx-wallet-sheet{animation:rx-wallet-sheet-enter .6s cubic-bezier(.16,1,.3,1) both!important}
 }
 `;
 
@@ -1326,10 +1331,6 @@ const createStyles = `
 @keyframes rx-sheet-enter{
   from{transform:translate3d(0,100%,0)}
   to{transform:translate3d(0,0,0)}
-}
-@keyframes rx-wallet-sheet-enter{
-  from{transform:translate3d(0,100%,0)}
-  to{transform:translate3d(0,calc(100% - min(80dvh,640px)),0)}
 }
 @keyframes rx-float{
   0%,100%{transform:translateX(-50%) translateY(0) rotate(-.3deg)}
