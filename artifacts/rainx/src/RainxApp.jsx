@@ -1380,7 +1380,18 @@ function MainApp({ account, onLogout }) {
 class HomeTabErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(error) { return { error }; }
-  componentDidCatch(error, info) { console.error("HomeTab crash:", error, info); }
+  componentDidCatch(error, info) {
+    console.error("HomeTab crash:", error, info);
+    // A corrupt persisted market/session value can crash only after hydration.
+    // Clear those recoverable inputs once, then remount the real homepage.
+    try {
+      if (!sessionStorage.getItem("rainx-home-recovery-attempted")) {
+        sessionStorage.setItem("rainx-home-recovery-attempted", "1");
+        ["rainx-active-symbol", "rainx-active-markets", "rainx-sessions"].forEach((key) => localStorage.removeItem(key));
+        window.location.reload();
+      }
+    } catch {}
+  }
   render() {
     if (this.state.error) return (
       <div style={{ minHeight: "60vh", padding: "48px 20px", background: "#F8F9FA", color: "#0F1419", textAlign: "center", fontFamily: FONT_BODY }}>
