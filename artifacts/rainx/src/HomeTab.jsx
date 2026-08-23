@@ -565,7 +565,9 @@ function fmtTime(secs) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Home Tab — main redesigned screen
 // ─────────────────────────────────────────────────────────────────────────────
-function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessions, sessionSecsLeft, startAnalysisSession, seriesMap, signalsMap, themeMode, activeMarkets = [], addActiveMarket, removeActiveMarket, maxActiveMarkets = 3 }) {
+function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessions, sessionSecsLeft, startAnalysisSession, seriesMap, signalsMap, themeMode, activeMarkets: activeMarketsProp = [], addActiveMarket, removeActiveMarket, maxActiveMarkets = 3 }) {
+  const activeMarkets = Array.isArray(activeMarketsProp) ? activeMarketsProp : [];
+  const safeSeries = Array.isArray(series) ? series : [];
   const [showAddMarket, setShowAddMarket] = useState(false);
   const [showActivity, setShowActivity] = useState(false);
   const [showFullChart, setShowFullChart] = useState(false);
@@ -576,7 +578,7 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
   setIsDarkCanvas(T.ink === "#0F0E0B");
 
   // OHLCV candles from tick series (fallback while real candles load)
-  const candles = React.useMemo(() => ticksToCandles(series || [], 70), [series]);
+  const candles = React.useMemo(() => ticksToCandles(safeSeries, 70), [series]);
 
   // Smooth the real live price into the existing gold line chart.
   // No synthetic jitter: the chart only moves toward prices supplied by the app.
@@ -674,7 +676,7 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
   // The last point follows the live price, so the homepage visualization is not a static mock.
   const performanceSeries = React.useMemo(() => {
     const candleSource = (chartCandles || []).map(c => Number(c.close)).filter(Number.isFinite).slice(-56);
-    const tickSource = (series || []).map(p => Number(p.price ?? p.close ?? p.value)).filter(Number.isFinite).slice(-56);
+    const tickSource = safeSeries.map(p => Number(p.price ?? p.close ?? p.value)).filter(Number.isFinite).slice(-56);
     // Prefer the live tick stream so the gold line keeps moving between
     // candle refreshes; candles remain the fallback when ticks are unavailable.
     const source = tickSource.length >= 2 ? tickSource : candleSource;
