@@ -2713,7 +2713,7 @@ function MainAppContent({ account, onLogout }) {
       {/* Community — lazy keep-alive: mounts on first visit, never unmounts again */}
       {communityMounted && (
         <div
-          style={{ display: tab === "community" ? "block" : "none", paddingBottom: 78, overscrollBehaviorY: "none", transform: communityRouteSwipeX ? `translate3d(${communityRouteSwipeX}px, 0, 0)` : "translate3d(0, 0, 0)", transition: communityRouteSwipeX === 0 ? "transform 180ms cubic-bezier(.22,.8,.3,1)" : "none", willChange: "transform", touchAction: "pan-y" }}
+          style={{ display: tab === "community" ? "block" : "none", paddingBottom: 78, overscrollBehaviorY: "none", touchAction: "pan-y" }}
           onTouchStart={(e) => { if (e.target.closest?.("button, input, textarea, select, [contenteditable=\"true\"], canvas, svg, video, a")) { communityRouteRef.current = null; return; } communityRouteRef.current = { x:e.touches[0].clientX, y:e.touches[0].clientY, axis:null }; }}
           onTouchMove={(e) => { const s=communityRouteRef.current; if (!s) return; const dx=e.touches[0].clientX-s.x, dy=e.touches[0].clientY-s.y; if (!s.axis && (Math.abs(dx)>8 || Math.abs(dy)>8)) s.axis=Math.abs(dx)>Math.abs(dy)?"x":"y"; if (s.axis === "x") setCommunityRouteSwipeX(Math.max(-window.innerWidth*.7, Math.min(window.innerWidth*.7, dx))); }}
           onTouchEnd={(e) => { const s=communityRouteRef.current; communityRouteRef.current=null; if (!s || s.axis !== "x") { setCommunityRouteSwipeX(0); return; } const dx=e.changedTouches[0].clientX-s.x; if (dx < -Math.min(100, window.innerWidth*.2)) goTab("more"); setCommunityRouteSwipeX(0); }}
@@ -2734,7 +2734,7 @@ function MainAppContent({ account, onLogout }) {
       <div
         key={tab}
         className={tabDirRef.current >= 0 ? "rx-slide-right" : "rx-slide-left"}
-        style={{ paddingBottom: 78, transform: swipeX ? `translate3d(${swipeX}px, 0, 0)` : "translate3d(0, 0, 0)", transition: swipeX === 0 ? "transform 180ms cubic-bezier(.22,.8,.3,1)" : "none", willChange: "transform", touchAction: "pan-y" }}
+        style={{ paddingBottom: 78, touchAction: "pan-y" }}
         onTouchStart={(e) => {
           if (e.target.closest?.("canvas, [data-no-route-swipe]")) { swipeRef.current = null; return; }
           swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, axis: null };
@@ -6364,7 +6364,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     );
     return (
       <div
-        style={{ minHeight:"100%", background:T.ink, overscrollBehaviorY:"none", touchAction:"pan-y", transform: profileSwipeX ? `translate3d(${profileSwipeX}px, 0, 0)` : "translate3d(0, 0, 0)", transition: profileSwipeX === 0 ? "transform 180ms cubic-bezier(.22,.8,.3,1)" : "none", willChange:"transform" }}
+        style={{ minHeight:"100%", background:T.ink, overscrollBehaviorY:"none", touchAction:"pan-y" }}
         onTouchStart={(e) => { profileSwipeRef.current = { x:e.touches[0].clientX, y:e.touches[0].clientY, axis:null }; }}
         onTouchMove={(e) => { const s=profileSwipeRef.current; if (!s) return; const dx=e.touches[0].clientX-s.x, dy=e.touches[0].clientY-s.y; if (!s.axis && (Math.abs(dx)>8 || Math.abs(dy)>8)) s.axis=Math.abs(dx)>Math.abs(dy)?"x":"y"; if (s.axis === "x") setProfileSwipeX(Math.max(-window.innerWidth*.7, Math.min(window.innerWidth*.7, dx))); }}
         onTouchEnd={(e) => { const s=profileSwipeRef.current; profileSwipeRef.current=null; if (!s || s.axis !== "x") { setProfileSwipeX(0); return; } finishProfileSwipe(e.changedTouches[0].clientX-s.x); }}
