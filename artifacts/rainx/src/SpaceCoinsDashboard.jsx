@@ -699,7 +699,7 @@ function WalletSheet({ onClose }) {
           height: `${expanded
             ? window.innerHeight - Math.max(0, Math.min(window.innerHeight * 0.8, dragY))
             : sheetHeight - Math.min(0, Math.max(-window.innerHeight * 0.72, dragY))}px`,
-          transform: `translate3d(0,${expanded ? Math.max(0, dragY) : 0}px,0)`,
+          transform: "translate3d(0,0,0)",
         } : undefined}
         onClick={(e) => e.stopPropagation()}
         onPointerDown={onPointerDown}
