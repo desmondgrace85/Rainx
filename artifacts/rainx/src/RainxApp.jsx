@@ -2706,13 +2706,13 @@ function MainAppContent({ account, onLogout }) {
 
       {/* Community — lazy keep-alive: mounts on first visit, never unmounts again */}
       {communityMounted && (
-        <div style={{ display: tab === "community" ? "block" : "none", paddingBottom: 78, maxHeight: "calc(100dvh - 78px)", overflowY: "auto", overscrollBehaviorY: "none" }}>
+        <div style={{ display: tab === "community" ? "block" : "none", paddingBottom: 78 }}>
           <CommunityTab account={account} entitlement={entitlement} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />
         </div>
       )}
       {/* Scalping — lazy keep-alive: mounts on first visit, never unmounts again */}
       {scalpingMounted && (
-        <div style={{ display: tab === "scalping" ? "block" : "none", paddingBottom: 78, maxHeight: "calc(100dvh - 78px)", overflowY: "auto", overscrollBehaviorY: "none" }}>
+        <div style={{ display: tab === "scalping" ? "block" : "none", paddingBottom: 78 }}>
           <ScalpingTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />
         </div>
       )}
@@ -2722,7 +2722,7 @@ function MainAppContent({ account, onLogout }) {
       <div
         key={tab}
         className={tabDirRef.current >= 0 ? "rx-slide-right" : "rx-slide-left"}
-        style={{ paddingBottom: 78, maxHeight: tab === "more" ? "calc(100dvh - 78px)" : undefined, overflowY: tab === "more" ? "auto" : undefined, overscrollBehaviorY: "none" }}
+        style={{ paddingBottom: 78 }}
         onTouchStart={(e) => {
           const x = e.touches[0].clientX;
           swipeRef.current = (x < 28 || x > window.innerWidth - 28)
@@ -6332,7 +6332,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       </svg>
     );
     return (
-      <div style={{ minHeight:"100%", background:T.ink, overflowY:"auto" }}>
+      <div style={{ minHeight:"100%", background:T.ink }}>
         <style>{"@keyframes slideInRight { from { transform:translateX(24px); opacity:0 } to { transform:translateX(0); opacity:1 } } @keyframes sheetUp { from { transform:translateY(100%) } to { transform:translateY(0) } }"}</style>
 
         {/* ── Bug 2 fix: Followers/Following modal for own profile ── */}
@@ -6554,7 +6554,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       </svg>
     );
     return (
-      <div style={{ minHeight:"100%", background:T.ink, overflowY:"auto", animation:"slideInRight 0.2s ease" }}>
+      <div style={{ minHeight:"100%", background:T.ink, animation:"slideInRight 0.2s ease" }}>
         <style>{"@keyframes slideInRight { from { transform:translateX(24px); opacity:0 } to { transform:translateX(0); opacity:1 } }"}</style>
 
         {/* ── Edit profile header ── */}
