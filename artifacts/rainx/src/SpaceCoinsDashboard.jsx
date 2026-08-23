@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
-  Bell,
   Check,
   ChevronDown,
   Menu,
@@ -13,10 +12,17 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
+import {
+  SiMetamask,
+  SiTrustwallet,
+  SiPhantom,
+  SiCoinbase,
+  SiWalletconnect,
+} from "react-icons/si";
 
-import galaxyDogeImage from "./assets/space-coins-galaxy-doge.svg";
-import moonCatImage from "./assets/space-coins-moon-cat.svg";
-import planetPepeImage from "./assets/space-coins-planet-pepe.svg";
+import galaxyDogeImage from "./assets/space-coins-galaxy-doge.jpg";
+import moonCatImage from "./assets/space-coins-moon-cat.jpg";
+import planetPepeImage from "./assets/space-coins-planet-pepe.jpg";
 import rocketArtwork from "./assets/space-coins-rocket.png";
 import orbitArtwork from "./assets/space-coins-orbit.png";
 import platformArtwork from "./assets/space-coins-platform.png";
@@ -61,15 +67,15 @@ function Header({ onMenu, onBack, title = "Space Coins" }) {
         <button className="rx-icon-btn rx-left" onClick={onBack} aria-label="Back">
           <ArrowLeft size={23} />
         </button>
-      ) : (
-        <button className="rx-icon-btn rx-left" onClick={onMenu} aria-label="Space Coins menu">
-          <Menu size={24} />
-        </button>
-      )}
+      ) : null}
+
       <h1>{title}</h1>
-      <button className="rx-icon-btn rx-right" aria-label="Notifications">
-        <Bell size={21} />
-      </button>
+
+      {!onBack ? (
+        <button className="rx-icon-btn rx-right" onClick={onMenu} aria-label="Space Coins menu">
+          <Menu size={28} strokeWidth={2.5} />
+        </button>
+      ) : null}
     </header>
   );
 }
@@ -317,6 +323,41 @@ function useEdgeBack(onBack) {
   };
 }
 
+function NetworkSelect({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const options = ["Solana", "Ethereum", "Base"];
+
+  return (
+    <div className="rx-network-select">
+      <button
+        type="button"
+        className={`rx-network-trigger ${open ? "open" : ""}`}
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <span>{value}</span>
+        <ChevronDown className={open ? "rx-chevron rotated" : "rx-chevron"} size={18} />
+      </button>
+
+      <div className={`rx-network-menu ${open ? "open" : ""}`}>
+        {options.map((option) => (
+          <button
+            type="button"
+            key={option}
+            className={option === value ? "selected" : ""}
+            onClick={() => {
+              onChange(option);
+              setOpen(false);
+            }}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function CreateCoin({ onBack }) {
   const [step, setStep] = useState(1);
   const [logo, setLogo] = useState(null);
@@ -486,21 +527,10 @@ function CreateCoin({ onBack }) {
 
                   <label className="rx-create-field">
                     <span>Network</span>
-
-                    <div className="rx-select-wrap">
-                      <select
-                        value={form.network}
-                        onChange={(e) =>
-                          set("network", e.target.value)
-                        }
-                      >
-                        <option>Solana</option>
-                        <option>Ethereum</option>
-                        <option>Base</option>
-                      </select>
-
-                      <ChevronDown className="rx-chevron" size={18} />
-                    </div>
+                    <NetworkSelect
+                      value={form.network}
+                      onChange={(value) => set("network", value)}
+                    />
                   </label>
                 </div>
               </div>
@@ -552,7 +582,8 @@ function CreateCoin({ onBack }) {
                 disabled={step === 1 && !valid}
                 onClick={() => setStep((s) => s + 1)}
               >
-                Next Step <ArrowRight size={16} />
+                <ArrowRight className="rx-action-arrow" size={17} />
+                <span>Next Step</span>
               </button>
             ) : (
               <button
@@ -578,31 +609,67 @@ function CreateCoin({ onBack }) {
 }
 
 function WalletSheet({ onClose }) {
+  const [expanded, setExpanded] = useState(false);
+  const dragStart = useRef(null);
+
   const wallets = [
-    "MetaMask",
-    "Trust Wallet",
-    "Phantom",
-    "Coinbase Wallet",
-    "WalletConnect",
+    ["MetaMask", SiMetamask],
+    ["Trust Wallet", SiTrustwallet],
+    ["Phantom", SiPhantom],
+    ["Coinbase Wallet", SiCoinbase],
+    ["WalletConnect", SiWalletconnect],
   ];
 
+  const beginDrag = (e) => {
+    const t = e.touches[0];
+    dragStart.current = t.clientY;
+  };
+
+  const endDrag = (e) => {
+    if (dragStart.current == null) return;
+
+    const dy = e.changedTouches[0].clientY - dragStart.current;
+    dragStart.current = null;
+
+    if (dy < -35) setExpanded(true);
+    if (dy > 35) setExpanded(false);
+  };
+
   return (
-    <div className="rx-overlay" onClick={onClose}>
-      <div className="rx-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="rx-sheet-handle" />
+    <div className={`rx-overlay ${expanded ? "expanded" : ""}`} onClick={onClose}>
+      <div
+        className={`rx-sheet rx-wallet-sheet ${expanded ? "expanded" : ""}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="rx-sheet-handle-button"
+          aria-label={expanded ? "Collapse wallet sheet" : "Expand wallet sheet"}
+          onClick={() => setExpanded((v) => !v)}
+          onTouchStart={beginDrag}
+          onTouchEnd={endDrag}
+        >
+          <span className="rx-sheet-handle" />
+        </button>
 
         <div className="rx-sheet-head">
           <h3>Connect Wallet</h3>
-          <button onClick={onClose}><X size={20} /></button>
+          <button onClick={onClose} aria-label="Close">
+            <X size={24} />
+          </button>
         </div>
 
-        {wallets.map((wallet) => (
-          <div className="rx-wallet-row" key={wallet}>
-            <span>{wallet.slice(0, 1)}</span>
-            <strong>{wallet}</strong>
-            <button onClick={onClose}>Connect</button>
-          </div>
-        ))}
+        <div className="rx-wallet-list">
+          {wallets.map(([wallet, Icon]) => (
+            <div className="rx-wallet-row" key={wallet}>
+              <span className="rx-wallet-logo">
+                <Icon size={23} />
+              </span>
+              <strong>{wallet}</strong>
+              <button onClick={onClose}>Connect</button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -707,12 +774,12 @@ const styles = `
 .rx-icon-btn.rx-right{right:0}
 
 .rx-space-banner{
-  position:relative;width:100%;max-width:100%;height:176px;
+  position:relative;width:100%;max-width:100%;
   overflow:hidden;border-radius:18px;margin-bottom:12px
 }
 .rx-space-banner>img{
-  display:block;width:100%;height:100%;max-width:100%;
-  object-fit:cover;object-position:center
+  display:block;width:100%;height:auto;max-width:100%;
+  object-fit:contain;object-position:center
 }
 .rx-space-banner-copy{
   position:absolute;left:7%;top:11%;width:53%;color:#fff;
@@ -765,20 +832,18 @@ const styles = `
   gap:7px;margin-bottom:20px
 }
 .rx-shortcuts button{
-  height:58px;min-width:0;border:1px solid #E4E5E7;
-  border-radius:15px;background:#F4F5F5;
+  height:72px;min-width:0;border:0;border-radius:0;background:transparent;
   display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:5px;color:#111418;
-  font:800 8px 'Montserrat',sans-serif;
-  box-shadow:0 1px 5px rgba(20,24,28,.025);
-  text-align:center
+  justify-content:center;gap:6px;color:#111418;
+  font:800 8.5px 'Montserrat',sans-serif;
+  box-shadow:none;text-align:center
 }
 .rx-shortcut-icon{
-  width:25px;height:25px;border-radius:8px;
-  background:#E9EAEB;display:grid;place-items:center
+  width:46px;height:46px;border-radius:50%;
+  background:#ECEEEF;display:grid;place-items:center
 }
 .rx-shortcut-icon svg{
-  width:17px;height:17px;stroke-width:2.5;color:#111418
+  width:21px;height:21px;stroke-width:2.5;color:#111418
 }
 .rx-shortcuts button:first-child .rx-shortcut-icon svg,
 .rx-shortcuts button:nth-child(3) .rx-shortcut-icon svg,
@@ -818,18 +883,18 @@ const styles = `
 .rx-coin-name{min-width:0;flex:1;overflow:hidden}
 .rx-coin-name strong{
   display:block;font-size:12px;line-height:1.18;
-  font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+  font-weight:700;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
 }
 .rx-coin-name small{
   display:block;margin-top:4px;color:#747A81;
-  font-size:10.5px;line-height:1;font-weight:600
+  font-size:10px;line-height:1;font-weight:600;letter-spacing:-.1px
 }
 .rx-coin-value{
   min-width:82px;text-align:right;flex:0 0 auto
 }
 .rx-coin-value strong{
-  display:block;font-size:12px;line-height:1.15;
-  font-weight:800;white-space:nowrap
+  display:block;font-size:11.5px;line-height:1.15;
+  font-weight:700;letter-spacing:-.15px;white-space:nowrap
 }
 .rx-coin-value small{
   display:block;margin-top:5px;color:#43A57C;
@@ -880,19 +945,37 @@ const styles = `
 }
 
 .rx-overlay{
-  position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.48);
-  display:flex;align-items:flex-end;justify-content:center
+  position:fixed;inset:0;z-index:900;
+  background:rgba(0,0,0,.48);
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:1;transition:opacity .28s ease;will-change:opacity
 }
+.rx-overlay.expanded{background:rgba(0,0,0,.52)}
 .rx-sheet{
   width:min(100%,480px);background:#fff;color:#111418;
   border-radius:22px 22px 0 0;
   padding:9px 16px calc(22px + env(safe-area-inset-bottom));
-  max-height:80dvh;overflow:auto
+  max-height:80dvh;overflow:auto;
+  transform:translate3d(0,0,0);
+  transition:max-height .42s cubic-bezier(.22,.8,.2,1),
+             border-radius .42s ease;
+  will-change:max-height
+}
+.rx-wallet-sheet{
+  height:72dvh;max-height:72dvh;
+  animation:rx-sheet-enter .34s cubic-bezier(.22,.8,.2,1) both
+}
+.rx-wallet-sheet.expanded{
+  height:100dvh;max-height:100dvh;border-radius:22px 22px 0 0
 }
 .rx-sheet-tall{max-height:86dvh}
+.rx-sheet-handle-button{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;height:28px;border:0;background:transparent;
+  padding:0;margin:0 0 2px;touch-action:none
+}
 .rx-sheet-handle{
-  width:42px;height:4px;border-radius:9px;background:#D8DADC;
-  margin:0 auto 12px
+  width:44px;height:5px;border-radius:999px;background:#D8DADC;margin:0
 }
 .rx-sheet-head{
   height:38px;display:flex;align-items:center;
@@ -901,19 +984,23 @@ const styles = `
 .rx-sheet-head h3{margin:0;font-size:16px;font-weight:800}
 .rx-sheet-head button{border:0;background:transparent;color:#111418;padding:5px}
 
+.rx-wallet-list{overflow:auto;height:calc(100% - 54px);scrollbar-width:none}
+.rx-wallet-list::-webkit-scrollbar{display:none}
 .rx-wallet-row{
-  min-height:58px;border-bottom:1px solid #ECEDEF;
-  display:grid;grid-template-columns:34px 1fr auto;
-  align-items:center;gap:10px
+  min-height:72px;border-bottom:1px solid #ECEDEF;
+  display:grid;grid-template-columns:42px 1fr auto;
+  align-items:center;gap:12px
 }
-.rx-wallet-row>span{
-  width:32px;height:32px;border-radius:50%;
-  background:#F4D35E;display:grid;place-items:center;font-weight:800
+.rx-wallet-logo{
+  width:40px;height:40px;border-radius:50%;
+  background:#F4D35E;display:grid;place-items:center;
+  color:#111418;overflow:hidden
 }
-.rx-wallet-row strong{font-size:12px}
+.rx-wallet-row strong{font-size:13px;font-weight:700;letter-spacing:-.15px}
 .rx-wallet-row button{
-  border:0;border-radius:9px;background:#F4D35E;color:#fff;
-  padding:9px 11px;font:800 10px 'Montserrat',sans-serif
+  border:0;border-radius:11px;background:#F4D35E;color:#fff;
+  min-width:92px;height:42px;padding:0 13px;
+  font:800 11px 'Montserrat',sans-serif
 }
 
 .rx-mycoin{
@@ -944,7 +1031,6 @@ const styles = `
 .rx-menu-card small{font-size:9px;color:#747A80;margin-top:4px}
 
 @media(max-width:430px){
-  .rx-space-banner{height:166px}
   .rx-space-banner-copy{left:7%;top:10%;width:55%}
   .rx-space-banner-copy h2{font-size:19px}
   .rx-space-banner-copy p{font-size:10px}
@@ -987,18 +1073,18 @@ const createStyles = `
   -webkit-mask-image:radial-gradient(ellipse at center,black 55%,transparent 100%)
 }
 .rx-rocket-crop{
-  position:absolute;z-index:5;left:50%;top:43px;width:126px;height:104px;
-  transform:translateX(-50%);overflow:hidden;pointer-events:none;
+  position:absolute;z-index:5;left:50%;top:47px;width:112px;height:112px;
+  transform:translateX(-50%);overflow:visible;pointer-events:none;
   filter:drop-shadow(0 12px 10px rgba(0,0,0,.10));
   animation:rx-float 2.8s ease-in-out infinite
 }
 .rx-rocket-crop img{
-  display:block;width:126px;height:150px;
-  object-fit:contain;object-position:top center
+  display:block;width:112px;height:132px;
+  object-fit:contain;object-position:center center
 }
 .rx-flame-video{
-  position:absolute;z-index:4;left:50%;top:145px;
-  width:64px;height:118px;transform:translateX(-50%);
+  position:absolute;z-index:4;left:50%;top:156px;
+  width:58px;height:108px;transform:translateX(-50%);
   object-fit:cover;mix-blend-mode:screen;
   filter:brightness(1.15) saturate(1.08);opacity:.99;
   pointer-events:none;
@@ -1029,13 +1115,13 @@ const createStyles = `
 }
 .rx-upload input{display:none}
 .rx-upload-circle{
-  width:72px;height:72px;border-radius:50%;display:grid;
+  width:76px;height:76px;border-radius:50%;display:grid;
   place-items:center;background:#FFF7DA;color:#D7A21A;
-  overflow:hidden;margin-bottom:8px
+  overflow:hidden;margin-bottom:12px
 }
 .rx-upload-circle img{width:100%;height:100%;object-fit:cover}
-.rx-upload strong{font-size:12px}
-.rx-upload small{margin-top:4px;color:#747A80;font-size:9px}
+.rx-upload strong{font-size:14px;font-weight:800;letter-spacing:-.2px}
+.rx-upload small{margin-top:6px;color:#747A80;font-size:10.5px;font-weight:600}
 
 .rx-fields{display:grid;gap:10px;margin-top:14px}
 .rx-create-field{display:grid;gap:5px;color:#535A60;font-size:9px;font-weight:700}
@@ -1046,14 +1132,45 @@ const createStyles = `
 }
 .rx-create-field input::placeholder{color:#B0B4B8}
 .rx-two-fields{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.rx-select-wrap{position:relative}
-.rx-select-wrap select{appearance:none;padding-right:35px}
 .rx-chevron{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none}
 
+.rx-network-select{position:relative}
+.rx-network-trigger{
+  width:100%;height:42px;border:1px solid #E4E6E8;border-radius:10px;
+  padding:0 11px;background:#fff;color:#111418;
+  display:flex;align-items:center;justify-content:space-between;
+  font:600 11px 'Montserrat',sans-serif
+}
+.rx-network-trigger.open{border-color:#D7A21A}
+.rx-network-trigger .rx-chevron{position:static;transform:none;pointer-events:none;transition:transform .22s ease}
+.rx-network-trigger .rx-chevron.rotated{transform:rotate(180deg)}
+.rx-network-menu{
+  position:absolute;z-index:30;left:0;right:0;bottom:calc(100% + 8px);
+  padding:5px;border:1px solid #E4E6E8;border-radius:12px;
+  background:#fff;box-shadow:0 12px 30px rgba(20,24,28,.12);
+  opacity:0;visibility:hidden;transform:translateY(8px) scale(.985);
+  transform-origin:bottom center;
+  transition:opacity .22s ease,transform .22s ease,visibility .22s ease;
+  pointer-events:none
+}
+.rx-network-menu.open{
+  opacity:1;visibility:visible;transform:translateY(0) scale(1);
+  pointer-events:auto
+}
+.rx-network-menu button{
+  width:100%;height:38px;border:0;border-radius:8px;
+  background:transparent;text-align:left;padding:0 10px;
+  color:#111418;font:600 10.5px 'Montserrat',sans-serif
+}
+.rx-network-menu button.selected,.rx-network-menu button:active{background:#FFF7DA}
 .rx-create-actions{display:flex;gap:9px;margin:16px 0}
 .rx-create-actions button{height:44px;border-radius:11px;font:800 11px 'Montserrat',sans-serif}
-.rx-create-actions .primary{flex:1;border:0;background:#D7A21A;color:#fff}
+.rx-create-actions .primary{
+  position:relative;flex:1;border:0;background:#D7A21A;color:#fff;
+  display:flex;align-items:center;justify-content:center;gap:8px
+}
 .rx-create-actions .primary:disabled{opacity:.45}
+.rx-action-arrow{position:absolute;left:12px}
 .rx-create-actions .secondary{
   width:90px;border:1px solid #E1E3E5;background:#fff;color:#111418
 }
@@ -1075,6 +1192,10 @@ const createStyles = `
 .rx-launched h2{font-size:17px;margin:9px 0 5px}
 .rx-launched p{font-size:10px;color:#747A80;margin:0}
 
+@keyframes rx-sheet-enter{
+  from{transform:translate3d(0,100%,0)}
+  to{transform:translate3d(0,0,0)}
+}
 @keyframes rx-side-float{
   0%,100%{transform:translateY(0) rotate(-3deg)}
   50%{transform:translateY(-6px) rotate(3deg)}
@@ -1087,9 +1208,9 @@ const createStyles = `
 @media(max-width:430px){
   .rx-create-stage{height:300px}
   .rx-platform{width:300px;height:215px}
-  .rx-rocket-crop{width:120px;height:100px}
-  .rx-rocket-crop img{width:120px;height:143px}
-  .rx-flame-video{top:140px;width:60px;height:112px}
+  .rx-rocket-crop{width:108px;height:108px}
+  .rx-rocket-crop img{width:108px;height:128px}
+  .rx-flame-video{top:153px;width:56px;height:106px}
   .rx-cloud-video{width:320px;height:174px}
   .rx-side-coin{width:29px;height:29px}
   .rx-side-left{left:calc(50% - 106px)}
