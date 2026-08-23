@@ -3081,10 +3081,10 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
       {/* Top bar: bell left, chat right, NO Community title */}
       <div
         style={{ transform: feedSwipeX ? `translate3d(${feedSwipeX}px, 0, 0)` : "translate3d(0, 0, 0)", transition: feedSwipeX === 0 ? "transform 180ms cubic-bezier(.22,.8,.3,1)" : "none", willChange: "transform" }}
-        onTouchStart={(e) => { feedSwipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, axis: null }; }}
-        onTouchMove={(e) => { const s = feedSwipeRef.current; if (!s) return; const dx = e.touches[0].clientX - s.x, dy = e.touches[0].clientY - s.y; if (!s.axis && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) s.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y"; if (s.axis === "x") setFeedSwipeX(Math.max(-window.innerWidth * .7, Math.min(window.innerWidth * .7, dx))); }}
-        onTouchEnd={(e) => { const s = feedSwipeRef.current; feedSwipeRef.current = null; if (!s || s.axis !== "x") { setFeedSwipeX(0); return; } finishFeedSwipe(e.changedTouches[0].clientX - s.x); }}
-        onTouchCancel={() => { feedSwipeRef.current = null; setFeedSwipeX(0); }}
+        onTouchStart={(e) => { if (!e.target.closest?.("button")) { feedSwipeRef.current = null; return; } e.stopPropagation(); feedSwipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, axis: null }; }}
+        onTouchMove={(e) => { e.stopPropagation(); const s = feedSwipeRef.current; if (!s) return; const dx = e.touches[0].clientX - s.x, dy = e.touches[0].clientY - s.y; if (!s.axis && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) s.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y"; if (s.axis === "x") setFeedSwipeX(Math.max(-window.innerWidth * .7, Math.min(window.innerWidth * .7, dx))); }}
+        onTouchEnd={(e) => { e.stopPropagation(); const s = feedSwipeRef.current; feedSwipeRef.current = null; if (!s || s.axis !== "x") { setFeedSwipeX(0); return; } finishFeedSwipe(e.changedTouches[0].clientX - s.x); }}
+        onTouchCancel={(e) => { e.stopPropagation(); feedSwipeRef.current = null; setFeedSwipeX(0); }}
       >
       <div style={{ display: "flex", alignItems: "center", padding: "12px 16px 0", gap: 8 }}>
         <CommunityNotifBell account={account} onOpenProfile={setViewingUserId} onOpenPost={(postId) => setOpenPostId(postId)} />
