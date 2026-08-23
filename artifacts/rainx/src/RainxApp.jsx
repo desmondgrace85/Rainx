@@ -1701,7 +1701,7 @@ function MainAppContent({ account, onLogout }) {
   
   // ─── Active markets (max 3 the user explicitly monitors) ────────────────────
   const [activeMarkets, setActiveMarkets] = useState(() => {
-    try { return JSON.parse(lsGet("rainx-active-markets") || "[]"); } catch { return []; }
+    try { const saved = JSON.parse(lsGet("rainx-active-markets") || "[]"); return Array.isArray(saved) ? saved.filter((symbol) => typeof symbol === "string") : []; } catch { return []; }
   });
   const [lastMarketReset, setLastMarketReset] = useState(() => lsGet("rxMarketResetDate") || "");
   const MAX_ACTIVE_MARKETS = 3;
