@@ -2726,7 +2726,7 @@ function MainAppContent({ account, onLogout }) {
       <div
         key={tab}
         className={tabDirRef.current >= 0 ? "rx-slide-right" : "rx-slide-left"}
-        style={{ paddingBottom: 78, transform: swipeX ? `translate3d(${swipeX}px, 0, 0)` : "translate3d(0, 0, 0)`, transition: swipeX === 0 ? "transform 180ms cubic-bezier(.22,.8,.3,1)" : "none", willChange: "transform", touchAction: "pan-y" }}
+        style={{ paddingBottom: 78, transform: swipeX ? `translate3d(${swipeX}px, 0, 0)` : "translate3d(0, 0, 0)", transition: swipeX === 0 ? "transform 180ms cubic-bezier(.22,.8,.3,1)" : "none", willChange: "transform", touchAction: "pan-y" }}
         onTouchStart={(e) => {
           swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, axis: null };
         }}
