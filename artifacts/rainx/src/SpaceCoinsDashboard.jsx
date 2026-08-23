@@ -84,13 +84,13 @@ function Header({ onMenu, onBack, title = "Space Coins" }) {
   );
 }
 
-function ModeToggle({ mode, setMode }) {
+function ModeToggle({ mode, setMode, swipeProgress = 0 }) {
   const [dragX, setDragX] = useState(0);
   const start = useRef(null);
   const begin = (e) => { e.currentTarget.setPointerCapture?.(e.pointerId); start.current = e.clientX; };
   const move = (e) => { if (start.current == null) return; setDragX(Math.max(-180, Math.min(180, e.clientX - start.current))); };
   const end = () => { if (start.current == null) return; if (dragX < -35) setMode("external"); else if (dragX > 35) setMode("space"); setDragX(0); start.current = null; };
-  const progress = mode === "external" ? 1 : 0;
+  const progress = (mode === "external" ? 1 : 0) + swipeProgress;
   return (
     <div className="rx-mode-toggle" role="tablist" aria-label="Coin type" onPointerDown={begin} onPointerMove={move} onPointerUp={end} onPointerCancel={end}>
       <span className="rx-mode-indicator" style={{ transform: `translateX(${(progress * 100) + dragX / 2}%)` }} />
@@ -224,12 +224,12 @@ function ExternalPanel({ onConnect }) {
   );
 }
 
-function SwipeArea({ mode, setMode, onMyCoins, onConnect }) {
+function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress }) {
   const start = useRef(null);
   const [dragX, setDragX] = useState(0);
   const onPointerDown = (e) => { e.currentTarget.setPointerCapture?.(e.pointerId); start.current = { x: e.clientX, y: e.clientY }; };
-  const onPointerMove = (e) => { if (!start.current) return; const dx = e.clientX - start.current.x; const dy = Math.abs(e.clientY - start.current.y); if (dy < 30) setDragX(Math.max(-window.innerWidth, Math.min(window.innerWidth, dx))); };
-  const onPointerEnd = () => { if (!start.current) return; if (dragX < -45) setMode("external"); else if (dragX > 45) setMode("space"); start.current = null; setDragX(0); };
+  const onPointerMove = (e) => { if (!start.current) return; const dx = e.clientX - start.current.x; const dy = Math.abs(e.clientY - start.current.y); if (dy < 30) setDragX(Math.max(-window.innerWidth, Math.min(window.innerWidth, dx))); onProgress?.(dx / window.innerWidth); };
+  const onPointerEnd = () => { if (!start.current) return; if (dragX < -45) setMode("external"); else if (dragX > 45) setMode("space"); start.current = null; setDragX(0); onProgress?.(0); };
 
   return (
     <div
@@ -255,6 +255,8 @@ function SwipeArea({ mode, setMode, onMyCoins, onConnect }) {
 }
 
 function Dashboard({ mode, setMode, onCreate, onMenu, onMyCoins, onConnect }) {
+  const [swipeProgress, setSwipeProgress] = useState(0);
+
   return (
     <Shell>
       <style>{styles}</style>
@@ -263,13 +265,14 @@ function Dashboard({ mode, setMode, onCreate, onMenu, onMyCoins, onConnect }) {
         <div className="rx-space-inner">
           <Header onMenu={onMenu} />
           <CreateBanner onCreate={onCreate} />
-          <ModeToggle mode={mode} setMode={setMode} />
+          <ModeToggle mode={mode} setMode={setMode} swipeProgress={swipeProgress} />
 
           <SwipeArea
             mode={mode}
             setMode={setMode}
             onMyCoins={onMyCoins}
             onConnect={onConnect}
+            onProgress={setSwipeProgress}
           />
         </div>
       </div>
@@ -621,7 +624,7 @@ function WalletSheet({ onClose }) {
     <div className="rx-overlay" onClick={onClose}>
       <div
         className={`rx-sheet ${expanded ? "expanded" : ""} ${dragging ? "dragging" : ""}`}
-        style={{ transform: `translate3d(0, ${dragY}px, 0)` }}
+        style={{ transform: `translate3d(0, ${dragging ? Math.max(-window.innerHeight * .72, Math.min(0, dragY)) : 0}px, 0)` }}
         onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -756,7 +759,7 @@ const styles = `
 }
 .rx-space-banner>img{
   display:block;width:100%;height:100%;max-width:100%;
-  object-fit:contain;object-position:center;background:transparent
+  object-fit:contain;object-position:center;background:transparent;transform:scale(1.55);transform-origin:center
 }
 .rx-space-banner-copy{
   position:absolute;left:7%;top:11%;width:53%;color:#fff;
@@ -940,6 +943,7 @@ const styles = `
 }
 .rx-sheet.expanded{max-height:96dvh}
 .rx-sheet.dragging{transition:none}
+.rx-sheet img{display:block}
 .rx-sheet-tall{max-height:86dvh}
 .rx-sheet-handle{
   width:100%;height:22px;border:0;border-radius:0;background:transparent;
