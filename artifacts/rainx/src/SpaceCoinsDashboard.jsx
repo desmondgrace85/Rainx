@@ -648,8 +648,6 @@ function CreateCoin({ onBack }) {
 
 function WalletSheet({ onClose }) {
   const [expanded, setExpanded] = useState(false);
-  const [dragY, setDragY] = useState(0);
-  const sheetHeight = Math.min(window.innerHeight * 0.8, 640);
   const [dragging, setDragging] = useState(false);
   const pointerStart = useRef(null);
   const dragYRef = useRef(0);
@@ -661,46 +659,48 @@ function WalletSheet({ onClose }) {
     ["WalletConnect", SiWalletconnect],
   ];
 
+  const collapsedOffset = Math.max(0, window.innerHeight - Math.min(window.innerHeight * 0.8, 640));
+  const baseOffset = expanded ? 0 : collapsedOffset;
+
   const onPointerDown = (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     e.currentTarget.setPointerCapture?.(e.pointerId);
     pointerStart.current = e.clientY;
     dragYRef.current = 0;
     setDragging(true);
-    setDragY(0);
   };
 
   const onPointerMove = (e) => {
     if (pointerStart.current == null) return;
     if (e.cancelable) e.preventDefault();
     const nextDragY = e.clientY - pointerStart.current;
-    const boundedDragY = expanded
-      ? Math.max(0, Math.min(window.innerHeight * 0.8, nextDragY))
-      : Math.max(-window.innerHeight * 0.72, Math.min(0, nextDragY));
-    dragYRef.current = boundedDragY;
-    setDragY(boundedDragY);
+    dragYRef.current = Math.max(-baseOffset, Math.min(window.innerHeight * 0.9, nextDragY));
+    setDragging(true);
   };
+
   const onPointerEnd = (e) => {
     if (pointerStart.current == null) return;
-    if (dragYRef.current < -45) setExpanded(true);
-    else if (dragYRef.current > 45 && expanded) setExpanded(false);
+    const dragDistance = dragYRef.current;
+    if (dragDistance < -56) setExpanded(true);
+    else if (dragDistance > 56) {
+      if (expanded) setExpanded(false);
+      else onClose();
+    }
     e.currentTarget.releasePointerCapture?.(e.pointerId);
     pointerStart.current = null;
     dragYRef.current = 0;
     setDragging(false);
-    setDragY(0);
   };
+
+  const dragOffset = dragging
+    ? Math.max(-baseOffset, Math.min(window.innerHeight * 0.9, dragYRef.current))
+    : 0;
 
   return (
     <div className="rx-overlay" onClick={onClose}>
       <div
-        className={`rx-sheet rx-wallet-sheet ${expanded ? "expanded" : ""} ${dragging ? "dragging" : ""}`}
-        style={dragging ? {
-          height: `${expanded
-            ? window.innerHeight - Math.max(0, Math.min(window.innerHeight * 0.8, dragY))
-            : sheetHeight - Math.min(0, Math.max(-window.innerHeight * 0.72, dragY))}px`,
-          transform: "translate3d(0,0,0)",
-        } : undefined}
+        className={"rx-sheet rx-wallet-sheet " + (expanded ? "expanded" : "") + (dragging ? " dragging" : "")}
+        style={{ transform: "translate3d(0," + (baseOffset + dragOffset) + "px,0)" }}
         onClick={(e) => e.stopPropagation()}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -840,7 +840,7 @@ const styles = `
   object-fit:contain;object-position:center;background:transparent
 }
 .rx-space-banner-copy{
-  position:absolute;left:7%;right:25%;top:15%;width:auto;color:#111418;
+  position:absolute;left:7%;right:25%;top:19%;width:auto;color:#111418;
   text-shadow:none
 }
 .rx-space-banner-copy h2{
@@ -1021,9 +1021,9 @@ const styles = `
   transition:transform .38s cubic-bezier(.22,.8,.2,1),max-height .38s ease;will-change:transform;
   touch-action:none
 }
-.rx-wallet-sheet{height:min(80dvh,640px);animation:rx-wallet-sheet-enter .42s cubic-bezier(.16,1,.3,1) both}
+.rx-wallet-sheet{height:100dvh;max-height:100dvh;transform:translate3d(0,calc(100% - min(80dvh,640px)),0);animation:rx-wallet-sheet-enter .6s cubic-bezier(.16,1,.3,1) both}
 .rx-sheet.expanded{height:100dvh;max-height:100dvh}
-.rx-sheet.dragging{transition:none}
+.rx-sheet.dragging{transition:none;cursor:grabbing}
 .rx-sheet img{display:block}
 .rx-sheet-tall{max-height:86dvh}
 .rx-sheet-handle{
@@ -1086,7 +1086,7 @@ const styles = `
 
 @media(max-width:430px){
   .rx-space-banner{width:100%;height:auto;aspect-ratio:2000 / 1414}
-  .rx-space-banner-copy{left:7%;right:25%;top:13%;width:auto}
+  .rx-space-banner-copy{left:7%;right:25%;top:17%;width:auto}
   .rx-space-banner-copy h2{font-size:19px}
   .rx-space-banner-copy p{margin-top:9px;font-size:10px}
   .rx-space-banner-copy button{margin-top:9px;height:35px;font-size:9.5px}
@@ -1101,7 +1101,7 @@ const styles = `
 
 @media(prefers-reduced-motion:reduce){
   .rx-space-shell *{animation:none!important;transition:none!important}
-  .rx-space-shell .rx-wallet-sheet{animation:rx-wallet-sheet-enter .42s cubic-bezier(.16,1,.3,1) both!important}
+  .rx-space-shell .rx-wallet-sheet{animation:rx-wallet-sheet-enter .6s cubic-bezier(.16,1,.3,1) both!important}
 }
 `;
 
@@ -1264,7 +1264,7 @@ const createStyles = `
 }
 @keyframes rx-wallet-sheet-enter{
   from{transform:translate3d(0,100%,0)}
-  to{transform:translate3d(0,0,0)}
+  to{transform:translate3d(0,calc(100% - min(80dvh,640px)),0)}
 }
 @keyframes rx-float{
   0%,100%{transform:translateX(-50%) translateY(0) rotate(-.3deg)}
