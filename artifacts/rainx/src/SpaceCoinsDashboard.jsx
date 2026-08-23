@@ -220,6 +220,7 @@ function ExternalPanel({ onConnect }) {
 }
 
 function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress, onSwipeStateChange }) {
+  const viewportRef = useRef(null);
   const start = useRef(null);
   const dragXRef = useRef(0);
   const [dragX, setDragX] = useState(0);
@@ -246,14 +247,19 @@ function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress, onSwipeSta
     const bounded = Math.max(-width, Math.min(width, dx));
     dragXRef.current = bounded;
     setDragX(bounded);
-    const progress = Math.max(0, Math.min(1, (mode === "external" ? 1 : 0) + bounded / width));
+    const progress = mode === "external"
+      ? Math.max(0, Math.min(1, 1 + bounded / width))
+      : Math.max(0, Math.min(1, bounded / -width));
     onProgress?.(progress);
   };
   const onPointerEnd = (e) => {
     if (!start.current) return;
     const width = e.currentTarget.getBoundingClientRect().width || 1;
-    if (dragXRef.current < -width * 0.16) setMode("external");
-    else if (dragXRef.current > width * 0.16) setMode("space");
+    if (start.current.axis === "x") {
+      if (mode === "space" && dragXRef.current < -width * 0.16) setMode("external");
+      else if (mode === "external" && dragXRef.current > width * 0.16) setMode("space");
+    }
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
     start.current = null;
     dragXRef.current = 0;
     setDragX(0);
@@ -264,6 +270,7 @@ function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress, onSwipeSta
 
   return (
     <div
+      ref={viewportRef}
       className="rx-swipe-viewport"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -273,7 +280,9 @@ function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress, onSwipeSta
       <div
         className={`rx-swipe-track ${mode === "external" ? "external" : ""}`}
         style={swiping ? {
-          transform: `translate3d(${(Math.max(0, Math.min(1, (mode === "external" ? 1 : 0) + dragX / (document.documentElement.clientWidth || 1))) * -50)}%,0,0)`,
+          transform: `translate3d(${(mode === "external"
+            ? Math.max(0, Math.min(1, 1 + dragX / (viewportRef.current?.clientWidth || 1)))
+            : Math.max(0, Math.min(1, dragX / -(viewportRef.current?.clientWidth || 1)))) * -50}%,0,0)`,
           transition: "none",
         } : undefined}
       >
@@ -817,26 +826,26 @@ const styles = `
 .rx-space-banner{
   position:relative;width:100%;max-width:none;height:auto;
   overflow:visible;border-radius:20px;margin:0 0 14px;background:transparent;aspect-ratio:2000 / 1414;
-  transform:scale(1.03);transform-origin:center top
+  transform:none
 }
 .rx-space-banner>img{
   display:block;width:100%;height:100%;max-width:100%;
   object-fit:contain;object-position:center;background:transparent
 }
 .rx-space-banner-copy{
-  position:absolute;left:7%;top:11%;width:53%;color:#fff;
-  text-shadow:0 2px 8px rgba(0,0,0,.14)
+  position:absolute;left:6%;top:10%;width:72%;color:#111418;
+  text-shadow:none
 }
 .rx-space-banner-copy h2{
-  margin:0;font-size:21px;line-height:1.04;font-weight:800;letter-spacing:-.7px
+  margin:0;font-size:29px;line-height:1.02;font-weight:900;letter-spacing:-1.1px
 }
 .rx-space-banner-copy p{
-  margin:9px 0 0;font-size:10.5px;line-height:1.4;font-weight:600
+  margin:12px 0 0;color:#111418;font-size:13.5px;line-height:1.3;font-weight:600
 }
 .rx-space-banner-copy button{
-  margin-top:12px;height:40px;padding:0 13px;
+  margin-top:14px;height:43px;padding:0 15px;
   border:1px solid rgba(255,255,255,.7);border-radius:12px;
-  background:rgba(255,255,255,.18);color:#fff;
+  background:rgba(255,255,255,.8);color:#111418;
   display:inline-flex;align-items:center;gap:8px;
   font:800 10.5px 'Montserrat',sans-serif;
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)
@@ -1068,10 +1077,10 @@ const styles = `
 
 @media(max-width:430px){
   .rx-space-banner{width:100%;height:auto;aspect-ratio:2000 / 1414}
-  .rx-space-banner-copy{left:7%;top:10%;width:55%}
-  .rx-space-banner-copy h2{font-size:20px}
-  .rx-space-banner-copy p{font-size:10.5px}
-  .rx-space-banner-copy button{height:37px;font-size:10px}
+  .rx-space-banner-copy{left:6%;top:9%;width:72%}
+  .rx-space-banner-copy h2{font-size:25px}
+  .rx-space-banner-copy p{margin-top:9px;font-size:11px}
+  .rx-space-banner-copy button{margin-top:10px;height:38px;font-size:10px}
   .rx-mode-toggle{height:60px}
   .rx-shortcuts{gap:2px}
   .rx-shortcuts button{height:68px;font-size:7.5px}
