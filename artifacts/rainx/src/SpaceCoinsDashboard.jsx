@@ -116,6 +116,13 @@ function CreateBanner({ onCreate }) {
   return (
     <section className="rx-space-banner">
       <img src={externalBanner} alt="" draggable="false" />
+      <div className="rx-space-banner-copy">
+        <h2>Create Your<br />Space Coin</h2>
+        <p>Launch your own mini meme coin<br />in just a few steps.</p>
+        <button onClick={onCreate}>
+          Create Coin <ArrowRight size={16} />
+        </button>
+      </div>
     </section>
   );
 }
@@ -788,12 +795,30 @@ const styles = `
 .rx-icon-btn.rx-right{right:0}
 
 .rx-space-banner{
-  position:relative;width:100%;max-width:100%;height:auto;
-  overflow:visible;border-radius:20px;margin:0 0 14px;background:transparent;aspect-ratio:2000 / 1414
+  position:relative;width:104%;max-width:none;height:auto;
+  overflow:visible;border-radius:20px;margin:0 -2% 14px;background:transparent;aspect-ratio:2000 / 1414
 }
 .rx-space-banner>img{
   display:block;width:100%;height:100%;max-width:100%;
   object-fit:contain;object-position:center;background:transparent
+}
+.rx-space-banner-copy{
+  position:absolute;left:7%;top:11%;width:53%;color:#fff;
+  text-shadow:0 2px 8px rgba(0,0,0,.14)
+}
+.rx-space-banner-copy h2{
+  margin:0;font-size:21px;line-height:1.04;font-weight:800;letter-spacing:-.7px
+}
+.rx-space-banner-copy p{
+  margin:9px 0 0;font-size:10.5px;line-height:1.4;font-weight:600
+}
+.rx-space-banner-copy button{
+  margin-top:12px;height:40px;padding:0 13px;
+  border:1px solid rgba(255,255,255,.7);border-radius:12px;
+  background:rgba(255,255,255,.18);color:#fff;
+  display:inline-flex;align-items:center;gap:8px;
+  font:800 10.5px 'Montserrat',sans-serif;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)
 }
 
 .rx-mode-toggle{
@@ -946,7 +971,7 @@ const styles = `
 .rx-overlay{
   position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.48);
   display:flex;align-items:flex-end;justify-content:center;
-  animation:rx-overlay-fade .2s ease-out both
+  animation:rx-overlay-fade .2s ease-out both;touch-action:none
 }
 .rx-sheet{
   width:min(100%,480px);background:#fff;color:#111418;
@@ -1021,7 +1046,11 @@ const styles = `
 .rx-menu-card small{font-size:9px;color:#747A80;margin-top:4px}
 
 @media(max-width:430px){
-  .rx-space-banner{height:auto;aspect-ratio:2000 / 1414}
+  .rx-space-banner{width:104%;height:auto;aspect-ratio:2000 / 1414}
+  .rx-space-banner-copy{left:7%;top:10%;width:55%}
+  .rx-space-banner-copy h2{font-size:20px}
+  .rx-space-banner-copy p{font-size:10.5px}
+  .rx-space-banner-copy button{height:37px;font-size:10px}
   .rx-mode-toggle{height:60px}
   .rx-shortcuts{gap:2px}
   .rx-shortcuts button{height:68px;font-size:7.5px}
