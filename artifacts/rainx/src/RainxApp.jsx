@@ -2706,13 +2706,13 @@ function MainAppContent({ account, onLogout }) {
 
       {/* Community — lazy keep-alive: mounts on first visit, never unmounts again */}
       {communityMounted && (
-        <div style={{ display: tab === "community" ? "block" : "none", paddingBottom: 78 }}>
+        <div style={{ display: tab === "community" ? "block" : "none", paddingBottom: 78, maxHeight: "calc(100dvh - 78px)", overflowY: "auto", overscrollBehaviorY: "none" }}>
           <CommunityTab account={account} entitlement={entitlement} themeTokens={T} onViewingProfileChange={(uid) => setCommunityProfileOpen(!!uid)} />
         </div>
       )}
       {/* Scalping — lazy keep-alive: mounts on first visit, never unmounts again */}
       {scalpingMounted && (
-        <div style={{ display: tab === "scalping" ? "block" : "none", paddingBottom: 78 }}>
+        <div style={{ display: tab === "scalping" ? "block" : "none", paddingBottom: 78, maxHeight: "calc(100dvh - 78px)", overflowY: "auto", overscrollBehaviorY: "none" }}>
           <ScalpingTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />
         </div>
       )}
@@ -2722,7 +2722,7 @@ function MainAppContent({ account, onLogout }) {
       <div
         key={tab}
         className={tabDirRef.current >= 0 ? "rx-slide-right" : "rx-slide-left"}
-        style={{ paddingBottom: 78 }}
+        style={{ paddingBottom: 78, maxHeight: tab === "more" ? "calc(100dvh - 78px)" : undefined, overflowY: tab === "more" ? "auto" : undefined, overscrollBehaviorY: "none" }}
         onTouchStart={(e) => {
           const x = e.touches[0].clientX;
           swipeRef.current = (x < 28 || x > window.innerWidth - 28)
