@@ -798,22 +798,31 @@ function useHorizontalSwipe(onLeft, onRight, onProgress) {
   const startX = useRef(null);
   const startY = useRef(null);
   const axis = useRef(null);
+  const captured = useRef(false);
   const onPointerDown = (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     startX.current = e.clientX; startY.current = e.clientY; axis.current = null;
-    e.currentTarget.setPointerCapture?.(e.pointerId);
+    captured.current = false;
   };
   const onPointerMove = (e) => {
     if (startX.current == null) return;
     const dx = e.clientX - startX.current; const dy = e.clientY - startY.current;
     if (!axis.current && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) axis.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
-    if (axis.current === "x") { if (e.cancelable) e.preventDefault(); onProgress?.(dx); }
+    if (axis.current === "x") {
+      if (!captured.current) {
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+        captured.current = true;
+      }
+      if (e.cancelable) e.preventDefault();
+      onProgress?.(dx);
+    }
   };
   const finish = (e) => {
     if (startX.current == null) return;
     const dx = e.clientX - startX.current; const dy = e.clientY - startY.current;
     if (axis.current === "x" && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.15) { if (dx < 0) onLeft?.(); else onRight?.(); } else onProgress?.(0);
-    e.currentTarget.releasePointerCapture?.(e.pointerId); startX.current = null; startY.current = null; axis.current = null;
+    if (captured.current) e.currentTarget.releasePointerCapture?.(e.pointerId);
+    captured.current = false; startX.current = null; startY.current = null; axis.current = null;
   };
   return { onPointerDown, onPointerMove, onPointerUp: finish, onPointerCancel: finish };
 }
@@ -864,7 +873,7 @@ function NativeTabScreen({ title, onBack, children, right }) {
 
 function TokenSettingsScreen({ onBack }) {
   const rows = [["Token Information", "Edit name, symbol, description"], ["Fee Settings", "Manage trading fees and creator fees", "2%"], ["Max Transaction", "Set max buy/sell limit", "No Limit"], ["Max Wallet", "Set max tokens per wallet", "No Limit"], ["Trading Settings", "Enable / Disable trading"], ["Whitelist", "Manage whitelisted addresses", "12"], ["Blacklist", "Manage blacklisted addresses", "0"], ["Token Visibility", "Show or hide your token"], ["Burn Tokens", "Burn a portion of supply"]];
-  return <NativeTabScreen title="Token Settings" onBack={onBack}><div className="rx-token-summary"><span className="rx-creator-number">4</span><img src={galaxyDogeToken} alt="" /><div><strong>STAR DOGE</strong><small>SDOGE</small></div><span className="rx-live-pill">Live</span></div><div className="rx-settings-list">{rows.map(([name, detail, value], index) => <div className="rx-settings-row" key={name}><span className="rx-settings-icon">{["ⓘ", "⚙", "◷", "▣", "◉", "ⓘ", "ⓧ", "◉", "♨"][index]}</span><div><strong>{name}</strong><small>{detail}</small></div>{value ? <em>{value}</em> : index === 4 || index === 7 ? <span className="rx-switch on" /> : <ChevronRight size={17} />}</div>)}</div></NativeTabScreen>;
+  return <NativeTabScreen title="Token Settings" onBack={onBack}><div className="rx-token-summary"><img src={galaxyDogeToken} alt="" /><div><strong>STAR DOGE</strong><small>SDOGE</small></div><span className="rx-live-pill">Live</span></div><div className="rx-settings-list">{rows.map(([name, detail, value], index) => <div className="rx-settings-row" key={name}><span className="rx-settings-icon">{["ⓘ", "⚙", "◷", "▣", "◉", "ⓘ", "ⓧ", "◉", "♨"][index]}</span><div><strong>{name}</strong><small>{detail}</small></div>{value ? <em>{value}</em> : index === 4 || index === 7 ? <span className="rx-switch on" /> : <ChevronRight size={17} />}</div>)}</div></NativeTabScreen>;
 }
 
 function HoldersScreen({ onBack }) {
@@ -1220,6 +1229,14 @@ const styles = `
 
  .rx-tab-screen .rx-native-scroll{padding:12px 16px calc(78px + env(safe-area-inset-bottom))}
  .rx-tab-screen .rx-native-tabs{position:absolute;left:0;right:0;bottom:0}
+ .rx-tab-screen .rx-holders-number{display:none}
+ .rx-tab-screen .rx-token-summary>.rx-creator-number{display:none}
+ .rx-tab-screen .rx-token-summary{margin:4px 0 22px;padding:0 2px}.rx-tab-screen .rx-token-summary img{width:47px;height:47px}.rx-tab-screen .rx-token-summary strong{font-size:17px}.rx-tab-screen .rx-token-summary small{font-size:11px}
+ .rx-tab-screen .rx-settings-row{min-height:70px;padding:10px 13px;gap:13px}.rx-tab-screen .rx-settings-row strong{font-size:14px;font-weight:700}.rx-tab-screen .rx-settings-row small{font-size:10px;margin-top:5px}.rx-tab-screen .rx-settings-row em{font-size:11px}.rx-tab-screen .rx-settings-icon{font-size:19px;width:25px}
+ .rx-tab-screen .rx-stat-grid{gap:9px;margin-bottom:20px}.rx-tab-screen .rx-stat-grid span{padding:13px 10px}.rx-tab-screen .rx-stat-grid small{font-size:9px}.rx-tab-screen .rx-stat-grid b{font-size:14px}.rx-tab-screen .rx-tab-switch,.rx-tab-screen .rx-transaction-tabs,.rx-tab-screen .rx-periods{height:47px;font-size:12px}.rx-tab-screen .rx-tab-switch b,.rx-tab-screen .rx-transaction-tabs b{height:47px}
+ .rx-tab-screen .rx-holder-list>div{height:49px;grid-template-columns:27px 1fr 58px 100px;padding:0 12px;font-size:11px}.rx-tab-screen .rx-holder-list strong{font-size:12px}.rx-tab-screen .rx-holder-list span,.rx-tab-screen .rx-holder-list b{font-size:11px}
+ .rx-tab-screen .rx-tab-heading{font-size:14px;margin:18px 0 10px}.rx-tab-screen .rx-periods span,.rx-tab-screen .rx-periods b{min-width:52px;height:30px}.rx-tab-screen .rx-analytics-metrics{gap:9px}.rx-tab-screen .rx-analytics-metrics span{padding:12px 10px}.rx-tab-screen .rx-analytics-metrics small{font-size:9px}.rx-tab-screen .rx-analytics-metrics b{font-size:12px}.rx-tab-screen .rx-analytics-metrics em{font-size:9px}
+ .rx-tab-screen .rx-transaction-list>div{min-height:74px;padding:9px 12px;grid-template-columns:30px 1fr auto 48px;gap:10px}.rx-tab-screen .rx-transaction-list strong{font-size:12px}.rx-tab-screen .rx-transaction-list small{font-size:9px}.rx-tab-screen .rx-transaction-list em{font-size:10px}.rx-tab-screen .rx-transaction-list time{font-size:9px}.rx-tab-screen .rx-notification-list>div{min-height:82px;padding:10px 12px;grid-template-columns:30px 1fr 48px;gap:10px}.rx-tab-screen .rx-notification-list strong{font-size:12px}.rx-tab-screen .rx-notification-list small{font-size:9px}.rx-tab-screen .rx-notification-list time{font-size:9px}
  .rx-token-summary,.rx-holders-number{display:flex;align-items:center;gap:10px;margin:2px 0 18px}
  .rx-token-summary img{width:42px;height:42px}.rx-token-summary div{display:flex;flex-direction:column;gap:3px}.rx-token-summary strong,.rx-holders-number strong{font-size:15px}.rx-token-summary small{color:#777;font-size:10px}
  .rx-settings-list,.rx-holder-list,.rx-transaction-list,.rx-notification-list{border:1px solid #ececec;border-radius:12px;overflow:hidden;background:#fff}
