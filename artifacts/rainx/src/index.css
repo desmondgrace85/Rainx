@@ -741,3 +741,34 @@ input, textarea, [contenteditable] {
 svg path[fill="#F4D35E"] {
   fill: #F4D35E !important;
 }
+
+
+/* Native-style route contract: opaque stationary shells; only their content scrolls. */
+.rx-standalone-route {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #0F0E0B;
+  isolation: isolate;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+.rx-standalone-route > * {
+  overscroll-behavior-y: contain;
+}
+.sc-screen,
+.rx-native-screen {
+  overscroll-behavior: none;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+.rx-native-scroll,
+.rx-menu-content,
+.sc-screen {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
