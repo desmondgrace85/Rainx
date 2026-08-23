@@ -837,10 +837,11 @@ const menuItems = [
   [Share2, "Share Token"],
 ];
 
-function MenuScreen({ onBack, onDashboard }) {
+function MenuScreen({ onBack, onDashboard, onSelect }) {
   const groups = [menuItems.slice(0, 2), menuItems.slice(2, 5), menuItems.slice(5)];
+  const swipe = useHorizontalSwipe(undefined, onBack);
   return (
-    <div className="rx-native-screen rx-menu-screen">
+    <div className="rx-native-screen rx-menu-screen" {...swipe}>
       <style>{styles}</style>
       <div className="rx-menu-topbar"><button className="rx-native-back" onClick={onBack} aria-label="Back"><ArrowLeft size={24} /></button></div>
       <div className="rx-menu-content">
@@ -849,11 +850,40 @@ function MenuScreen({ onBack, onDashboard }) {
           <button className="rx-menu-feature" onClick={onDashboard}><span className="rx-menu-feature-icon"><BriefcaseBusiness size={25} /></span><strong>Funds</strong></button>
         </div>
         <div className="rx-menu-groups">
-          {groups.map((group, groupIndex) => <section className="rx-menu-group" key={groupIndex}><h2 className="rx-menu-section-label">{["Support", "Token", "Activity"][groupIndex]}</h2><div className="rx-menu-list">{group.map(([Icon, label]) => <button key={label} onClick={() => {}}><span className="rx-menu-list-icon"><Icon size={22} strokeWidth={2.2} /></span><span>{label}</span><ChevronRight size={21} /></button>)}</div></section>)}
+          {groups.map((group, groupIndex) => <section className="rx-menu-group" key={groupIndex}><h2 className="rx-menu-section-label">{["Support", "Token", "Activity"][groupIndex]}</h2><div className="rx-menu-list">{group.map(([Icon, label]) => <button key={label} onClick={() => onSelect(label)}><span className="rx-menu-list-icon"><Icon size={22} strokeWidth={2.2} /></span><span>{label}</span><ChevronRight size={21} /></button>)}</div></section>)}
         </div>
       </div>
     </div>
   );
+}
+
+function NativeTabScreen({ title, onBack, children, right }) {
+  const swipe = useHorizontalSwipe(undefined, onBack);
+  return <div className="rx-native-screen rx-tab-screen" {...swipe}><style>{styles}</style><NativeHeader title={title} onBack={onBack} right={right} /><div className="rx-native-scroll">{children}</div><NativeTabs active="Space Coins" /></div>;
+}
+
+function TokenSettingsScreen({ onBack }) {
+  const rows = [["Token Information", "Edit name, symbol, description"], ["Fee Settings", "Manage trading fees and creator fees", "2%"], ["Max Transaction", "Set max buy/sell limit", "No Limit"], ["Max Wallet", "Set max tokens per wallet", "No Limit"], ["Trading Settings", "Enable / Disable trading"], ["Whitelist", "Manage whitelisted addresses", "12"], ["Blacklist", "Manage blacklisted addresses", "0"], ["Token Visibility", "Show or hide your token"], ["Burn Tokens", "Burn a portion of supply"]];
+  return <NativeTabScreen title="Token Settings" onBack={onBack}><div className="rx-token-summary"><span className="rx-creator-number">4</span><img src={galaxyDogeToken} alt="" /><div><strong>STAR DOGE</strong><small>SDOGE</small></div><span className="rx-live-pill">Live</span></div><div className="rx-settings-list">{rows.map(([name, detail, value], index) => <div className="rx-settings-row" key={name}><span className="rx-settings-icon">{["ⓘ", "⚙", "◷", "▣", "◉", "ⓘ", "ⓧ", "◉", "♨"][index]}</span><div><strong>{name}</strong><small>{detail}</small></div>{value ? <em>{value}</em> : index === 4 || index === 7 ? <span className="rx-switch on" /> : <ChevronRight size={17} />}</div>)}</div></NativeTabScreen>;
+}
+
+function HoldersScreen({ onBack }) {
+  const holders = [["7xK...9a3b", "8.45%", "84,500,000"], ["GdL...8kL2", "6.21%", "62,100,000"], ["Fh3...9mN7", "4.32%", "43,200,000"], ["9dA...3jK1", "3.85%", "38,500,000"], ["HkL...2pQ8", "2.98%", "29,800,000"], ["Js9...7aD4", "2.41%", "24,100,000"], ["2kM...8xP6", "1.89%", "18,900,000"], ["9nB...1dQ2", "1.52%", "15,200,000"], ["Kd3...9pZ1", "1.33%", "13,300,000"], ["8sL...6mT5", "1.29%", "12,900,000"]];
+  return <NativeTabScreen title="Holders" onBack={onBack} right={<CircleHelp size={18} />}><div className="rx-holders-number"><span className="rx-creator-number">5</span><strong>Holders</strong></div><div className="rx-stat-grid"><span><small>Total Holders</small><b>2,845</b></span><span><small>Top 10 Holders</small><b>32.45%</b></span><span><small>Total Supply</small><b>1B SDOGE</b></span></div><div className="rx-tab-switch"><b>Top Holders</b><span>All Holders</span></div><div className="rx-holder-list">{holders.map(([address, share, amount], i) => <div key={address}><i>{i + 1}</i><strong>{address}</strong><span>{share}</span><b>{amount}</b></div>)}</div></NativeTabScreen>;
+}
+
+function AnalyticsScreen({ onBack }) {
+  return <NativeTabScreen title="Analytics" onBack={onBack}><div className="rx-holders-number"><span className="rx-creator-number">6</span><strong>Analytics</strong></div><div className="rx-periods"><b>24H</b><span>7D</span><span>30D</span><span>90D</span><span>ALL</span></div><h3 className="rx-tab-heading">Performance</h3><div className="rx-analytics-metrics"><span><small>Price</small><b>$0.00241</b><em>+18.27%</em></span><span><small>Market Cap</small><b>$2.41M</b><em>+18.27%</em></span><span><small>Volume</small><b>$254.8K</b><em>+24.18%</em></span></div><div className="rx-chart-card"><svg viewBox="0 0 360 130" preserveAspectRatio="none"><path d="M0 105 L18 96 L28 108 L45 75 L58 91 L76 68 L93 83 L111 55 L129 70 L145 42 L162 58 L180 49 L198 62 L215 40 L232 47 L250 25 L267 35 L284 15 L301 29 L318 8 L336 22 L360 5" /></svg><div><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div></div><h3 className="rx-tab-heading">Volume</h3><div className="rx-volume-bars">{Array.from({ length: 34 }, (_, i) => <i key={i} style={{ height: `${22 + ((i * 17) % 58)}px` }} />)}</div></NativeTabScreen>;
+}
+
+function TransactionsScreen({ onBack }) {
+  const rows = [["Buy", "7xK...9a3b bought 50,000 SDOGE", "+50,000 SDOGE", "$120.50", "2m ago"], ["Sell", "GdL...8kL2", "-20,000 SDOGE", "$48.20", "6m ago"], ["Buy", "Fh3...9mN7", "+100,000 SDOGE", "$241.00", "12m ago"], ["Add Liquidity", "10,000,000 SDOGE", "+10,000,000 SDOGE", "+2,450 USDT", "30m ago"], ["Sell", "9dA...3jK1", "-75,000 SDOGE", "$180.75", "1h ago"], ["Buy", "HkL...2pQ8", "+25,000 SDOGE", "$60.25", "1h ago"]];
+  return <NativeTabScreen title="Transactions" onBack={onBack} right={<span className="rx-filter">⌯</span>}><div className="rx-holders-number"><span className="rx-creator-number">7</span><strong>Transactions</strong></div><div className="rx-transaction-tabs"><b>All</b><span>Buys</span><span>Sells</span><span>Liquidity</span></div><div className="rx-transaction-list">{rows.map(([type, detail, amount, total, time]) => <div key={`${type}-${time}`}><i className={type === "Sell" ? "sell" : type === "Add Liquidity" ? "liq" : "buy"}>{type === "Add Liquidity" ? "+" : type === "Sell" ? "↗" : "↙"}</i><div><strong>{type}</strong><small>{detail}</small></div><em className={type === "Sell" ? "red" : ""}>{amount}<small>{total}</small></em><time>{time}</time></div>)}</div></NativeTabScreen>;
+}
+
+function NotificationsScreen({ onBack }) {
+  const rows = [["New Buy", "7xK...9a3b bought 50,000 SDOGE", "2m ago"], ["Price Alert", "SDOGE is up 15% in the last 24h", "30m ago"], ["New Holder", "Js8...7aD4 is now holding SDOGE", "1h ago"], ["Liquidity Added", "10,000,000 SDOGE added to liquidity", "2h ago"]];
+  return <NativeTabScreen title="Notifications" onBack={onBack} right={<span className="rx-more">•••</span>}><div className="rx-notification-list">{rows.map(([title, detail, time], i) => <div key={title}><i className={`notice-${i}`}>{["◉", "♧", "♙", "ⓘ"][i]}</i><div><strong>{title}</strong><small>{detail}</small></div><time>{time}</time></div>)}</div><button className="rx-view-all">View All</button></NativeTabScreen>;
 }
 
 function Metric({ label, value }) { return <div className="rx-creator-metric"><small>{label}</small><strong>{value}</strong></div>; }
@@ -1171,7 +1201,7 @@ const styles = `
 @keyframes rx-native-content-in{from{opacity:.98;transform:translate3d(16px,0,0)}to{opacity:1;transform:translate3d(0,0,0)}}
 
 .rx-native-screen button{touch-action:manipulation;transition:background-color .16s ease,color .16s ease,border-color .16s ease}.rx-native-screen button:active{transform:none}
-.rx-menu-screen{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif}.rx-menu-content{width:100%;max-width:480px;margin:0 auto;padding:14px 18px calc(30px + env(safe-area-inset-bottom));overflow:visible}.rx-menu-feature-grid{gap:10px;margin-bottom:22px}.rx-menu-feature{height:72px;border-radius:12px;padding:8px}.rx-menu-feature-icon svg{width:22px;height:22px}.rx-menu-feature strong{font-size:13px;font-weight:600;color:#111}.rx-menu-section-label{margin:18px 0 7px;color:#85898d;font-size:13px;font-weight:500;letter-spacing:.01em}.rx-menu-list{border-top:0!important;border-bottom:1px solid #e6e6e6}.rx-menu-list button{height:52px;grid-template-columns:34px 1fr 20px;color:#111;font-size:15px;font-weight:500}.rx-menu-list-icon,.rx-menu-list-icon svg,.rx-menu-list button svg:last-child{color:#85898d}.rx-menu-list-icon svg{stroke-width:2}.rx-creator-screen .rx-creator-title{gap:10px}.rx-creator-screen .rx-creator-number{width:30px;height:30px;font-size:14px}.rx-creator-screen .rx-creator-title strong{font-size:16px}.rx-creator-screen .rx-creator-title small{font-size:11px}.rx-creator-screen .rx-live-pill{font-size:11px;padding:7px 11px}.rx-creator-screen .rx-creator-price{margin-top:20px}.rx-creator-screen .rx-creator-price strong{font-size:25px}.rx-creator-screen .rx-creator-price span{font-size:12px}.rx-creator-screen .rx-creator-price small{font-size:11px}.rx-creator-screen .rx-creator-chart{height:125px;margin:10px 0}.rx-creator-screen .rx-range{font-size:11px;margin:8px 18px 18px}.rx-creator-screen .rx-creator-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.rx-creator-screen .rx-creator-metric{min-width:0;padding:11px 10px;border-radius:12px}.rx-creator-screen .rx-creator-metric small{font-size:10px}.rx-creator-screen .rx-creator-metric strong{font-size:13px}.rx-creator-screen .rx-overview{margin-top:22px}.rx-creator-screen .rx-overview h3{font-size:16px}.rx-creator-screen .rx-overview p{font-size:12px;margin:11px 0}.rx-creator-screen .rx-overview p b{font-size:12px}.rx-creator-screen .rx-gold-cta{height:48px;font-size:13px;margin-top:24px}.rx-liquidity-swipe{width:100%;overflow:hidden;touch-action:pan-y;overscroll-behavior:contain}.rx-liquidity-track{display:flex;width:200%;will-change:transform}.rx-liquidity-panel{width:50%;min-width:50%;padding:0 5px}.rx-liquidity-screen .rx-liquidity-tabs{margin-left:0;margin-right:0}.rx-liquidity-screen .rx-liquidity-tabs button{font-size:12px}.rx-liquidity-screen .rx-liquidity-art,.rx-liquidity-screen .rx-pool-card,.rx-liquidity-screen .rx-form-card{width:100%;max-width:none}.rx-liquidity-screen .rx-liquidity-art{height:165px;padding:20px}.rx-liquidity-screen .rx-liquidity-art strong{font-size:15px}.rx-liquidity-screen .rx-liquidity-art small{font-size:11px}.rx-liquidity-screen .rx-pool-card,.rx-liquidity-screen .rx-form-card{padding:18px}.rx-liquidity-screen .rx-pool-card h3,.rx-liquidity-screen .rx-form-card h3{font-size:15px}.rx-liquidity-screen .rx-pool-card>div{gap:18px 28px}.rx-liquidity-screen .rx-pool-card p small,.rx-liquidity-screen .rx-form-card label,.rx-liquidity-screen .rx-form-card>small{font-size:11px}.rx-liquidity-screen .rx-pool-card p strong,.rx-liquidity-screen .rx-receive strong{font-size:14px}.rx-liquidity-screen .rx-form-card input{height:44px;font-size:13px}.rx-liquidity-screen .rx-gold-cta,.rx-liquidity-screen .rx-danger-cta{height:46px;font-size:13px}.rx-wallet-sheet.dragging{transition:none}
+ .rx-menu-screen{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif}.rx-menu-content{flex:1;min-height:0;width:100%;max-width:480px;margin:0 auto;padding:14px 18px calc(30px + env(safe-area-inset-bottom));overflow-y:auto;overflow-x:hidden;overscroll-behavior:none;-webkit-overflow-scrolling:touch;touch-action:pan-y}.rx-menu-feature-grid{gap:10px;margin-bottom:22px}.rx-menu-feature{height:72px;border-radius:12px;padding:8px}.rx-menu-feature-icon svg{width:22px;height:22px}.rx-menu-feature strong{font-size:13px;font-weight:600;color:#111}.rx-menu-section-label{margin:18px 0 7px;color:#85898d;font-size:13px;font-weight:500;letter-spacing:.01em}.rx-menu-list{border-top:0!important;border-bottom:1px solid #e6e6e6}.rx-menu-list button{height:52px;grid-template-columns:34px 1fr 20px;color:#111;font-size:15px;font-weight:500}.rx-menu-list-icon,.rx-menu-list-icon svg,.rx-menu-list button svg:last-child{color:#85898d}.rx-menu-list-icon svg{stroke-width:2}.rx-creator-screen .rx-creator-title{gap:10px}.rx-creator-screen .rx-creator-number{width:30px;height:30px;font-size:14px}.rx-creator-screen .rx-creator-title strong{font-size:16px}.rx-creator-screen .rx-creator-title small{font-size:11px}.rx-creator-screen .rx-live-pill{font-size:11px;padding:7px 11px}.rx-creator-screen .rx-creator-price{margin-top:20px}.rx-creator-screen .rx-creator-price strong{font-size:25px}.rx-creator-screen .rx-creator-price span{font-size:12px}.rx-creator-screen .rx-creator-price small{font-size:11px}.rx-creator-screen .rx-creator-chart{height:125px;margin:10px 0}.rx-creator-screen .rx-range{font-size:11px;margin:8px 18px 18px}.rx-creator-screen .rx-creator-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.rx-creator-screen .rx-creator-metric{min-width:0;padding:11px 10px;border-radius:12px}.rx-creator-screen .rx-creator-metric small{font-size:10px}.rx-creator-screen .rx-creator-metric strong{font-size:13px}.rx-creator-screen .rx-overview{margin-top:22px}.rx-creator-screen .rx-overview h3{font-size:16px}.rx-creator-screen .rx-overview p{font-size:12px;margin:11px 0}.rx-creator-screen .rx-overview p b{font-size:12px}.rx-creator-screen .rx-gold-cta{height:48px;font-size:13px;margin-top:24px}.rx-liquidity-swipe{width:100%;overflow:hidden;touch-action:pan-y;overscroll-behavior:contain}.rx-liquidity-track{display:flex;width:200%;align-items:flex-start;will-change:transform}.rx-liquidity-panel{width:50%;min-width:50%;height:max-content;padding:0 5px}.rx-liquidity-screen .rx-liquidity-tabs{margin-left:0;margin-right:0}.rx-liquidity-screen .rx-liquidity-tabs button{font-size:12px}.rx-liquidity-screen .rx-liquidity-art,.rx-liquidity-screen .rx-pool-card,.rx-liquidity-screen .rx-form-card{width:100%;max-width:none}.rx-liquidity-screen .rx-liquidity-art{height:165px;padding:20px}.rx-liquidity-screen .rx-liquidity-art strong{font-size:15px}.rx-liquidity-screen .rx-liquidity-art small{font-size:11px}.rx-liquidity-screen .rx-pool-card,.rx-liquidity-screen .rx-form-card{padding:18px}.rx-liquidity-screen .rx-pool-card h3,.rx-liquidity-screen .rx-form-card h3{font-size:15px}.rx-liquidity-screen .rx-pool-card>div{gap:18px 28px}.rx-liquidity-screen .rx-pool-card p small,.rx-liquidity-screen .rx-form-card label,.rx-liquidity-screen .rx-form-card>small{font-size:11px}.rx-liquidity-screen .rx-pool-card p strong,.rx-liquidity-screen .rx-receive strong{font-size:14px}.rx-liquidity-screen .rx-form-card input{height:44px;font-size:13px}.rx-liquidity-screen .rx-gold-cta,.rx-liquidity-screen .rx-danger-cta{height:46px;font-size:13px}.rx-wallet-sheet.dragging{transition:none}
 
 @media(max-width:430px){
   .rx-space-banner{width:100%;height:auto;aspect-ratio:2000 / 1414}
@@ -1187,6 +1217,16 @@ const styles = `
   .rx-coin-row>img{width:42px;height:42px}
   .rx-coin-value{min-width:78px}
 }
+
+ .rx-tab-screen .rx-native-scroll{padding:12px 16px calc(78px + env(safe-area-inset-bottom))}
+ .rx-tab-screen .rx-native-tabs{position:absolute;left:0;right:0;bottom:0}
+ .rx-token-summary,.rx-holders-number{display:flex;align-items:center;gap:10px;margin:2px 0 18px}
+ .rx-token-summary img{width:42px;height:42px}.rx-token-summary div{display:flex;flex-direction:column;gap:3px}.rx-token-summary strong,.rx-holders-number strong{font-size:15px}.rx-token-summary small{color:#777;font-size:10px}
+ .rx-settings-list,.rx-holder-list,.rx-transaction-list,.rx-notification-list{border:1px solid #ececec;border-radius:12px;overflow:hidden;background:#fff}
+ .rx-settings-row{min-height:54px;padding:8px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #ededed}.rx-settings-row:last-child{border-bottom:0}.rx-settings-icon{width:22px;text-align:center;color:#73777b;font-size:17px}.rx-settings-row div{min-width:0;flex:1}.rx-settings-row strong,.rx-settings-row small{display:block}.rx-settings-row strong{font-size:11px}.rx-settings-row small{margin-top:3px;color:#777;font-size:8px}.rx-settings-row em{font-style:normal;color:#777;font-size:9px;white-space:nowrap}.rx-switch{width:29px;height:17px;border-radius:12px;background:#d5d7d9;position:relative}.rx-switch:after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff}.rx-switch.on{background:#d49b12}.rx-switch.on:after{left:14px}
+ .rx-stat-grid,.rx-analytics-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:16px}.rx-stat-grid span,.rx-analytics-metrics span{padding:11px 8px;border:1px solid #ededed;border-radius:10px}.rx-stat-grid small,.rx-stat-grid b,.rx-analytics-metrics small,.rx-analytics-metrics b,.rx-analytics-metrics em{display:block}.rx-stat-grid small,.rx-analytics-metrics small{font-size:8px;color:#777}.rx-stat-grid b,.rx-analytics-metrics b{margin-top:6px;font-size:11px}.rx-tab-switch,.rx-transaction-tabs,.rx-periods{display:flex;justify-content:space-around;align-items:center;height:40px;border-bottom:1px solid #ececec;margin-bottom:8px;font-size:10px;color:#656a70}.rx-tab-switch b,.rx-transaction-tabs b,.rx-periods b{height:40px;display:grid;place-items:center;color:#222;border-bottom:2px solid #c89316}.rx-holder-list>div{height:39px;display:grid;grid-template-columns:24px 1fr 52px 86px;align-items:center;gap:3px;padding:0 9px;border-bottom:1px solid #f0f0f0;font-size:9px}.rx-holder-list>div:last-child{border-bottom:0}.rx-holder-list i{font-style:normal;color:#555}.rx-holder-list strong{font-size:9px}.rx-holder-list span{text-align:right;color:#666}.rx-holder-list b{text-align:right;font-size:9px}
+ .rx-periods span,.rx-periods b{min-width:45px;height:25px;border:1px solid #e9e9e9;border-radius:9px;display:grid;place-items:center}.rx-periods b{background:#d49b12;color:#fff;border-color:#d49b12}.rx-tab-heading{font-size:11px;margin:14px 0 8px}.rx-analytics-metrics em{margin-top:5px;color:#33956d;font-style:normal;font-size:8px}.rx-chart-card{border:1px solid #ededed;border-radius:11px;padding:10px 8px}.rx-chart-card svg{width:100%;height:130px}.rx-chart-card path{fill:none;stroke:#c89316;stroke-width:2}.rx-chart-card div{display:flex;justify-content:space-between;color:#777;font-size:7px}.rx-volume-bars{height:78px;display:flex;align-items:flex-end;justify-content:space-around;border-bottom:1px solid #eee}.rx-volume-bars i{display:block;width:4px;background:#d49b12;border-radius:2px 2px 0 0}
+ .rx-transaction-list>div,.rx-notification-list>div{min-height:58px;display:grid;grid-template-columns:28px 1fr auto 42px;align-items:center;gap:8px;padding:7px 9px;border-bottom:1px solid #ededed}.rx-transaction-list>div:last-child,.rx-notification-list>div:last-child{border-bottom:0}.rx-transaction-list i,.rx-notification-list i{width:25px;height:25px;border-radius:50%;display:grid;place-items:center;font-style:normal;background:#e4f5ed;color:#299368;font-size:12px}.rx-transaction-list i.sell{background:#fde9e9;color:#d33c3c}.rx-transaction-list i.liq{background:#fff2ca;color:#c48d12}.rx-transaction-list strong,.rx-transaction-list small,.rx-notification-list strong,.rx-notification-list small{display:block}.rx-transaction-list strong,.rx-notification-list strong{font-size:9px}.rx-transaction-list small,.rx-notification-list small{margin-top:3px;color:#777;font-size:7px}.rx-transaction-list em{color:#299368;font-size:8px;font-style:normal;text-align:right}.rx-transaction-list em.red{color:#d33c3c}.rx-transaction-list em small{color:#555}.rx-transaction-list time,.rx-notification-list time{color:#777;font-size:7px;text-align:right}.rx-notification-list>div{grid-template-columns:28px 1fr 42px;min-height:67px}.rx-notification-list .notice-1{color:#c48d12;background:#fffaf0}.rx-notification-list .notice-2{color:#3e9ec2;background:#eef9fc}.rx-notification-list .notice-3{color:#299368}.rx-view-all{display:block;margin:22px auto 0;border:0;background:none;color:#b17e0b;font-size:11px;font-weight:700}.rx-more,.rx-filter{font-weight:800;letter-spacing:2px;color:#333}
 
 `;
 
@@ -1381,7 +1421,7 @@ export default function SpaceCoinsDashboard({ onBack }) {
     return <CreateCoin onBack={() => setScreen("dashboard")} />;
   }
   if (screen === "menu") {
-    return <MenuScreen onBack={() => setScreen("dashboard")} onDashboard={() => setScreen("creator")} />;
+    return <MenuScreen onBack={() => setScreen("dashboard")} onDashboard={() => setScreen("creator")} onSelect={(label) => setScreen({ "Token Settings": "token-settings", Analytics: "analytics", Holders: "holders", Transactions: "transactions", Notifications: "notifications" }[label] || "menu")} />;
   }
   if (screen === "creator") {
     return <CreatorDashboard onBack={() => setScreen("menu")} onManage={() => setScreen("liquidity-manage")} />;
@@ -1391,6 +1431,21 @@ export default function SpaceCoinsDashboard({ onBack }) {
   }
   if (screen === "liquidity-remove") {
     return <LiquidityScreen remove onBack={() => setScreen("liquidity-manage")} onToggle={() => {}} />;
+  }
+  if (screen === "token-settings") {
+    return <TokenSettingsScreen onBack={() => setScreen("menu")} />;
+  }
+  if (screen === "holders") {
+    return <HoldersScreen onBack={() => setScreen("menu")} />;
+  }
+  if (screen === "analytics") {
+    return <AnalyticsScreen onBack={() => setScreen("menu")} />;
+  }
+  if (screen === "transactions") {
+    return <TransactionsScreen onBack={() => setScreen("menu")} />;
+  }
+  if (screen === "notifications") {
+    return <NotificationsScreen onBack={() => setScreen("menu")} />;
   }
   return (
     <>
