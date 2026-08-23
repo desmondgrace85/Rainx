@@ -87,12 +87,12 @@ function Header({ onMenu, onBack, title = "Space Coins" }) {
 function ModeToggle({ mode, setMode }) {
   const [dragX, setDragX] = useState(0);
   const start = useRef(null);
-  const begin = (e) => { const t = e.touches ? e.touches[0] : e; start.current = t.clientX; };
-  const move = (e) => { if (start.current == null) return; const t = e.touches ? e.touches[0] : e; setDragX(Math.max(-120, Math.min(120, t.clientX - start.current))); };
+  const begin = (e) => { e.currentTarget.setPointerCapture?.(e.pointerId); start.current = e.clientX; };
+  const move = (e) => { if (start.current == null) return; setDragX(Math.max(-180, Math.min(180, e.clientX - start.current))); };
   const end = () => { if (start.current == null) return; if (dragX < -35) setMode("external"); else if (dragX > 35) setMode("space"); setDragX(0); start.current = null; };
   const progress = mode === "external" ? 1 : 0;
   return (
-    <div className="rx-mode-toggle" role="tablist" aria-label="Coin type" onTouchStart={begin} onTouchMove={move} onTouchEnd={end} onMouseDown={begin} onMouseMove={move} onMouseUp={end}>
+    <div className="rx-mode-toggle" role="tablist" aria-label="Coin type" onPointerDown={begin} onPointerMove={move} onPointerUp={end} onPointerCancel={end}>
       <span className="rx-mode-indicator" style={{ transform: `translateX(${(progress * 100) + dragX / 2}%)` }} />
       <button
         className={mode === "space" ? "active" : ""}
@@ -227,18 +227,17 @@ function ExternalPanel({ onConnect }) {
 function SwipeArea({ mode, setMode, onMyCoins, onConnect }) {
   const start = useRef(null);
   const [dragX, setDragX] = useState(0);
-  const onTouchStart = (e) => { const t = e.touches[0]; start.current = { x: t.clientX, y: t.clientY }; };
-  const onTouchMove = (e) => { if (!start.current) return; const t = e.touches[0]; const dx = t.clientX - start.current.x; const dy = Math.abs(t.clientY - start.current.y); if (dy < 30) { e.preventDefault(); setDragX(Math.max(-window.innerWidth, Math.min(window.innerWidth, dx))); } };
-  const onTouchEnd = () => { if (!start.current) return; if (dragX < -45) setMode("external"); else if (dragX > 45) setMode("space"); start.current = null; setDragX(0); };
+  const onPointerDown = (e) => { e.currentTarget.setPointerCapture?.(e.pointerId); start.current = { x: e.clientX, y: e.clientY }; };
+  const onPointerMove = (e) => { if (!start.current) return; const dx = e.clientX - start.current.x; const dy = Math.abs(e.clientY - start.current.y); if (dy < 30) setDragX(Math.max(-window.innerWidth, Math.min(window.innerWidth, dx))); };
+  const onPointerEnd = () => { if (!start.current) return; if (dragX < -45) setMode("external"); else if (dragX > 45) setMode("space"); start.current = null; setDragX(0); };
 
   return (
     <div
       className="rx-swipe-viewport"
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-      onTouchCancel={() => {
-        start.current = null;
-      }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerEnd}
+      onPointerCancel={onPointerEnd}
     >
       <div className={`rx-swipe-track ${mode === "external" ? "external" : ""}`} style={dragX ? { transform: `translate3d(calc(${mode === "external" ? "-50%" : "0%"} + ${dragX}px),0,0)`, transition: "none" } : undefined}>
         <div className="rx-swipe-panel">
@@ -642,7 +641,7 @@ function WalletSheet({ onClose }) {
 
         {wallets.map(([wallet, Icon]) => (
           <div className="rx-wallet-row" key={wallet}>
-            <span><Icon /></span>
+            <span>{typeof Icon === "string" ? <img src={Icon} alt="" /> : <Icon />}</span>
             <strong>{wallet}</strong>
             <button onClick={onClose}>Connect</button>
           </div>
@@ -753,11 +752,11 @@ const styles = `
 
 .rx-space-banner{
   position:relative;width:100%;max-width:100%;height:204px;
-  overflow:hidden;border-radius:20px;margin:0 -2px 14px;width:calc(100% + 4px)
+  overflow:visible;border-radius:20px;margin:0 0 14px;width:100%;background:transparent;aspect-ratio:2.08
 }
 .rx-space-banner>img{
   display:block;width:100%;height:100%;max-width:100%;
-  object-fit:fill;object-position:center;background:#dcae29
+  object-fit:contain;object-position:center;background:transparent
 }
 .rx-space-banner-copy{
   position:absolute;left:7%;top:11%;width:53%;color:#fff;
@@ -794,7 +793,7 @@ const styles = `
 .rx-mode-toggle img{width:30px;height:30px;object-fit:contain}
 
 .rx-swipe-viewport{
-  width:100%;overflow:hidden;touch-action:pan-y;user-select:none
+  width:100%;overflow:hidden;touch-action:pan-y;user-select:none;cursor:grab
 }
 .rx-swipe-track{
   display:flex;width:200%;
@@ -971,7 +970,7 @@ const styles = `
   border:0;border-radius:9px;background:#F4D35E;color:#fff;
   padding:9px 11px;font:800 10px 'Montserrat',sans-serif
 }
-.rx-wallet-row>span svg{width:21px;height:21px}
+.rx-wallet-row>span svg,.rx-wallet-row>span img{width:21px;height:21px;object-fit:contain}
 
 .rx-mycoin{
   display:grid;grid-template-columns:40px 1fr auto;
@@ -1001,7 +1000,7 @@ const styles = `
 .rx-menu-card small{font-size:9px;color:#747A80;margin-top:4px}
 
 @media(max-width:430px){
-  .rx-space-banner{height:204px}
+  .rx-space-banner{height:auto;aspect-ratio:2.08}
   .rx-space-banner-copy{left:7%;top:10%;width:55%}
   .rx-space-banner-copy h2{font-size:20px}
   .rx-space-banner-copy p{font-size:10.5px}
