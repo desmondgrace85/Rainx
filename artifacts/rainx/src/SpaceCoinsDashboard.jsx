@@ -26,6 +26,12 @@ import orbitArtwork from "./assets/space-coins-orbit.png";
 import platformArtwork from "./assets/space-coins-platform.png";
 import coinArtwork from "./assets/space-coins-coin.png";
 import externalBanner from "./assets/space-coins-external-banner.png";
+import galaxyDogeToken from "./assets/space-coins-galaxy-doge.svg";
+import moonCatToken from "./assets/space-coins-moon-cat.svg";
+import planetPepeToken from "./assets/space-coins-planet-pepe.svg";
+import metamaskLogo from "./assets/metamask.svg";
+import trustWalletLogo from "./assets/trust-wallet.svg";
+import phantomLogo from "./assets/phantom.svg";
 
 const REAL_FLAME_VIDEO =
   "https://d8j0ntlcm91z4.cloudfront.net/user_3BHloZy6zhOMmqbVkiEIfVkbiDF/hf_20260821_145856_91a13b8e-c366-4951-be01-e7f1846cbbc6.mp4";
@@ -33,9 +39,9 @@ const REAL_CLOUD_VIDEO =
   "https://d8j0ntlcm91z4.cloudfront.net/user_3BHloZy6zhOMmqbVkiDF/hf_20260821_153425_e7dbe97e-35f8-4ada-80e3-d11209f83006.mp4";
 
 const COINS = [
-  { name: "GALAXY DOGE", ticker: "GDOGE", price: "$0.000245", change: "+23.14%", image: galaxyDogeImage },
-  { name: "MOON CAT", ticker: "MCAT", price: "$0.000182", change: "+12.08%", image: moonCatImage },
-  { name: "PLANET PEPE", ticker: "PPEPE", price: "$0.000092", change: "+8.19%", image: planetPepeImage },
+  { name: "GALAXY DOGE", ticker: "GDOGE", price: "$0.000245", change: "+23.14%", image: galaxyDogeToken },
+  { name: "MOON CAT", ticker: "MCAT", price: "$0.000182", change: "+12.08%", image: moonCatToken },
+  { name: "PLANET PEPE", ticker: "PPEPE", price: "$0.000092", change: "+8.19%", image: planetPepeToken },
 ];
 
 const TRENDING = ["STARINU", "COSMO", "MOONME"];
@@ -79,8 +85,16 @@ function Header({ onMenu, onBack, title = "Space Coins" }) {
 }
 
 function ModeToggle({ mode, setMode }) {
+  const [dragX, setDragX] = useState(0);
+  const start = useRef(null);
+  const begin = (e) => { const t = e.touches ? e.touches[0] : e; start.current = t.clientX; };
+  const move = (e) => { if (start.current == null) return; const t = e.touches ? e.touches[0] : e; setDragX(Math.max(-120, Math.min(120, t.clientX - start.current))); };
+  const end = () => { if (start.current == null) return; if (dragX < -35) setMode("external"); else if (dragX > 35) setMode("space"); setDragX(0); start.current = null; };
+  const progress = mode === "external" ? 1 : 0;
   return (
-    <div className="rx-mode-toggle" role="tablist" aria-label="Coin type">
+  return (
+    <div className="rx-mode-toggle" role="tablist" aria-label="Coin type" onTouchStart={begin} onTouchMove={move} onTouchEnd={end} onMouseDown={begin} onMouseMove={move} onMouseUp={end}>
+      <span className="rx-mode-indicator" style={{ transform: `translateX(${(progress * 100) + dragX / 2}%)` }} />
       <button
         className={mode === "space" ? "active" : ""}
         onClick={() => setMode("space")}
@@ -213,26 +227,10 @@ function ExternalPanel({ onConnect }) {
 
 function SwipeArea({ mode, setMode, onMyCoins, onConnect }) {
   const start = useRef(null);
-
-  const onTouchStart = (e) => {
-    const t = e.touches[0];
-    start.current = { x: t.clientX, y: t.clientY };
-  };
-
-  const onTouchEnd = (e) => {
-    if (!start.current) return;
-
-    const t = e.changedTouches[0];
-    const dx = t.clientX - start.current.x;
-    const dy = Math.abs(t.clientY - start.current.y);
-
-    start.current = null;
-
-    if (dy > 70 || Math.abs(dx) < 45) return;
-
-    if (dx < 0) setMode("external");
-    if (dx > 0) setMode("space");
-  };
+  const [dragX, setDragX] = useState(0);
+  const onTouchStart = (e) => { const t = e.touches[0]; start.current = { x: t.clientX, y: t.clientY }; };
+  const onTouchMove = (e) => { if (!start.current) return; const t = e.touches[0]; const dx = t.clientX - start.current.x; const dy = Math.abs(t.clientY - start.current.y); if (dy < 30) { e.preventDefault(); setDragX(Math.max(-window.innerWidth, Math.min(window.innerWidth, dx))); } };
+  const onTouchEnd = () => { if (!start.current) return; if (dragX < -45) setMode("external"); else if (dragX > 45) setMode("space"); start.current = null; setDragX(0); };
 
   return (
     <div
@@ -243,7 +241,7 @@ function SwipeArea({ mode, setMode, onMyCoins, onConnect }) {
         start.current = null;
       }}
     >
-      <div className={`rx-swipe-track ${mode === "external" ? "external" : ""}`}>
+      <div className={`rx-swipe-track ${mode === "external" ? "external" : ""}`} style={dragX ? { transform: `translate3d(calc(${mode === "external" ? "-50%" : "0%"} + ${dragX}px),0,0)`, transition: "none" } : undefined}>
         <div className="rx-swipe-panel">
           <Shortcuts onMyCoins={onMyCoins} />
           <CoinList />
@@ -600,35 +598,35 @@ function CreateCoin({ onBack }) {
 
 function WalletSheet({ onClose }) {
   const [expanded, setExpanded] = useState(false);
+  const [dragY, setDragY] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const touchStart = useRef(null);
   const wallets = [
-    ["MetaMask", Wallet],
-    ["Trust Wallet", Wallet],
-    ["Phantom", Wallet],
+    ["MetaMask", metamaskLogo],
+    ["Trust Wallet", trustWalletLogo],
+    ["Phantom", phantomLogo],
     ["Coinbase Wallet", SiCoinbase],
     ["WalletConnect", SiWalletconnect],
   ];
 
   const onTouchStart = (e) => {
     const touch = e.touches[0];
-    touchStart.current = { y: touch.clientY };
+    touchStart.current = touch.clientY;
+    setDragging(true);
+    setDragY(0);
   };
 
-  const onTouchEnd = (e) => {
-    if (!touchStart.current) return;
-    const dy = e.changedTouches[0].clientY - touchStart.current.y;
-    touchStart.current = null;
-    if (Math.abs(dy) < 35) return;
-    if (dy < 0) setExpanded(true);
-    if (dy > 0) setExpanded(false);
-  };
+  const onTouchMove = (e) => { if (touchStart.current == null) return; e.preventDefault(); setDragY(e.touches[0].clientY - touchStart.current); };
+  const onTouchEnd = () => { if (touchStart.current == null) return; if (dragY < -45) setExpanded(true); if (dragY > 45) setExpanded(false); touchStart.current = null; setDragging(false); setDragY(0); };
 
   return (
     <div className="rx-overlay" onClick={onClose}>
       <div
-        className={`rx-sheet ${expanded ? "expanded" : ""}`}
+        className={`rx-sheet ${expanded ? "expanded" : ""} ${dragging ? "dragging" : ""}`}
+        style={{ transform: `translate3d(0, ${dragY}px, 0)` }}
         onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
         <button
@@ -755,12 +753,12 @@ const styles = `
 .rx-icon-btn.rx-right{right:0}
 
 .rx-space-banner{
-  position:relative;width:100%;max-width:100%;height:192px;
-  overflow:hidden;border-radius:18px;margin-bottom:12px
+  position:relative;width:100%;max-width:100%;height:204px;
+  overflow:hidden;border-radius:20px;margin:0 -2px 14px;width:calc(100% + 4px)
 }
 .rx-space-banner>img{
   display:block;width:100%;height:100%;max-width:100%;
-  object-fit:contain;object-position:center;background:#dcae29
+  object-fit:fill;object-position:center;background:#dcae29
 }
 .rx-space-banner-copy{
   position:absolute;left:7%;top:11%;width:53%;color:#fff;
@@ -782,22 +780,22 @@ const styles = `
 }
 
 .rx-mode-toggle{
-  height:62px;display:grid;grid-template-columns:1fr 1fr;gap:3px;
+  position:relative;height:62px;display:grid;grid-template-columns:1fr 1fr;gap:3px;
   padding:3px;margin-bottom:14px;border:1px solid #E7E8EA;
   border-radius:18px;background:#fff;box-shadow:0 3px 12px rgba(20,24,28,.04)
 }
-.rx-mode-toggle button{
-  border:0;background:transparent;border-radius:15px;color:#6E747A;
+.rx-mode-indicator{position:absolute;z-index:0;left:3px;top:3px;width:calc(50% - 3px);height:calc(100% - 6px);border-radius:15px;background:#F4D35E;box-shadow:0 4px 12px rgba(244,211,94,.2);transition:transform .34s cubic-bezier(.22,.8,.2,1);pointer-events:none}
+.rx-mode-toggle button{position:relative;z-index:1;border:0;background:transparent;border-radius:15px;color:#6E747A;
   display:flex;align-items:center;justify-content:center;gap:8px;
   font:800 11.5px 'Montserrat',sans-serif
 }
 .rx-mode-toggle button.active{
-  background:#F4D35E;color:#fff;box-shadow:0 4px 12px rgba(244,211,94,.2)
+  background:transparent;color:#fff;box-shadow:none
 }
 .rx-mode-toggle img{width:30px;height:30px;object-fit:contain}
 
 .rx-swipe-viewport{
-  width:100%;overflow:hidden;touch-action:pan-y
+  width:100%;overflow:hidden;touch-action:pan-y;user-select:none
 }
 .rx-swipe-track{
   display:flex;width:200%;
@@ -842,12 +840,12 @@ const styles = `
   margin-bottom:9px
 }
 .rx-section-head h2{
-  margin:0;font-size:16px;line-height:1.05;
+  margin:0;font-size:17px;line-height:1.12;
   font-weight:800;letter-spacing:-.55px
 }
 .rx-section-head button{
   border:0;background:transparent;color:#C28F18;
-  font:700 11px 'Montserrat',sans-serif
+  font:700 10.5px 'Montserrat',sans-serif
 }
 .rx-coin-list{
   overflow:hidden;border:1px solid #E8EAEC;
@@ -940,9 +938,10 @@ const styles = `
   max-height:80dvh;overflow:auto;
   transform:translate3d(0,0,0);
   animation:rx-sheet-enter .28s cubic-bezier(.22,.8,.2,1) both;
-  transition:max-height .28s ease
+  transition:transform .38s cubic-bezier(.22,.8,.2,1),max-height .38s ease;will-change:transform
 }
 .rx-sheet.expanded{max-height:96dvh}
+.rx-sheet.dragging{transition:none}
 .rx-sheet-tall{max-height:86dvh}
 .rx-sheet-handle{
   width:100%;height:22px;border:0;border-radius:0;background:transparent;
@@ -1003,10 +1002,10 @@ const styles = `
 .rx-menu-card small{font-size:9px;color:#747A80;margin-top:4px}
 
 @media(max-width:430px){
-  .rx-space-banner{height:182px}
+  .rx-space-banner{height:204px}
   .rx-space-banner-copy{left:7%;top:10%;width:55%}
-  .rx-space-banner-copy h2{font-size:19px}
-  .rx-space-banner-copy p{font-size:10px}
+  .rx-space-banner-copy h2{font-size:20px}
+  .rx-space-banner-copy p{font-size:10.5px}
   .rx-space-banner-copy button{height:37px;font-size:10px}
   .rx-mode-toggle{height:60px}
   .rx-shortcuts{gap:2px}
