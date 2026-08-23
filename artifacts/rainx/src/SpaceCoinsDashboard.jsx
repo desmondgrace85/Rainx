@@ -219,7 +219,7 @@ function ExternalPanel({ onConnect }) {
   );
 }
 
-function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress }) {
+function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress, onSwipeStateChange }) {
   const start = useRef(null);
   const dragXRef = useRef(0);
   const [dragX, setDragX] = useState(0);
@@ -227,33 +227,38 @@ function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress }) {
   const onPointerDown = (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     e.currentTarget.setPointerCapture?.(e.pointerId);
-    start.current = { x: e.clientX, y: e.clientY };
+    start.current = { x: e.clientX, y: e.clientY, axis: null };
     dragXRef.current = 0;
     setSwiping(true);
+    onSwipeStateChange?.(true);
     setDragX(0);
   };
   const onPointerMove = (e) => {
     if (!start.current) return;
     const dx = e.clientX - start.current.x;
     const dy = e.clientY - start.current.y;
-    if (Math.abs(dx) <= Math.abs(dy) && Math.abs(dy) > 12) return;
+    if (!start.current.axis && Math.max(Math.abs(dx), Math.abs(dy)) > 8) {
+      start.current.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+    }
+    if (start.current.axis === "y") return;
     if (e.cancelable) e.preventDefault();
-    const width = e.currentTarget.getBoundingClientRect().width || window.innerWidth;
+    const width = e.currentTarget.getBoundingClientRect().width || 1;
     const bounded = Math.max(-width, Math.min(width, dx));
     dragXRef.current = bounded;
     setDragX(bounded);
     const progress = Math.max(0, Math.min(1, (mode === "external" ? 1 : 0) + bounded / width));
     onProgress?.(progress);
   };
-  const onPointerEnd = () => {
+  const onPointerEnd = (e) => {
     if (!start.current) return;
-    const width = window.innerWidth;
+    const width = e.currentTarget.getBoundingClientRect().width || 1;
     if (dragXRef.current < -width * 0.16) setMode("external");
     else if (dragXRef.current > width * 0.16) setMode("space");
     start.current = null;
     dragXRef.current = 0;
     setDragX(0);
     setSwiping(false);
+    onSwipeStateChange?.(false);
     onProgress?.(null);
   };
 
@@ -268,7 +273,7 @@ function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress }) {
       <div
         className={`rx-swipe-track ${mode === "external" ? "external" : ""}`}
         style={swiping ? {
-          transform: `translate3d(${(Math.max(0, Math.min(1, (mode === "external" ? 1 : 0) + dragX / (window.innerWidth || 1))) * -50)}%,0,0)`,
+          transform: `translate3d(${(Math.max(0, Math.min(1, (mode === "external" ? 1 : 0) + dragX / (document.documentElement.clientWidth || 1))) * -50)}%,0,0)`,
           transition: "none",
         } : undefined}
       >
@@ -288,6 +293,7 @@ function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress }) {
 
 function Dashboard({ mode, setMode, onCreate, onMenu, onMyCoins, onConnect }) {
   const [swipeProgress, setSwipeProgress] = useState(0);
+  const [swiping, setSwiping] = useState(false);
 
   return (
     <Shell>
@@ -297,7 +303,7 @@ function Dashboard({ mode, setMode, onCreate, onMenu, onMyCoins, onConnect }) {
         <div className="rx-space-inner">
           <Header onMenu={onMenu} />
           <CreateBanner onCreate={onCreate} />
-          <ModeToggle mode={mode} setMode={setMode} swipeProgress={swipeProgress} swiping={swipeProgress !== null} />
+          <ModeToggle mode={mode} setMode={setMode} swipeProgress={swipeProgress} swiping={swiping} />
 
           <SwipeArea
             mode={mode}
@@ -305,6 +311,7 @@ function Dashboard({ mode, setMode, onCreate, onMenu, onMyCoins, onConnect }) {
             onMyCoins={onMyCoins}
             onConnect={onConnect}
             onProgress={setSwipeProgress}
+            onSwipeStateChange={setSwiping}
           />
         </div>
       </div>
@@ -656,13 +663,17 @@ function WalletSheet({ onClose }) {
     if (pointerStart.current == null) return;
     if (e.cancelable) e.preventDefault();
     const nextDragY = e.clientY - pointerStart.current;
-    dragYRef.current = nextDragY;
-    setDragY(nextDragY);
+    const boundedDragY = expanded
+      ? Math.max(0, Math.min(window.innerHeight * 0.8, nextDragY))
+      : Math.max(-window.innerHeight * 0.72, Math.min(0, nextDragY));
+    dragYRef.current = boundedDragY;
+    setDragY(boundedDragY);
   };
-  const onPointerEnd = () => {
+  const onPointerEnd = (e) => {
     if (pointerStart.current == null) return;
     if (dragYRef.current < -45) setExpanded(true);
     else if (dragYRef.current > 45) setExpanded(false);
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
     pointerStart.current = null;
     dragYRef.current = 0;
     setDragging(false);
@@ -673,7 +684,7 @@ function WalletSheet({ onClose }) {
     <div className="rx-overlay" onClick={onClose}>
       <div
         className={`rx-sheet ${expanded ? "expanded" : ""} ${dragging ? "dragging" : ""}`}
-        style={{ transform: dragging ? `translate3d(0, ${Math.max(-window.innerHeight * .72, Math.min(0, dragY))}px, 0)` : undefined }}
+        style={{ transform: dragging ? `translate3d(0, ${expanded ? Math.max(0, Math.min(window.innerHeight * .8, dragY)) : Math.max(-window.innerHeight * .72, Math.min(0, dragY))}px, 0)` : undefined }}
         onClick={(e) => e.stopPropagation()}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -804,8 +815,9 @@ const styles = `
 .rx-icon-btn.rx-right{right:0}
 
 .rx-space-banner{
-  position:relative;width:104%;max-width:none;height:auto;
-  overflow:visible;border-radius:20px;margin:0 -2% 14px;background:transparent;aspect-ratio:2000 / 1414
+  position:relative;width:100%;max-width:none;height:auto;
+  overflow:visible;border-radius:20px;margin:0 0 14px;background:transparent;aspect-ratio:2000 / 1414;
+  transform:scale(1.03);transform-origin:center top
 }
 .rx-space-banner>img{
   display:block;width:100%;height:100%;max-width:100%;
@@ -992,7 +1004,7 @@ const styles = `
   transition:transform .38s cubic-bezier(.22,.8,.2,1),max-height .38s ease;will-change:transform;
   touch-action:none
 }
-.rx-sheet.expanded{max-height:96dvh}
+.rx-sheet.expanded{height:100dvh;max-height:100dvh}
 .rx-sheet.dragging{transition:none}
 .rx-sheet img{display:block}
 .rx-sheet-tall{max-height:86dvh}
@@ -1055,7 +1067,7 @@ const styles = `
 .rx-menu-card small{font-size:9px;color:#747A80;margin-top:4px}
 
 @media(max-width:430px){
-  .rx-space-banner{width:104%;height:auto;aspect-ratio:2000 / 1414}
+  .rx-space-banner{width:100%;height:auto;aspect-ratio:2000 / 1414}
   .rx-space-banner-copy{left:7%;top:10%;width:55%}
   .rx-space-banner-copy h2{font-size:20px}
   .rx-space-banner-copy p{font-size:10.5px}
