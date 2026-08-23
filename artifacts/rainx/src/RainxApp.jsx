@@ -2739,7 +2739,7 @@ function MainAppContent({ account, onLogout }) {
 
       {/* ── Profile overlay — opens over any tab when accessed from header/sidebar ── */}
       {profileFromHeader && morePage && tab !== "more" && (
-        <div style={{ position:"fixed", inset:0, zIndex:500, background:T.ink, overflowY:"auto" }}>
+        <div className="rx-standalone-route" style={{ background:T.ink }}>
           <MoreTabErrorBoundary>
             <MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} activeMarkets={activeMarkets} />
           </MoreTabErrorBoundary>
