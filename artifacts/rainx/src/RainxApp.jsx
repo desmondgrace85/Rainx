@@ -1382,15 +1382,8 @@ class HomeTabErrorBoundary extends React.Component {
   static getDerivedStateFromError(error) { return { error }; }
   componentDidCatch(error, info) {
     console.error("HomeTab crash:", error, info);
-    // A corrupt persisted market/session value can crash only after hydration.
-    // Clear those recoverable inputs once, then remount the real homepage.
-    try {
-      if (!sessionStorage.getItem("rainx-home-recovery-attempted")) {
-        sessionStorage.setItem("rainx-home-recovery-attempted", "1");
-        ["rainx-active-symbol", "rainx-active-markets", "rainx-sessions"].forEach((key) => localStorage.removeItem(key));
-        window.location.reload();
-      }
-    } catch {}
+    // Keep the rest of the app usable if an old persisted home value is malformed.
+    // Recovery is handled by the Retry action so React does not reload in a loop.
   }
   render() {
     if (this.state.error) return (
@@ -1398,7 +1391,13 @@ class HomeTabErrorBoundary extends React.Component {
         <div style={{ fontSize: 30, marginBottom: 12 }}>RainX</div>
         <div style={{ fontWeight: 700, marginBottom: 8 }}>The home screen could not be refreshed.</div>
         <div style={{ fontSize: 12, color: "#536471", marginBottom: 18 }}>Your account and other screens are safe.</div>
-        <button onClick={() => this.setState({ error: null })} style={{ border: 0, borderRadius: 10, padding: "11px 18px", background: "#F4D35E", color: "#0F1419", fontWeight: 700 }}>Retry</button>
+        <button onClick={() => {
+          try {
+            ["rainx-active-symbol", "rainx-active-markets", "rainx-sessions", "rainx-home-recovery-attempted"].forEach((key) => localStorage.removeItem(key));
+            sessionStorage.removeItem("rainx-home-recovery-attempted");
+          } catch {}
+          window.location.reload();
+        }} style={{ border: 0, borderRadius: 10, padding: "11px 18px", background: "#F4D35E", color: "#0F1419", fontWeight: 700 }}>Retry</button>
       </div>
     );
     return this.props.children;
@@ -1659,11 +1658,12 @@ function MainAppContent({ account, onLogout }) {
           });
         }
       });
-      return saved;
+      return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
     } catch { return {}; }
   });
-  // Derive the active session (for display) from the currently viewed symbol
-  const session = sessions[activeSymbol] || null;
+  // Derive the active session (for display) from the currently viewed symbol.
+  // Older builds could persist null or another non-map value here.
+  const session = sessions && typeof sessions === "object" ? (sessions[activeSymbol] || null) : null;
   const activeInst = ALL_ASSETS.find(i => i.symbol === (session?.symbol || activeSymbol)) || ALL_ASSETS.find(i => i.symbol === "XAUUSD");
   const inst = activeInst;
   const marketOpen = isMarketOpen(inst.cls);
