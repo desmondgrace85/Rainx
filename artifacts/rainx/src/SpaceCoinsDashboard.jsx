@@ -92,7 +92,6 @@ function ModeToggle({ mode, setMode }) {
   const end = () => { if (start.current == null) return; if (dragX < -35) setMode("external"); else if (dragX > 35) setMode("space"); setDragX(0); start.current = null; };
   const progress = mode === "external" ? 1 : 0;
   return (
-  return (
     <div className="rx-mode-toggle" role="tablist" aria-label="Coin type" onTouchStart={begin} onTouchMove={move} onTouchEnd={end} onMouseDown={begin} onMouseMove={move} onMouseUp={end}>
       <span className="rx-mode-indicator" style={{ transform: `translateX(${(progress * 100) + dragX / 2}%)` }} />
       <button
