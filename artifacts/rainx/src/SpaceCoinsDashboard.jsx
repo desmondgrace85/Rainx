@@ -84,16 +84,11 @@ function Header({ onMenu, onBack, title = "Space Coins" }) {
   );
 }
 
-function ModeToggle({ mode, setMode, swipeProgress = 0 }) {
-  const [dragX, setDragX] = useState(0);
-  const start = useRef(null);
-  const begin = (e) => { e.currentTarget.setPointerCapture?.(e.pointerId); start.current = e.clientX; };
-  const move = (e) => { if (start.current == null) return; setDragX(Math.max(-180, Math.min(180, e.clientX - start.current))); };
-  const end = () => { if (start.current == null) return; if (dragX < -35) setMode("external"); else if (dragX > 35) setMode("space"); setDragX(0); start.current = null; };
-  const progress = (mode === "external" ? 1 : 0) + swipeProgress;
+function ModeToggle({ mode, setMode, swipeProgress = null, swiping = false }) {
+  const progress = swipeProgress == null ? (mode === "external" ? 1 : 0) : swipeProgress;
   return (
-    <div className="rx-mode-toggle" role="tablist" aria-label="Coin type" onPointerDown={begin} onPointerMove={move} onPointerUp={end} onPointerCancel={end}>
-      <span className="rx-mode-indicator" style={{ transform: `translateX(${(progress * 100) + dragX / 2}%)` }} />
+    <div className="rx-mode-toggle" role="tablist" aria-label="Coin type">
+      <span className="rx-mode-indicator" style={{ transform: `translateX(${progress * 100}%)`, transition: swiping ? "none" : undefined }} />
       <button
         className={mode === "space" ? "active" : ""}
         onClick={() => setMode("space")}
@@ -121,13 +116,6 @@ function CreateBanner({ onCreate }) {
   return (
     <section className="rx-space-banner">
       <img src={externalBanner} alt="" draggable="false" />
-      <div className="rx-space-banner-copy">
-        <h2>Create Your<br />Space Coin</h2>
-        <p>Launch your own mini meme coin<br />in just a few steps.</p>
-        <button onClick={onCreate}>
-          Create Coin <ArrowRight size={16} />
-        </button>
-      </div>
     </section>
   );
 }
@@ -227,9 +215,36 @@ function ExternalPanel({ onConnect }) {
 function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress }) {
   const start = useRef(null);
   const [dragX, setDragX] = useState(0);
-  const onPointerDown = (e) => { e.currentTarget.setPointerCapture?.(e.pointerId); start.current = { x: e.clientX, y: e.clientY }; };
-  const onPointerMove = (e) => { if (!start.current) return; const dx = e.clientX - start.current.x; const dy = Math.abs(e.clientY - start.current.y); if (dy < 30) setDragX(Math.max(-window.innerWidth, Math.min(window.innerWidth, dx))); onProgress?.(dx / window.innerWidth); };
-  const onPointerEnd = () => { if (!start.current) return; if (dragX < -45) setMode("external"); else if (dragX > 45) setMode("space"); start.current = null; setDragX(0); onProgress?.(0); };
+  const [swiping, setSwiping] = useState(false);
+  const onPointerDown = (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    start.current = { x: e.clientX, y: e.clientY };
+    setSwiping(true);
+    setDragX(0);
+  };
+  const onPointerMove = (e) => {
+    if (!start.current) return;
+    const dx = e.clientX - start.current.x;
+    const dy = e.clientY - start.current.y;
+    if (Math.abs(dx) <= Math.abs(dy) && Math.abs(dy) > 12) return;
+    if (e.cancelable) e.preventDefault();
+    const width = e.currentTarget.getBoundingClientRect().width || window.innerWidth;
+    const bounded = Math.max(-width, Math.min(width, dx));
+    setDragX(bounded);
+    const progress = Math.max(0, Math.min(1, (mode === "external" ? 1 : 0) + bounded / width));
+    onProgress?.(progress);
+  };
+  const onPointerEnd = () => {
+    if (!start.current) return;
+    const width = window.innerWidth;
+    if (dragX < -width * 0.16) setMode("external");
+    else if (dragX > width * 0.16) setMode("space");
+    start.current = null;
+    setDragX(0);
+    setSwiping(false);
+    onProgress?.(null);
+  };
 
   return (
     <div
@@ -239,7 +254,13 @@ function SwipeArea({ mode, setMode, onMyCoins, onConnect, onProgress }) {
       onPointerUp={onPointerEnd}
       onPointerCancel={onPointerEnd}
     >
-      <div className={`rx-swipe-track ${mode === "external" ? "external" : ""}`} style={dragX ? { transform: `translate3d(calc(${mode === "external" ? "-50%" : "0%"} + ${dragX}px),0,0)`, transition: "none" } : undefined}>
+      <div
+        className={`rx-swipe-track ${mode === "external" ? "external" : ""}`}
+        style={swiping ? {
+          transform: `translate3d(${(Math.max(0, Math.min(1, (mode === "external" ? 1 : 0) + dragX / (window.innerWidth || 1))) * -50)}%,0,0)`,
+          transition: "none",
+        } : undefined}
+      >
         <div className="rx-swipe-panel">
           <Shortcuts onMyCoins={onMyCoins} />
           <CoinList />
@@ -265,7 +286,7 @@ function Dashboard({ mode, setMode, onCreate, onMenu, onMyCoins, onConnect }) {
         <div className="rx-space-inner">
           <Header onMenu={onMenu} />
           <CreateBanner onCreate={onCreate} />
-          <ModeToggle mode={mode} setMode={setMode} swipeProgress={swipeProgress} />
+          <ModeToggle mode={mode} setMode={setMode} swipeProgress={swipeProgress} swiping={swipeProgress !== null} />
 
           <SwipeArea
             mode={mode}
@@ -601,7 +622,7 @@ function WalletSheet({ onClose }) {
   const [expanded, setExpanded] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const touchStart = useRef(null);
+  const pointerStart = useRef(null);
   const wallets = [
     ["MetaMask", metamaskLogo],
     ["Trust Wallet", trustWalletLogo],
@@ -610,25 +631,38 @@ function WalletSheet({ onClose }) {
     ["WalletConnect", SiWalletconnect],
   ];
 
-  const onTouchStart = (e) => {
-    const touch = e.touches[0];
-    touchStart.current = touch.clientY;
+  const onPointerDown = (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    pointerStart.current = e.clientY;
     setDragging(true);
     setDragY(0);
   };
 
-  const onTouchMove = (e) => { if (touchStart.current == null) return; e.preventDefault(); setDragY(e.touches[0].clientY - touchStart.current); };
-  const onTouchEnd = () => { if (touchStart.current == null) return; if (dragY < -45) setExpanded(true); if (dragY > 45) setExpanded(false); touchStart.current = null; setDragging(false); setDragY(0); };
+  const onPointerMove = (e) => {
+    if (pointerStart.current == null) return;
+    if (e.cancelable) e.preventDefault();
+    setDragY(e.clientY - pointerStart.current);
+  };
+  const onPointerEnd = () => {
+    if (pointerStart.current == null) return;
+    if (dragY < -45) setExpanded(true);
+    else if (dragY > 45) setExpanded(false);
+    pointerStart.current = null;
+    setDragging(false);
+    setDragY(0);
+  };
 
   return (
     <div className="rx-overlay" onClick={onClose}>
       <div
         className={`rx-sheet ${expanded ? "expanded" : ""} ${dragging ? "dragging" : ""}`}
-        style={{ transform: `translate3d(0, ${dragging ? Math.max(-window.innerHeight * .72, Math.min(0, dragY)) : 0}px, 0)` }}
+        style={{ transform: dragging ? `translate3d(0, ${Math.max(-window.innerHeight * .72, Math.min(0, dragY))}px, 0)` : undefined }}
         onClick={(e) => e.stopPropagation()}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerEnd}
+        onPointerCancel={onPointerEnd}
       >
         <button
           type="button"
@@ -754,30 +788,12 @@ const styles = `
 .rx-icon-btn.rx-right{right:0}
 
 .rx-space-banner{
-  position:relative;width:100%;max-width:100%;height:204px;
-  overflow:visible;border-radius:20px;margin:0 0 14px;width:100%;background:transparent;aspect-ratio:2.08
+  position:relative;width:100%;max-width:100%;height:auto;
+  overflow:visible;border-radius:20px;margin:0 0 14px;background:transparent;aspect-ratio:2.08
 }
 .rx-space-banner>img{
   display:block;width:100%;height:100%;max-width:100%;
-  object-fit:contain;object-position:center;background:transparent;transform:scale(1.55);transform-origin:center
-}
-.rx-space-banner-copy{
-  position:absolute;left:7%;top:11%;width:53%;color:#fff;
-  text-shadow:0 2px 8px rgba(0,0,0,.14)
-}
-.rx-space-banner-copy h2{
-  margin:0;font-size:21px;line-height:1.04;font-weight:800;letter-spacing:-.7px
-}
-.rx-space-banner-copy p{
-  margin:9px 0 0;font-size:10.5px;line-height:1.4;font-weight:600
-}
-.rx-space-banner-copy button{
-  margin-top:12px;height:40px;padding:0 13px;
-  border:1px solid rgba(255,255,255,.7);border-radius:12px;
-  background:rgba(255,255,255,.18);color:#fff;
-  display:inline-flex;align-items:center;gap:8px;
-  font:800 10.5px 'Montserrat',sans-serif;
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)
+  object-fit:contain;object-position:center;background:transparent
 }
 
 .rx-mode-toggle{
@@ -939,7 +955,8 @@ const styles = `
   max-height:80dvh;overflow:auto;
   transform:translate3d(0,0,0);
   animation:rx-sheet-enter .28s cubic-bezier(.22,.8,.2,1) both;
-  transition:transform .38s cubic-bezier(.22,.8,.2,1),max-height .38s ease;will-change:transform
+  transition:transform .38s cubic-bezier(.22,.8,.2,1),max-height .38s ease;will-change:transform;
+  touch-action:none
 }
 .rx-sheet.expanded{max-height:96dvh}
 .rx-sheet.dragging{transition:none}
@@ -1005,10 +1022,6 @@ const styles = `
 
 @media(max-width:430px){
   .rx-space-banner{height:auto;aspect-ratio:2.08}
-  .rx-space-banner-copy{left:7%;top:10%;width:55%}
-  .rx-space-banner-copy h2{font-size:20px}
-  .rx-space-banner-copy p{font-size:10.5px}
-  .rx-space-banner-copy button{height:37px;font-size:10px}
   .rx-mode-toggle{height:60px}
   .rx-shortcuts{gap:2px}
   .rx-shortcuts button{height:68px;font-size:7.5px}
