@@ -6,7 +6,7 @@ import {
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
   CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet, Landmark, Gift, Trophy,
   Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle, Plus, ChevronDown,
-  BrainCircuit, Cpu, Palette, Globe, Trash2, UserX, Download, FileCheck, Cookie, Database,
+  BrainCircuit, Cpu, Palette, Globe, Trash2, UserX, Download, FileCheck, Cookie, Database, Coins,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, Badge as CommunityBadge, formatCount } from "./CommunityTab";
@@ -18,6 +18,8 @@ import HomeTab from "./HomeTab";
 
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
 import goodbyeLoloAnimation from "./assets/goodbye-lolo.webm";
+import referralAnimation from "./assets/social-media-influencer.json";
+import lottie from "lottie-web";
 import { resolveMarketLogo, resolveMarketDirection, isMarketNotification, FALLBACK_NEWS_LOGO, FALLBACK_RAINX_LOGO, MARKET_NAMES } from "./MarketLogos";
 
 // ---------- Design tokens ----------
@@ -5464,6 +5466,27 @@ function HeaderAvatar({ account, morePage, T }) {
     : <div style={{ width:42, height:42, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink }}>{initial}</div>;
 }
 
+
+function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
+  const animationRef = useRef(null);
+  useEffect(() => {
+    if (!animationRef.current) return undefined;
+    const player = lottie.loadAnimation({ container: animationRef.current, renderer: "svg", loop: true, autoplay: true, animationData: referralAnimation });
+    return () => player.destroy();
+  }, []);
+  return <div style={{position:"fixed",inset:0,zIndex:450,overflowY:"auto",background:"#FFFFFF",color:"#17191B"}}>
+    <div style={{maxWidth:480,minHeight:"100%",margin:"0 auto",padding:"16px 22px 34px"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}><button onClick={onBack} aria-label="Back" style={{border:0,background:"none",fontSize:30,lineHeight:1,cursor:"pointer"}}>‹</button><div style={{width:38,height:38,borderRadius:"50%",background:"#17191B",display:"grid",placeItems:"center"}}><Coins size={20} color="#F4D35E"/></div></div>
+      <div ref={animationRef} aria-label="Creator rewards animation" style={{width:"100%",height:205,margin:"0 auto 4px"}}/>
+      <div style={{textAlign:"center",color:"#D94A6A",fontFamily:FONT_HEAD,fontWeight:800,fontSize:13}}>CREATOR REWARDS PROGRAM</div>
+      <h1 style={{textAlign:"center",fontFamily:FONT_HEAD,fontWeight:900,fontSize:29,lineHeight:1.08,margin:"12px auto 10px",maxWidth:330}}>Turn your referrals into rewards</h1>
+      <p style={{textAlign:"center",color:"#596269",fontSize:13,lineHeight:1.55,margin:"0 auto 22px",maxWidth:330}}>Share RainX with your community and earn when qualified creators activate a subscription.</p>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}><div style={{background:"#FFF7D6",borderRadius:18,padding:"18px 16px"}}><div style={{fontSize:11,color:"#765B00",fontWeight:700}}>QUALIFIED REFERRALS</div><div style={{fontFamily:FONT_HEAD,fontWeight:900,fontSize:28}}>{count.toLocaleString()}</div></div><div style={{background:"#17191B",color:"#FFFFFF",borderRadius:18,padding:"18px 16px"}}><div style={{fontSize:11,color:"#F4D35E",fontWeight:700}}>REFERRAL EARNINGS</div><div style={{fontFamily:FONT_HEAD,fontWeight:900,fontSize:28}}>{"$"}{earnings.toFixed(2)}</div></div></div>
+      <div style={{borderTop:"1px dashed #D9DDDF",paddingTop:18}}><h2 style={{fontFamily:FONT_HEAD,fontWeight:900,fontSize:18,margin:"0 0 8px"}}>Grow your rewards</h2><p style={{color:"#596269",fontSize:12.5,lineHeight:1.6}}>Your reward is calculated from qualified activations. Keep sharing your link to grow your balance.</p>{referralCode?<div style={{background:"#F1F3F3",borderRadius:12,padding:"12px 14px",fontSize:11.5,wordBreak:"break-all"}}>https://rainx.app/?ref={referralCode}</div>:<div style={{color:"#8A9297",fontSize:12}}>Your referral link is being prepared.</div>}</div>
+    </div>
+  </div>;
+}
+
 function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, onLogoutConfirm, setTab, entitlement, themeMode, setThemeMode, morePage, setMorePage, setProfileFromHeader, activeMarkets = [] }) {
   // morePage/setMorePage lifted to MainAppContent so sidebar can deep-link
   const [username, setUsername] = useState("");
@@ -5658,14 +5681,15 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   // Trader Rewards progress counters — declared here (Rules of Hooks: no hooks after early returns)
   const [followerCount, setFollowerCount] = useState(0);
   const [referralCount, setReferralCount] = useState(0);
+  const [referralEarnings, setReferralEarnings] = useState(0);
   const [impressionCount, setImpressionCount] = useState(0);
   const [referralCode, setReferralCode] = useState("");
   useEffect(() => {
     if (!account?.id) return;
     supabase.from("follows").select("*",{count:"exact",head:true}).eq("followed_id",account.id)
       .then(({count})=>setFollowerCount(count||0)).catch(()=>{});
-    supabase.from("referrals").select("*",{count:"exact",head:true}).eq("referrer_id",account.id).eq("status","qualified")
-      .then(({count})=>setReferralCount(count||0)).catch(()=>{});
+    supabase.from("referrals").select("*").eq("referrer_id",account.id).eq("status","qualified")
+      .then(({data})=>{ const rows=data||[]; setReferralCount(rows.length); setReferralEarnings(rows.reduce((sum,row)=>sum+Number(row.reward_amount ?? row.earnings ?? row.amount ?? row.commission ?? 0),0)); }).catch(()=>{});
     supabase.from("community_posts").select("views").eq("user_id",account.id)
       .then(({data})=>setImpressionCount((data||[]).reduce((s,p)=>s+(p.views||0),0))).catch(()=>{});
   }, [account?.id]);
@@ -5930,6 +5954,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       notifyAvatarRefresh();
     }
   };
+
+  if (morePage === "referrals") return <ReferralRewardsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} onBack={() => setMorePage(null)} />;
 
   if (cropFile) return <CoverCropModal file={cropFile} onConfirm={blob => { setCropFile(null); uploadCoverBlob(blob); }} onCancel={() => { setCropFile(null); }} T={T} FONT_HEAD={FONT_HEAD} />;
 
@@ -7066,14 +7092,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     <div style={{ padding: "8px 16px 28px" }}>
       {/* User account header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0 16px" }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {fullName || (profileLoaded ? "User" : "…")}
-          </div>
-          {username ? (
-            <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>@{username}</div>
-          ) : null}
-        </div>
+        <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, lineHeight: 1.2 }}>{fullName || (profileLoaded ? "User" : "…")}</div>{username ? <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>@{username}</div> : null}</div>
+        <button onClick={() => setMorePage("referrals")} aria-label="Open referral rewards" style={{ width:42, height:42, borderRadius:"50%", border:"none", background:"#17191B", display:"grid", placeItems:"center", cursor:"pointer" }}><Coins size={21} color={T.gold}/></button>
       </div>
 
       {/* Analytics preview card */}
