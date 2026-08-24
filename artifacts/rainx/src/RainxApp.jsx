@@ -5472,6 +5472,7 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
   const animationRef = useRef(null);
   const touchStartX = useRef(null);
   const [closing, setClosing] = useState(false);
+  const [referralsEnabled, setReferralsEnabled] = useState(false);
   useEffect(() => {
     if (!animationRef.current) return undefined;
     const player = lottie.loadAnimation({ container: animationRef.current, renderer: "svg", loop: true, autoplay: true, animationData: referralAnimation });
@@ -5522,12 +5523,12 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
       </button>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",borderTop:"1px solid #ECECEC",paddingTop:16}}>
         <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:15}}>Referrals</div>
-        <label style={{position:"relative",width:52,height:32,display:"inline-block"}}>
-          <input type="checkbox" defaultChecked={false} onChange={(event) => { event.currentTarget.parentElement?.classList.toggle("is-on", event.currentTarget.checked); }} style={{opacity:0,width:0,height:0}}/>
-          <span className="referralToggle" style={{position:"absolute",inset:0,borderRadius:999,background:"#D7DADD",transition:"background .34s cubic-bezier(.22,1,.36,1)",cursor:"pointer"}}/>
+        <label className={referralsEnabled ? "is-on" : ""} style={{position:"relative",width:52,height:32,display:"inline-block"}}>
+          <input type="checkbox" checked={referralsEnabled} onChange={(event) => setReferralsEnabled(event.target.checked)} style={{opacity:0,width:0,height:0}}/>
+          <span className="referralToggle" style={{position:"absolute",inset:0,borderRadius:999,background:referralsEnabled?"#F4D35E":"#D7DADD",transition:"background .46s cubic-bezier(.22,1,.36,1)",cursor:"pointer"}}/>
         </label>
       </div>
-      <style>{`.referralToggle:after{content:"";position:absolute;width:26px;height:26px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.18);transition:transform .34s cubic-bezier(.22,1.2,.36,1)}label.is-on .referralToggle{background:#F4D35E}label.is-on .referralToggle:after{transform:translateX(20px)}`}</style>
+      <style>{`@keyframes referral-toggle-on{0%{left:3px;width:26px}34%{left:3px;width:34px}70%{left:15px;width:34px}100%{left:23px;width:26px}}@keyframes referral-toggle-off{0%{left:23px;width:26px}30%{left:15px;width:34px}66%{left:3px;width:34px}100%{left:3px;width:26px}}.referralToggle:after{content:"";position:absolute;width:26px;height:26px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.18);animation:referral-toggle-off .62s cubic-bezier(.22,1,.36,1) both}label.is-on .referralToggle:after{animation:referral-toggle-on .72s cubic-bezier(.22,1,.36,1) both}`}</style>
     </div>
   </div>;
 }
