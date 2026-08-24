@@ -2892,44 +2892,24 @@ function MainAppContent({ account, onLogout }) {
                 setNotifToDelete(null);
                 setNotifications(list => list.filter(x => x.id !== n.id));
                 if (account?.id) supabase.from("user_notifications").delete().eq("id", n.id).then(() => {}, () => {});
-              }} style={{ flex:1, background:"#E53935", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer" }}>Delete</button>
+              }} style={{ flex:1, background:"#E53935", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer" }}>Clear all</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Clear all notifications confirmation modal ── */}
-      {showClearAllConfirm && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:600, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px" }} onClick={() => setShowClearAllConfirm(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:24, maxWidth:360, width:"100%" }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:10 }}>Clear all notifications?</div>
-            <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.7, marginBottom:20 }}>
-              This will permanently remove all notifications from your list. This action cannot be undone.
-            </div>
-            <div style={{ display:"flex", gap:10 }}>
-              <button onClick={() => setShowClearAllConfirm(false)} style={{ flex:1, background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, cursor:"pointer" }}>Cancel</button>
-              <button onClick={() => {
-                setShowClearAllConfirm(false);
-                setNotifications([]);
-                if (account?.id) supabase.from("user_notifications").delete().eq("user_id", account.id).then(() => {}, () => {});
-              }} style={{ flex:1, background:"#E53935", border:"none", borderRadius:12, paddi      {showLogoutConfirm && (
-        <div onClick={closeLogoutConfirm} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.72)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px", animation:logoutClosing ? "logoutOverlayOut .3s ease-in both" : "logoutOverlayIn .28s ease-out both" }}>
-          <style>{"@keyframes logoutOverlayIn { from { opacity:0 } to { opacity:1 } } @keyframes logoutOverlayOut { from { opacity:1 } to { opacity:0 } } @keyframes logoutPopupSpring { 0% { transform:translateY(34px) scale(.82); opacity:0 } 60% { transform:translateY(-5px) scale(1.025); opacity:1 } 82% { transform:translateY(2px) scale(.99) } 100% { transform:translateY(0) scale(1); opacity:1 } } @keyframes logoutPopupReverse { from { transform:translateY(0) scale(1); opacity:1 } to { transform:translateY(34px) scale(.82); opacity:0 } } @keyframes logoutBackingIn { from { transform:rotate(0deg) scale(.82); opacity:0 } to { transform:rotate(5deg) scale(1); opacity:1 } } @keyframes logoutBackingOut { from { transform:rotate(5deg) scale(1); opacity:1 } to { transform:rotate(0deg) scale(.82); opacity:0 }}"}</style>
-          <div aria-hidden="true" style={{ position:"absolute", width:"min(320px, calc(100% - 40px))", height:"min(366px, calc(100% - 80px))", background:"#E53935", borderRadius:28, transformOrigin:"center", animation:logoutClosing ? "logoutBackingOut .3s ease-in both" : "logoutBackingIn .72s cubic-bezier(.22,1,.36,1) both" }} />
-          <div onClick={e => e.stopPropagation()} style={{ position:"relative", background:"#FFFFFF", borderRadius:28, padding:"18px 22px 18px", maxWidth:320, width:"100%", textAlign:"center", boxShadow:"0 18px 40px rgba(15,14,11,.3)", animation:logoutClosing ? "logoutPopupReverse .3s ease-in both" : "logoutPopupSpring .72s cubic-bezier(.22,1,.36,1) both" }}>
-            <button onClick={closeLogoutConfirm} aria-label="Close logout dialog" style={{ position:"absolute", top:12, right:14, width:28, height:28, display:"grid", placeItems:"center", background:"none", border:"none", color:"#17191B", fontSize:22, lineHeight:1, cursor:"pointer" }}>×</button>
-            <video src={goodbyeLoloAnimation} autoPlay loop muted playsInline preload="auto" aria-label="Goodbye animation" style={{ display:"block", width:150, height:118, objectFit:"contain", objectPosition:"center", margin:"0 auto 2px" }} />
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, lineHeight:1.2, color:"#17191B", marginBottom:9 }}>Leaving already?</div>
-            <div style={{ fontSize:12.5, color:"#596269", lineHeight:1.55, margin:"0 auto 20px", maxWidth:260 }}>
-              Come back soon. There’s always more to discover and earn.
-            </div>
-            <div style={{ display:"flex", justifyContent:"center", gap:10 }}>
-              <button onClick={closeLogoutConfirm} style={{ minWidth:88, background:"#FFFFFF", border:"1.5px solid #17191B", borderRadius:999, padding:"10px 17px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:12.5, color:"#17191B", cursor:"pointer" }}>Cancel</button>
-              <button onClick={() => { setShowLogoutConfirm(false); onLogout(); }} style={{ minWidth:88, background:"#E53935", border:"1.5px solid #C62828", borderRadius:999, padding:"10px 17px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, color:"#FFFFFF", cursor:"pointer" }}>Log out</button>
-            </div>
-          </div>
+      {/* ── Logout confirmation modal ── */}
+      {showLogoutConfirm && <div onClick={closeLogoutConfirm} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.72)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 20px",animation:logoutClosing?"logoutOverlayOut .3s ease-in both":"logoutOverlayIn .28s ease-out both"}}>
+        <style>{"@keyframes logoutOverlayIn{from{opacity:0}to{opacity:1}}@keyframes logoutOverlayOut{from{opacity:1}to{opacity:0}}@keyframes logoutPopupSpring{0%{transform:translateY(34px) scale(.82);opacity:0}60%{transform:translateY(-5px) scale(1.025);opacity:1}100%{transform:translateY(0) scale(1);opacity:1}}@keyframes logoutPopupReverse{from{transform:translateY(0) scale(1);opacity:1}to{transform:translateY(34px) scale(.82);opacity:0}}@keyframes logoutBackingIn{from{transform:rotate(0deg) scale(.82);opacity:0}to{transform:rotate(5deg) scale(1);opacity:1}}@keyframes logoutBackingOut{from{transform:rotate(5deg) scale(1);opacity:1}to{transform:rotate(0deg) scale(.82);opacity:0}}"}</style>
+        <div aria-hidden="true" style={{position:"absolute",width:"min(320px,calc(100% - 40px))",height:"min(366px,calc(100% - 80px))",background:"#E53935",borderRadius:28,animation:logoutClosing?"logoutBackingOut .3s ease-in both":"logoutBackingIn .72s cubic-bezier(.22,1,.36,1) both"}} />
+        <div onClick={e=>e.stopPropagation()} style={{position:"relative",background:"#FFFFFF",borderRadius:28,padding:"18px 22px",maxWidth:320,width:"100%",textAlign:"center",boxShadow:"0 18px 40px rgba(15,14,11,.3)",animation:logoutClosing?"logoutPopupReverse .3s ease-in both":"logoutPopupSpring .72s cubic-bezier(.22,1,.36,1) both"}}>
+          <button onClick={closeLogoutConfirm} aria-label="Close logout dialog" style={{position:"absolute",top:12,right:14,width:28,height:28,background:"none",border:"none",fontSize:22,cursor:"pointer"}}>×</button>
+          <video src={goodbyeLoloAnimation} autoPlay loop muted playsInline preload="auto" aria-label="Goodbye animation" style={{display:"block",width:150,height:118,objectFit:"contain",margin:"0 auto 2px"}} />
+          <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:18,color:"#17191B",marginBottom:9}}>Leaving already?</div>
+          <div style={{fontSize:12.5,color:"#596269",lineHeight:1.55,margin:"0 auto 20px",maxWidth:260}}>Come back soon. There’s always more to discover and earn.</div>
+          <div style={{display:"flex",justifyContent:"center",gap:10}}><button onClick={closeLogoutConfirm} style={{minWidth:88,background:"#FFFFFF",border:"1.5px solid #17191B",borderRadius:999,padding:"10px 17px",fontFamily:FONT_HEAD,fontWeight:700,cursor:"pointer"}}>Cancel</button><button onClick={()=>{setShowLogoutConfirm(false);onLogout();}} style={{minWidth:88,background:"#E53935",border:"1.5px solid #C62828",borderRadius:999,padding:"10px 17px",fontFamily:FONT_HEAD,fontWeight:800,color:"#FFFFFF",cursor:"pointer"}}>Log out</button></div>
         </div>
-      )}
+      </div>)}
 
       {!communityProfileOpen && !spaceCoinsScreen && (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", zIndex: 100, background: T.card, opacity: 1, borderTop: `1px solid ${T.cardBorder}`, boxShadow: "0 -8px 24px rgba(0,0,0,0.12)", display: "flex", justifyContent: "space-around", padding: "6px 0 calc(20px + env(safe-area-inset-bottom))", "--rx-logo-bg": isDark ? "#000" : "#fff" }}>
