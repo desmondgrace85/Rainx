@@ -5955,109 +5955,109 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   if (cropFile) return <CoverCropModal file={cropFile} onConfirm={blob => { setCropFile(null); uploadCoverBlob(blob); }} onCancel={() => { setCropFile(null); }} T={T} FONT_HEAD={FONT_HEAD} />;
 
   if (morePage === "profile-menu") return (
-    <div style={{ minHeight:"100%", background:T.ink, animation:"slideInRight 0.2s ease" }}>
+    <div style={{ minHeight:"100%", background:"#F1F3F3", animation:"slideInRight 0.2s ease" }}>
       <style>{"@keyframes slideInRight { from { transform: translateX(24px); opacity:0; } to { transform: translateX(0); opacity:1; } }"}</style>
       {/* Header */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px 8px" }}>
-        <button onClick={() => { setMorePage(null); if (setProfileFromHeader) setProfileFromHeader(false); }} style={{ background:"none", border:"none", cursor:"pointer", color:T.muted, padding:4 }}>
+        <button onClick={() => { setMorePage(null); if (setProfileFromHeader) setProfileFromHeader(false); }} style={{ background:"none", border:"none", cursor:"pointer", color:"#657076", padding:4 }}>
           <X size={22} />
         </button>
       </div>
       {/* Menu cards */}
       <div style={{ padding:"8px 16px 0", display:"grid", gridTemplateColumns:"repeat(2, minmax(0, 1fr))", gap:12 }}>
         {/* Profile header — intentionally not a menu card */}
-        <button onClick={() => setMorePage("profile")} style={{ width:"100%", gridColumn:"1 / -1", background:"transparent", border:0, padding:"8px 4px 14px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:14, position:"relative" }}>
-          <div style={{ width:72, height:72, borderRadius:"50%", overflow:"hidden", flexShrink:0, background:T.goldGradient, border:`3px solid ${T.gold}`, display:"grid", placeItems:"center" }}>
-            {avatarUrl ? <img src={avatarUrl} alt="Profile" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:28, color:T.ink }}>{(fullName || "P").trim()[0].toUpperCase()}</span>}
+        <button onClick={() => setMorePage("profile")} style={{ width:"100%", gridColumn:"1 / -1", background:"transparent", border:0, padding:"8px 4px 14px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:12, position:"relative" }}>
+          <div style={{ width:52, height:52, borderRadius:"50%", overflow:"hidden", flexShrink:0, background:T.goldGradient, border:`2px solid ${T.gold}`, display:"grid", placeItems:"center" }}>
+            {avatarUrl ? <img src={avatarUrl} alt="Profile" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:21, color:T.ink }}>{(fullName || "P").trim()[0].toUpperCase()}</span>}
           </div>
           <div style={{ minWidth:0 }}>
-            <div style={{ fontSize:11, color:T.muted, marginBottom:4 }}>Your profile</div>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:22, color:T.paper, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:"240px" }}>{fullName || "Complete your profile"}</div>
+            <div style={{ fontSize:11, color:"#657076", marginBottom:3, letterSpacing:"0.01em" }}>Your profile</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, lineHeight:1.2, color:"#17191B", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:"240px" }}>{fullName || "Complete your profile"}</div>
           </div>
-          <ChevronRight size={18} color={T.muted} style={{ position:"absolute", top:28, right:4 }} />
+          <ChevronRight size={18} color="#657076" style={{ position:"absolute", top:23, right:4 }} />
         </button>
         {/* Security row */}
         {[
           { label:"Security", icon:ShieldCheck, page:"security" },
         ].map(item => (
           <button key={item.label} onClick={() => setMorePage(item.page)}
-            style={{ width:"100%", minHeight:item.wide ? 88 : 98, gridColumn:item.wide ? "1 / -1" : "auto", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:18, padding:item.wide ? "13px" : "13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", gap:5, position:"relative" }}>
-            <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:14, right:14 }} />
+            style={{ width:"100%", minHeight:item.wide ? 88 : 98, gridColumn:item.wide ? "1 / -1" : "auto", background:"#FFFFFF", border:"1px solid #E5E9EA", borderRadius:18, padding:item.wide ? "13px" : "13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", gap:5, position:"relative", boxShadow:"0 1px 2px rgba(25,35,40,0.02)" }}>
+            <ChevronRight size={13} color="#657076" style={{ position:"absolute", top:14, right:14 }} />
             <div style={{ width:36, height:36, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
               <item.icon size={17} color={T.ink} />
             </div>
             <div style={{ width:26, height:3, borderRadius:2, background:T.gold, marginTop:4 }} />
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{item.label}</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#17191B", lineHeight:1.25 }}>{item.label}</div>
           </button>
         ))}
 
         {/* Appearance — standalone, before Settings */}
         <button onClick={() => setAppearanceOpen(true)}
-          style={{ width:"100%", minHeight:98, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:18, padding:"13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative" }}>
-          <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:14, right:14 }} />
+          style={{ width:"100%", minHeight:98, background:"#FFFFFF", border:"1px solid #E5E9EA", borderRadius:18, padding:"13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative", boxShadow:"0 1px 2px rgba(25,35,40,0.02)" }}>
+          <ChevronRight size={13} color="#657076" style={{ position:"absolute", top:14, right:14 }} />
           <div style={{ width:36, height:36, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <Palette size={17} color={T.ink} />
           </div>
           <div style={{ width:26, height:3, borderRadius:2, background:T.gold, marginTop:4 }} />
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Appearance</div>
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#17191B" }}>Appearance</div>
         </button>
 
         {/* Settings */}
         <button onClick={() => setMorePage("settings")}
-          style={{ width:"100%", minHeight:98, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:18, padding:"13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative" }}>
-          <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:14, right:14 }} />
+          style={{ width:"100%", minHeight:98, background:"#FFFFFF", border:"1px solid #E5E9EA", borderRadius:18, padding:"13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative", boxShadow:"0 1px 2px rgba(25,35,40,0.02)" }}>
+          <ChevronRight size={13} color="#657076" style={{ position:"absolute", top:14, right:14 }} />
           <div style={{ width:36, height:36, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <Settings size={17} color={T.ink} />
           </div>
           <div style={{ width:26, height:3, borderRadius:2, background:T.gold, marginTop:4 }} />
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Settings</div>
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#17191B" }}>Settings</div>
         </button>
 
         {/* Account activity & history */}
         <button onClick={() => setMorePage("history")}
-          style={{ width:"100%", minHeight:98, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:18, padding:"13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative" }}>
-          <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:14, right:14 }} />
+          style={{ width:"100%", minHeight:98, background:"#FFFFFF", border:"1px solid #E5E9EA", borderRadius:18, padding:"13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative", boxShadow:"0 1px 2px rgba(25,35,40,0.02)" }}>
+          <ChevronRight size={13} color="#657076" style={{ position:"absolute", top:14, right:14 }} />
           <div style={{ width:36, height:36, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <Activity size={17} color={T.ink} />
           </div>
           <div style={{ width:26, height:3, borderRadius:2, background:T.gold, marginTop:4 }} />
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Activity & History</div>
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#17191B" }}>Activity & History</div>
         </button>
 
         {/* Privacy & data center */}
         <button onClick={() => setMorePage("privacy-center")}
-          style={{ width:"100%", minHeight:98, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:18, padding:"13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative" }}>
-          <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:14, right:14 }} />
+          style={{ width:"100%", minHeight:98, background:"#FFFFFF", border:"1px solid #E5E9EA", borderRadius:18, padding:"13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative", boxShadow:"0 1px 2px rgba(25,35,40,0.02)" }}>
+          <ChevronRight size={13} color="#657076" style={{ position:"absolute", top:14, right:14 }} />
           <div style={{ width:36, height:36, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <Eye size={17} color={T.ink} />
           </div>
           <div style={{ width:26, height:3, borderRadius:2, background:T.gold, marginTop:4 }} />
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Privacy & Data</div>
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#17191B" }}>Privacy & Data</div>
         </button>
 
         {/* Creator & token safety */}
         <button onClick={() => setMorePage("creator-safety")}
-          style={{ width:"100%", minHeight:98, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:18, padding:"13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative" }}>
-          <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:14, right:14 }} />
+          style={{ width:"100%", minHeight:98, background:"#FFFFFF", border:"1px solid #E5E9EA", borderRadius:18, padding:"13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative", boxShadow:"0 1px 2px rgba(25,35,40,0.02)" }}>
+          <ChevronRight size={13} color="#657076" style={{ position:"absolute", top:14, right:14 }} />
           <div style={{ width:36, height:36, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <ShieldCheck size={17} color={T.ink} />
           </div>
           <div style={{ width:26, height:3, borderRadius:2, background:T.gold, marginTop:4 }} />
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Creator & Token Safety</div>
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#17191B", lineHeight:1.25 }}>Creator & Token Safety</div>
         </button>
 
         {/* Logout */}
         <button onClick={() => onLogoutConfirm && onLogoutConfirm()}
-          style={{ width:"100%", minHeight:70, gridColumn:"1 / -1", background:"#C0392B", border:"none", borderRadius:18, padding:"13px 18px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:12, position:"relative", boxShadow:"0 8px 18px rgba(192,57,43,.18)" }}>
+          style={{ width:"calc(100% - 16px)", justifySelf:"center", minHeight:64, gridColumn:"1 / -1", background:"#C0392B", border:"none", borderRadius:32, padding:"11px 18px", textAlign:"center", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:10, position:"relative", boxShadow:"0 8px 18px rgba(192,57,43,.18)" }}>
           <div style={{ width:38, height:38, borderRadius:"50%", background:"rgba(255,255,255,.14)", display:"grid", placeItems:"center", flexShrink:0 }}>
             <LogOut size={18} color="#FFFFFF" />
           </div>
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:"#FFFFFF" }}>Logout</div>
-          <ChevronRight size={17} color="#FFFFFF" style={{ position:"absolute", top:"50%", right:18, transform:"translateY(-50%)" }} />
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:"#FFFFFF", textAlign:"center" }}>Logout</div>
+          <ChevronRight size={17} color="#FFFFFF" style={{ position:"absolute", top:"50%", right:16, transform:"translateY(-50%)" }} />
         </button>
       </div>
       <div style={{ padding:"24px 20px 0", textAlign:"center" }}>
-        <div style={{ fontSize:10.5, color:T.muted, lineHeight:1.7 }}>RainX is an analysis tool, not a broker.<br/>AI analysis is not financial advice.</div>
+        <div style={{ fontSize:10.5, color:"#657076", lineHeight:1.7 }}>RainX is an analysis tool, not a broker.<br/>AI analysis is not financial advice.</div>
       </div>
 
       {appearanceOpen && (
