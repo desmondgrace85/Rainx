@@ -1,8 +1,8 @@
 /* RainX Service Worker — Push Notifications + Offline Cache */
 // Keep this unique for deploys, but update adoption is also enforced by
 // index.html with updateViaCache: "none" and an explicit registration.update().
-const CACHE_NAME = "rainx-v2026-08-18-navigation-refresh-1";
-const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
+const CACHE_NAME = "rainx-v2026-08-24-offline-media-1";
+const STATIC_ASSETS = ["/", "/index.html", "/manifest.json", "/goodbye-lolo.webm"];
 const presenceByClient = new Map();
 const recentPushIds = new Set();
 const PUSH_DB_NAME = "rainx-notification-state";
