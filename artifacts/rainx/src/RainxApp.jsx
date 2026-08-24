@@ -1587,11 +1587,12 @@ function MainAppContent({ account, onLogout }) {
   const entitlement = useEntitlement(account.id);
   // ── Route state: URL hash is the source of truth; localStorage is fallback ─
   const [morePage, setMorePage] = useState(() => {
-    const { tab: rt, sub } = routeRead();
-    // Only restore morePage from URL if the URL tab is "more" (or profileFromHeader overlay)
+    const { tab: rt, sub, flag } = routeRead();
+    // More sub-pages belong to More only. Keep the header profile overlay
+    // separate so a stale profile route cannot replace the More landing view.
     if (rt === "more" && sub) return sub;
-    if (rt && sub && rt !== "community") return sub; // e.g. #home/profile-menu/h
-    return lsGet("rainx-morepage") || null;
+    if (flag === "h" && sub === "profile-menu") return sub;
+    return null;
   });
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [logoutClosing, setLogoutClosing] = useState(false);
