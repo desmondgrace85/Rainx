@@ -319,6 +319,37 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+const CATEGORY_ART = {
+  crypto: "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=900&q=85",
+  forex: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=900&q=85",
+  metals: "https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&w=900&q=85",
+  energy: "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=900&q=85",
+  indices: "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=900&q=85",
+};
+
+function MarketSparkline({ data = [], base = 1, width = 92, height = 32 }) {
+  const values = data.map((point) => Number(point?.price ?? point?.close ?? point?.value)).filter(Number.isFinite);
+  const points = values.length > 1
+    ? values.slice(-40)
+    : Array.from({ length: 14 }, (_, index) => base * (1 + Math.sin(index * 1.4 + base) * 0.008 + index * 0.0007));
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = max - min || Math.max(Math.abs(max) * 0.001, 1);
+  const coordinates = points.map((value, index) => {
+    const x = (index / Math.max(1, points.length - 1)) * width;
+    const y = height - 3 - ((value - min) / range) * (height - 6);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const up = points[points.length - 1] >= points[0];
+  const stroke = up ? "#2186F3" : "#C8644E";
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true" style={{ display: "block" }}>
+      <path d={`M0 ${height - 1} L${coordinates.split(" ").join(" L")} L${width} ${height - 1} Z`} fill={up ? "rgba(33,134,243,.10)" : "rgba(200,100,78,.10)"} />
+      <polyline points={coordinates} fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 // Native-feeling interactive sheet behavior. Dragging is intentionally limited to the
 // handle so the market list keeps its normal vertical scrolling behavior.
 function useBottomSheet(onClose) {
@@ -379,7 +410,7 @@ function useBottomSheet(onClose) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Add Market bottom sheet — supports add, replace when full, and manage active
 // ─────────────────────────────────────────────────────────────────────────────
-function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets = [], maxActiveMarkets = 3, onRemoveMarket }) {
+function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets = [], maxActiveMarkets = 3, onRemoveMarket, seriesMap = {} }) {
   const [category, setCategory] = useState(null);
   // mode: null = category grid | "manage" = replace/delete active | "pick_replacement" = pick who to replace
   const [mode, setMode] = useState(null);
@@ -391,7 +422,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
   if (mode === "manage" && managedAsset) {
     return (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px", maxHeight:"88dvh", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain" }}>
+        <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px", height:"min(88dvh, 760px)", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain", touchAction:"pan-y" }}>
           <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} /></div>
           <div style={{ padding:"0 20px 20px" }}>
             <button onClick={() => { setMode(null); setManagedAsset(null); }} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
@@ -421,7 +452,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
     if (!category) {
       return (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-          <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"88dvh", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain" }}>
+          <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", height:"min(88dvh, 760px)", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain", touchAction:"pan-y" }}>
             <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} /></div>
             <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:10 }}>
               <button onClick={() => { setMode(backMode === "pick_category_for_replace" ? "manage" : null); }} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
@@ -434,10 +465,12 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 16px" }}>
               {ASSET_CATALOG.map(cat => (
-                <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:"#FFFFFF", border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"18px 14px", textAlign:"left", cursor:"pointer" }}>
-                  <div style={{ fontSize:22, marginBottom:8 }}>{cat.emoji}</div>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>{cat.label}</div>
-                  <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>{cat.assets.length} markets</div>
+                <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:"#FFFFFF", border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:0, overflow:"hidden", textAlign:"left", cursor:"pointer", minHeight:142 }}>
+                  <div style={{ height:72, backgroundImage:`linear-gradient(180deg, rgba(15,14,11,.04), rgba(15,14,11,.54)), url(${CATEGORY_ART[cat.id]})`, backgroundSize:"cover", backgroundPosition:"center", display:"flex", alignItems:"flex-end", padding:"0 12px 9px", color:"#FFFFFF", fontSize:23 }}>{cat.emoji}</div>
+                  <div style={{ padding:"10px 12px 12px" }}>
+                    <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>{cat.label}</div>
+                    <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>{cat.assets.length} markets</div>
+                  </div>
                 </button>
               ))}
             </div>
@@ -447,7 +480,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
     }
     return (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"88dvh", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain" }}>
+          <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", height:"min(88dvh, 760px)", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain", touchAction:"pan-y" }}>
           <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} /></div>
           <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:12 }}>
             <button onClick={() => setCategory(null)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
@@ -474,11 +507,17 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
                     setMode("pick_who_to_replace");
                     setCategory(null);
                   }
-                }} style={{ background:"#FFFFFF", border:`1px solid ${alreadyActive ? T.gold : T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:alreadyActive ? "default" : "pointer", opacity:alreadyActive ? 0.45 : 1 }}>
-                  <div style={{ textAlign:"left" }}>
-                    <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>{asset.symbol}</div>
-                    <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{asset.name}</div>
-                  </div>
+                }} style={{ background:"#FFFFFF", border:`1px solid ${alreadyActive ? T.gold : T.cardBorder}`, borderRadius:12, padding:"11px 12px", display:"flex", alignItems:"center", gap:10, cursor:alreadyActive ? "default" : "pointer", opacity:alreadyActive ? 0.45 : 1 }}>
+                   <img src={resolveMarketLogo({symbol:asset.symbol})?.src} alt="" style={{ width:34, height:34, borderRadius:"50%", flexShrink:0 }} />
+                   <div style={{ textAlign:"left", minWidth:0, flex:1 }}>
+                     <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:"#0F0E0B" }}>{asset.symbol}</div>
+                     <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{asset.name}</div>
+                   </div>
+                   <MarketSparkline data={seriesMap[asset.symbol]} base={asset.base} />
+                   <div style={{ textAlign:"right", minWidth:74 }}>
+                     <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:12, color:"#0F0E0B", fontVariantNumeric:"tabular-nums" }}>{Number(seriesMap[asset.symbol]?.slice(-1)?.[0]?.price ?? asset.base).toFixed(Math.min(asset.digits, 5))}</div>
+                     <div style={{ fontSize:10, color:(Number(seriesMap[asset.symbol]?.slice(-1)?.[0]?.price ?? asset.base) >= Number(seriesMap[asset.symbol]?.[0]?.price ?? asset.base)) ? "#21844A" : "#B24B37", marginTop:2 }}>Live move</div>
+                   </div>
                   {alreadyActive
                     ? <div style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.gold}22`, borderRadius:6, padding:"3px 8px" }}>Active</div>
                     : <ChevronRight size={16} color={T.muted} />}
@@ -495,7 +534,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
   if (mode === "pick_who_to_replace" && managedAsset) {
     return (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px", maxHeight:"88dvh", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain" }}>
+          <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px", height:"min(88dvh, 760px)", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain", touchAction:"pan-y" }}>
           <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} /></div>
           <div style={{ padding:"0 20px 20px" }}>
             <button onClick={() => setMode("pick_new_when_full")} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
@@ -508,7 +547,8 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
                 const a = ALL_ASSETS.find(x => x.symbol === sym);
                 if (!a) return null;
                 return (
-                  <button key={sym} onClick={() => { onRemoveMarket(sym); onSelect(managedAsset); }} style={{ background:"#FFFFFF", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
+                   <button key={sym} onClick={() => { onRemoveMarket(sym); onSelect(managedAsset); }} style={{ background:"#FFFFFF", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"11px 12px", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
+                     <img src={resolveMarketLogo({symbol:a.symbol})?.src} alt="" style={{ width:34, height:34, borderRadius:"50%" }} />
                     <div style={{ textAlign:"left" }}>
                       <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>{a.symbol}</div>
                       <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{a.name}</div>
@@ -527,7 +567,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
   // ── Default: category grid + asset list ─────────────────────────────────
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"88dvh", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain" }}>
+           <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", height:"min(88dvh, 760px)", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain", touchAction:"pan-y" }}>
         <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}>
           <div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} />
         </div>
@@ -547,10 +587,12 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
             )}
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 16px" }}>
               {ASSET_CATALOG.map(cat => (
-                <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:"#FFFFFF", border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"18px 14px", textAlign:"left", cursor:"pointer" }}>
-                  <div style={{ fontSize:22, marginBottom:8 }}>{cat.emoji}</div>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>{cat.label}</div>
-                  <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>{cat.assets.length} markets</div>
+                   <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:"#FFFFFF", border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:0, overflow:"hidden", textAlign:"left", cursor:"pointer", minHeight:142 }}>
+                   <div style={{ height:72, backgroundImage:`linear-gradient(180deg, rgba(15,14,11,.04), rgba(15,14,11,.54)), url(${CATEGORY_ART[cat.id]})`, backgroundSize:"cover", backgroundPosition:"center", display:"flex", alignItems:"flex-end", padding:"0 12px 9px", color:"#FFFFFF", fontSize:23 }}>{cat.emoji}</div>
+                   <div style={{ padding:"10px 12px 12px" }}>
+                     <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>{cat.label}</div>
+                     <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>{cat.assets.length} markets</div>
+                   </div>
                 </button>
               ))}
             </div>
@@ -568,7 +610,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
               {category.assets.map(asset => {
                 const alreadyActive = activeMarkets.includes(asset.symbol);
                 return (
-                  <button key={asset.symbol} onClick={() => {
+                   <button key={asset.symbol} onClick={() => {
                     if (alreadyActive) {
                       setManagedAsset(asset);
                       setMode("manage");
@@ -578,11 +620,17 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
                     } else {
                       onSelect(asset);
                     }
-                  }} style={{ background:"#FFFFFF", border:`1px solid ${alreadyActive ? T.gold : T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
-                    <div style={{ textAlign:"left" }}>
+                   }} style={{ background:"#FFFFFF", border:`1px solid ${alreadyActive ? T.gold : T.cardBorder}`, borderRadius:12, padding:"11px 12px", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
+                     <img src={resolveMarketLogo({symbol:asset.symbol})?.src} alt="" style={{ width:34, height:34, borderRadius:"50%", flexShrink:0 }} />
+                     <div style={{ textAlign:"left", minWidth:0, flex:1 }}>
                       <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>{asset.symbol}</div>
                       <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{asset.name}</div>
                     </div>
+                     <MarketSparkline data={seriesMap[asset.symbol]} base={asset.base} />
+                     <div style={{ textAlign:"right", minWidth:74 }}>
+                       <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:12, color:"#0F0E0B", fontVariantNumeric:"tabular-nums" }}>{Number(seriesMap[asset.symbol]?.slice(-1)?.[0]?.price ?? asset.base).toFixed(Math.min(asset.digits, 5))}</div>
+                       <div style={{ fontSize:10, color:"#21844A", marginTop:2 }}>Live move</div>
+                     </div>
                     {alreadyActive
                       ? <div style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.gold}22`, borderRadius:6, padding:"3px 8px" }}>Active ›</div>
                       : (atLimit
@@ -877,7 +925,7 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
           <button onClick={()=>setShowSubLock(false)} style={{width:"100%",background:"none",border:`1px solid ${T.cardBorder}`,borderRadius:12,padding:"11px 0",fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.muted,cursor:"pointer"}}>Close</button>
         </div>
       </div>}
-      {showAddMarket&&<AddMarketSheet onClose={()=>setShowAddMarket(false)} onSelect={handleAssetSelect} activeMarkets={displayMarkets} maxActiveMarkets={maxActiveMarkets} onRemoveMarket={removeActiveMarket}/>}
+      {showAddMarket&&<AddMarketSheet onClose={()=>setShowAddMarket(false)} onSelect={handleAssetSelect} activeMarkets={displayMarkets} maxActiveMarkets={maxActiveMarkets} onRemoveMarket={removeActiveMarket} seriesMap={seriesMap}/>}
     </div>
   );
 }
