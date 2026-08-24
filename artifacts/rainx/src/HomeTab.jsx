@@ -840,12 +840,13 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
   // Called from AddMarketSheet when the user picks a NEW market to add/replace
   function handleAssetSelect(asset) {
     setShowAddMarket(false);
+    // Update the homepage cards immediately, then keep the subscription prompt separate.
+    setDisplayMarkets(prev => prev.includes(asset.symbol) ? prev : [...prev, asset.symbol].slice(-maxActiveMarkets));
+    if (addActiveMarket) addActiveMarket(asset.symbol);
     if (!hasAccess(entitlement?.tier, "weekly")) {
       setShowSubLock(true);
       return;
     }
-    setDisplayMarkets(prev => prev.includes(asset.symbol) ? prev : [...prev, asset.symbol].slice(-maxActiveMarkets));
-    if (addActiveMarket) addActiveMarket(asset.symbol);
     // Only start a new session if one doesn't already exist for this market
     if (!sessions?.[asset.symbol]) {
       startAnalysisSession(asset);
