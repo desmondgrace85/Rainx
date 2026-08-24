@@ -5965,9 +5965,19 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       </div>
       {/* Menu cards */}
       <div style={{ padding:"8px 16px 0", display:"grid", gridTemplateColumns:"repeat(2, minmax(0, 1fr))", gap:12 }}>
-        {/* Profile + Security row */}
+        {/* Profile header — intentionally not a menu card */}
+        <button onClick={() => setMorePage("profile")} style={{ width:"100%", gridColumn:"1 / -1", background:"transparent", border:0, padding:"8px 4px 14px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:14, position:"relative" }}>
+          <div style={{ width:72, height:72, borderRadius:"50%", overflow:"hidden", flexShrink:0, background:T.goldGradient, border:`3px solid ${T.gold}`, display:"grid", placeItems:"center" }}>
+            {avatarUrl ? <img src={avatarUrl} alt="Profile" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:28, color:T.ink }}>{(fullName || "P").trim()[0].toUpperCase()}</span>}
+          </div>
+          <div style={{ minWidth:0 }}>
+            <div style={{ fontSize:11, color:T.muted, marginBottom:4 }}>Your profile</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:22, color:T.paper, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:"240px" }}>{fullName || "Complete your profile"}</div>
+          </div>
+          <ChevronRight size={18} color={T.muted} style={{ position:"absolute", top:28, right:4 }} />
+        </button>
+        {/* Security row */}
         {[
-          { label:"Profile", icon:Users2, page:"profile", wide:true },
           { label:"Security", icon:ShieldCheck, page:"security" },
         ].map(item => (
           <button key={item.label} onClick={() => setMorePage(item.page)}
@@ -6038,13 +6048,12 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
         {/* Logout */}
         <button onClick={() => onLogoutConfirm && onLogoutConfirm()}
-          style={{ width:"100%", minHeight:88, gridColumn:"1 / -1", background:"rgba(176,96,74,0.08)", border:"1px solid rgba(176,96,74,0.25)", borderRadius:18, padding:"13px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative" }}>
-          <ChevronRight size={13} color={T.rust} style={{ position:"absolute", top:14, right:14 }} />
-          <div style={{ width:36, height:36, borderRadius:"50%", background:"rgba(176,96,74,0.15)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-            <LogOut size={17} color={T.rust} />
+          style={{ width:"100%", minHeight:70, gridColumn:"1 / -1", background:"#C0392B", border:"none", borderRadius:18, padding:"13px 18px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:12, position:"relative", boxShadow:"0 8px 18px rgba(192,57,43,.18)" }}>
+          <div style={{ width:38, height:38, borderRadius:"50%", background:"rgba(255,255,255,.14)", display:"grid", placeItems:"center", flexShrink:0 }}>
+            <LogOut size={18} color="#FFFFFF" />
           </div>
-          <div style={{ width:26, height:3, borderRadius:2, background:T.rust, marginTop:4 }} />
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.rust }}>Logout</div>
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:"#FFFFFF" }}>Logout</div>
+          <ChevronRight size={17} color="#FFFFFF" style={{ position:"absolute", top:"50%", right:18, transform:"translateY(-50%)" }} />
         </button>
       </div>
       <div style={{ padding:"24px 20px 0", textAlign:"center" }}>
