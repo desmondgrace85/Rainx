@@ -17,6 +17,8 @@ import SpaceCoinsDashboard from "./SpaceCoinsDashboard";
 import HomeTab from "./HomeTab";
 
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
+import referralEarningsTransparent from "./assets/referral-earnings-transparent.png";
+import referralNetworkOptimized from "./assets/referral-network-optimized.png";
 import referralAnimation from "./assets/social-media-influencer.json";
 import lottie from "lottie-web";
 import { resolveMarketLogo, resolveMarketDirection, isMarketNotification, FALLBACK_NEWS_LOGO, FALLBACK_RAINX_LOGO, MARKET_NAMES } from "./MarketLogos";
@@ -5502,10 +5504,10 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
       <div ref={animationRef} aria-label="Creator rewards animation" style={{width:"100%",height:205,margin:"0 auto 2px"}}/>
       <h1 style={{textAlign:"center",fontFamily:FONT_HEAD,fontWeight:900,fontSize:26,lineHeight:1.12,margin:"12px auto 8px",maxWidth:360}}>Refer Friends, They Subscribe.<br/><span style={{color:"#C99512"}}>You Earn!</span></h1>
       <p style={{textAlign:"center",color:"#596269",fontSize:13,lineHeight:1.55,margin:"0 auto 24px",maxWidth:330}}>Invite friends to join and earn a percentage when they subscribe to a package.</p>
-      <img src="/referral-earnings-transparent.png" alt="Creators earning rewards together" draggable="false" style={{display:"block",width:"100%",height:190,objectFit:"contain",margin:"2px auto 16px"}}/>
+      <img src={referralEarningsTransparent} alt="Creators earning rewards together" draggable="false" style={{display:"block",width:"100%",height:190,objectFit:"contain",margin:"2px auto 16px"}}/>
       <h2 style={{fontFamily:FONT_HEAD,fontWeight:900,fontSize:21,lineHeight:1.15,margin:"0 0 8px"}}>Share More. Earn More.</h2>
       <p style={{color:"#596269",fontSize:13,lineHeight:1.6,margin:"0 0 22px"}}>Earn rewards when your referrals subscribe, with every successful referral adding to your earnings.</p>
-      <img src="/referral-network-optimized.png" alt="Friends building a network together" draggable="false" style={{display:"block",width:"100%",height:245,objectFit:"contain",margin:"0 auto 16px"}}/>
+      <img src={referralNetworkOptimized} alt="Friends building a network together" draggable="false" style={{display:"block",width:"100%",height:245,objectFit:"contain",margin:"0 auto 16px"}}/>
       <h2 style={{fontFamily:FONT_HEAD,fontWeight:900,fontSize:21,lineHeight:1.15,margin:"0 0 8px"}}>Your Friends. Your Network. Your Rewards.</h2>
       <p style={{color:"#596269",fontSize:13,lineHeight:1.6,margin:"0 0 15px"}}>Build your network, earn together, and celebrate every successful referral.</p>
       <div style={{color:"#596269",fontSize:13,lineHeight:1.8,marginBottom:18}}>
