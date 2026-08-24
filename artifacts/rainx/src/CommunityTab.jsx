@@ -2720,13 +2720,6 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
   const [showFabModal, setShowFabModal] = useState(false);
   // New: feed tabs, chat, post analytics
   const [feedTab, setFeedTab] = useState("foryou");
-  const [feedSwipeX, setFeedSwipeX] = useState(0);
-  const feedSwipeRef = useRef(null);
-  const finishFeedSwipe = (dx) => {
-    const threshold = Math.min(100, window.innerWidth * 0.2);
-    if (Math.abs(dx) >= threshold) setFeedTab(dx < 0 ? "following" : "foryou");
-    setFeedSwipeX(0);
-  };
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInitUser, setChatInitUser] = useState(null);
   const [postActivity, setPostActivity] = useState(null); // { post, profile }
@@ -3049,7 +3042,7 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
     : filteredByFeedTab;
 
   return (
-    <div style={{ position: "relative", minHeight: "100%", background: T.ink, overscrollBehaviorY: "none", touchAction: "pan-y" }}>
+    <div style={{ position: "relative", minHeight: "100%", background: T.ink }}>
       <style>{`${pulse} ${slideIn}`}</style>
 
       {/* Chat overlay */}
@@ -3079,13 +3072,6 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
       )}
 
       {/* Top bar: bell left, chat right, NO Community title */}
-      <div
-        style={{ transform: feedSwipeX ? `translate3d(${feedSwipeX}px, 0, 0)` : "translate3d(0, 0, 0)", transition: feedSwipeX === 0 ? "transform 180ms cubic-bezier(.22,.8,.3,1)" : "none", willChange: "transform" }}
-        onTouchStart={(e) => { if (!e.target.closest?.("button")) { feedSwipeRef.current = null; return; } feedSwipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, axis: null }; }}
-        onTouchMove={(e) => { const s = feedSwipeRef.current; if (!s) return; const dx = e.touches[0].clientX - s.x, dy = e.touches[0].clientY - s.y; if (!s.axis && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) s.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y"; if (s.axis === "x") setFeedSwipeX(Math.max(-window.innerWidth * .7, Math.min(window.innerWidth * .7, dx))); }}
-        onTouchEnd={(e) => { const s = feedSwipeRef.current; feedSwipeRef.current = null; if (!s || s.axis !== "x") { setFeedSwipeX(0); return; } finishFeedSwipe(e.changedTouches[0].clientX - s.x); }}
-        onTouchCancel={() => { feedSwipeRef.current = null; setFeedSwipeX(0); }}
-      >
       <div style={{ display: "flex", alignItems: "center", padding: "12px 16px 0", gap: 8 }}>
         <CommunityNotifBell account={account} onOpenProfile={setViewingUserId} onOpenPost={(postId) => setOpenPostId(postId)} />
         <div style={{ flex: 1, display: "flex", justifyContent: "center", gap: 0 }}>
@@ -3155,7 +3141,6 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
       ))}
 
       </div>{/* end feed wrapper */}
-      </div>{/* end community swipe surface */}
       <button onClick={() => setShowFabModal(true)} style={{ position: "fixed", bottom: 90, right: 20, width: 52, height: 52, borderRadius: "50%", background: T.gold, border: "none", color: T.ink, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 16px rgba(0,0,0,0.4)", cursor: "pointer", opacity: fabVisible ? 1 : 0, transform: fabVisible ? "scale(1)" : "scale(0.8)", transition: "opacity 0.25s, transform 0.25s", pointerEvents: fabVisible ? "auto" : "none" }}
         onMouseDown={(e) => { if (fabVisible) e.currentTarget.style.transform = "scale(0.9)"; }}
         onMouseUp={(e) => { if (fabVisible) e.currentTarget.style.transform = "scale(1)"; }}
