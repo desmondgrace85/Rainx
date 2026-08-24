@@ -1724,6 +1724,14 @@ function MainAppContent({ account, onLogout }) {
       return next;
     });
   }, []);
+  const replaceActiveMarket = useCallback((oldSymbol, newSymbol) => {
+    setActiveMarkets(prev => { const index = prev.indexOf(oldSymbol); if (index < 0 || prev.includes(newSymbol)) return prev; const next = [...prev]; next[index] = newSymbol; lsSet("rainx-active-markets", JSON.stringify(next)); return next; });
+    setSessions(prev => { const next = { ...prev }; delete next[oldSymbol]; return next; });
+  }, []);
+  const reorderActiveMarkets = useCallback((symbols) => {
+    const next = symbols.filter((symbol, index, list) => list.indexOf(symbol) === index).slice(0, MAX_ACTIVE_MARKETS);
+    setActiveMarkets(next); lsSet("rainx-active-markets", JSON.stringify(next));
+  }, []);
   const removeActiveMarket = useCallback((symbol) => {
     setActiveMarkets(prev => {
       const next = prev.filter(s => s !== symbol);
@@ -2726,7 +2734,7 @@ function MainAppContent({ account, onLogout }) {
         className={tabDirRef.current >= 0 ? "rx-slide-right" : "rx-slide-left"}
         style={{ paddingBottom: 78 }}
       >
-        {tab === "home" && <HomeTabErrorBoundary><HomeTab account={account} inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessions={sessions} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} seriesMap={seriesMap} signalsMap={signalsMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} /></HomeTabErrorBoundary>}
+        {tab === "home" && <HomeTabErrorBoundary><HomeTab account={account} inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessions={sessions} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} seriesMap={seriesMap} signalsMap={signalsMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} replaceActiveMarket={replaceActiveMarket} reorderActiveMarkets={reorderActiveMarkets} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} /></HomeTabErrorBoundary>}
         {tab === "wallet" && <WalletTab account={account} />}
         {tab === "history" && <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />}
         {tab === "subscribe" && <SubscribeScreen account={account} entitlement={entitlement} onBack={() => goTab("more", -1)} />}
