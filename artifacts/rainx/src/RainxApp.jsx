@@ -1594,6 +1594,11 @@ function MainAppContent({ account, onLogout }) {
     return lsGet("rainx-morepage") || null;
   });
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [logoutClosing, setLogoutClosing] = useState(false);
+  const closeLogoutConfirm = () => {
+    setLogoutClosing(true);
+    window.setTimeout(() => { setShowLogoutConfirm(false); setLogoutClosing(false); }, 300);
+  };
 
   const [tab, setTab] = useState(() => {
     const { tab: urlTab } = routeRead();
@@ -2791,7 +2796,7 @@ function MainAppContent({ account, onLogout }) {
                 { icon:ShieldCheck, label:"Security",       action:() => { setMorePage("security"); goTab("more"); setShowSidebar(false); } },
                 { icon:Settings,    label:"Settings",       action:() => { setMorePage("settings"); goTab("more"); setShowSidebar(false); } },
                 null,
-                { icon:LogOut,      label:"Log out",        action:() => { setShowSidebar(false); setShowLogoutConfirm(true); }, danger:true },
+                { icon:LogOut,      label:"Log out",        action:() => { setShowSidebar(false); setLogoutClosing(false); setShowLogoutConfirm(true); }, danger:true },
               ].map((item, i) => item === null ? (
                 <div key={`div-${i}`} style={{ height:1, background:T.cardBorder, margin:"6px 16px" }} />
               ) : (
@@ -2907,26 +2912,20 @@ function MainAppContent({ account, onLogout }) {
                 setShowClearAllConfirm(false);
                 setNotifications([]);
                 if (account?.id) supabase.from("user_notifications").delete().eq("user_id", account.id).then(() => {}, () => {});
-              }} style={{ flex:1, background:"#E53935", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer" }}>Clear all</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Logout confirmation modal ── */}
-      {showLogoutConfirm && (
-        <div onClick={() => setShowLogoutConfirm(false)} style={{ position:"fixed", inset:0, background:T.gold, zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px", animation:"logoutOverlayIn 0.28s ease-out" }}>
-          <style>{"@keyframes logoutOverlayIn { from { opacity:0 } to { opacity:1 } } @keyframes logoutPopupSpring { 0% { transform:translateY(34px) scale(.82); opacity:0 } 60% { transform:translateY(-5px) scale(1.025); opacity:1 } 82% { transform:translateY(2px) scale(.99) } 100% { transform:translateY(0) scale(1); opacity:1 } }"}</style>
-          <div onClick={e => e.stopPropagation()} style={{ position:"relative", background:"#FFFFFF", borderRadius:28, padding:"20px 22px 18px", maxWidth:320, width:"100%", textAlign:"center", boxShadow:"0 18px 40px rgba(15,14,11,.16)", animation:"logoutPopupSpring .72s cubic-bezier(.22,1,.36,1) both" }}>
-            <button onClick={() => setShowLogoutConfirm(false)} aria-label="Close logout dialog" style={{ position:"absolute", top:12, right:14, width:28, height:28, display:"grid", placeItems:"center", background:"none", border:"none", color:"#17191B", fontSize:22, lineHeight:1, cursor:"pointer" }}>×</button>
-            <video src={goodbyeLoloAnimation} autoPlay loop muted playsInline aria-label="Goodbye animation" style={{ display:"block", width:132, height:104, objectFit:"contain", margin:"0 auto 4px" }} />
+              }} style={{ flex:1, background:"#E53935", border:"none", borderRadius:12, paddi      {showLogoutConfirm && (
+        <div onClick={closeLogoutConfirm} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.72)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px", animation:logoutClosing ? "logoutOverlayOut .3s ease-in both" : "logoutOverlayIn .28s ease-out both" }}>
+          <style>{"@keyframes logoutOverlayIn { from { opacity:0 } to { opacity:1 } } @keyframes logoutOverlayOut { from { opacity:1 } to { opacity:0 } } @keyframes logoutPopupSpring { 0% { transform:translateY(34px) scale(.82); opacity:0 } 60% { transform:translateY(-5px) scale(1.025); opacity:1 } 82% { transform:translateY(2px) scale(.99) } 100% { transform:translateY(0) scale(1); opacity:1 } } @keyframes logoutPopupReverse { from { transform:translateY(0) scale(1); opacity:1 } to { transform:translateY(34px) scale(.82); opacity:0 } } @keyframes logoutBackingIn { from { transform:rotate(0deg) scale(.82); opacity:0 } to { transform:rotate(5deg) scale(1); opacity:1 } } @keyframes logoutBackingOut { from { transform:rotate(5deg) scale(1); opacity:1 } to { transform:rotate(0deg) scale(.82); opacity:0 }}"}</style>
+          <div aria-hidden="true" style={{ position:"absolute", width:"min(320px, calc(100% - 40px))", height:"min(366px, calc(100% - 80px))", background:"#E53935", borderRadius:28, transformOrigin:"center", animation:logoutClosing ? "logoutBackingOut .3s ease-in both" : "logoutBackingIn .72s cubic-bezier(.22,1,.36,1) both" }} />
+          <div onClick={e => e.stopPropagation()} style={{ position:"relative", background:"#FFFFFF", borderRadius:28, padding:"18px 22px 18px", maxWidth:320, width:"100%", textAlign:"center", boxShadow:"0 18px 40px rgba(15,14,11,.3)", animation:logoutClosing ? "logoutPopupReverse .3s ease-in both" : "logoutPopupSpring .72s cubic-bezier(.22,1,.36,1) both" }}>
+            <button onClick={closeLogoutConfirm} aria-label="Close logout dialog" style={{ position:"absolute", top:12, right:14, width:28, height:28, display:"grid", placeItems:"center", background:"none", border:"none", color:"#17191B", fontSize:22, lineHeight:1, cursor:"pointer" }}>×</button>
+            <video src={goodbyeLoloAnimation} autoPlay loop muted playsInline preload="auto" aria-label="Goodbye animation" style={{ display:"block", width:150, height:118, objectFit:"contain", objectPosition:"center", margin:"0 auto 2px" }} />
             <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, lineHeight:1.2, color:"#17191B", marginBottom:9 }}>Leaving already?</div>
             <div style={{ fontSize:12.5, color:"#596269", lineHeight:1.55, margin:"0 auto 20px", maxWidth:260 }}>
               Come back soon. There’s always more to discover and earn.
             </div>
             <div style={{ display:"flex", justifyContent:"center", gap:10 }}>
-              <button onClick={() => setShowLogoutConfirm(false)} style={{ minWidth:88, background:"#FFFFFF", border:"1.5px solid #17191B", borderRadius:999, padding:"10px 17px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:12.5, color:"#17191B", cursor:"pointer" }}>Cancel</button>
-              <button onClick={() => { setShowLogoutConfirm(false); onLogout(); }} style={{ minWidth:88, background:T.gold, border:"1.5px solid #F4D35E", borderRadius:999, padding:"10px 17px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, color:"#17191B", cursor:"pointer" }}>Log out</button>
+              <button onClick={closeLogoutConfirm} style={{ minWidth:88, background:"#FFFFFF", border:"1.5px solid #17191B", borderRadius:999, padding:"10px 17px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:12.5, color:"#17191B", cursor:"pointer" }}>Cancel</button>
+              <button onClick={() => { setShowLogoutConfirm(false); onLogout(); }} style={{ minWidth:88, background:"#E53935", border:"1.5px solid #C62828", borderRadius:999, padding:"10px 17px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, color:"#FFFFFF", cursor:"pointer" }}>Log out</button>
             </div>
           </div>
         </div>
