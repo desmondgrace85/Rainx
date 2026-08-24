@@ -409,13 +409,14 @@ function useBottomSheet(onClose) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Add Market bottom sheet — supports add, replace when full, and manage active
 // ─────────────────────────────────────────────────────────────────────────────
-function AddMarketSheet({ onClose, onSelect, onReplaceMarket, activeSessions = [], activeMarkets = [], maxActiveMarkets = 3, onRemoveMarket, seriesMap = {} }) {
+function AddMarketSheet({ onClose, onSelect, onReplaceMarket, initialReplacementAsset = null, activeSessions = [], activeMarkets = [], maxActiveMarkets = 3, onRemoveMarket, seriesMap = {} }) {
   const [category, setCategory] = useState(null);
   // mode: null = category grid | "manage" = replace/delete active | "pick_replacement" = pick who to replace
   const [mode, setMode] = useState(null);
   const [managedAsset, setManagedAsset] = useState(null);   // asset being managed or new asset wanting a slot
   const atLimit = activeMarkets.length >= maxActiveMarkets;
   const sheet = useBottomSheet(onClose);
+  useEffect(() => { if (initialReplacementAsset) { setManagedAsset(initialReplacementAsset); setMode("pick_category_for_replace"); } }, [initialReplacementAsset]);
 
   // ── Manage already-active market: Replace or Delete ─────────────────────
   if (mode === "manage" && managedAsset) {
@@ -677,6 +678,7 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
   const safeSeries = Array.isArray(series) ? series : [];
   const [showAddMarket, setShowAddMarket] = useState(false);
   const [longPressAsset, setLongPressAsset] = useState(null);
+  const [replacementTarget, setReplacementTarget] = useState(null);
   const [reorderMode, setReorderMode] = useState(false);
   const pressTimer = useRef(null);
   const dragSymbol = useRef(null);
@@ -932,8 +934,8 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
           <button onClick={()=>setShowSubLock(false)} style={{width:"100%",background:"none",border:`1px solid ${T.cardBorder}`,borderRadius:12,padding:"11px 0",fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.muted,cursor:"pointer"}}>Close</button>
         </div>
       </div>}
-      {showAddMarket&&<AddMarketSheet onClose={()=>setShowAddMarket(false)} onSelect={handleAssetSelect} onReplaceMarket={replaceMarket} activeMarkets={displayMarkets} maxActiveMarkets={maxActiveMarkets} onRemoveMarket={removeActiveMarket} seriesMap={seriesMap}/>}
-       {longPressAsset&&<div onClick={()=>setLongPressAsset(null)} style={{position:"fixed",inset:0,zIndex:1200,background:"rgba(15,14,11,.42)",display:"grid",placeItems:"center",padding:24,backdropFilter:"blur(5px)"}}><div onClick={e=>e.stopPropagation()} style={{width:"min(340px,100%)",background:"#fff",borderRadius:26,padding:"12px 18px 18px",boxShadow:"0 22px 70px rgba(0,0,0,.28)",animation:"rx-modal-spring .46s cubic-bezier(.16,1.25,.3,1) both"}}><div style={{width:38,height:4,borderRadius:3,background:"#ddd",margin:"0 auto 18px"}}/><div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}><img src={resolveMarketLogo({symbol:longPressAsset.symbol})?.src} alt="" style={{width:42,height:42,borderRadius:"50%"}}/><div><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:16,color:"#0F0E0B"}}>{longPressAsset.symbol}</div><div style={{fontSize:12,color:T.muted}}>{longPressAsset.name}</div></div></div><div style={{display:"grid",gap:8}}><button onClick={()=>{setLongPressAsset(null);setShowAddMarket(true);}} style={{padding:14,border:0,borderRadius:14,background:"#F7F5EF",textAlign:"left",fontFamily:FONT_HEAD,fontWeight:800}}>Replace</button><button onClick={()=>{removeActiveMarket(longPressAsset.symbol);setLongPressAsset(null);}} style={{padding:14,border:0,borderRadius:14,background:"#FFF0EC",color:T.rust,textAlign:"left",fontFamily:FONT_HEAD,fontWeight:800}}>Close market</button><button onClick={()=>{setReorderMode(true);setLongPressAsset(null);}} style={{padding:14,border:0,borderRadius:14,background:"#F7F5EF",textAlign:"left",fontFamily:FONT_HEAD,fontWeight:800}}>Rearrange</button></div></div></div>}
+      {showAddMarket&&<AddMarketSheet initialReplacementAsset={replacementTarget} onClose={()=>{setShowAddMarket(false);setReplacementTarget(null);}} onSelect={handleAssetSelect} onReplaceMarket={replaceMarket} activeMarkets={displayMarkets} maxActiveMarkets={maxActiveMarkets} onRemoveMarket={removeActiveMarket} seriesMap={seriesMap}/>}
+       {longPressAsset&&<div onClick={()=>setLongPressAsset(null)} style={{position:"fixed",inset:0,zIndex:1200,background:"rgba(15,14,11,.42)",display:"grid",placeItems:"center",padding:24,backdropFilter:"blur(5px)"}}><div onClick={e=>e.stopPropagation()} style={{width:"min(340px,100%)",background:"#fff",borderRadius:26,padding:"12px 18px 18px",boxShadow:"0 22px 70px rgba(0,0,0,.28)",animation:"rx-modal-spring .46s cubic-bezier(.16,1.25,.3,1) both"}}><div style={{width:38,height:4,borderRadius:3,background:"#ddd",margin:"0 auto 18px"}}/><div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}><img src={resolveMarketLogo({symbol:longPressAsset.symbol})?.src} alt="" style={{width:42,height:42,borderRadius:"50%"}}/><div><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:16,color:"#0F0E0B"}}>{longPressAsset.symbol}</div><div style={{fontSize:12,color:T.muted}}>{longPressAsset.name}</div></div></div><div style={{display:"grid",gap:8}}><button onClick={()=>{setReplacementTarget(longPressAsset);setLongPressAsset(null);setShowAddMarket(true);}} style={{padding:14,border:0,borderRadius:14,background:"#F7F5EF",textAlign:"left",fontFamily:FONT_HEAD,fontWeight:800}}>Replace</button><button onClick={()=>{removeActiveMarket(longPressAsset.symbol);setLongPressAsset(null);}} style={{padding:14,border:0,borderRadius:14,background:"#FFF0EC",color:T.rust,textAlign:"left",fontFamily:FONT_HEAD,fontWeight:800}}>Close market</button><button onClick={()=>{setReorderMode(true);setLongPressAsset(null);}} style={{padding:14,border:0,borderRadius:14,background:"#F7F5EF",textAlign:"left",fontFamily:FONT_HEAD,fontWeight:800}}>Rearrange</button></div></div></div>}
        {reorderMode&&<button onClick={()=>setReorderMode(false)} style={{position:"fixed",right:16,bottom:92,zIndex:50,border:0,borderRadius:20,padding:"10px 14px",background:T.ink,color:T.gold,fontFamily:FONT_HEAD,fontWeight:800}}>Done rearranging</button>}
     </div>
   );
