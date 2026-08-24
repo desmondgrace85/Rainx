@@ -49,7 +49,7 @@ function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }
         const open = isMarketOpen(i.cls);
         const combo = signalsMap[i.symbol] || {};
         return (
-          <div key={i.symbol} style={{ background: T.card, border: `1px solid ${i.symbol === activeSymbol ? T.gold : T.cardBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, color: T.paper }}>
+          <div key={i.symbol} style={{ background: T.card, border: `2px solid ${i.symbol === activeSymbol ? T.gold : T.cardBorder}`, boxShadow: i.symbol === activeSymbol ? `0 0 0 3px ${T.gold}22, 0 8px 20px rgba(0,0,0,.12)` : "none", borderRadius: 12, padding: "12px 14px", marginBottom: 8, color: T.paper }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => onSelect(i.symbol)}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: T.paper }}>{i.name}</div>
