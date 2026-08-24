@@ -17,7 +17,6 @@ import SpaceCoinsDashboard from "./SpaceCoinsDashboard";
 import HomeTab from "./HomeTab";
 
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
-import goodbyeLoloAnimation from "./assets/goodbye-lolo.webm";
 import referralAnimation from "./assets/social-media-influencer.json";
 import lottie from "lottie-web";
 import { resolveMarketLogo, resolveMarketDirection, isMarketNotification, FALLBACK_NEWS_LOGO, FALLBACK_RAINX_LOGO, MARKET_NAMES } from "./MarketLogos";
@@ -2907,7 +2906,7 @@ function MainAppContent({ account, onLogout }) {
         <div aria-hidden="true" style={{position:"absolute",width:"min(280px,calc(100% - 64px))",height:"min(322px,calc(100% - 112px))",background:"#000000",borderRadius:28,animation:logoutClosing?"logoutBackingOut .3s ease-in both":"logoutBackingIn .72s cubic-bezier(.22,1,.36,1) both"}} />
         <div onClick={e=>e.stopPropagation()} style={{position:"relative",background:"#FFFFFF",borderRadius:28,padding:"18px 22px",maxWidth:320,width:"100%",textAlign:"center",boxShadow:"0 18px 40px rgba(15,14,11,.3)",animation:logoutClosing?"logoutPopupReverse .3s ease-in both":"logoutPopupSpring .72s cubic-bezier(.22,1,.36,1) both"}}>
           <button onClick={closeLogoutConfirm} aria-label="Close logout dialog" style={{position:"absolute",top:12,right:14,width:28,height:28,background:"none",border:"none",fontSize:22,cursor:"pointer"}}>×</button>
-          <video src={goodbyeLoloAnimation} autoPlay loop muted playsInline preload="auto" aria-label="Goodbye animation" style={{display:"block",width:150,height:118,objectFit:"contain",margin:"0 auto 2px"}} />
+          <video src="/goodbye-lolo.webm" autoPlay loop muted playsInline preload="auto" aria-label="Goodbye animation" style={{display:"block",width:150,height:118,objectFit:"contain",margin:"0 auto 2px"}} />
           <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:18,color:"#17191B",marginBottom:9}}>Leaving already?</div>
           <div style={{fontSize:12.5,color:"#596269",lineHeight:1.55,margin:"0 auto 20px",maxWidth:260}}>Come back soon. There’s always more to discover and earn.</div>
           <div style={{display:"flex",justifyContent:"center",gap:10}}><button onClick={closeLogoutConfirm} style={{minWidth:88,background:"#FFFFFF",border:"1.5px solid #17191B",borderRadius:999,padding:"10px 17px",fontFamily:FONT_HEAD,fontWeight:700,cursor:"pointer"}}>Cancel</button><button onClick={()=>{setShowLogoutConfirm(false);onLogout();}} style={{minWidth:88,background:"#E53935",border:"1.5px solid #C62828",borderRadius:999,padding:"10px 17px",fontFamily:FONT_HEAD,fontWeight:800,color:"#FFFFFF",cursor:"pointer"}}>Log out</button></div>
