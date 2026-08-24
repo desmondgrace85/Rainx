@@ -353,8 +353,8 @@ function MarketSparkline({ data = [], base = 1, width = 92, height = 32 }) {
 // Native-feeling interactive sheet behavior. Dragging is intentionally limited to the
 // handle so the market list keeps its normal vertical scrolling behavior.
 function useBottomSheet(onClose) {
-  const restOffset = 0;
-  const [offset, setOffset] = useState(Math.min(96, Math.round(window.innerHeight * 0.14)));
+  const restOffset = Math.min(72, Math.round(window.innerHeight * 0.08));
+  const [offset, setOffset] = useState(restOffset);
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef(null);
 
@@ -421,8 +421,8 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
   // ── Manage already-active market: Replace or Delete ─────────────────────
   if (mode === "manage" && managedAsset) {
     return (
-      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px", height:"min(88dvh, 760px)", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain", touchAction:"pan-y" }}>
+      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:1000, display:"flex", alignItems:"flex-end", overflow:"hidden" }} onClick={onClose}>
+        <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px", height:"min(92dvh, 760px)", maxHeight:"92dvh", overflowY:"scroll", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"auto", touchAction:"pan-y" }}>
           <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} /></div>
           <div style={{ padding:"0 20px 20px" }}>
             <button onClick={() => { setMode(null); setManagedAsset(null); }} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
