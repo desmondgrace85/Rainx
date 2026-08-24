@@ -906,7 +906,7 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
                                 <div style={{marginTop:4,fontFamily:FONT_HEAD,fontSize:10,fontWeight:700,color:up?"#5EDB78":"#E27661",fontVariantNumeric:"tabular-nums"}}>{Number(price).toFixed(Math.min(asset.digits,2))}</div>
                               </button>;
                             })}
-                             <button onClick={()=>setShowAddMarket(true)} style={{minWidth:0,minHeight:86,borderRadius:13,border:`1px solid ${T.cardBorder}`,backgroundImage:`linear-gradient(180deg,rgba(15,14,11,.18),rgba(15,14,11,.78)),url(${CATEGORY_ART.crypto})`,backgroundSize:"cover",backgroundPosition:"center",color:"#FFFFFF",padding:"5px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textShadow:"0 1px 3px rgba(0,0,0,.75)"}}>
+                             <button onClick={()=>setShowAddMarket(true)} style={{minWidth:0,minHeight:86,borderRadius:13,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"5px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",}}>
                                <div style={{width:25,height:25,borderRadius:"50%",border:`2px solid ${T.gold}`,display:"grid",placeItems:"center",marginBottom:4}}><Plus size={15} color={T.gold}/></div>
                               <div style={{fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800}}>Add Market</div>
                             </button>
