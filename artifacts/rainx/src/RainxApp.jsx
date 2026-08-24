@@ -1,21 +1,23 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Area, ComposedChart, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import {
-  Bell, Home, Briefcase, MessageCircle, MoreHorizontal, Settings, X,
+  Bell, Home, Briefcase, MessageCircle, MoreHorizontal, Settings, X, Repeat2,
   TrendingUp, TrendingDown, Minus, Activity, Send, Calendar as CalendarIcon,
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
   CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet, Landmark, Gift, Trophy,
   Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle, Plus, ChevronDown,
-  BrainCircuit, Cpu, Palette,
+  BrainCircuit, Cpu, Palette, Globe, Trash2, UserX, Download, FileCheck, Cookie, Database,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, formatCount } from "./CommunityTab";
+import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, Badge as CommunityBadge, formatCount } from "./CommunityTab";
 import FullChartView from "./FullChartView";
 import LightweightChart from "./LightweightChart";
 import SpaceCoinsIntro from "./SpaceCoinsIntro";
 import SpaceCoinsDashboard from "./SpaceCoinsDashboard";
+import HomeTab from "./HomeTab";
 
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
+import goodbyeLoloAnimation from "./assets/goodbye-lolo.webm";
 import { resolveMarketLogo, resolveMarketDirection, isMarketNotification, FALLBACK_NEWS_LOGO, FALLBACK_RAINX_LOGO, MARKET_NAMES } from "./MarketLogos";
 
 // ---------- Design tokens ----------
@@ -23,10 +25,10 @@ const T = {
   ink: "#0F0E0B",
   card: "#1C1913",
   cardBorder: "#332C1F",
-  gold: "#FFBE0B",
-  goldBright: "#FFBE0B",
-  goldGradient: "linear-gradient(135deg, #FFBE0B 0%, #F0A800 50%, #D89E00 100%)",
-  goldShine: "linear-gradient(180deg, #FFBE0B 0%, #F0A800 48%, #D89E00 100%)",
+  gold: "#F4D35E",
+  goldBright: "#F4D35E",
+  goldGradient: "linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)",
+  goldShine: "linear-gradient(180deg, #F4D35E 0%, #F4D35E 48%, #F4D35E 100%)",
   sage: "#7A9E86",
   rust: "#B0604A",
   paper: "#F2EDE0",
@@ -38,8 +40,8 @@ let _avatarRefreshTick = 0;
 const _avatarRefreshListeners = new Set();
 function notifyAvatarRefresh() { _avatarRefreshTick++; _avatarRefreshListeners.forEach(fn => fn(_avatarRefreshTick)); }
 
-const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#FFBE0B", goldBright:"#FFBE0B", goldGradient:"linear-gradient(135deg, #FFBE0B 0%, #F0A800 50%, #D89E00 100%)", goldShine:"linear-gradient(180deg, #FFBE0B 0%, #F0A800 48%, #D89E00 100%)", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
-const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#FFBE0B", goldBright:"#FFBE0B", goldGradient:"linear-gradient(135deg, #FFBE0B 0%, #F0A800 50%, #D89E00 100%)", goldShine:"linear-gradient(180deg, #FFBE0B 0%, #F0A800 48%, #D89E00 100%)", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
+const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#F4D35E", goldBright:"#F4D35E", goldGradient:"linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)", goldShine:"linear-gradient(180deg, #F4D35E 0%, #F4D35E 48%, #F4D35E 100%)", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
+const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#F4D35E", goldBright:"#F4D35E", goldGradient:"linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)", goldShine:"linear-gradient(180deg, #F4D35E 0%, #F4D35E 48%, #F4D35E 100%)", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
 const FONT_HEAD = "'Montserrat', sans-serif";
 const FONT_BODY = "'Montserrat', sans-serif";
 
@@ -224,14 +226,14 @@ function CoverCropModal({ file, onConfirm, onCancel, T, FONT_HEAD }) {
     <div style={{ position:'fixed', inset:0, zIndex:400, background:'rgba(0,0,0,0.88)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}
       onPointerMove={onPM} onPointerUp={onPU} onPointerLeave={onPU}>
       <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:15, color:'#fff', marginBottom:14 }}>Drag to position</div>
-      <div style={{ width:DISPLAY_W, height:DISPLAY_H, overflow:'hidden', borderRadius:8, border:'2px solid #FFBE0B', cursor:dragging?'grabbing':'grab', position:'relative', userSelect:'none', touchAction:'none' }}
+      <div style={{ width:DISPLAY_W, height:DISPLAY_H, overflow:'hidden', borderRadius:8, border:'2px solid #F4D35E', cursor:dragging?'grabbing':'grab', position:'relative', userSelect:'none', touchAction:'none' }}
         onPointerDown={onPD}>
         {imgSrc && <img src={imgSrc} style={{ width:DISPLAY_W, height:'auto', position:'absolute', top:offsetY, left:0, pointerEvents:'none', userSelect:'none', draggable:false }} alt='' />}
       </div>
       <div style={{ fontSize:11, color:'rgba(255,255,255,0.35)', marginTop:10, marginBottom:20 }}>Cover photo · 4:1</div>
       <div style={{ display:'flex', gap:12 }}>
         <button onClick={onCancel} style={{ background:'none', border:'1px solid rgba(255,255,255,0.25)', borderRadius:10, padding:'10px 24px', color:'#fff', fontFamily:FONT_HEAD, fontWeight:600, fontSize:13, cursor:'pointer' }}>Cancel</button>
-        <button onClick={confirm} style={{ background:'#FFBE0B', border:'none', borderRadius:10, padding:'10px 24px', color:'#0F0E0B', fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:'pointer' }}>Use photo</button>
+        <button onClick={confirm} style={{ background:'#F4D35E', border:'none', borderRadius:10, padding:'10px 24px', color:'#0F0E0B', fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:'pointer' }}>Use photo</button>
       </div>
       <canvas ref={canvasRef} style={{ display:'none' }} />
     </div>
@@ -886,7 +888,7 @@ function AuthScreen({ onAuthed }) {
           phone: phone.trim() || null,
           country: country.trim() || null,
         }).catch(() => {});
-        recordActivity(data.user.id, "signup");
+        recordActivity(data.user.id, "signup", { userAgent: navigator.userAgent, language: navigator.language, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, platform: navigator.platform });
         // Referral attribution — ?ref=CODE in the URL
         try {
           const refCode = new URLSearchParams(window.location.search).get("ref");
@@ -929,7 +931,7 @@ function AuthScreen({ onAuthed }) {
         setBusy(false);
         return;
       }
-      recordActivity(data.user.id, "login");
+      recordActivity(data.user.id, "login", { userAgent: navigator.userAgent, language: navigator.language, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, platform: navigator.platform });
       onAuthed(data.session);
     }
     setBusy(false);
@@ -938,8 +940,8 @@ function AuthScreen({ onAuthed }) {
   // Local premium palette - scoped to this screen only, doesn't touch the
   // shared T tokens used everywhere else in the app.
   const A = {
-    bg: "#0B0B0B", card: "#171513", gold: "#FFBE0B",
-    goldGrad: "linear-gradient(135deg, #FFBE0B 0%, #F0A800 50%, #D89E00 100%)",
+    bg: "#0B0B0B", card: "#171513", gold: "#F4D35E",
+    goldGrad: "linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)",
     border: "rgba(255,255,255,0.08)", gray: "#B4B4B4",
   };
   const [oauthNotice, setOauthNotice] = useState("");
@@ -951,9 +953,9 @@ function AuthScreen({ onAuthed }) {
       <svg width="100%" height="92" viewBox="0 0 320 92" style={{ display: "block", marginBottom: 4 }}>
         <defs>
           <linearGradient id="authRibbon" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#FFBE0B" />
-            <stop offset="50%" stopColor="#F0A800" />
-            <stop offset="100%" stopColor="#D89E00" />
+            <stop offset="0%" stopColor="#F4D35E" />
+            <stop offset="50%" stopColor="#F4D35E" />
+            <stop offset="100%" stopColor="#F4D35E" />
           </linearGradient>
         </defs>
         <path id="authRibbonPath" d="M6 74 C 55 6, 95 6, 140 46 S 250 84, 306 14" stroke="url(#authRibbon)" strokeWidth="22" fill="none" strokeLinecap="round" />
@@ -1039,7 +1041,7 @@ function AuthScreen({ onAuthed }) {
         {notice && <div style={{ color: "#7A9E86", fontSize: 12, marginBottom: 12 }}>{notice}</div>}
         {error && <div style={{ color: "#E27D6B", fontSize: 12, marginBottom: 12 }}>{error}</div>}
 
-        <button onClick={submit} disabled={busy} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: A.goldGrad, color: "#0B0B0B", border: "none", borderRadius: 14, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1, boxShadow: "0 8px 20px rgba(212,175,99,0.25)" }}>
+        <button onClick={submit} disabled={busy} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", background: A.goldGrad, color: "#0B0B0B", border: "none", borderRadius: 14, padding: "14px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13.5, cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1, boxShadow: "0 8px 20px rgba(244,211,94,0.25)" }}>
           {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"} {!busy && <ArrowRight size={15} />}
         </button>
 
@@ -1208,7 +1210,7 @@ function SubscribeScreen({ account, entitlement, onBack }) {
   if (entitlement.pendingPlan || submitted) {
     return (
       <div style={{ padding: 20, textAlign: "center" }}>
-        <div style={{ width: 64, height: 64, borderRadius: "50%", background: `rgba(198,161,91,0.12)`, border: `2px solid ${T.gold}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+        <div style={{ width: 64, height: 64, borderRadius: "50%", background: `rgba(244,211,94,0.12)`, border: `2px solid ${T.gold}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
           <ShieldCheck size={30} color={T.gold} />
         </div>
         <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 17, color: T.paper, marginBottom: 8 }}>Payment Submitted!</div>
@@ -1308,7 +1310,7 @@ function SubscribeScreen({ account, entitlement, onBack }) {
         <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 10 }}>
           {plan.features.map((f, i) => (
             <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-              <div style={{ width: 22, height: 22, borderRadius: "50%", background: `rgba(198,161,91,0.15)`, border: `1px solid ${T.gold}44`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+              <div style={{ width: 22, height: 22, borderRadius: "50%", background: `rgba(244,211,94,0.15)`, border: `1px solid ${T.gold}44`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
                 <span style={{ fontSize: 11, color: T.gold, fontWeight: 800 }}>✓</span>
               </div>
               <div style={{ flex: 1 }}>
@@ -1376,6 +1378,33 @@ function MainApp({ account, onLogout }) {
   return <MainAppContent account={account} onLogout={onLogout} />;
 }
 
+class HomeTabErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) {
+    console.error("HomeTab crash:", error, info);
+    // Keep the rest of the app usable if an old persisted home value is malformed.
+    // Recovery is handled by the Retry action so React does not reload in a loop.
+  }
+  render() {
+    if (this.state.error) return (
+      <div style={{ minHeight: "60vh", padding: "48px 20px", background: "#F8F9FA", color: "#0F1419", textAlign: "center", fontFamily: FONT_BODY }}>
+        <div style={{ fontSize: 30, marginBottom: 12 }}>RainX</div>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>The home screen could not be refreshed.</div>
+        <div style={{ fontSize: 12, color: "#536471", marginBottom: 18 }}>Your account and other screens are safe.</div>
+        <button onClick={() => {
+          try {
+            ["rainx-active-symbol", "rainx-active-markets", "rainx-sessions", "rainx-home-recovery-attempted"].forEach((key) => localStorage.removeItem(key));
+            sessionStorage.removeItem("rainx-home-recovery-attempted");
+          } catch {}
+          window.location.reload();
+        }} style={{ border: 0, borderRadius: 10, padding: "11px 18px", background: "#F4D35E", color: "#0F1419", fontWeight: 700 }}>Retry</button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
 class MoreTabErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(e) { return { error: String(e) }; }
@@ -1429,9 +1458,23 @@ function CenterNavLogo({ active, onActivate }) {
       onClick={handleActivate}
       className={`rx-center-nav-control${active ? " is-active" : ""}${energized ? " is-energized" : ""}`}
     >
-      <span className="rx-center-nav-stage" aria-hidden="true">
-        <span className="rx-center-nav-aura" />
-        <span className="rx-center-nav-core">
+      <span
+        className="rx-center-nav-stage"
+        aria-hidden="true"
+        style={{ width: 84, height: 84, background: "transparent", transform: "translateY(5px)" }}
+      >
+        <span
+          className="rx-center-nav-aura"
+          style={{ opacity: 0.28, filter: "blur(9px)", boxShadow: "none" }}
+        />
+        <span
+          className="rx-center-nav-core"
+          style={{
+            inset: 12,
+            borderColor: "rgba(255,255,255,0.98)",
+            boxShadow: "0 0 0 4px rgba(255,255,255,0.98), 0 0 12px 5px rgba(244,211,94,0.28), inset 0 1px 3px rgba(255,255,255,0.38), inset 0 0 10px rgba(180,130,30,0.12)",
+          }}
+        >
           <img src={rainxLogoTransparent} alt="" />
         </span>
         <span className="rx-center-nav-ripple rx-center-nav-ripple-one" />
@@ -1525,6 +1568,18 @@ function PullToRefresh({ children }) {
   );
 }
 
+function WalletTab({ account }) {
+  return (
+    <div style={{ minHeight:"100%", background:T.ink, paddingBottom:20 }}>
+      <div style={{ padding:"18px 16px 8px" }}>
+        <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:24, color:T.paper }}>Wallet</div>
+        <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>Your trader wallet, balance and transactions</div>
+      </div>
+      <CreatorWalletScreen account={account} />
+    </div>
+  );
+}
+
 function MainAppContent({ account, onLogout }) {
   const seriesMap = useMultiPriceSeries();
   const seriesMapRef = useRef(seriesMap);
@@ -1542,9 +1597,9 @@ function MainAppContent({ account, onLogout }) {
 
   const [tab, setTab] = useState(() => {
     const { tab: urlTab } = routeRead();
-    if (urlTab && urlTab !== "space-coins") return urlTab;
+    if (urlTab && urlTab !== "space-coins") return urlTab === "markets" ? "wallet" : urlTab;
     const t = lsGet("rainx-tab");
-    return _ROUTE_TABS.includes(t) ? t : "home";
+    return t === "markets" ? "wallet" : (_ROUTE_TABS.includes(t) ? t : "home");
   });
   const [profileFromHeader, setProfileFromHeader] = useState(() => routeRead().flag === "h");
   const [communityProfileOpen, setCommunityProfileOpen] = useState(false);
@@ -1563,10 +1618,9 @@ function MainAppContent({ account, onLogout }) {
   // ── Telegram-style animated navigation ───────────────────────────────────
   const prevTabRef = useRef("home");
   const tabDirRef  = useRef(1);    // 1 = slide from right, −1 = from left
-  const swipeRef   = useRef(null); // edge-swipe touch tracking
 
   const goTab = (key, forcedDir) => {
-    const ORDER = { home: 0, markets: 1, community: 2, more: 3, history: 3, scalping: 3, subscribe: 3 };
+    const ORDER = { home: 0, wallet: 1, community: 2, more: 3, history: 3, scalping: 3, subscribe: 3 };
     tabDirRef.current  = forcedDir ?? ((ORDER[key] ?? 0) >= (ORDER[prevTabRef.current] ?? 0) ? 1 : -1);
     prevTabRef.current = key;
     setTab(key);
@@ -1604,11 +1658,12 @@ function MainAppContent({ account, onLogout }) {
           });
         }
       });
-      return saved;
+      return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
     } catch { return {}; }
   });
-  // Derive the active session (for display) from the currently viewed symbol
-  const session = sessions[activeSymbol] || null;
+  // Derive the active session (for display) from the currently viewed symbol.
+  // Older builds could persist null or another non-map value here.
+  const session = sessions && typeof sessions === "object" ? (sessions[activeSymbol] || null) : null;
   const activeInst = ALL_ASSETS.find(i => i.symbol === (session?.symbol || activeSymbol)) || ALL_ASSETS.find(i => i.symbol === "XAUUSD");
   const inst = activeInst;
   const marketOpen = isMarketOpen(inst.cls);
@@ -1657,7 +1712,7 @@ function MainAppContent({ account, onLogout }) {
   
   // ─── Active markets (max 3 the user explicitly monitors) ────────────────────
   const [activeMarkets, setActiveMarkets] = useState(() => {
-    try { return JSON.parse(lsGet("rainx-active-markets") || "[]"); } catch { return []; }
+    try { const saved = JSON.parse(lsGet("rainx-active-markets") || "[]"); return Array.isArray(saved) ? saved.filter((symbol) => typeof symbol === "string") : []; } catch { return []; }
   });
   const [lastMarketReset, setLastMarketReset] = useState(() => lsGet("rxMarketResetDate") || "");
   const MAX_ACTIVE_MARKETS = 3;
@@ -1669,6 +1724,14 @@ function MainAppContent({ account, onLogout }) {
       lsSet("rainx-active-markets", JSON.stringify(next));
       return next;
     });
+  }, []);
+  const replaceActiveMarket = useCallback((oldSymbol, newSymbol) => {
+    setActiveMarkets(prev => { const index = prev.indexOf(oldSymbol); if (index < 0 || prev.includes(newSymbol)) return prev; const next = [...prev]; next[index] = newSymbol; lsSet("rainx-active-markets", JSON.stringify(next)); return next; });
+    setSessions(prev => { const next = { ...prev }; delete next[oldSymbol]; return next; });
+  }, []);
+  const reorderActiveMarkets = useCallback((symbols) => {
+    const next = symbols.filter((symbol, index, list) => list.indexOf(symbol) === index).slice(0, MAX_ACTIVE_MARKETS);
+    setActiveMarkets(next); lsSet("rainx-active-markets", JSON.stringify(next));
   }, []);
   const removeActiveMarket = useCallback((symbol) => {
     setActiveMarkets(prev => {
@@ -2062,6 +2125,38 @@ function MainAppContent({ account, onLogout }) {
     }).catch(() => {});
   }, [account, entitlement?.tier, enqueueInAppNotification]);
 
+  // Native Capacitor/FCM foreground delivery uses the same routing rules as
+  // service-worker delivery. Android shows the system notification while the
+  // app is backgrounded; when the app is open we surface it in-app here.
+  useEffect(() => {
+    if (!account?.id) return undefined;
+    const handleNativePush = (event) => {
+      const notification = event?.detail || {};
+      const data = notification?.data || {};
+      const kind = String(data.kind || data.category || "").toLowerCase();
+      const category = String(data.category || "").toLowerCase();
+      const isCommunity = kind === "community" || ["like", "comment", "comment_reply", "reply", "comment_like", "follow", "repost", "mention", "chat"].includes(kind) || category === "community" || category === "chat";
+      if (isCommunity) {
+        window.dispatchEvent(new CustomEvent("rainx:community-notification-received"));
+        return;
+      }
+      if (document.visibilityState === "visible") {
+        enqueueInAppNotification({
+          id: data.notificationId || data.messageId || `${notification.title || "RainX"}::${notification.body || ""}`,
+          title: notification.title || "RainX",
+          body: notification.body || "",
+          type: data.kind || data.category || "update",
+          read: false,
+          time: new Date().toLocaleTimeString(),
+          created_at: new Date().toISOString(),
+          data,
+        });
+      }
+    };
+    window.addEventListener("rainx:native-push-received", handleNativePush);
+    return () => window.removeEventListener("rainx:native-push-received", handleNativePush);
+  }, [account?.id, enqueueInAppNotification]);
+
   // ─── One account-scoped notification bridge for every RainX surface ────────
   useEffect(() => {
     if (!account?.id) return undefined;
@@ -2162,52 +2257,7 @@ function MainAppContent({ account, onLogout }) {
     return () => { supabase.removeChannel(channel); };
   }, [account?.id, enqueueInAppNotification]);
 
-  // ─── Register service worker push subscription ──────────────────────────
-  useEffect(() => {
-    if (!account?.id || !("serviceWorker" in navigator) || !("PushManager" in window)) return;
-    const apiBase = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
-    (async () => {
-      try {
-        const reg = await navigator.serviceWorker.ready;
-        const existing = await reg.pushManager.getSubscription();
-        if (existing) {
-          // Re-sync existing subscription with backend on login
-          fetch(`${apiBase}/api/push/subscribe`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ subscription: existing.toJSON(), userId: account.id, activeMarkets }),
-          }).catch(() => {});
-          return;
-        }
-        // No existing subscription — ask for permission and create one
-        const permission = Notification.permission === "granted"
-          ? "granted"
-          : await Notification.requestPermission().catch(() => "denied");
-        if (permission !== "granted") return;
-
-        // Fetch VAPID public key from backend
-        const keyRes = await fetch(`${apiBase}/api/push/keys`).then(r => r.ok ? r.json() : null).catch(() => null);
-        const vapidPublicKey = keyRes?.publicKey;
-        if (!vapidPublicKey) return;
-
-        // Convert base64url VAPID key → Uint8Array (required by browsers)
-        const b64 = vapidPublicKey.replace(/-/g, "+").replace(/_/g, "/").padEnd(
-          vapidPublicKey.length + ((4 - vapidPublicKey.length % 4) % 4), "="
-        );
-        const serverKey = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-
-        const subscription = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: serverKey,
-        });
-        fetch(`${apiBase}/api/push/subscribe`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subscription: subscription.toJSON(), userId: account.id, activeMarkets }),
-        }).catch(() => {});
-      } catch { /* push not supported in this environment */ }
-    })();
-  }, [account?.id]);
+  // Native Capacitor/FCM is the only notification transport in the mobile app.
 
   useEffect(() => {
     if (!activeToast && toastQueue.length > 0) {
@@ -2615,7 +2665,7 @@ function MainAppContent({ account, onLogout }) {
 
   return (
     <PullToRefresh>
-      <div style={{ minHeight: "100dvh", background: T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative", isolation: "isolate" }}>
+      <div className="rx-app-root" style={{ minHeight: "100dvh", background: tab === "home" ? "#F8F9FA" : T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative", isolation: "isolate", overscrollBehaviorY: "none", touchAction: "pan-y" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
@@ -2625,12 +2675,15 @@ function MainAppContent({ account, onLogout }) {
         @keyframes priceFlash { 0% { opacity:0.4; } 100% { opacity:1; } }
         @keyframes rx-slide-in-right { from { transform:translateX(40px); opacity:0; } to { transform:translateX(0); opacity:1; } }
         @keyframes rx-slide-in-left  { from { transform:translateX(-40px); opacity:0; } to { transform:translateX(0); opacity:1; } }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }\n        @keyframes rx-breathe { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.68; transform:scale(.985); } }
         .rx-slide-right { animation: rx-slide-in-right 0.22s cubic-bezier(0.25,0.46,0.45,0.94) backwards; }
         .rx-slide-left  { animation: rx-slide-in-left  0.22s cubic-bezier(0.25,0.46,0.45,0.94) backwards; }
         .hide-scroll::-webkit-scrollbar { display:none; }
         .hide-scroll { -ms-overflow-style:none; scrollbar-width:none; }
-        .scroll-hint::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,rgba(198,161,91,0.5),transparent); opacity:0; transition:opacity 0.3s; pointer-events:none; }
+        /* Disable rubber-band overscroll only; scrolling and pull-to-refresh remain enabled. */
+        .rx-app-root { overscroll-behavior-y: none; }
+        .rx-standalone-route { overscroll-behavior-y: none; }
+        .scroll-hint::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,rgba(244,211,94,0.5),transparent); opacity:0; transition:opacity 0.3s; pointer-events:none; }
         .scroll-hint.scrolling::after { opacity:1; }
       `}</style>
 
@@ -2640,15 +2693,11 @@ function MainAppContent({ account, onLogout }) {
         onOpen={openNotificationTarget}
       />
 
-      {tab === "home" && <div style={{ background: T.card, borderBottom: `1px solid ${T.cardBorder}`, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20 }}>
+      {tab === "home" && <div style={{ background: "transparent", borderBottom: "none", padding: "16px 18px 14px", minHeight: 82, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 20, boxShadow: "none" }}>
         {/* ── Profile avatar trigger ── */}
           <button onClick={() => { setProfileFromHeader(true); setMorePage("profile-menu"); routeWrite(tab, "profile-menu", "h"); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
               <HeaderAvatar account={account} morePage={morePage} T={T} />
             </button>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: FONT_HEAD, fontSize: 19, fontWeight: 800, color: T.goldBright, letterSpacing: -0.3 }}>RainX</div>
-          <div style={{ fontSize: 9.5, color: T.muted, fontWeight: 600, marginTop: -2 }}>Powered by Raina AI</div>
-        </div>
         <button onClick={() => {
           setShowNotifPanel(true);
           const unreadIds = notifications.filter((n) => !n.read).map((n) => n.id);
@@ -2656,8 +2705,8 @@ function MainAppContent({ account, onLogout }) {
           if (account?.id && unreadIds.length) {
             supabase.from("user_notifications").update({ read: true }).eq("user_id", account.id).in("id", unreadIds).then(() => {}, () => {});
           }
-        }} style={{ position: "relative", background: "none", border: "none", color: T.paper, cursor: "pointer" }}>
-          <Bell size={20} />
+        }} style={{ position: "relative", background: "none", border: "none", color: "#0F0E0B", cursor: "pointer", padding: 4 }}>
+          <Bell size={24} strokeWidth={1.8} fill="#0F0E0B" color="#0F0E0B" />
           {unreadCount > 0 && (
             <span style={{ position: "absolute", top: -6, right: -8, background: T.rust, color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 10, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>
               {unreadCount > 99 ? "99+" : unreadCount}
@@ -2685,25 +2734,9 @@ function MainAppContent({ account, onLogout }) {
         key={tab}
         className={tabDirRef.current >= 0 ? "rx-slide-right" : "rx-slide-left"}
         style={{ paddingBottom: 78 }}
-        onTouchStart={(e) => {
-          const x = e.touches[0].clientX;
-          swipeRef.current = (x < 28 || x > window.innerWidth - 28)
-            ? { x, y: e.touches[0].clientY } : null;
-        }}
-        onTouchEnd={(e) => {
-          if (!swipeRef.current) return;
-          const dx = e.changedTouches[0].clientX - swipeRef.current.x;
-          const dy = Math.abs(e.changedTouches[0].clientY - swipeRef.current.y);
-          swipeRef.current = null;
-          if (Math.abs(dx) < 45 || dy > 100) return;
-          const tabs = ["home", "markets", "games", "community", "more"];
-          const ci = tabs.indexOf(tab);
-          if (dx < 0 && ci < tabs.length - 1) goTab(tabs[ci + 1]);
-          else if (dx > 0 && ci > 0)          goTab(tabs[ci - 1]);
-        }}
       >
-        {tab === "home" && <HomeTab inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessions={sessions} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} seriesMap={seriesMap} signalsMap={signalsMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} />}
-        {tab === "markets" && <MarketsTab seriesMap={seriesMap} signalsMap={signalsMap} activeSymbol={activeSymbol} onSelect={(s) => { setActiveSymbol(s); goTab("home", -1); }} themeMode={themeMode} />}
+        {tab === "home" && <HomeTabErrorBoundary><HomeTab account={account} inst={inst} marketOpen={marketOpen} last={last} changePct={changePct} series={series} activeSymbol={activeSymbol} setActiveSymbol={setActiveSymbol} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} session={session} sessions={sessions} sessionSecsLeft={sessionSecsLeft} startAnalysisSession={startAnalysisSession} seriesMap={seriesMap} signalsMap={signalsMap} themeMode={themeMode} activeMarkets={activeMarkets} addActiveMarket={addActiveMarket} removeActiveMarket={removeActiveMarket} replaceActiveMarket={replaceActiveMarket} reorderActiveMarkets={reorderActiveMarkets} maxActiveMarkets={MAX_ACTIVE_MARKETS} resetMarkets={resetMarkets} lastMarketReset={lastMarketReset} /></HomeTabErrorBoundary>}
+        {tab === "wallet" && <WalletTab account={account} />}
         {tab === "history" && <HistoryTab account={account} entitlement={entitlement} onSubscribe={() => goTab("subscribe")} />}
         {tab === "subscribe" && <SubscribeScreen account={account} entitlement={entitlement} onBack={() => goTab("more", -1)} />}
         {tab === "more" && <MoreTabErrorBoundary><MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} activeMarkets={activeMarkets} /></MoreTabErrorBoundary>}
@@ -2712,7 +2745,7 @@ function MainAppContent({ account, onLogout }) {
 
       {/* ── Profile overlay — opens over any tab when accessed from header/sidebar ── */}
       {profileFromHeader && morePage && tab !== "more" && (
-        <div style={{ position:"fixed", inset:0, zIndex:500, background:T.ink, overflowY:"auto" }}>
+        <div className="rx-standalone-route" style={{ background:T.ink }}>
           <MoreTabErrorBoundary>
             <MoreTab autoScan={autoScan} setAutoScan={setAutoScan} analysis={activeSignal} inst={inst} last={last} account={account} onLogout={onLogout} onLogoutConfirm={() => setShowLogoutConfirm(true)} setTab={goTab} entitlement={entitlement} themeMode={themeMode} setThemeMode={setThemeMode} morePage={morePage} setMorePage={setMorePage} setProfileFromHeader={setProfileFromHeader} activeMarkets={activeMarkets} />
           </MoreTabErrorBoundary>
@@ -2882,20 +2915,18 @@ function MainAppContent({ account, onLogout }) {
 
       {/* ── Logout confirmation modal ── */}
       {showLogoutConfirm && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px" }}>
-          <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:24, maxWidth:360, width:"100%" }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:10 }}>Log Out of RainX?</div>
-            <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.8, marginBottom:20 }}>
-              If you log out, you will stop receiving:<br/>
-              <span style={{ color:T.paper }}>• Live trading signals &amp; Raina AI alerts</span><br/>
-              <span style={{ color:T.paper }}>• TP / SL hit notifications</span><br/>
-              <span style={{ color:T.paper }}>• CPI, NFP &amp; economic news updates</span><br/>
-              <span style={{ color:T.paper }}>• Community mentions &amp; replies</span><br/><br/>
-              You can log back in at any time.
+        <div onClick={() => setShowLogoutConfirm(false)} style={{ position:"fixed", inset:0, background:T.gold, zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px", animation:"logoutOverlayIn 0.28s ease-out" }}>
+          <style>{"@keyframes logoutOverlayIn { from { opacity:0 } to { opacity:1 } } @keyframes logoutPopupSpring { 0% { transform:translateY(34px) scale(.82); opacity:0 } 60% { transform:translateY(-5px) scale(1.025); opacity:1 } 82% { transform:translateY(2px) scale(.99) } 100% { transform:translateY(0) scale(1); opacity:1 } }"}</style>
+          <div onClick={e => e.stopPropagation()} style={{ position:"relative", background:"#FFFFFF", borderRadius:28, padding:"20px 22px 18px", maxWidth:320, width:"100%", textAlign:"center", boxShadow:"0 18px 40px rgba(15,14,11,.16)", animation:"logoutPopupSpring .72s cubic-bezier(.22,1,.36,1) both" }}>
+            <button onClick={() => setShowLogoutConfirm(false)} aria-label="Close logout dialog" style={{ position:"absolute", top:12, right:14, width:28, height:28, display:"grid", placeItems:"center", background:"none", border:"none", color:"#17191B", fontSize:22, lineHeight:1, cursor:"pointer" }}>×</button>
+            <video src={goodbyeLoloAnimation} autoPlay loop muted playsInline aria-label="Goodbye animation" style={{ display:"block", width:132, height:104, objectFit:"contain", margin:"0 auto 4px" }} />
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, lineHeight:1.2, color:"#17191B", marginBottom:9 }}>Leaving already?</div>
+            <div style={{ fontSize:12.5, color:"#596269", lineHeight:1.55, margin:"0 auto 20px", maxWidth:260 }}>
+              Come back soon. There’s always more to discover and earn.
             </div>
-            <div style={{ display:"flex", gap:10 }}>
-              <button onClick={() => setShowLogoutConfirm(false)} style={{ flex:1, background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, cursor:"pointer" }}>Cancel</button>
-              <button onClick={() => { setShowLogoutConfirm(false); onLogout(); }} style={{ flex:1, background:"#E53935", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer" }}>Log Out</button>
+            <div style={{ display:"flex", justifyContent:"center", gap:10 }}>
+              <button onClick={() => setShowLogoutConfirm(false)} style={{ minWidth:88, background:"#FFFFFF", border:"1.5px solid #17191B", borderRadius:999, padding:"10px 17px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:12.5, color:"#17191B", cursor:"pointer" }}>Cancel</button>
+              <button onClick={() => { setShowLogoutConfirm(false); onLogout(); }} style={{ minWidth:88, background:T.gold, border:"1.5px solid #F4D35E", borderRadius:999, padding:"10px 17px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, color:"#17191B", cursor:"pointer" }}>Log out</button>
             </div>
           </div>
         </div>
@@ -2910,12 +2941,11 @@ function MainAppContent({ account, onLogout }) {
                 <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z M9 21V12h6v9z"/>
               </svg>
             )},
-            { key: "markets", label: "Markets", icon: (active) => (
+            { key: "wallet", label: "Wallet", icon: (active) => (
               <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "none" : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                <rect x="4" y="13" width="3" height="7" rx="0.8"/>
-                <rect x="10.5" y="8" width="3" height="12" rx="0.8"/>
-                <rect x="17" y="4" width="3" height="16" rx="0.8"/>
-                <polyline points="5.5 10 10 6.5 14 9.5 19 5"/>
+                <path d="M3.5 7.5A2.5 2.5 0 0 1 6 5h12.5A2.5 2.5 0 0 1 21 7.5v9A2.5 2.5 0 0 1 18.5 19H6a2.5 2.5 0 0 1-2.5-2.5z"/>
+                <path d="M3.5 8h14.5a3 3 0 0 1 3 3v1.5h-5.5a2 2 0 0 0 0 4H21"/>
+                <circle cx="16.5" cy="14.5" r="0.9" fill="currentColor"/>
               </svg>
             )},
             { key: "space-coins", center: true },
@@ -2929,9 +2959,10 @@ function MainAppContent({ account, onLogout }) {
             )},
             { key: "more", label: "More", icon: (active) => (
               <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "none" : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="5" cy="12" r="1.4"/>
-                <circle cx="12" cy="12" r="1.4"/>
-                <circle cx="19" cy="12" r="1.4"/>
+                <rect x="4" y="4" width="6" height="6" rx="1.2"/>
+                <rect x="14" y="4" width="6" height="6" rx="1.2"/>
+                <rect x="4" y="14" width="6" height="6" rx="1.2"/>
+                <rect x="14" y="14" width="6" height="6" rx="1.2"/>
               </svg>
             )},
           ].map(({ key, label, icon, center }) => {
@@ -2952,9 +2983,9 @@ function MainAppContent({ account, onLogout }) {
                   <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true">
                     <defs>
                       <linearGradient id="rxNavGold" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#FFBE0B"/>
-                        <stop offset="50%" stopColor="#F0A800"/>
-                        <stop offset="100%" stopColor="#D89E00"/>
+                        <stop offset="0%" stopColor="#F4D35E"/>
+                        <stop offset="50%" stopColor="#F4D35E"/>
+                        <stop offset="100%" stopColor="#F4D35E"/>
                       </linearGradient>
                     </defs>
                   </svg>
@@ -3065,7 +3096,7 @@ function CandlestickChart({ candles, overlays, inst, containerHeight = 260 }) {
       const WBEAR = isDarkCanvas ? "#9ca3af" : "#374151";
       const GRID  = isDarkCanvas ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.065)";
       const TLBL  = isDarkCanvas ? "rgba(220,225,235,0.55)" : "rgba(18,18,42,0.5)";
-      const GOLD  = T.gold || "#FFBE0B";
+      const GOLD  = T.gold || "#F4D35E";
 
       // ── Dashed horizontal grid lines ─────────────────────────────────────
       ctx.setLineDash([3, 4]); ctx.strokeStyle = GRID; ctx.lineWidth = 1;
@@ -3142,7 +3173,7 @@ function CandlestickChart({ candles, overlays, inst, containerHeight = 260 }) {
       overlays.forEach(o => {
         if (o.type !== "entry_zone") return;
         const y1 = toY(o.priceHigh), y2 = toY(o.priceLow);
-        ctx.fillStyle = "rgba(198,161,91,0.09)";
+        ctx.fillStyle = "rgba(244,211,94,0.09)";
         ctx.fillRect(pad.left, y1, cW, y2 - y1);
         [y1, y2].forEach(y => {
           ctx.beginPath(); ctx.strokeStyle = GOLD; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
@@ -3297,230 +3328,6 @@ function roundRect(ctx, x, y, w, h, r) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Add Market bottom sheet — supports add, replace when full, and manage active
 // ─────────────────────────────────────────────────────────────────────────────
-function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets = [], maxActiveMarkets = 3, onRemoveMarket }) {
-  const [category, setCategory] = useState(null);
-  // mode: null = category grid | "manage" = replace/delete active | "pick_replacement" = pick who to replace
-  const [mode, setMode] = useState(null);
-  const [managedAsset, setManagedAsset] = useState(null);   // asset being managed or new asset wanting a slot
-  const atLimit = activeMarkets.length >= maxActiveMarkets;
-
-  // ── Manage already-active market: Replace or Delete ─────────────────────
-  if (mode === "manage" && managedAsset) {
-    return (
-      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:500, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
-          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
-          <div style={{ padding:"0 20px 20px" }}>
-            <button onClick={() => { setMode(null); setManagedAsset(null); }} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
-              <ChevronLeft size={16} /><span style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:700 }}>Back</span>
-            </button>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:3 }}>{managedAsset.symbol}</div>
-            <div style={{ fontSize:12, color:T.muted, marginBottom:22 }}>{managedAsset.name} · Currently active</div>
-            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              <button onClick={() => { setMode("pick_category_for_replace"); setCategory(null); }} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"16px", textAlign:"left", cursor:"pointer" }}>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Replace with another market</div>
-                <div style={{ fontSize:12, color:T.muted, marginTop:3 }}>Swap {managedAsset.symbol} with a different market</div>
-              </button>
-              <button onClick={() => { onRemoveMarket(managedAsset.symbol); onClose(); }} style={{ background:`${T.rust}12`, border:`1px solid ${T.rust}44`, borderRadius:12, padding:"16px", textAlign:"left", cursor:"pointer" }}>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.rust }}>Remove market</div>
-                <div style={{ fontSize:12, color:T.muted, marginTop:3 }}>Stop analyzing {managedAsset.symbol}</div>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Pick new replacement market (category → asset) ───────────────────────
-  if (mode === "pick_category_for_replace" || mode === "pick_new_when_full") {
-    const backMode = mode;
-    if (!category) {
-      return (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:500, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-          <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
-            <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
-            <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:10 }}>
-              <button onClick={() => { setMode(backMode === "pick_category_for_replace" ? "manage" : null); }} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
-              <div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>
-                  {backMode === "pick_category_for_replace" ? `Replace ${managedAsset?.symbol}` : "Select replacement market"}
-                </div>
-                <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Choose a category</div>
-              </div>
-            </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 16px" }}>
-              {ASSET_CATALOG.map(cat => (
-                <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"18px 14px", textAlign:"left", cursor:"pointer" }}>
-                  <div style={{ fontSize:22, marginBottom:8 }}>{cat.emoji}</div>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{cat.label}</div>
-                  <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>{cat.assets.length} markets</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:500, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
-          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
-          <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:12 }}>
-            <button onClick={() => setCategory(null)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
-            <div>
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>{category.label}</div>
-              <div style={{ fontSize:12, color:T.muted }}>
-                {backMode === "pick_category_for_replace" ? `Replacing ${managedAsset?.symbol}` : "Pick market to add"}
-              </div>
-            </div>
-          </div>
-          <div style={{ padding:"0 16px", display:"flex", flexDirection:"column", gap:8 }}>
-            {category.assets.map(asset => {
-              const alreadyActive = activeMarkets.includes(asset.symbol);
-              const isSelf = asset.symbol === managedAsset?.symbol;
-              if (isSelf) return null;
-              return (
-                <button key={asset.symbol} disabled={alreadyActive} onClick={() => {
-                  if (backMode === "pick_category_for_replace") {
-                    onRemoveMarket(managedAsset.symbol);
-                    onSelect(asset);
-                  } else {
-                    // pick_new_when_full: need to pick which to remove
-                    setManagedAsset(asset); // new asset wanting a slot
-                    setMode("pick_who_to_replace");
-                    setCategory(null);
-                  }
-                }} style={{ background:T.card, border:`1px solid ${alreadyActive ? T.gold : T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:alreadyActive ? "default" : "pointer", opacity:alreadyActive ? 0.45 : 1 }}>
-                  <div style={{ textAlign:"left" }}>
-                    <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{asset.symbol}</div>
-                    <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{asset.name}</div>
-                  </div>
-                  {alreadyActive
-                    ? <div style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.gold}22`, borderRadius:6, padding:"3px 8px" }}>Active</div>
-                    : <ChevronRight size={16} color={T.muted} />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Pick which active market to evict (when 3 are full and user wants a 4th) ─
-  if (mode === "pick_who_to_replace" && managedAsset) {
-    return (
-      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:500, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px" }}>
-          <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} /></div>
-          <div style={{ padding:"0 20px 20px" }}>
-            <button onClick={() => setMode("pick_new_when_full")} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
-              <ChevronLeft size={16} /><span style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:700 }}>Back</span>
-            </button>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:3 }}>Replace a Market</div>
-            <div style={{ fontSize:12, color:T.muted, marginBottom:18 }}>Choose which market to replace with <strong style={{ color:T.paper }}>{managedAsset.symbol}</strong></div>
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {activeMarkets.map(sym => {
-                const a = ALL_ASSETS.find(x => x.symbol === sym);
-                if (!a) return null;
-                return (
-                  <button key={sym} onClick={() => { onRemoveMarket(sym); onSelect(managedAsset); }} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
-                    <div style={{ textAlign:"left" }}>
-                      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{a.symbol}</div>
-                      <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{a.name}</div>
-                    </div>
-                    <div style={{ fontSize:10, color:T.rust, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.rust}22`, borderRadius:6, padding:"3px 8px" }}>Replace</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Default: category grid + asset list ─────────────────────────────────
-  return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:500, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background:T.ink, borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", maxHeight:"85vh", overflowY:"auto" }}>
-        <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}>
-          <div style={{ width:36, height:4, borderRadius:2, background:T.cardBorder }} />
-        </div>
-        {!category ? (
-          <>
-            <div style={{ padding:"0 20px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>Add Market</div>
-                <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Choose a market · {activeMarkets.length}/{maxActiveMarkets} active</div>
-              </div>
-              <button onClick={onClose} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><X size={20} /></button>
-            </div>
-            {atLimit && (
-              <div style={{ margin:"0 16px 14px", background:`${T.gold}11`, border:`1px solid ${T.gold}44`, borderRadius:10, padding:"10px 14px", fontSize:12, color:T.gold, fontFamily:FONT_HEAD, fontWeight:600 }}>
-                3 markets active. Tap an active market below to replace or remove it.
-              </div>
-            )}
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 16px" }}>
-              {ASSET_CATALOG.map(cat => (
-                <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"18px 14px", textAlign:"left", cursor:"pointer" }}>
-                  <div style={{ fontSize:22, marginBottom:8 }}>{cat.emoji}</div>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{cat.label}</div>
-                  <div style={{ fontSize:11, color:T.muted, marginTop:3 }}>{cat.assets.length} markets</div>
-                </button>
-              ))}
-            </div>
-          </>
-        ) : (
-          <>
-            <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:12 }}>
-              <button onClick={() => setCategory(null)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
-              <div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>{category.label}</div>
-                <div style={{ fontSize:12, color:T.muted }}>Select a market</div>
-              </div>
-            </div>
-            <div style={{ padding:"0 16px", display:"flex", flexDirection:"column", gap:8 }}>
-              {category.assets.map(asset => {
-                const alreadyActive = activeMarkets.includes(asset.symbol);
-                return (
-                  <button key={asset.symbol} onClick={() => {
-                    if (alreadyActive) {
-                      setManagedAsset(asset);
-                      setMode("manage");
-                    } else if (atLimit) {
-                      setManagedAsset(asset);
-                      setMode("pick_who_to_replace");
-                    } else {
-                      onSelect(asset);
-                    }
-                  }} style={{ background:T.card, border:`1px solid ${alreadyActive ? T.gold : T.cardBorder}`, borderRadius:12, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", cursor:"pointer" }}>
-                    <div style={{ textAlign:"left" }}>
-                      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{asset.symbol}</div>
-                      <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>{asset.name}</div>
-                    </div>
-                    {alreadyActive
-                      ? <div style={{ fontSize:10, color:T.gold, fontFamily:FONT_HEAD, fontWeight:700, background:`${T.gold}22`, borderRadius:6, padding:"3px 8px" }}>Active ›</div>
-                      : (atLimit
-                        ? <div style={{ fontSize:10, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600, background:`${T.cardBorder}`, borderRadius:6, padding:"3px 8px" }}>Replace</div>
-                        : <ChevronRight size={16} color={T.muted} />)}
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Duration picker modal
-// ─────────────────────────────────────────────────────────────────────────────
-// DurationPicker retained for reference but no longer shown in the UI.
-// Raina AI analyzes continuously — users do not select an analysis duration.
 function DurationPicker({ asset, onSelect, onClose }) {
   return (
     <div style={{ display:"none" }}>
@@ -3574,9 +3381,9 @@ function GamesTab() {
         @keyframes games-fade-in { from { opacity:0; } to { opacity:1; } }
         @keyframes games-scale-in { from { opacity:0; transform:scale(.82); } to { opacity:1; transform:scale(1); } }
         @keyframes games-pulse-ring {
-          0% { transform:scale(.95); box-shadow:0 0 0 0 rgba(255,190,11,.7); }
-          70% { transform:scale(1); box-shadow:0 0 0 10px rgba(255,190,11,0); }
-          100% { transform:scale(.95); box-shadow:0 0 0 0 rgba(255,190,11,0); }
+          0% { transform:scale(.95); box-shadow:0 0 0 0 rgba(244,211,94,.7); }
+          70% { transform:scale(1); box-shadow:0 0 0 10px rgba(244,211,94,0); }
+          100% { transform:scale(.95); box-shadow:0 0 0 0 rgba(244,211,94,0); }
         }
         @keyframes games-shimmer { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
         .games-reveal { opacity:0; animation:games-fade-up .6s ease-out forwards; }
@@ -3585,7 +3392,7 @@ function GamesTab() {
         .games-scroll-hide { scrollbar-width:none; -ms-overflow-style:none; }
       `}</style>
 
-      <header style={{ position: "sticky", top: 0, zIndex: 20, background: "rgba(5,5,5,.82)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(198,161,91,.2)", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <header style={{ position: "sticky", top: 0, zIndex: 20, background: "rgba(5,5,5,.82)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(244,211,94,.2)", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ color: T.gold, fontSize: 20 }}>✦</span>
           <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: "#F2EDE0" }}>RainX</span>
@@ -3601,7 +3408,7 @@ function GamesTab() {
           <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(to top, #050505, rgba(5,5,5,.45) 58%, rgba(5,5,5,.3))" }} />
           <div style={{ position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(to bottom, rgba(5,5,5,.45), transparent 35%)" }} />
           <img src={gamesHeroRocket} alt="Gold rocket launching" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
-          <div style={{ position: "absolute", inset: 0, zIndex: 2, opacity: .25, background: "radial-gradient(circle at 50% 50%, rgba(255,190,11,.15), transparent 45%)", animation: "games-shimmer 15s linear infinite" }} />
+          <div style={{ position: "absolute", inset: 0, zIndex: 2, opacity: .25, background: "radial-gradient(circle at 50% 50%, rgba(244,211,94,.15), transparent 45%)", animation: "games-shimmer 15s linear infinite" }} />
         </div>
         <div className={pageReady ? "games-fade" : ""} style={{ position: "relative", zIndex: 3, textAlign: "center" }}>
           <h1 style={{ fontFamily: FONT_HEAD, fontSize: 38, lineHeight: 1.05, fontWeight: 800, color: "#F2EDE0", margin: "0 0 8px", textShadow: `0 0 14px ${T.gold}66` }}>Play Smart.<br />Win More.</h1>
@@ -3722,409 +3529,10 @@ function GamesTab() {
     </div>
   );
 }
-
-// Home Tab — main redesigned screen
-// ─────────────────────────────────────────────────────────────────────────────
-  */
+*/
 }
-function HomeTab({ inst, marketOpen, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessions, sessionSecsLeft, startAnalysisSession, seriesMap, signalsMap, themeMode, activeMarkets = [], addActiveMarket, removeActiveMarket, maxActiveMarkets = 3 }) {
-  const [showAddMarket, setShowAddMarket] = useState(false);
-  const [showActivity, setShowActivity] = useState(false);
-  const [showFullChart, setShowFullChart] = useState(false);
-  const [activeChartTf, setActiveChartTf] = useState("15m");   // chart candle timeframe — does NOT control AI analysis duration
-  const [sigTf, setSigTf] = useState("15m");   // signal card timeframe tab
 
-  // Sync dark canvas flag
-  setIsDarkCanvas(T.ink === "#0F0E0B");
-
-  // OHLCV candles from tick series (fallback while real candles load)
-  const candles = React.useMemo(() => ticksToCandles(series || [], 70), [series]);
-
-  // Real candles from Raina AI backend — keyed to selected timeframe
-  const BASE_URL_H = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
-  const apiInterval = ({ "1H": "1h", "2H": "2h", "4H": "4h", "1D": "1d" }[activeChartTf] || activeChartTf);
-  const [realCandles, setRealCandles] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    const sym = session?.symbol || activeSymbol;
-    if (!sym) return;
-    fetch(`${BASE_URL_H}/api/candles?symbol=${encodeURIComponent(sym)}&interval=${apiInterval}&limit=500`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (!cancelled && data) {
-          // API returns { values: [{datetime, open, high, low, close}] } newest-first
-          const vals = Array.isArray(data) ? data : (data.values || []);
-          // Convert to LightweightChart tick format (t in ms) — oldest-first
-          const converted = vals.slice().reverse().map((c) => ({
-            t: new Date(c.datetime || c.time || 0).getTime(),
-            open: +c.open, high: +c.high, low: +c.low, close: +c.close,
-          })).filter((c) => c.t > 0 && isFinite(c.open));
-          setRealCandles(converted);
-        }
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [activeSymbol, session?.symbol, apiInterval]);
-
-  // Load older candles when the shared chart reaches its left edge.
-  const loadMoreChartHistory = React.useCallback(async () => {
-    if (historyLoading || !realCandles.length) return;
-    const sym = session?.symbol || activeSymbol;
-    const oldest = realCandles[0]?.t;
-    if (!sym || !oldest) return;
-    setHistoryLoading(true);
-    try {
-      const before = Math.floor(oldest / 1000);
-      const res = await fetch(`${BASE_URL_H}/api/candles?symbol=${encodeURIComponent(sym)}&interval=${apiInterval}&limit=500&before=${before}`);
-      if (!res.ok) return;
-      const data = await res.json();
-      const older = (data.values || []).slice().reverse().map(c => ({
-        t: new Date(c.datetime || c.time || 0).getTime(),
-        open: +c.open, high: +c.high, low: +c.low, close: +c.close,
-      })).filter(c => c.t > 0 && isFinite(c.open));
-      const uniqueOlder = older.filter(c => c.t < oldest);
-      if (uniqueOlder.length) setRealCandles(prev => [...uniqueOlder, ...prev]);
-    } catch {}
-    finally { setHistoryLoading(false); }
-  }, [historyLoading, realCandles, session?.symbol, activeSymbol, apiInterval]);
-
-  // Poll the candles API every 5s — matches FullChartView's cadence so the
-  // Home preview shows the same live movement instead of looking frozen
-  // next to it (was 30s, which made the last candle look static).
-  useEffect(() => {
-    const sym = session?.symbol || activeSymbol;
-    if (!sym) return;
-    const id = setInterval(() => {
-      fetch(`${BASE_URL_H}/api/candles?symbol=${encodeURIComponent(sym)}&interval=${apiInterval}&limit=500`)
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (!data) return;
-          const vals = Array.isArray(data) ? data : (data.values || []);
-          const converted = vals.slice().reverse().map(c => ({
-            t: new Date(c.datetime || c.time || 0).getTime(),
-            open: +c.open, high: +c.high, low: +c.low, close: +c.close,
-          })).filter(c => c.t > 0 && isFinite(c.open));
-          if (converted.length) setRealCandles(converted);
-        }).catch(() => {});
-    }, 5000);
-    return () => clearInterval(id);
-  }, [activeSymbol, session?.symbol, apiInterval]);
-
-  // The chart uses only broker/API candles. Never replace a real close with a
-  // locally generated value; that was the source of price differences.
-  const chartCandles = React.useMemo(() => {
-    return realCandles;
-  }, [realCandles]);
-
-  // State label
-  const stateLabel = session ? {
-    analyzing: "AI Analysis Active",
-    watching:  "Watching Setup",
-    confirming:"Confirming",
-    completed: "Session Complete",
-  }[session.state] || "Active" : null;
-
-  const stateColor = session?.state === "watching" ? T.sage
-    : session?.state === "completed" ? T.muted
-    : T.gold;
-
-  const [showSubLock, setShowSubLock] = useState(false);
-
-  // Called from AddMarketSheet when the user picks a NEW market to add/replace
-  function handleAssetSelect(asset) {
-    setShowAddMarket(false);
-    if (!hasAccess(entitlement?.tier, "weekly")) {
-      setShowSubLock(true);
-      return;
-    }
-    if (addActiveMarket) addActiveMarket(asset.symbol);
-    // Only start a new session if one doesn't already exist for this market
-    if (!sessions?.[asset.symbol]) {
-      startAnalysisSession(asset);
-    }
-    setActiveSymbol(asset.symbol);
-  }
-
-  return (
-    <div style={{ paddingBottom: 4 }}>
-      {/* ── Asset tab bar ──────────────────────────────────────────────── */}
-      <div className="hide-scroll" style={{ display:"flex", gap:6, padding:"12px 14px 6px", overflowX:"auto", overflowY:"hidden", WebkitOverflowScrolling:"touch", position:"relative" }}>
-        {(() => {
-          const primarySym = session?.symbol || activeSymbol;
-          const primaryAsset = ALL_ASSETS.find(a => a.symbol === primarySym);
-          // Show active watched markets; fall back to defaults if none set yet
-          const watchedAssets = activeMarkets.length > 0
-            ? activeMarkets.filter(s => s !== primarySym).map(s => ALL_ASSETS.find(a => a.symbol === s)).filter(Boolean)
-            : [];
-          const tabs = [primaryAsset, ...watchedAssets].filter(Boolean).slice(0, 4);
-          return tabs.map(a => {
-            const active = a.symbol === primarySym;
-            return (
-              // Tab bar just switches the view — no dialog, no session restart
-              <button key={a.symbol} onClick={() => setActiveSymbol(a.symbol)} style={{ flexShrink:0, background:active ? T.gold : T.card, color:active ? T.ink : T.paper, border:`1px solid ${active ? T.gold : T.cardBorder}`, borderRadius:20, padding:"6px 14px", fontFamily:FONT_HEAD, fontSize:11, fontWeight:700, cursor:"pointer" }}>
-                {a.symbol}
-              </button>
-            );
-          });
-        })()}
-        <button onClick={() => setShowAddMarket(true)} style={{ flexShrink:0, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"6px 12px", fontFamily:FONT_HEAD, fontSize:14, fontWeight:700, color:T.gold, cursor:"pointer" }}>+</button>
-      </div>
-
-      {/* ── Live market mini-strip ──────────────────────────────────────── */}
-      <div className="hide-scroll" style={{ display:"flex", gap:8, padding:"10px 14px 0", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
-        {ALL_ASSETS.filter(a => ["BTCUSD","ETHUSD","XAUUSD","EURUSD","NAS100","SOLUSD"].includes(a.symbol)).map(a => {
-          const arr = seriesMap[a.symbol] || [];
-          const p  = arr.length ? arr[arr.length-1].price : a.base;
-          const p2 = arr.length > 1 ? arr[arr.length-2].price : p;
-          const up = p >= p2;
-          return (
-            <button key={a.symbol} onClick={() => handleAssetSelect(a)}
-              style={{ flexShrink:0, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:10, padding:"6px 12px", cursor:"pointer", textAlign:"left" }}>
-              <div style={{ fontFamily:FONT_HEAD, fontSize:10, fontWeight:700, color:T.muted }}>{a.symbol}</div>
-              <div style={{ fontFamily:FONT_HEAD, fontSize:12, fontWeight:800, color:up ? "#1D6FE8" : T.rust, fontVariantNumeric:"tabular-nums" }}>{p.toFixed(Math.min(a.digits,2))}</div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Price header ─────────────────────────────────────────────────── */}
-      <div style={{ padding:"8px 16px 0" }}>
-        <div style={{ display:"flex", alignItems:"baseline", gap:10 }}>
-          <span style={{ fontFamily:FONT_HEAD, fontSize:34, fontWeight:800, fontVariantNumeric:"tabular-nums", color:T.paper }}>{last?.toFixed(inst.digits) ?? "—"}</span>
-          <span style={{ fontSize:14, fontWeight:700, color: changePct >= 0 ? T.sage : T.rust }}>{changePct >= 0 ? "▲" : "▼"} {Math.abs(changePct || 0).toFixed(3)}%</span>
-        </div>
-        <div style={{ fontSize:12, color:T.muted, fontWeight:500, marginTop:1 }}>{inst.name} · {inst.symbol}</div>
-      </div>
-
-      {/* ── Chart preview area ────────────────────────────────────────────── */}
-      <div style={{ margin:"12px 14px 0", borderRadius:14, border:`1px solid ${T.cardBorder}`, overflow:"hidden", background:T.card, position:"relative" }}>
-        {/* AI badge + session timer */}
-        {session && session.state !== "completed" && (
-          <div style={{ position:"absolute", top:8, right:8, zIndex:5, display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:5, background:T.ink, border:`1px solid ${stateColor}44`, borderRadius:20, padding:"3px 9px" }}>
-              <div style={{ width:6, height:6, borderRadius:"50%", background:stateColor, animation:"pulse 1.5s infinite" }} />
-              <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:9.5, color:stateColor }}>{stateLabel}</span>
-            </div>
-            {sessionSecsLeft > 0 && (
-              <div style={{ fontSize:9.5, color:T.muted, fontFamily:FONT_HEAD, fontWeight:600 }}>{fmtTime(sessionSecsLeft)}</div>
-            )}
-          </div>
-        )}
-
-        {/* Empty state: only when zero markets selected */}
-        {activeMarkets.length === 0 && !session && (
-          <div style={{ position:"absolute", inset:0, zIndex:5, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:T.ink + "cc", borderRadius:14 }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:4 }}>Select a market</div>
-            <div style={{ fontSize:12, color:T.muted, marginBottom:16, textAlign:"center", maxWidth:200 }}>You can select up to 3 markets per day.</div>
-            <button onClick={() => setShowAddMarket(true)} style={{ background:T.gold, color:T.ink, border:"none", borderRadius:10, padding:"10px 22px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, cursor:"pointer" }}>+ Add Market</button>
-          </div>
-        )}
-        {/* Market Closed overlay */}
-        {!marketOpen && (activeMarkets.length > 0 || !!session) && (
-          <div style={{ position:"absolute", inset:0, zIndex:4, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"rgba(15,14,11,0.75)", borderRadius:14, pointerEvents:"none" }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.muted, marginBottom:6 }}>Market Closed</div>
-            <div style={{ fontSize:12, color:T.muted, textAlign:"center", maxWidth:220, lineHeight:1.6 }}>
-              {inst?.cls === "crypto" ? "Crypto trades 24/7 — data will resume shortly." : inst?.cls === "forex" ? "Forex is closed on weekends (Sat–Sun UTC)." : "Opens at the next market session."}
-            </div>
-          </div>
-        )}
-
-        {/* Preview chart — powered by lightweight-charts */}
-        <div style={{ height:270, flexShrink:0, minHeight:220 }}>
-          <LightweightChart
-            candles={chartCandles}
-            overlays={[
-              ...(session?.overlays || []).filter(o => !o._tf),
-              ...(session?.overlaysByTf?.[sigTf] || []),
-            ]}
-            inst={inst}
-            containerHeight={270}
-            compact={false}
-            isDark={T.ink === "#0F0E0B"}
-            onLoadMore={loadMoreChartHistory}
-          />
-        </div>
-
-        {/* "Open Full Chart" button — always visible at bottom of chart */}
-        <button
-          onClick={() => setShowFullChart(true)}
-          style={{
-            width:"100%", background:T.ink, border:"none", borderTop:`1px solid ${T.cardBorder}`,
-            padding:"9px 16px", cursor:"pointer",
-            display:"flex", alignItems:"center", justifyContent:"center", gap:7,
-          }}
-        >
-          <Maximize2 size={13} color={T.gold} />
-          <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:12, color:T.gold }}>Open Full Chart</span>
-        </button>
-      </div>
-
-      {/* Full-screen chart overlay */}
-      {showFullChart && (
-        <FullChartErrorBoundary onClose={() => setShowFullChart(false)}>
-          <FullChartView
-            inst={inst}
-            session={session}
-            signalsMap={signalsMap}
-            themeMode={themeMode}
-            onClose={() => setShowFullChart(false)}
-            livePrice={last}
-          />
-        </FullChartErrorBoundary>
-      )}
-
-      {/* ── Timeframe selector (chart candle timeframe — M15 = 15-min candles, not AI analysis duration) ── */}
-      <div className="hide-scroll" style={{ display:"flex", gap:6, padding:"10px 14px 0", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
-        {["15m","30m","1H","2H","4H","1D"].map(tf => {
-          const active = tf === activeChartTf;
-          return (
-            <button key={tf} onClick={() => setActiveChartTf(tf)} style={{ flexShrink:0, minWidth:44, padding:"7px 0", borderRadius:8, border:`1px solid ${active ? T.gold : T.cardBorder}`, background:active ? T.gold : T.card, color:active ? T.ink : T.paper, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11, cursor:"pointer" }}>
-              {tf}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Signal Timeframe Tabs ───────────────────────────────────────── */}
-      <div style={{ display:"flex", gap:0, margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:4 }}>
-        {[{key:"15m",label:"15 Minute"},{key:"1h",label:"1 Hour"}].map(({key,label})=>{
-          const active = sigTf === key;
-          return (
-            <button key={key} onClick={()=>setSigTf(key)} style={{ flex:1, background:active?T.gold:"transparent", color:active?T.ink:T.muted, border:"none", borderRadius:8, padding:"9px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, cursor:"pointer", transition:"all 0.2s", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
-              {active && <span style={{ width:7, height:7, borderRadius:"50%", background:T.ink, display:"inline-block", flexShrink:0 }} />}
-              {label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Signal Card ──────────────────────────────────────────────────── */}
-      {(()=>{
-        const setup = session?.setupByTf?.[sigTf];
-        const sym = session?.symbol || activeSymbol || "—";
-        const tfLabel = sigTf === "15m" ? "15 Minute" : "1 Hour";
-        // Use the real signal timestamp (set when the backend actually returned
-        // this setup) rather than the last entry of the activity log, which is
-        // a running feed of unrelated events and could be hours old.
-        const realGeneratedAt = signalsMap?.[sym]?.[sigTf]?.generatedAt;
-        const genTime = realGeneratedAt
-          ? new Date(realGeneratedAt).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"})
-          : new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
-
-        // Market closed state
-        if (!marketOpen && (activeMarkets.length > 0 || !!session)) {
-          return (
-            <div style={{ margin:"8px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"32px 20px", textAlign:"center" }}>
-              <div style={{ fontSize:34, marginBottom:10 }}>🌙</div>
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.paper, marginBottom:6 }}>Market is closed</div>
-              <div style={{ fontSize:12, color:T.muted, lineHeight:1.6 }}>No new signals will load until trading resumes.</div>
-            </div>
-          );
-        }
-
-        // Analyzing — no setup yet
-        if (!session || (!setup && session.state === "analyzing")) {
-          return (
-            <div style={{ margin:"8px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"28px 20px", textAlign:"center" }}>
-              <div style={{ width:8, height:8, borderRadius:"50%", background:T.gold, margin:"0 auto 12px", animation:"pulse 1.5s infinite" }} />
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.gold, marginBottom:4 }}>Analyzing market…</div>
-              <div style={{ fontSize:12, color:T.muted }}>A signal will appear when a strong setup is confirmed.</div>
-            </div>
-          );
-        }
-
-        const bias = setup?.bias || "HOLD";
-        const isBuy = bias === "BUY", isSell = bias === "SELL", isHold = !isBuy && !isSell;
-        const confidence = setup?.confidence ?? 0;
-        const dotColor = isBuy ? T.sage : isSell ? T.rust : T.muted;
-        const actText = session?.activities?.[0]?.text || "";
-        const hasSlHit = actText.toLowerCase().includes("stop loss");
-        const hasTpHit = actText.toLowerCase().includes("take profit");
-        let message = null;
-        if (isHold) message = "No trade recommended right now - signals are mixed. No entry, stop loss, or take profit is being tracked for this call.";
-        else if (hasSlHit) message = "Stop Loss hit. Your capital was protected by our risk-management limits. We are analyzing the next high-probability market setup.";
-        else if (hasTpHit) message = "Take Profit hit. Well done. We are scanning for the next high-probability setup.";
-        const fmt = n => (n != null && isFinite(n)) ? Number(n).toFixed(inst?.digits ?? 2) : "—";
-        const entry = setup?.entry ?? (setup?.entryLow != null && setup?.entryHigh != null ? (setup.entryLow + setup.entryHigh) / 2 : null);
-
-        return (
-          <div style={{ margin:"8px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px" }}>
-            {/* Header: symbol + badge */}
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-              <div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.paper }}>{sym}</div>
-                <div style={{ fontSize:11.5, color:T.muted, marginTop:3 }}>{tfLabel} signal · generated {genTime}</div>
-              </div>
-              <div style={{ display:"flex", alignItems:"center", gap:6, background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:8, padding:"5px 10px", flexShrink:0 }}>
-                <div style={{ width:8, height:8, borderRadius:"50%", background:dotColor, flexShrink:0 }} />
-                <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, color:T.paper }}>{bias}</span>
-              </div>
-            </div>
-            {/* Confidence row */}
-            <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, padding:"6px 0", borderBottom:`1px solid ${T.cardBorder}` }}>
-              <span style={{ color:T.muted }}>Confidence</span>
-              <span style={{ color:T.paper, fontWeight:700 }}>{confidence}%</span>
-            </div>
-            {/* Message box */}
-            {message && (
-              <div style={{ background:`${T.cardBorder}40`, border:`1px solid ${T.cardBorder}`, borderRadius:10, padding:"10px 12px", margin:"8px 0" }}>
-                <div style={{ fontSize:12.5, color:T.paper, lineHeight:1.6 }}>{message}</div>
-              </div>
-            )}
-            {/* Trade rows — BUY / SELL only */}
-            {!isHold && setup && (
-              <>
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, padding:"6px 0", borderBottom:`1px solid ${T.cardBorder}` }}>
-                  <span style={{ color:T.muted }}>Entry</span>
-                  <span style={{ color:T.paper, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{fmt(entry)}</span>
-                </div>
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, padding:"6px 0", borderBottom:`1px solid ${T.cardBorder}` }}>
-                  <span style={{ color:T.muted }}>Stop Loss</span>
-                  <span style={{ color:T.rust, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{fmt(setup.stopLoss)}</span>
-                </div>
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, padding:"6px 0", borderBottom:`1px solid ${T.cardBorder}` }}>
-                  <span style={{ color:T.muted }}>Take Profit 1</span>
-                  <span style={{ color:T.sage, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{fmt(setup.tp1)}</span>
-                </div>
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:13.5, padding:"6px 0" }}>
-                  <span style={{ color:T.muted }}>Take Profit 2</span>
-                  <span style={{ color:T.sage, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{fmt(setup.tp2)}</span>
-                </div>
-              </>
-            )}
-          </div>
-        );
-      })()}
-      {/* Session complete panel */}
-      {session?.state === "completed" && (
-        <div style={{ margin:"12px 14px 0", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"20px 16px", textAlign:"center" }}>
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:6 }}>Analysis Session Complete</div>
-          <div style={{ fontSize:12, color:T.muted, marginBottom:16 }}>The selected analysis period has ended. Start a new session to continue monitoring.</div>
-          <button onClick={() => setShowAddMarket(true)} style={{ background:T.gold, color:T.ink, border:"none", borderRadius:10, padding:"11px 28px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, cursor:"pointer" }}>Analyze Again</button>
-        </div>
-      )}
-
-      <div style={{ margin:"10px 14px 16px", fontSize:10.5, color:T.muted, lineHeight:1.6, textAlign:"center" }}>
-        AI-generated analysis, not financial advice. No outcome is guaranteed. Always manage your risk.
-      </div>
-
-      {/* ── Modals ───────────────────────────────────────────────────────── */}
-      {showSubLock && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
-          <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:18, padding:28, width:"100%", maxWidth:340, textAlign:"center" }}>
-            <div style={{ fontSize:38, marginBottom:12 }}>🔒</div>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:8 }}>Subscription Required</div>
-            <div style={{ fontSize:13, color:T.muted, lineHeight:1.7, marginBottom:22 }}>An active subscription is required to access live market analysis, Raina AI signals, and real-time charts. Subscribe to unlock up to 3 active markets.</div>
-            <button onClick={() => { setShowSubLock(false); onSubscribe(); }} style={{ width:"100%", background:T.goldGradient, color:T.ink, border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, cursor:"pointer", marginBottom:10 }}>View Plans</button>
-            <button onClick={() => setShowSubLock(false)} style={{ width:"100%", background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"11px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.muted, cursor:"pointer" }}>Close</button>
-          </div>
-        </div>
-      )}
-      {showAddMarket && <AddMarketSheet onClose={() => setShowAddMarket(false)} onSelect={handleAssetSelect} activeMarkets={activeMarkets} maxActiveMarkets={maxActiveMarkets} onRemoveMarket={removeActiveMarket} />}
-    </div>
-  );
-}
+// Homepage is maintained in ./HomeTab.jsx. Keep a single source of truth so the legacy inline HomeTab cannot reappear.
 function Row({ label, value, color }) {
   return <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, padding:"4px 0" }}><span style={{ color:T.muted, fontWeight:500 }}>{label}</span><span style={{ color:color||T.paper, fontWeight:700, fontVariantNumeric:"tabular-nums" }}>{value}</span></div>;
 }
@@ -4211,7 +3619,7 @@ function MarketsTab({ seriesMap, signalsMap, activeSymbol, onSelect, themeMode }
         const open = isMarketOpen(i.cls);
         const combo = signalsMap[i.symbol] || {};
         return (
-          <div key={i.symbol} style={{ background: T.card, border: `1px solid ${i.symbol === activeSymbol ? "#FFBE0B" : T.cardBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, color: T.paper, boxShadow: i.symbol === activeSymbol ? "0 0 0 1px #FFBE0B, 0 0 12px rgba(255,190,11,0.25)" : "none" }}>
+          <div key={i.symbol} style={{ background: T.card, border: `1px solid ${i.symbol === activeSymbol ? "#F4D35E" : T.cardBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, color: T.paper, boxShadow: i.symbol === activeSymbol ? "0 0 0 1px #F4D35E, 0 0 12px rgba(244,211,94,0.25)" : "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {/* Left: name + symbol + signals — tap to go to home */}
               <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => onSelect(i.symbol)}>
@@ -5449,7 +4857,7 @@ function MoreRow({ icon: Icon, iconType, title, subtitle, badge, badgeColor, onP
 function SecuritySection({ icon: Icon, title, desc, onPress, label, comingSoon }) {
   return (
     <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12 }}>
-      <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(244,211,94,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         <Icon size={19} color={T.paper} />
       </div>
       <div style={{ flex: 1 }}>
@@ -5558,82 +4966,33 @@ function NotificationSettingsScreen({ account, activeMarkets = [] }) {
       return next;
     });
   };
+  const bg = "#F2F3F5", card = "#FFFFFF", border = "#E7E9EC", text = "#111418", muted = "#737B85", yellow = T.gold;
   const SwitchToggle = ({ on, onChange }) => (
-    <div onClick={onChange} style={{ width: 44, height: 24, borderRadius: 12, background: on ? T.sage : T.cardBorder, position: "relative", cursor: "pointer", transition: "background 0.2s", flexShrink: 0 }}>
-      <div style={{ position: "absolute", top: 3, left: on ? 23 : 3, width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "left 0.2s" }} />
-    </div>
+    <button type="button" aria-pressed={on} onClick={e=>{e.stopPropagation();onChange();}} style={{ width:44,height:25,padding:0,border:0,borderRadius:13,background:on?yellow:"#D7DBE0",position:"relative",cursor:"pointer",transition:"background .18s",flexShrink:0 }}>
+      <span style={{position:"absolute",top:3,left:on?22:3,width:19,height:19,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 3px rgba(0,0,0,.18)",transition:"left .18s"}} />
+    </button>
   );
   return (
-    <div style={{ padding: 16 }}>
-      {/* Master toggle */}
-      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 14, color: T.paper }}>All Notifications</div>
-            <div style={{ fontSize: 11.5, color: T.muted, marginTop: 2 }}>Master on/off for all alerts</div>
-          </div>
-          <SwitchToggle on={masterOn} onChange={() => toggle("master")} />
+    <div style={{ background:bg, padding:"16px 16px 28px", minHeight:"100%" }}>
+      <div style={{ background:card, border:`1px solid ${border}`, borderRadius:17, padding:"15px 16px", marginBottom:16, boxShadow:"0 1px 2px rgba(15,20,25,.03)" }}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+          <div><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:14,color:text}}>All Notifications</div><div style={{fontSize:11.2,color:muted,marginTop:3}}>Master control for all alerts</div></div>
+          <SwitchToggle on={masterOn} onChange={()=>toggle("master")} />
         </div>
       </div>
-      {/* Category toggles */}
-      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, overflow: "hidden" }}>
-        {NOTIF_CATEGORIES.map((cat, i) => {
+      <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:12.5,color:muted,margin:"0 0 8px 4px",textTransform:"uppercase"}}>Categories</div>
+      <div style={{ background:card,border:`1px solid ${border}`,borderRadius:17,overflow:"hidden",boxShadow:"0 1px 2px rgba(15,20,25,.03)" }}>
+        {NOTIF_CATEGORIES.map((cat,i)=>{
           const catOn = masterOn && prefs[cat.key] !== false;
-          return (
-            <div key={cat.key} style={{ padding: "14px 16px", borderBottom: i < NOTIF_CATEGORIES.length - 1 ? `1px solid ${T.cardBorder}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center", opacity: masterOn ? 1 : 0.5 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: FONT_HEAD, fontWeight: 600, fontSize: 13, color: T.paper }}>{cat.label}</div>
-                <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{cat.desc}</div>
-              </div>
-              <SwitchToggle on={catOn} onChange={() => masterOn && toggle(cat.key)} />
+          return <React.Fragment key={cat.key}>
+            {i>0&&<div style={{height:1,background:border,marginLeft:16}}/>}
+            <div onClick={()=>masterOn&&toggle(cat.key)} style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,opacity:masterOn?1:.5,cursor:masterOn?"pointer":"default"}}>
+              <div style={{flex:1,minWidth:0}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:text}}>{cat.label}</div><div style={{fontSize:11,color:muted,marginTop:3,lineHeight:1.35}}>{cat.desc}</div></div>
+              <SwitchToggle on={catOn} onChange={()=>toggle(cat.key)} />
             </div>
-          );
+          </React.Fragment>;
         })}
       </div>
-      {/* Push notifications */}
-      <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "14px 16px", marginTop: 16 }}>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper, marginBottom: 8 }}>Push Notifications</div>
-        <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.7, marginBottom: 12 }}>Enable push notifications to receive trading signals and alerts even when RainX is not open.</div>
-        <button onClick={async () => {
-          if (!("Notification" in window)) { alert("Notifications are not supported in this browser."); return; }
-          const permission = await Notification.requestPermission();
-          if (permission !== "granted") { alert("Permission denied. Enable notifications in your browser settings."); return; }
-          if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-            alert("Push notifications are not supported in your browser. You will still receive in-app alerts."); return;
-          }
-          try {
-            const reg = await navigator.serviceWorker.ready;
-            const existing = await reg.pushManager.getSubscription();
-            if (existing) { alert("Push notifications are already enabled!"); return; }
-            // Fetch VAPID public key from backend
-            let vapidKey;
-            try {
-              const apiBase = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
-              const keyRes = await fetch(`${apiBase}/api/push/keys`);
-              if (keyRes.ok) { const kd = await keyRes.json(); vapidKey = kd.publicKey; }
-            } catch {}
-            if (!vapidKey) { alert("Push server not configured yet. You will receive in-app alerts instead."); return; }
-            // Convert VAPID key
-            const urlBase64ToUint8Array = (base64String) => {
-              const padding = "=".repeat((4 - base64String.length % 4) % 4);
-              const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-              const rawData = window.atob(base64);
-              return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
-            };
-            const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidKey) });
-            const apiBase = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
-            await fetch(`${apiBase}/api/push/subscribe`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ subscription: sub.toJSON(), userId: account?.id, activeMarkets }),
-            });
-            alert("Push notifications enabled! You will now receive trading signals even when RainX is closed.");
-          } catch (e) { alert("Could not enable push notifications: " + e.message); }
-        }} style={{ width: "100%", background: T.gold, color: T.ink, border: "none", borderRadius: 10, padding: "11px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-          Enable Push Notifications
-        </button>
-      </div>
-      {/* Sound Picker — 7 categories with Preview buttons */}
       <SoundPickerCard />
     </div>
   );
@@ -5673,31 +5032,46 @@ function GoldBarsIcon() {
         <path d="M10 0 L82 0 L92 9 L20 9 Z" fill="url(#bt3)"/>
       </g>
       <defs>
-        <linearGradient id="bf1" x1="10" y1="0" x2="10" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#B8932A"/><stop offset="1" stopColor="#6B4A0A"/></linearGradient>
-        <linearGradient id="bs1" x1="82" y1="0" x2="92" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#8A6B18"/><stop offset="1" stopColor="#4A3205"/></linearGradient>
-        <linearGradient id="bt1" x1="10" y1="0" x2="92" y2="9" gradientUnits="userSpaceOnUse"><stop stopColor="#F5D96A"/><stop offset="0.5" stopColor="#E8C450"/><stop offset="1" stopColor="#C8A030"/></linearGradient>
-        <linearGradient id="bf2" x1="10" y1="0" x2="10" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#C8A030"/><stop offset="1" stopColor="#7A5515"/></linearGradient>
-        <linearGradient id="bs2" x1="82" y1="0" x2="92" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#9A7820"/><stop offset="1" stopColor="#553A08"/></linearGradient>
-        <linearGradient id="bt2" x1="10" y1="0" x2="92" y2="9" gradientUnits="userSpaceOnUse"><stop stopColor="#FAE478"/><stop offset="0.5" stopColor="#EDCE60"/><stop offset="1" stopColor="#D4AC40"/></linearGradient>
-        <linearGradient id="bf3" x1="10" y1="0" x2="10" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#D8AE40"/><stop offset="1" stopColor="#8A6020"/></linearGradient>
+        <linearGradient id="bf1" x1="10" y1="0" x2="10" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#F4D35E"/><stop offset="1" stopColor="#F4D35E"/></linearGradient>
+        <linearGradient id="bs1" x1="82" y1="0" x2="92" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#F4D35E"/><stop offset="1" stopColor="#F4D35E"/></linearGradient>
+        <linearGradient id="bt1" x1="10" y1="0" x2="92" y2="9" gradientUnits="userSpaceOnUse"><stop stopColor="#F4D35E"/><stop offset="0.5" stopColor="#F4D35E"/><stop offset="1" stopColor="#F4D35E"/></linearGradient>
+        <linearGradient id="bf2" x1="10" y1="0" x2="10" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#F4D35E"/><stop offset="1" stopColor="#F4D35E"/></linearGradient>
+        <linearGradient id="bs2" x1="82" y1="0" x2="92" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#F4D35E"/><stop offset="1" stopColor="#F4D35E"/></linearGradient>
+        <linearGradient id="bt2" x1="10" y1="0" x2="92" y2="9" gradientUnits="userSpaceOnUse"><stop stopColor="#F4D35E"/><stop offset="0.5" stopColor="#F4D35E"/><stop offset="1" stopColor="#F4D35E"/></linearGradient>
+        <linearGradient id="bf3" x1="10" y1="0" x2="10" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#F4D35E"/><stop offset="1" stopColor="#F4D35E"/></linearGradient>
         <linearGradient id="bs3" x1="82" y1="0" x2="92" y2="24" gradientUnits="userSpaceOnUse"><stop stopColor="#AA8828"/><stop offset="1" stopColor="#5F4010"/></linearGradient>
-        <linearGradient id="bt3" x1="10" y1="0" x2="92" y2="9" gradientUnits="userSpaceOnUse"><stop stopColor="#FFF0A0"/><stop offset="0.5" stopColor="#F8E080"/><stop offset="1" stopColor="#DEC058"/></linearGradient>
+        <linearGradient id="bt3" x1="10" y1="0" x2="92" y2="9" gradientUnits="userSpaceOnUse"><stop stopColor="#F4D35E"/><stop offset="0.5" stopColor="#F4D35E"/><stop offset="1" stopColor="#F4D35E"/></linearGradient>
       </defs>
     </svg>
   );
 }
 
-function MoreSubScreen({ onBack, title, subtitle, rightElement, children }) {
+function StableLightSheet({ children, onClose }) {
   return (
-    <div style={{ minHeight: "100%", animation: "slideInRight 0.2s ease", background: T.card }}>
-      <style>{"@keyframes slideInRight { from { transform: translateX(24px); opacity:0; } to { transform: translateX(0); opacity:1; } }"}</style>
-      <div style={{ display: "flex", alignItems: "center", padding: "10px 16px 10px", borderBottom: `1px solid ${T.cardBorder}` }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", color: T.paper, cursor: "pointer", display: "flex", alignItems: "center", padding: "4px", borderRadius: 8, flexShrink: 0 }}>
+    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(15,20,25,.20)", backdropFilter:"blur(7px)", WebkitBackdropFilter:"blur(7px)", zIndex:100, display:"flex", alignItems:"flex-end" }}>
+      <div onClick={e=>e.stopPropagation()} style={{ width:"100%", maxWidth:480, margin:"0 auto", background:"#FFFFFF", border:"1px solid #E7E9EC", borderBottom:0, borderRadius:"22px 22px 0 0", padding:"11px 18px 28px", boxShadow:"0 -10px 35px rgba(15,20,25,.12)", transform:"translateY(0)", willChange:"transform", animation:"rxLightSheetUp .26s cubic-bezier(.22,1,.36,1)" }}>
+        <div style={{ width:42, height:5, borderRadius:3, background:"#D9DDE1", margin:"0 auto 18px" }} />
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function MoreSubScreen({ onBack, title, subtitle, rightElement, children }) {
+  const lightPrefScreen = title === "Settings" || title === "Security" || title === "Notifications";
+  const prefBg = "#F2F3F5";
+  const prefText = "#111418";
+  const prefBorder = "#E7E9EC";
+  return (
+    <div style={{ minHeight: "100%", animation: "slideInRight 0.2s ease", background: lightPrefScreen ? prefBg : T.card }}>
+      <style>{"@keyframes slideInRight { from { transform: translateX(24px); opacity:0; } to { transform: translateX(0); opacity:1; } } @keyframes rxLightSheetUp { from { transform:translateY(100%); opacity:.7 } to { transform:translateY(0); opacity:1 } }"}</style>
+      <div style={{ display: "flex", alignItems: "center", padding: "10px 16px 10px", borderBottom: `1px solid ${lightPrefScreen ? prefBorder : T.cardBorder}`, background: lightPrefScreen ? prefBg : T.card }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: lightPrefScreen ? prefText : T.paper, cursor: "pointer", display: "flex", alignItems: "center", padding: "4px", borderRadius: 8, flexShrink: 0 }}>
           <ChevronLeft size={22} />
         </button>
         <div style={{ flex: 1, textAlign: "center" }}>
-          {title && <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, lineHeight: 1.2 }}>{title}</div>}
-          {subtitle && <div style={{ fontSize: 11, color: T.muted, marginTop: 2 }}>{subtitle}</div>}
+          {title && <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: lightPrefScreen ? prefText : T.paper, lineHeight: 1.2 }}>{title}</div>}
+          {subtitle && <div style={{ fontSize: 11, color: lightPrefScreen ? "#737B85" : T.muted, marginTop: 2 }}>{subtitle}</div>}
         </div>
         <div style={{ flexShrink: 0, width: 30, display: "flex", justifyContent: "flex-end" }}>
           {rightElement || null}
@@ -5776,7 +5150,7 @@ function RewardsScreen({ account, entitlement }) {
           <ChevronLeft size={18} /> Back
         </button>
         <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: 32, textAlign: "center" }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(198,161,91,0.12)", border: `1px solid ${T.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(244,211,94,0.12)", border: `1px solid ${T.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
             <Trophy size={26} color={T.goldBright} />
           </div>
           <div style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 15, color: T.paper, marginBottom: 8 }}>{titles[quickPage]}</div>
@@ -5792,7 +5166,7 @@ function RewardsScreen({ account, entitlement }) {
       {/* Balance Card — uses theme tokens, no hardcoded dark colors */}
       <div style={{ margin: "16px 16px 0" }}>
         <div style={{ background: `linear-gradient(135deg, ${T.card} 0%, ${T.ink} 100%)`, border: `1px solid ${T.cardBorder}`, borderRadius: 18, padding: "22px 20px 20px", position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", inset: 0, borderRadius: 18, background: "linear-gradient(135deg, rgba(198,161,91,0.07) 0%, transparent 60%)", pointerEvents: "none" }} />
+          <div style={{ position: "absolute", inset: 0, borderRadius: 18, background: "linear-gradient(135deg, rgba(244,211,94,0.07) 0%, transparent 60%)", pointerEvents: "none" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11.5, color: T.goldBright, fontWeight: 600, marginBottom: 8, letterSpacing: 0.3 }}>Total Rewards Balance</div>
@@ -5868,7 +5242,7 @@ function RewardsScreen({ account, entitlement }) {
             const isPos = (tx.amount || 0) >= 0;
             return (
               <button key={tx.id || i} onClick={() => setQuickPage("txHistory")} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 14, padding: "13px 0", borderBottom: i < displayTxns.length - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: `rgba(198,161,91,0.12)`, border: `1px solid ${T.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 44, height: 44, borderRadius: "50%", background: `rgba(244,211,94,0.12)`, border: `1px solid ${T.cardBorder}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <IconComp size={20} color={T.goldBright} strokeWidth={1.6} />
                 </div>
                 <div style={{ flex: 1, textAlign: "left" }}>
@@ -6034,7 +5408,7 @@ function CreatorWalletScreen({ account }) {
       {/* Action buttons */}
       <div style={{ margin: "16px 16px 0", display: "flex", gap: 10 }}>
         <button onClick={() => setWalletPage("topup")} style={{ flex: 1, background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: "16px 0", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 44, height: 44, borderRadius: "50%", background: `rgba(198,161,91,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 44, height: 44, borderRadius: "50%", background: `rgba(244,211,94,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <ArrowUpCircle size={22} color={T.gold} />
           </div>
           <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: T.paper }}>Top Up</span>
@@ -6067,7 +5441,7 @@ function CreatorWalletScreen({ account }) {
             return (
               <div key={tx.id || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: i < Math.min(displayTxns.length, 5) - 1 ? `1px solid ${T.cardBorder}` : "none" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: isPos ? `rgba(198,161,91,0.12)` : `rgba(176,96,74,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ width: 40, height: 40, borderRadius: "50%", background: isPos ? `rgba(244,211,94,0.12)` : `rgba(176,96,74,0.12)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {isPos ? <ArrowUpCircle size={18} color={T.gold} /> : <ArrowDownCircle size={18} color={T.rust} />}
                   </div>
                   <div>
@@ -6103,11 +5477,11 @@ function HeaderAvatar({ account, morePage, T }) {
       .catch(() => { setLoaded(true); });
   }, [account?.id, tick]);
   // Show neutral circle while fetching — no email-derived initial during load
-  if (!loaded) return <div style={{ width:34, height:34, borderRadius:"50%", background:T.cardBorder }} />;
+  if (!loaded) return <div style={{ width:42, height:42, borderRadius:"50%", background:T.cardBorder }} />;
   const initial = (account?.email || "?")[0].toUpperCase();
   return url
-    ? <img src={url} alt="me" style={{ width:34, height:34, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} />
-    : <div style={{ width:34, height:34, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.ink }}>{initial}</div>;
+    ? <img src={url} alt="me" style={{ width:42, height:42, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} />
+    : <div style={{ width:42, height:42, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink }}>{initial}</div>;
 }
 
 function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, onLogoutConfirm, setTab, entitlement, themeMode, setThemeMode, morePage, setMorePage, setProfileFromHeader, activeMarkets = [] }) {
@@ -6124,6 +5498,172 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [verification, setVerification] = useState(null);
   const [showLegal, setShowLegal] = useState(false);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
+
+  // Security + Settings preferences are intentionally local to this app shell so
+  // these controls can be added without changing the existing community, signal,
+  // wallet, creator-space or home implementations.
+  const [securityPrefs, setSecurityPrefs] = useState(() => {
+    try { return JSON.parse(lsGet("rainx-security-prefs") || "{}"); } catch { return {}; }
+  });
+  const [securitySheet, setSecuritySheet] = useState(null);
+  const [pinValue, setPinValue] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [settingsPrefs, setSettingsPrefs] = useState(() => {
+    try { return JSON.parse(lsGet("rainx-settings-prefs") || "{}"); } catch { return {}; }
+  });
+  const [settingsSheet, setSettingsSheet] = useState(null);
+  const [accountSettingsLoaded, setAccountSettingsLoaded] = useState(false);
+  const [securitySessions, setSecuritySessions] = useState([]);
+  const [securitySessionsLoading, setSecuritySessionsLoading] = useState(false);
+  const [loginHistoryRows, setLoginHistoryRows] = useState([]);
+  const [loginHistoryLoading, setLoginHistoryLoading] = useState(false);
+  const [blockedUsers, setBlockedUsers] = useState([]);
+  const [mutedUsers, setMutedUsers] = useState([]);
+  const [blockedLoading, setBlockedLoading] = useState(false);
+  const loadBlockedAndMuted = useCallback(async () => {
+    if (!account?.id) return;
+    setBlockedLoading(true);
+    try {
+      const [{ data: blocked }, { data: muted }] = await Promise.all([
+        supabase.from("user_blocks").select("blocked_id,created_at").eq("blocker_id", account.id).order("created_at", { ascending:false }),
+        supabase.from("user_mutes").select("muted_id,created_at").eq("muter_id", account.id).order("created_at", { ascending:false }),
+      ]);
+      const blockedIds = (blocked || []).map(r => r.blocked_id).filter(Boolean);
+      const mutedIds = (muted || []).map(r => r.muted_id).filter(Boolean);
+      const ids = [...new Set([...blockedIds, ...mutedIds])];
+      let profileMap = {};
+      if (ids.length) {
+        const { data: pub } = await supabase.from("public_profiles").select("id,display_name,full_name,username,avatar_url,badge,is_admin").in("id", ids);
+        (pub || []).forEach(p => { profileMap[p.id] = p; });
+        const missing = ids.filter(id => !profileMap[id]);
+        if (missing.length) {
+          const { data: priv } = await supabase.from("profiles").select("id,display_name,full_name,username,avatar_url,badge,is_admin").in("id", missing);
+          (priv || []).forEach(p => { profileMap[p.id] = p; });
+        }
+      }
+      setBlockedUsers(blockedIds.map(id => ({ id, profile: profileMap[id] || null })));
+      setMutedUsers(mutedIds.map(id => ({ id, profile: profileMap[id] || null })));
+    } finally { setBlockedLoading(false); }
+  }, [account?.id]);
+  useEffect(() => { if (settingsSheet === "blockedUsers") loadBlockedAndMuted(); }, [settingsSheet, loadBlockedAndMuted]);
+  const [postVisibility, setPostVisibility] = useState(() => lsGet("rainx-post-visibility") || "public");
+
+  const persistSecurity = (patch) => {
+    setSecurityPrefs(prev => {
+      const next = { ...prev, ...patch };
+      lsSet("rainx-security-prefs", JSON.stringify(next));
+      // Never send device PIN hashes or biometric credential IDs to the account backend.
+      const backendSafe = { ...next };
+      delete backendSafe.pinHash;
+      delete backendSafe.biometricCredentialId;
+      if (account?.id) {
+        supabase.from("account_settings").upsert({ user_id: account.id, security_prefs: backendSafe, updated_at: new Date().toISOString() }, { onConflict: "user_id" }).then(() => {}).catch(() => {});
+      }
+      return next;
+    });
+  };
+  const persistSettings = (patch) => {
+    setSettingsPrefs(prev => {
+      const next = { ...prev, ...patch };
+      lsSet("rainx-settings-prefs", JSON.stringify(next));
+      if (account?.id) {
+        supabase.from("account_settings").upsert({ user_id: account.id, settings: next, updated_at: new Date().toISOString() }, { onConflict: "user_id" }).then(() => {}).catch(() => {});
+      }
+      return next;
+    });
+  };
+  useEffect(() => {
+    if (!account?.id) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase.from("account_settings").select("settings,security_prefs").eq("user_id", account.id).maybeSingle();
+      if (cancelled) return;
+      if (!error && data) {
+        if (data.settings && typeof data.settings === "object") {
+          setSettingsPrefs(prev => ({ ...prev, ...data.settings }));
+          lsSet("rainx-settings-prefs", JSON.stringify({ ...settingsPrefs, ...data.settings }));
+        }
+        if (data.security_prefs && typeof data.security_prefs === "object") {
+          setSecurityPrefs(prev => ({ ...prev, ...data.security_prefs }));
+          lsSet("rainx-security-prefs", JSON.stringify({ ...securityPrefs, ...data.security_prefs }));
+        }
+      }
+      setAccountSettingsLoaded(true);
+    })();
+    return () => { cancelled = true; };
+  }, [account?.id]);
+
+  const loadSecuritySessions = useCallback(async () => {
+    if (!account?.id) return;
+    setSecuritySessionsLoading(true);
+    try {
+      const [{ data: sessionData }, { data: activityData }] = await Promise.all([
+        supabase.rpc("get_my_auth_sessions"),
+        supabase.from("activity_logs").select("id,action,meta,created_at").eq("user_id", account.id).in("action", ["login","signup"]).order("created_at", { ascending:false }).limit(30),
+      ]);
+      setSecuritySessions(sessionData || []);
+      setLoginHistoryRows(activityData || []);
+    } finally { setSecuritySessionsLoading(false); }
+  }, [account?.id]);
+
+  useEffect(() => {
+    if (settingsSheet !== "sessions" && settingsSheet !== "loginHistory") return;
+    setLoginHistoryLoading(true);
+    loadSecuritySessions().finally(() => setLoginHistoryLoading(false));
+  }, [settingsSheet, loadSecuritySessions]);
+
+  const hashPin = async (pin) => {
+    const bytes = new TextEncoder().encode(pin);
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
+  };
+  const setupPin = async () => {
+    setPinError("");
+    if (!/^\d{4,6}$/.test(pinValue)) { setPinError("Enter a 4–6 digit PIN."); return; }
+    if (pinValue !== pinConfirm) { setPinError("PINs do not match."); return; }
+    try {
+      const hash = await hashPin(pinValue);
+      persistSecurity({ pinEnabled: true, pinHash: hash });
+      setPinValue(""); setPinConfirm(""); setSecuritySheet(null);
+    } catch { setPinError("Unable to save PIN on this device."); }
+  };
+  const setupPasskey = async () => {
+    try {
+      if (!("PublicKeyCredential" in window) || !navigator.credentials?.create) {
+        alert("Face ID / device passkeys are not supported on this device or browser.");
+        return;
+      }
+      const platformReady = typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === "function"
+        ? await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().catch(() => false)
+        : true;
+      if (platformReady === false) {
+        alert("A device biometric authenticator is not available. You can use a PIN instead.");
+        return;
+      }
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const userId = crypto.getRandomValues(new Uint8Array(16));
+      const credential = await navigator.credentials.create({ publicKey: {
+        challenge,
+        rp: { name: "RainX" },
+        user: { id: userId, name: account?.email || "rainx-user", displayName: fullName || username || "RainX User" },
+        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "preferred" },
+        timeout: 60000,
+        attestation: "none",
+      }});
+      if (credential?.rawId) {
+        const id = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+        persistSecurity({ biometricEnabled: true, biometricCredentialId: id });
+      }
+    } catch (e) {
+      if (e?.name !== "NotAllowedError") alert("Face ID / passkey setup could not be completed.");
+    }
+  };
+  useEffect(() => {
+    if (morePage !== "profile-menu") setAppearanceOpen(false);
+  }, [morePage]);
   // PWA install — deferred prompt + installed flag
   const [installPrompt, setInstallPrompt] = useState(null);
   const [appInstalled, setAppInstalled] = useState(() => window.matchMedia('(display-mode: standalone)').matches);
@@ -6303,20 +5843,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     verification === "golden" ? T.goldBright :
     verification === "blue"   ? BLUE         : T.muted;
 
-  // Inline verified badge — same circular checkmark shape as community, colour-coded by tier
-  const VerifBadgeIcon = ({ size = 16 }) =>
-    verification === "golden" ? (
-      <svg width={size} height={size} viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
-        <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D89E00" />
-      </svg>
-    ) : verification === "blue" ? (
-      <svg width={size} height={size} viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
-        <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1d9bf0" />
-      </svg>
-    ) : (
-      <ShieldCheck size={size} color={T.muted} />
-    );
-
   // Don't expose email as initial before profile loads — show neutral "?" until username resolves
   const profileInitial = (username || (profileLoaded ? account?.email : null) || "?")[0]?.toUpperCase();
 
@@ -6334,6 +5860,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   const [cropFile, setCropFile] = useState(null);
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [profilePosts, setProfilePosts] = useState([]);
+  const [profileTab, setProfileTab] = useState("posts");
   const [profilePostsLoading, setProfilePostsLoading] = useState(false);
   const [profileComposerText, setProfileComposerText] = useState("");
   const [profileComposerPosting, setProfileComposerPosting] = useState(false);
@@ -6345,17 +5872,10 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       if(data){ setFullName(data.full_name||""); setLocation(data.location||""); setDob(data.date_of_birth||""); if(data.cover_url) setCoverUrl(data.cover_url); }
     }).catch(()=>{});
     setProfilePostsLoading(true);
-    // Bug 1 fix: compute comment_count from actual post_comments rows (same way Community does it)
     (async () => {
       try {
         const { data } = await supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false});
-        let rows = data || [];
-        if (rows.length) {
-          const { data: allComments } = await supabase.from("post_comments").select("post_id").in("post_id", rows.map(r => r.id));
-          const cCounts = {};
-          (allComments || []).forEach(c => { cCounts[c.post_id] = (cCounts[c.post_id] || 0) + 1; });
-          rows = rows.map(r => ({ ...r, comment_count: cCounts[r.id] || r.comment_count || 0 }));
-        }
+        const rows = data || [];
         setProfilePosts(rows);
         setProfilePostsLoading(false);
       } catch { setProfilePostsLoading(false); }
@@ -6434,101 +5954,134 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   if (cropFile) return <CoverCropModal file={cropFile} onConfirm={blob => { setCropFile(null); uploadCoverBlob(blob); }} onCancel={() => { setCropFile(null); }} T={T} FONT_HEAD={FONT_HEAD} />;
 
   if (morePage === "profile-menu") return (
-    <div style={{ minHeight:"100%", background:T.ink, animation:"slideInRight 0.2s ease" }}>
+    <div style={{ minHeight:"100%", background:"#F1F3F3", animation:"slideInRight 0.2s ease" }}>
       <style>{"@keyframes slideInRight { from { transform: translateX(24px); opacity:0; } to { transform: translateX(0); opacity:1; } }"}</style>
       {/* Header */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 16px 8px" }}>
-        <button onClick={() => { setMorePage(null); if (setProfileFromHeader) setProfileFromHeader(false); }} style={{ background:"none", border:"none", cursor:"pointer", color:T.muted, padding:4 }}>
+        <button onClick={() => { setMorePage(null); if (setProfileFromHeader) setProfileFromHeader(false); }} style={{ background:"none", border:"none", cursor:"pointer", color:"#657076", padding:4 }}>
           <X size={22} />
         </button>
-        <div style={{ display:"flex", gap:14, alignItems:"center" }}>
-          <ShieldCheck size={20} color={T.muted} />
-          <Users2 size={20} color={T.muted} />
-          <Maximize2 size={20} color={T.muted} />
-        </div>
-      </div>
-      {/* User row */}
-      <div style={{ padding:"8px 20px 18px", display:"flex", alignItems:"center", gap:14 }}>
-        {avatarUrl
-          ? <img src={avatarUrl} alt="avatar" style={{ width:56, height:56, borderRadius:"50%", objectFit:"cover", border:`2px solid ${T.gold}` }} />
-          : <div style={{ width:56, height:56, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.ink, flexShrink:0 }}>{profileInitial}</div>
-        }
-        <div style={{ flex:1 }}>
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper }}>{fullName || (profileLoaded ? "User" : "…")}</div>
-          {username && <div style={{ fontSize:11.5, color:T.muted, marginTop:2 }}>@{username}</div>}
-        </div>
       </div>
       {/* Menu cards */}
-      <div style={{ padding:"0 16px", display:"flex", flexDirection:"column", gap:12 }}>
-        {/* Profile + Security row */}
-        <div style={{ display:"flex", gap:12 }}>
-          {[
-            { label:"Profile", icon:Users2, page:"profile" },
-            { label:"Security", icon:ShieldCheck, page:"security" },
-          ].map(item => (
-            <button key={item.label} onClick={() => setMorePage(item.page)}
-              style={{ flex:1, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", gap:8, position:"relative" }}>
-              <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:14, right:14 }} />
-              <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                <item.icon size={18} color={T.ink} />
-              </div>
-              <div style={{ width:28, height:3, borderRadius:2, background:T.gold, marginTop:6 }} />
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{item.label}</div>
-            </button>
-          ))}
-        </div>
-        {/* Trader Wallet */}
-        <button onClick={() => setMorePage("wallet")}
-          style={{ width:"100%", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
-          <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:"50%", right:14, transform:"translateY(-50%)" }} />
-          <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-            <Wallet size={18} color={T.ink} />
+      <div style={{ padding:"8px 16px 0", display:"grid", gridTemplateColumns:"repeat(2, minmax(0, 1fr))", gap:12 }}>
+        {/* Profile header — intentionally not a menu card */}
+        <button onClick={() => setMorePage("profile")} style={{ width:"100%", gridColumn:"1 / -1", background:"transparent", border:0, padding:"8px 4px 14px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:12, position:"relative" }}>
+          <div style={{ width:52, height:52, borderRadius:"50%", overflow:"hidden", flexShrink:0, background:T.goldGradient, border:`2px solid ${T.gold}`, display:"grid", placeItems:"center" }}>
+            {avatarUrl ? <img src={avatarUrl} alt="Profile" style={{ width:"100%", height:"100%", objectFit:"cover" }} /> : <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:21, color:T.ink }}>{(fullName || "P").trim()[0].toUpperCase()}</span>}
           </div>
-          <div>
-            <div style={{ width:28, height:3, borderRadius:2, background:T.gold, marginBottom:8 }} />
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Trader Wallet</div>
+          <div style={{ minWidth:0 }}>
+            <div style={{ fontSize:11, color:"#657076", marginBottom:3, letterSpacing:"0.01em" }}>Your profile</div>
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, lineHeight:1.2, color:"#17191B", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:"240px" }}>{fullName || "Complete your profile"}</div>
           </div>
+          <ChevronRight size={18} color="#657076" style={{ position:"absolute", top:23, right:4 }} />
         </button>
+        {/* Security row */}
+        {[
+          { label:"Security", icon:ShieldCheck, page:"security" },
+        ].map(item => (
+          <button key={item.label} onClick={() => setMorePage(item.page)}
+            style={{ width:"100%", minHeight:item.wide ? 88 : 98, gridColumn:item.wide ? "1 / -1" : "auto", background:"#FFFFFF", border:"1px solid #E5E9EA", borderRadius:18, padding:item.wide ? "13px" : "13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", gap:5, position:"relative", boxShadow:"0 1px 2px rgba(25,35,40,0.02)" }}>
+            <ChevronRight size={13} color="#657076" style={{ position:"absolute", top:14, right:14 }} />
+            <div style={{ width:36, height:36, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <item.icon size={17} color={T.ink} />
+            </div>
+            <div style={{ width:26, height:3, borderRadius:2, background:T.gold, marginTop:4 }} />
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#17191B", lineHeight:1.25 }}>{item.label}</div>
+          </button>
+        ))}
+
         {/* Appearance — standalone, before Settings */}
-        <button onClick={() => setMorePage("appearance")}
-          style={{ width:"100%", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
-          <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:"50%", right:14, transform:"translateY(-50%)" }} />
-          <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-            <Palette size={18} color={T.ink} />
+        <button onClick={() => setAppearanceOpen(true)}
+          style={{ width:"100%", minHeight:98, background:"#FFFFFF", border:"1px solid #E5E9EA", borderRadius:18, padding:"13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative", boxShadow:"0 1px 2px rgba(25,35,40,0.02)" }}>
+          <ChevronRight size={13} color="#657076" style={{ position:"absolute", top:14, right:14 }} />
+          <div style={{ width:36, height:36, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <Palette size={17} color={T.ink} />
           </div>
-          <div>
-            <div style={{ width:28, height:3, borderRadius:2, background:T.gold, marginBottom:8 }} />
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Appearance</div>
-          </div>
+          <div style={{ width:26, height:3, borderRadius:2, background:T.gold, marginTop:4 }} />
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#17191B" }}>Appearance</div>
         </button>
+
         {/* Settings */}
         <button onClick={() => setMorePage("settings")}
-          style={{ width:"100%", background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
-          <ChevronRight size={13} color={T.muted} style={{ position:"absolute", top:"50%", right:14, transform:"translateY(-50%)" }} />
-          <div style={{ width:40, height:40, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-            <Settings size={18} color={T.ink} />
+          style={{ width:"100%", minHeight:98, background:"#FFFFFF", border:"1px solid #E5E9EA", borderRadius:18, padding:"13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative", boxShadow:"0 1px 2px rgba(25,35,40,0.02)" }}>
+          <ChevronRight size={13} color="#657076" style={{ position:"absolute", top:14, right:14 }} />
+          <div style={{ width:36, height:36, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <Settings size={17} color={T.ink} />
           </div>
-          <div>
-            <div style={{ width:28, height:3, borderRadius:2, background:T.gold, marginBottom:8 }} />
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>Settings</div>
-          </div>
+          <div style={{ width:26, height:3, borderRadius:2, background:T.gold, marginTop:4 }} />
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#17191B" }}>Settings</div>
         </button>
+
+        {/* Account activity & history */}
+        <button onClick={() => setMorePage("history")}
+          style={{ width:"100%", minHeight:98, background:"#FFFFFF", border:"1px solid #E5E9EA", borderRadius:18, padding:"13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative", boxShadow:"0 1px 2px rgba(25,35,40,0.02)" }}>
+          <ChevronRight size={13} color="#657076" style={{ position:"absolute", top:14, right:14 }} />
+          <div style={{ width:36, height:36, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <Activity size={17} color={T.ink} />
+          </div>
+          <div style={{ width:26, height:3, borderRadius:2, background:T.gold, marginTop:4 }} />
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#17191B" }}>Activity & History</div>
+        </button>
+
+        {/* Privacy & data center */}
+        <button onClick={() => setMorePage("privacy-center")}
+          style={{ width:"100%", minHeight:98, background:"#FFFFFF", border:"1px solid #E5E9EA", borderRadius:18, padding:"13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative", boxShadow:"0 1px 2px rgba(25,35,40,0.02)" }}>
+          <ChevronRight size={13} color="#657076" style={{ position:"absolute", top:14, right:14 }} />
+          <div style={{ width:36, height:36, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <Eye size={17} color={T.ink} />
+          </div>
+          <div style={{ width:26, height:3, borderRadius:2, background:T.gold, marginTop:4 }} />
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#17191B" }}>Privacy & Data</div>
+        </button>
+
+        {/* Creator & token safety */}
+        <button onClick={() => setMorePage("creator-safety")}
+          style={{ width:"100%", minHeight:98, background:"#FFFFFF", border:"1px solid #E5E9EA", borderRadius:18, padding:"13px 12px", textAlign:"left", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"flex-start", gap:5, position:"relative", boxShadow:"0 1px 2px rgba(25,35,40,0.02)" }}>
+          <ChevronRight size={13} color="#657076" style={{ position:"absolute", top:14, right:14 }} />
+          <div style={{ width:36, height:36, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <ShieldCheck size={17} color={T.ink} />
+          </div>
+          <div style={{ width:26, height:3, borderRadius:2, background:T.gold, marginTop:4 }} />
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#17191B", lineHeight:1.25 }}>Creator & Token Safety</div>
+        </button>
+
         {/* Logout */}
         <button onClick={() => onLogoutConfirm && onLogoutConfirm()}
-          style={{ width:"100%", background:"rgba(176,96,74,0.08)", border:"1px solid rgba(176,96,74,0.25)", borderRadius:20, padding:"20px 16px", textAlign:"left", cursor:"pointer", display:"flex", alignItems:"center", gap:16, position:"relative" }}>
-          <ChevronRight size={13} color={T.rust} style={{ position:"absolute", top:"50%", right:14, transform:"translateY(-50%)" }} />
-          <div style={{ width:40, height:40, borderRadius:"50%", background:"rgba(176,96,74,0.15)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-            <LogOut size={18} color={T.rust} />
+          style={{ width:"calc(100% - 28px)", justifySelf:"center", minHeight:52, gridColumn:"1 / -1", background:T.gold, border:"none", borderRadius:28, padding:"7px 18px", textAlign:"center", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:10, position:"relative", boxShadow:"0 6px 14px rgba(244,211,94,.24)" }}>
+          <div style={{ width:34, height:34, borderRadius:"50%", background:"rgba(15,14,11,.10)", display:"grid", placeItems:"center", flexShrink:0 }}>
+            <LogOut size={17} color={T.ink} />
           </div>
-          <div>
-            <div style={{ width:28, height:3, borderRadius:2, background:T.rust, marginBottom:8 }} />
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.rust }}>Logout</div>
-          </div>
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.ink, textAlign:"center" }}>Logout</div>
         </button>
       </div>
       <div style={{ padding:"24px 20px 0", textAlign:"center" }}>
-        <div style={{ fontSize:10.5, color:T.muted, lineHeight:1.7 }}>RainX is an analysis tool, not a broker.<br/>AI analysis is not financial advice.</div>
+        <div style={{ fontSize:10.5, color:"#657076", lineHeight:1.7 }}>RainX is an analysis tool, not a broker.<br/>AI analysis is not financial advice.</div>
       </div>
+
+      {appearanceOpen && (
+        <div onClick={() => setAppearanceOpen(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.16)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)", zIndex:60, display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
+          <style>{"@keyframes rxSheetUp { from { transform:translateY(100%) } to { transform:translateY(0) } }"}</style>
+          <div onClick={(e) => e.stopPropagation()} style={{ background:"#ffffff", borderRadius:24, padding:"14px 14px 28px", animation:"rxSheetUp 0.28s cubic-bezier(0.22,1,0.36,1)" }}>
+            <div style={{ width:42, height:5, borderRadius:3, background:"#e2e2e2", margin:"0 auto 18px" }} />
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:"#2d2d2d", textAlign:"center", marginBottom:22 }}>Choose appearance</div>
+            <div style={{ display:"flex", justifyContent:"space-between", gap:10 }}>
+              {[["light","Always light"],["dark","Always dark"],["system","Device settings"]].map(([val,label]) => {
+                const selected = themeMode === val;
+                const mode = val === "system" ? "split" : val;
+                return (
+                  <button key={val} onClick={() => { lsSet("rainx-theme", val); setThemeMode(val); }} style={{ flex:1, background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
+                    {renderAppearancePhone(mode)}
+                    <div style={{ width:22, height:22, borderRadius:"50%", border: "2px solid " + (selected ? "#4a6d7c" : "#cfcfcf"), display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      {selected && <div style={{ width:12, height:12, borderRadius:"50%", background:"#4a6d7c" }} />}
+                    </div>
+                    <div style={{ fontFamily:FONT_HEAD, fontWeight:600, fontSize:12, color:"#2d2d2d" }}>{label}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -6556,7 +6109,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       </svg>
     );
     return (
-      <div style={{ minHeight:"100%", background:T.ink, overflowY:"auto" }}>
+      <div style={{ minHeight:"100%", background:T.ink }}>
         <style>{"@keyframes slideInRight { from { transform:translateX(24px); opacity:0 } to { transform:translateX(0); opacity:1 } } @keyframes sheetUp { from { transform:translateY(100%) } to { transform:translateY(0) } }"}</style>
 
         {/* ── Bug 2 fix: Followers/Following modal for own profile ── */}
@@ -6564,6 +6117,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           <FollowListModal
             userId={account.id}
             type={showFollowListOwn}
+            viewerId={account.id}
             onClose={() => setShowFollowListOwn(null)}
             onOpenProfile={(uid) => { setShowFollowListOwn(null); setTab("community"); }}
           />
@@ -6658,7 +6212,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <div style={{ padding:"0 16px 8px" }}>
           <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2 }}>
             <span style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:T.paper, lineHeight:1.2 }}>{fullName || username || (profileLoaded ? account?.email : "")}</span>
-            <VerifBadgeIcon size={18} />
+            <CommunityBadge isAdmin={false} badge={verification || "none"} isPro={false} />
           </div>
           {username && <div style={{ fontSize:13.5, color:T.muted, marginBottom:7 }}>@{username}</div>}
           {bio && <div style={{ fontSize:13.5, color:T.paper, marginBottom:9, lineHeight:1.65 }}>{bio}</div>}
@@ -6698,9 +6252,18 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           )}
         </div>
 
-        {/* ── Posts header ── */}
-        <div style={{ borderTop:`1px solid ${T.cardBorder}`, padding:"12px 16px 0" }}>
-          <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper, borderBottom:`2px solid ${T.gold}`, paddingBottom:10, display:"inline-block" }}>Posts</span>
+        {/* ── Posts / Reposts — same interaction model as Community profiles ── */}
+        <div style={{ borderTop:`1px solid ${T.cardBorder}`, display:"grid", gridTemplateColumns:"1fr 1fr" }}>
+          {[
+            { key:"posts", label:"Posts", icon:null },
+            { key:"reposts", label:"Reposts", icon:Repeat2 },
+          ].map(({ key, label, icon:Icon }) => (
+            <button key={key} onClick={() => setProfileTab(key)}
+              style={{ background:"none", border:"none", color:profileTab === key ? T.paper : T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, padding:"13px 8px 11px", cursor:"pointer", borderBottom:profileTab === key ? `2px solid ${T.gold}` : "2px solid transparent", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              {Icon && <Icon size={16} strokeWidth={2.2} />}
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* ── Profile Composer FAB ── */}
@@ -6727,12 +6290,13 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         {/* ── Profile posts feed ── */}
         {profilePostsLoading ? (
           <div style={{ fontSize:13, color:T.muted, padding:"28px 0", textAlign:"center" }}>Loading…</div>
-        ) : profilePosts.length === 0 ? (
-          <div style={{ fontSize:13, color:T.muted, padding:"28px 0", textAlign:"center" }}>No posts yet.</div>
-        ) : (
-          <CommunityProfileFeed
-            posts={profilePosts}
-            account={account}
+        ) : (() => {
+          const tabPosts = profileTab === "reposts" ? profilePosts.filter(p => !!p.repost_of_post_id) : profilePosts.filter(p => !p.repost_of_post_id);
+          if (!tabPosts.length) return <div style={{ fontSize:13, color:T.muted, padding:"32px 0", textAlign:"center" }}>{profileTab === "reposts" ? "No reposts yet." : "No posts yet."}</div>;
+          return (
+            <CommunityProfileFeed
+              posts={tabPosts}
+              account={account}
             themeTokens={T}
             profileEntry={{
               id: account.id,
@@ -6740,6 +6304,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               full_name: fullName,
               username: username,
               avatar_url: avatarUrl,
+              badge: verification || "none",
+              is_official: verification === "official",
+              is_admin: false,
             }}
             onOpenProfile={() => {}}
             onDmUser={() => {}}
@@ -6747,11 +6314,12 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               await supabase.from("community_posts").delete().eq("id", id);
               setProfilePosts(posts => posts.filter(p => p.id !== id));
             }}
-            onRefresh={() => {
-              supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false}).then(({data})=>setProfilePosts(data||[]));
-            }}
-          />
-        )}
+              onRefresh={() => {
+                supabase.from("community_posts").select("*").eq("user_id",account.id).order("created_at",{ascending:false}).then(({data})=>setProfilePosts(data||[]));
+              }}
+            />
+          );
+        })()}
       </div>
     );
   }
@@ -6763,7 +6331,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       </svg>
     );
     return (
-      <div style={{ minHeight:"100%", background:T.ink, overflowY:"auto", animation:"slideInRight 0.2s ease" }}>
+      <div style={{ minHeight:"100%", background:T.ink, animation:"slideInRight 0.2s ease" }}>
         <style>{"@keyframes slideInRight { from { transform:translateX(24px); opacity:0 } to { transform:translateX(0); opacity:1 } }"}</style>
 
         {/* ── Edit profile header ── */}
@@ -6923,9 +6491,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     const isGolden = verification === "golden";
     const isBlue   = verification === "blue";
     const isVerif  = isGolden || isBlue;
-    const badgeBg  = isGolden ? "rgba(198,161,91,0.12)" : isBlue ? "rgba(91,156,246,0.12)" : "rgba(100,100,100,0.10)";
+    const badgeBg  = isGolden ? "rgba(244,211,94,0.12)" : isBlue ? "rgba(91,156,246,0.12)" : "rgba(100,100,100,0.10)";
     const badgeBorder = isGolden ? T.gold : isBlue ? "#5B9CF6" : T.cardBorder;
-    const iconBg   = isGolden ? "rgba(198,161,91,0.15)" : isBlue ? "rgba(91,156,246,0.15)" : "rgba(100,100,100,0.08)";
+    const iconBg   = isGolden ? "rgba(244,211,94,0.15)" : isBlue ? "rgba(91,156,246,0.15)" : "rgba(100,100,100,0.08)";
     const iconBorder = isGolden ? `2px solid ${T.gold}` : isBlue ? "2px solid #5B9CF6" : `1px solid ${T.cardBorder}`;
 
     const tiers = [
@@ -6942,7 +6510,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
             <div style={{ width: 70, height: 70, borderRadius: "50%", background: iconBg, border: iconBorder, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
               {isGolden ? (
                 <svg width="38" height="38" viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
-                  <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D89E00" />
+                  <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#F4D35E" />
                 </svg>
               ) : isBlue ? (
                 <svg width="38" height="38" viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
@@ -6956,7 +6524,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               {isVerif ? verificationLabel : "Not Verified"}
             </div>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: badgeBg, border: `1px solid ${badgeBorder}`, borderRadius: 20, padding: "7px 18px" }}>
-              <VerifBadgeIcon size={13} />
+              <CommunityBadge isAdmin={false} badge={verification || "none"} isPro={false} />
               <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 12.5, color: verificationColor }}>{verificationLabel}</span>
             </div>
             {isVerif && (
@@ -6973,22 +6541,22 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               const active = entitlement.tier === t.key;
               const tBlue = t.icon === "blue";
               return (
-                <div key={t.key} style={{ padding: "12px 16px", borderTop: i > 0 ? `1px solid ${T.cardBorder}` : "none", display: "flex", alignItems: "center", gap: 12, background: active ? (tBlue ? "rgba(91,156,246,0.06)" : "rgba(198,161,91,0.06)") : "transparent" }}>
-                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: tBlue ? "rgba(91,156,246,0.12)" : "rgba(198,161,91,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div key={t.key} style={{ padding: "12px 16px", borderTop: i > 0 ? `1px solid ${T.cardBorder}` : "none", display: "flex", alignItems: "center", gap: 12, background: active ? (tBlue ? "rgba(91,156,246,0.06)" : "rgba(244,211,94,0.06)") : "transparent" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: tBlue ? "rgba(91,156,246,0.12)" : "rgba(244,211,94,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     {tBlue ? (
                       <svg width="16" height="16" viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
                         <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1d9bf0" />
                       </svg>
                     ) : (
                       <svg width="16" height="16" viewBox="1.604 1.604 18.792 18.792" style={{ flexShrink: 0 }}>
-                        <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D89E00" />
+                        <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#F4D35E" />
                       </svg>
                     )}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <span style={{ fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.paper }}>{t.label} Plan</span>
-                      {active && <span style={{ fontSize: 10, fontWeight: 700, color: tBlue ? "#5B9CF6" : T.goldBright, background: tBlue ? "rgba(91,156,246,0.15)" : "rgba(198,161,91,0.15)", borderRadius: 8, padding: "2px 7px" }}>ACTIVE</span>}
+                      {active && <span style={{ fontSize: 10, fontWeight: 700, color: tBlue ? "#5B9CF6" : T.goldBright, background: tBlue ? "rgba(91,156,246,0.15)" : "rgba(244,211,94,0.15)", borderRadius: 8, padding: "2px 7px" }}>ACTIVE</span>}
                     </div>
                     <div style={{ fontSize: 11, color: tBlue ? "#5B9CF6" : T.goldBright, marginTop: 2, fontWeight: 600 }}>{t.verif}</div>
                   </div>
@@ -7047,13 +6615,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     return null;
   }
 
-  if (morePage === "analytics") return (
-    <MoreSubScreen onBack={() => setMorePage(null)} title="ANALYTICS" subtitle="Your creator performance">
-      <AnalyticsScreen account={account} />
-    </MoreSubScreen>
-  );
-
-  const renderAppearancePhone = (mode) => {
+  function renderAppearancePhone(mode) {
     const isLight = mode === "light";
     const splitGrad = function(l, d) { return "linear-gradient(to right, " + l + " 50%, " + d + " 50%)"; };
     const bg = mode === "split" ? splitGrad("#f5f5f5", "#1c1c1c") : (isLight ? "#f5f5f5" : "#1c1c1c");
@@ -7072,113 +6634,447 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
         <div style={{ height:12, borderRadius:6, background:nav }} />
       </div>
     );
-  };
+  }
 
-  if (morePage === "appearance") return (
-    <div onClick={() => setMorePage("profile-menu")} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.35)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)", zIndex:60, display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
-      <style>{"@keyframes rxSheetUp { from { transform:translateY(100%) } to { transform:translateY(0) } }"}</style>
-      <div onClick={(e) => e.stopPropagation()} style={{ background:"#ffffff", borderRadius:24, padding:"14px 14px 28px", animation:"rxSheetUp 0.28s cubic-bezier(0.22,1,0.36,1)" }}> 
-        <div style={{ width:42, height:5, borderRadius:3, background:"#e2e2e2", margin:"0 auto 18px" }} />
-        <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:20, color:"#2d2d2d", textAlign:"center", marginBottom:22 }}>Choose appearance</div>
-        <div style={{ display:"flex", justifyContent:"space-between", gap:10 }}>
-          {[["light","Always light"],["dark","Always dark"],["system","Device settings"]].map(([val,label]) => {
-            const selected = themeMode === val;
-            const mode = val === "system" ? "split" : val;
-            return (
-              <button key={val} onClick={() => { lsSet("rainx-theme", val); setThemeMode(val); }} style={{ flex:1, background:"none", border:"none", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}> 
-                {renderAppearancePhone(mode)}
-                <div style={{ width:22, height:22, borderRadius:"50%", border: "2px solid " + (selected ? "#4a6d7c" : "#cfcfcf"), display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  {selected && <div style={{ width:12, height:12, borderRadius:"50%", background:"#4a6d7c" }} />}
-                </div>
-                <div style={{ fontFamily:FONT_HEAD, fontWeight:600, fontSize:12, color:"#2d2d2d" }}>{label}</div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+  // ── Settings / Security visual system ─────────────────────────────────────
+  // These screens intentionally use a light ash page, white grouped cards,
+  // dark icons and the existing RainX yellow accent without changing the rest
+  // of the application theme.
+  const PREF_BG = "#F2F3F5";
+  const PREF_CARD = "#FFFFFF";
+  const PREF_BORDER = "#E7E9EC";
+  const PREF_ICON = "#18202A";
+  const PREF_TEXT = "#111418";
+  const PREF_MUTED = "#737B85";
+  const PREF_YELLOW = T.gold;
+
+  const LightToggle = ({ on, onChange, disabled=false, danger=false }) => (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={e=>{ e.stopPropagation(); onChange(); }}
+      disabled={disabled}
+      style={{ width:44, height:25, padding:0, border:0, borderRadius:13, background:on ? (danger ? "#C0392B" : PREF_YELLOW) : "#D7DBE0", position:"relative", cursor:disabled?"not-allowed":"pointer", transition:"background .18s", flexShrink:0, opacity:disabled?.55:1 }}
+    >
+      <span style={{ position:"absolute", top:3, left:on?22:3, width:19, height:19, borderRadius:"50%", background:"#fff", boxShadow:"0 1px 3px rgba(0,0,0,.18)", transition:"left .18s" }} />
+    </button>
+  );
+
+  const LightSection = ({ title, children }) => (
+    <section style={{ marginBottom:22 }}>
+      <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, letterSpacing:.15, color:PREF_MUTED, margin:"0 0 8px 4px", textTransform:"uppercase" }}>{title}</div>
+      <div style={{ background:PREF_CARD, border:`1px solid ${PREF_BORDER}`, borderRadius:17, overflow:"hidden", boxShadow:"0 1px 2px rgba(15,20,25,.03)" }}>{children}</div>
+    </section>
+  );
+
+  const LightDivider = () => <div style={{ height:1, background:PREF_BORDER, marginLeft:66 }} />;
+
+  const LightIcon = ({ Icon }) => (
+    <div style={{ width:38, height:38, borderRadius:11, background:"#F1F3F5", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+      <Icon size={19} color={PREF_ICON} strokeWidth={2.1} />
     </div>
   );
+
+  const LightRow = ({ icon:Icon, title, subtitle, onPress, right, disabled=false }) => (
+    <div role={onPress?"button":undefined} tabIndex={onPress?0:undefined} onClick={onPress} onKeyDown={e=>{if(onPress&&(e.key==="Enter"||e.key===" ")){e.preventDefault();onPress();}}} style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"14px 16px", background:"transparent", border:0, textAlign:"left", cursor:disabled?"not-allowed":onPress?"pointer":"default", opacity:disabled?.55:1, boxSizing:"border-box" }}>
+      {Icon && <LightIcon Icon={Icon} />}
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:PREF_TEXT }}>{title}</div>
+        {subtitle && <div style={{ fontFamily:FONT_BODY, fontSize:11.2, color:PREF_MUTED, marginTop:3, lineHeight:1.4 }}>{subtitle}</div>}
+      </div>
+      {right}
+    </div>
+  );
+
+  const LightToggleRow = ({ icon:Icon, title, subtitle, prefKey, defaultValue=true }) => {
+    const on = settingsPrefs[prefKey] ?? defaultValue;
+    return <LightRow icon={Icon} title={title} subtitle={subtitle} onPress={()=>persistSettings({[prefKey]:!on})} right={<LightToggle on={on} onChange={()=>persistSettings({[prefKey]:!on})} />} />;
+  };
+
+  const LightSecurityToggleRow = ({ title, subtitle, prefKey, defaultValue=true }) => {
+    const on = securityPrefs[prefKey] ?? defaultValue;
+    return <LightRow icon={ShieldCheck} title={title} subtitle={subtitle} onPress={()=>persistSecurity({[prefKey]:!on})} right={<LightToggle on={on} onChange={()=>persistSecurity({[prefKey]:!on})} />} />;
+  };
+
+  const LightSheet = StableLightSheet;
+
+  const LightSheetTitle = ({ title, desc }) => <>
+    <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, color:PREF_TEXT, marginBottom:5 }}>{title}</div>
+    {desc && <div style={{ fontSize:11.5, color:PREF_MUTED, lineHeight:1.55, marginBottom:16 }}>{desc}</div>}
+  </>;
+
+  const LightChoice = ({ value, current, title, desc, onSelect }) => (
+    <button type="button" onClick={()=>onSelect(value)} style={{ width:"100%", background:"transparent", border:0, padding:"13px 0", display:"flex", alignItems:"center", gap:12, textAlign:"left", cursor:"pointer" }}>
+      <div style={{ flex:1 }}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:PREF_TEXT}}>{title}</div>{desc&&<div style={{fontSize:11,color:PREF_MUTED,marginTop:2}}>{desc}</div>}</div>
+      <div style={{ width:20, height:20, borderRadius:"50%", border:`2px solid ${current===value?PREF_YELLOW:"#C9CED4"}`, display:"flex", alignItems:"center", justifyContent:"center" }}>{current===value&&<div style={{width:10,height:10,borderRadius:"50%",background:PREF_YELLOW}}/>}</div>
+    </button>
+  );
+
+  if (morePage === "privacy-center") return (
+    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Privacy & Data" subtitle="Control how RainX uses, stores and exposes your information">
+      <div style={{ background:PREF_BG, minHeight:"100%", padding:"16px 16px 28px" }}>
+        <LightSection title="Privacy controls">
+          <LightToggleRow icon={Eye} title="Profile discoverable" subtitle="Allow your profile to appear in search and suggestions" prefKey="profileDiscoverable" />
+          <LightDivider />
+          <LightToggleRow icon={EyeOff} title="Activity status" subtitle="Hide your active status from other users" prefKey="activityStatus" defaultValue={false} />
+          <LightDivider />
+          <LightToggleRow icon={MessageCircle} title="Read receipts" subtitle="Control whether message read status is shared" prefKey="readReceipts" />
+          <LightDivider />
+          <LightRow icon={Users2} title="Blocked & muted users" subtitle="Manage accounts you no longer want to interact with" onPress={()=>setSettingsSheet("blockedUsers")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={Lock} title="Messaging privacy" subtitle="Choose who can message you and send requests" onPress={()=>setSettingsSheet("messageWho")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+        </LightSection>
+        <LightSection title="Data & personalization">
+          <LightToggleRow icon={Users2} title="Personalized recommendations" subtitle="Use activity to improve people, market and creator suggestions" prefKey="personalizedSuggestions" />
+          <LightDivider />
+          <LightToggleRow icon={Activity} title="Analytics" subtitle="Allow optional product analytics" prefKey="analyticsCookies" defaultValue={false} />
+          <LightDivider />
+          <LightToggleRow icon={Bell} title="Marketing updates" subtitle="Allow optional promotional and creator updates" prefKey="marketingNotifications" defaultValue={false} />
+          <LightDivider />
+          <LightRow icon={Download} title="Download your data" subtitle="Export available local preferences now; full account export needs backend support" onPress={()=>setSettingsSheet("downloadData")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+        </LightSection>
+        <LightSection title="Data lifecycle">
+          <LightRow icon={Database} title="Data deletion request" subtitle="Request deletion of eligible account data" onPress={()=>alert("Backend required: authenticated data-deletion request and retention workflow.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED,border:`1px solid ${PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>BACKEND</span>} />
+          <LightDivider />
+          <LightRow icon={Trash2} title="Clear local RainX data" subtitle="Remove locally stored preferences on this device" onPress={()=>{try{Object.keys(localStorage).filter(k=>k.startsWith("rainx-")).forEach(k=>localStorage.removeItem(k));}catch{} setSettingsPrefs({}); setSecurityPrefs({}); alert("Local RainX data cleared.");}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+        </LightSection>
+        <LightSection title="Legal & preferences">
+          <LightRow icon={FileCheck} title="Privacy Policy" subtitle="Review how personal information is handled" onPress={()=>alert("Open the RainX Privacy Policy from the legal centre.")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={FileCheck} title="Terms of Service" subtitle="Review the rules governing RainX use" onPress={()=>alert("Open the RainX Terms from the legal centre.")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={Cookie} title="Cookie & data preferences" subtitle="Manage optional analytics, personalization and marketing" onPress={()=>setSettingsSheet("cookies")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+        </LightSection>
+      </div>
+    </MoreSubScreen>
+  );
+
+  if (morePage === "creator-safety") return (
+    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Creator & Token Safety" subtitle="Security, reporting, moderation and creator controls">
+      <div style={{ background:PREF_BG, minHeight:"100%", padding:"16px 16px 28px" }}>
+        <LightSection title="Creator protection">
+          <LightSecurityToggleRow title="Creator security alerts" subtitle="Permission, payout and creator-account security events" prefKey="creatorSecurityAlerts" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Payout change confirmations" subtitle="Require an extra confirmation before changing payout destinations" prefKey="creatorPayoutConfirmations" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Moderation notifications" subtitle="Notify me about reports, takedowns and review outcomes" prefKey="moderationNotifications" />
+        </LightSection>
+        <LightSection title="Token safety">
+          <LightSecurityToggleRow title="Show token reporting controls" subtitle="Keep report, mute and moderation actions visible on token surfaces" prefKey="tokenReporting" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Risk acknowledgement" subtitle="Require acknowledgement before high-risk creator-token actions" prefKey="tokenRiskAcknowledgement" />
+          <LightDivider />
+          <LightRow icon={ShieldCheck} title="Internal-token risk & disclosure" subtitle="Review the risk language used around creator tokens" onPress={()=>setSecuritySheet("tokenRisk")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={FileCheck} title="Report a token" subtitle="Flag suspected scams, impersonation, manipulation or policy violations" onPress={()=>alert("Backend required: token-report submission and moderation queue.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED,border:`1px solid ${PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>BACKEND</span>} />
+        </LightSection>
+        <LightSection title="Premium creator controls">
+          <LightRow icon={Lock} title="Creator permissions" subtitle="Role-based publishing, moderation and payout permissions" onPress={()=>alert("Backend required: creator role/permission API.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+          <LightDivider />
+          <LightRow icon={Activity} title="Creator activity log" subtitle="Audit creator actions and security events" onPress={()=>alert("Backend required: creator audit-log endpoint.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+        </LightSection>
+      </div>
+    </MoreSubScreen>
+  );
+
   if (morePage === "settings") return (
-    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Settings" subtitle="Privacy &amp; account controls">
-      <div style={{ padding:16 }}>
-        <MoreSection title="Post Visibility">
-          {[["public","Public — everyone"],["followers","Followers only"],["premium","Subscribers only"]].map(([val,label],i,arr)=>{
-            const cur = lsGet("rainx-post-visibility")||"public";
-            return (
-              <React.Fragment key={val}>
-                {i>0 && <MoreRowDivider />}
-                <button onClick={()=>lsSet("rainx-post-visibility",val)} style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"13px 16px", background:"none", border:"none", cursor:"pointer" }}>
-                  <span style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13.5, color:T.paper }}>{label}</span>
-                  <div style={{ width:20, height:20, borderRadius:"50%", border:`2px solid ${cur===val?T.gold:T.cardBorder}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    {cur===val && <div style={{ width:10, height:10, borderRadius:"50%", background:T.gold }} />}
-                  </div>
-                </button>
-              </React.Fragment>
-            );
+    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Settings" subtitle="Privacy & account controls">
+      <div style={{ background:PREF_BG, minHeight:"100%", padding:"16px 16px 28px" }}>
+        <LightSection title="Privacy & discovery">
+          <LightToggleRow icon={Eye} title="Profile discoverable" subtitle="Allow your profile to appear in search and suggestions" prefKey="profileDiscoverable" />
+          <LightDivider />
+          <LightToggleRow icon={Eye} title="Activity status" subtitle="Let people you follow see when you are active" prefKey="activityStatus" />
+          <LightDivider />
+          <LightToggleRow icon={MessageCircle} title="Read receipts" subtitle="Show when direct messages have been read" prefKey="readReceipts" />
+          <LightDivider />
+          <LightToggleRow icon={Users2} title="Personalized suggestions" subtitle="Use your activity to improve people and market suggestions" prefKey="personalizedSuggestions" />
+        </LightSection>
+
+        <LightSection title="Your posts">
+          {[["public","Public — everyone","Anyone can view your posts"],["followers","Followers only","Only your followers can view your posts"],["premium","Subscribers only","Only eligible subscribers can view your posts"]].map(([value,title,desc],i)=>{
+            return <React.Fragment key={value}>{i>0&&<LightDivider/>}<LightRow icon={FileText} title={title} subtitle={desc} onPress={()=>{setPostVisibility(value);lsSet("rainx-post-visibility",value)}} right={<div style={{width:20,height:20,borderRadius:"50%",border:`2px solid ${postVisibility===value?PREF_YELLOW:"#C9CED4"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{postVisibility===value&&<div style={{width:10,height:10,borderRadius:"50%",background:PREF_YELLOW}}/>}</div>} /></React.Fragment>;
           })}
-        </MoreSection>
+        </LightSection>
+
+        <LightSection title="Trading & signals">
+          <LightToggleRow icon={Bell} title="Trading signal alerts" subtitle="Receive new BUY / SELL signal notifications" prefKey="signalAlerts" />
+          <LightDivider />
+          <LightToggleRow icon={ShieldCheck} title="Risk & trade alerts" subtitle="Get TP, SL and important risk notifications" prefKey="riskAlerts" />
+          <LightDivider />
+          <LightToggleRow icon={Bell} title="Signal sounds" subtitle="Play alert sounds for important trading events" prefKey="signalSounds" />
+          <LightDivider />
+          <LightToggleRow icon={Activity} title="Live market refresh" subtitle="Keep market and signal data refreshed automatically" prefKey="autoRefresh" />
+          <LightDivider />
+          <LightRow icon={ChevronDown} title="Signal delivery" subtitle={settingsPrefs.signalDelivery || "All signals"} onPress={()=>setSettingsSheet("signalDelivery")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+        </LightSection>
+
+        <LightSection title="Community & messaging">
+          <LightToggleRow icon={Bell} title="Community notifications" subtitle="Likes, replies, follows and mentions" prefKey="communityNotifications" />
+          <LightDivider />
+          <LightToggleRow icon={MessageCircle} title="Message requests" subtitle="Allow new people to send you a message request" prefKey="messageRequests" />
+          <LightDivider />
+          <LightToggleRow icon={Users2} title="Creator updates" subtitle="Updates from creators and Space Coins you follow" prefKey="creatorUpdates" />
+          <LightDivider />
+          <LightToggleRow icon={TrendingUp} title="Space Coin launch alerts" subtitle="Notify me when followed creators launch a new mini token" prefKey="launchAlerts" />
+          <LightDivider />
+          <LightRow icon={Lock} title="Who can message you" subtitle={settingsPrefs.messageWho || "Followers and people you follow"} onPress={()=>setSettingsSheet("messageWho")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+        </LightSection>
+
+        <LightSection title="Data & account">
+          <LightToggleRow icon={EyeOff} title="Hide balances" subtitle="Hide wallet and account balances until tapped" prefKey="hideBalances" defaultValue={false} />
+          <LightDivider />
+          <LightRow icon={ScrollText} title="Data & storage" subtitle="Cache, downloads and local data" onPress={()=>setSettingsSheet("dataStorage")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+          <LightDivider />
+          <LightRow icon={Globe} title="Language & region" subtitle={settingsPrefs.language ? `${settingsPrefs.language} · ${settingsPrefs.region || "Ghana"}` : "English · Ghana"} onPress={()=>setSettingsSheet("region")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+        </LightSection>
+
+        <LightSection title="Legal, privacy & data">
+          <LightRow icon={FileCheck} title="Privacy policy" subtitle="Review how RainX handles personal information" onPress={()=>setShowLegal(true)} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+          <LightDivider />
+          <LightRow icon={FileCheck} title="Terms of service" subtitle="Review the rules that apply to your account" onPress={()=>setShowLegal(true)} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+          <LightDivider />
+          <LightRow icon={Cookie} title="Cookie & tracking preferences" subtitle="Control optional analytics and personalization" onPress={()=>setSettingsSheet("cookies")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+          <LightDivider />
+          <LightRow icon={Download} title="Download your data" subtitle="Request a copy of information associated with your account" onPress={()=>setSettingsSheet("downloadData")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+        </LightSection>
+
+        <LightSection title="Notifications">
+          <LightRow icon={Bell} title="Notification preferences" subtitle="Manage in-app and push alerts by category" onPress={()=>setMorePage("notifications")} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+        </LightSection>
+
+        {settingsSheet && <LightSheet onClose={()=>setSettingsSheet(null)}>
+          {settingsSheet === "signalDelivery" && <>
+            <LightSheetTitle title="Signal delivery" desc="Choose which trading signals reach you." />
+            <LightChoice value="all" current={settingsPrefs.signalDelivery||"all"} title="All signals" desc="BUY, SELL and watchlist updates" onSelect={v=>{persistSettings({signalDelivery:v});setSettingsSheet(null)}} />
+            <LightChoice value="high" current={settingsPrefs.signalDelivery||"all"} title="High confidence only" desc="Only stronger-confidence setups" onSelect={v=>{persistSettings({signalDelivery:v});setSettingsSheet(null)}} />
+            <LightChoice value="followed" current={settingsPrefs.signalDelivery||"all"} title="Followed markets only" desc="Only markets in your watchlist" onSelect={v=>{persistSettings({signalDelivery:v});setSettingsSheet(null)}} />
+          </>}
+          {settingsSheet === "messageWho" && <>
+            <LightSheetTitle title="Who can message you" desc="Choose who can start a conversation." />
+            {[['followers','Followers and people you follow'],['everyone','Anyone on RainX'],['nobody','Nobody']].map(([v,t])=><LightChoice key={v} value={v} current={settingsPrefs.messageWhoKey||'followers'} title={t} onSelect={x=>{persistSettings({messageWho:t,messageWhoKey:x});setSettingsSheet(null)}} />)}
+          </>}
+          {settingsSheet === "blockedUsers" && <>
+            <LightSheetTitle title="Blocked & muted users" desc="These lists are connected directly to your RainX account controls." />
+            {blockedLoading ? <div style={{padding:"18px 0",fontSize:12,color:PREF_MUTED,textAlign:"center"}}>Loading account controls…</div> : <>
+              <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:12.5,color:PREF_MUTED,margin:"4px 0 8px"}}>BLOCKED ({blockedUsers.length})</div>
+              {blockedUsers.length === 0 ? <div style={{padding:"10px 0 14px",fontSize:12,color:PREF_MUTED}}>No blocked accounts.</div> : blockedUsers.map(({id,profile}) => {
+                const name = profile?.display_name || profile?.full_name || profile?.username || `Account ${id.slice(0,6)}`;
+                return <LightRow key={id} icon={UserX} title={name} subtitle={profile?.username ? `@${profile.username}` : "Blocked account"} onPress={async()=>{ const {error}=await supabase.from("user_blocks").delete().eq("blocker_id",account.id).eq("blocked_id",id); if(!error) setBlockedUsers(v=>v.filter(x=>x.id!==id)); }} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED,border:`1px solid ${PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>UNBLOCK</span>} />;
+              })}
+              <LightDivider />
+              <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:12.5,color:PREF_MUTED,margin:"14px 0 8px"}}>MUTED ({mutedUsers.length})</div>
+              {mutedUsers.length === 0 ? <div style={{padding:"10px 0",fontSize:12,color:PREF_MUTED}}>No muted accounts.</div> : mutedUsers.map(({id,profile}) => {
+                const name = profile?.display_name || profile?.full_name || profile?.username || `Account ${id.slice(0,6)}`;
+                return <LightRow key={id} icon={Bell} title={name} subtitle={profile?.username ? `@${profile.username}` : "Muted account"} onPress={async()=>{ const {error}=await supabase.from("user_mutes").delete().eq("muter_id",account.id).eq("muted_id",id); if(!error) setMutedUsers(v=>v.filter(x=>x.id!==id)); }} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED,border:`1px solid ${PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>UNMUTE</span>} />;
+              })}
+            </>}
+          </>}
+          {settingsSheet === "dataStorage" && <>
+            <LightSheetTitle title="Data & storage" desc="Manage local app data without changing your account." />
+            <LightRow icon={ScrollText} title="Clear local preferences" subtitle="Remove locally saved RainX preferences on this device" onPress={()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('rainx-')).forEach(k=>localStorage.removeItem(k));}catch{} setSettingsPrefs({}); setSettingsSheet(null); alert('Local RainX preferences were cleared.');}} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+          </>}
+          {settingsSheet === "region" && <>
+            <LightSheetTitle title="Language & region" desc="Choose your preferred app language and region." />
+            <div style={{maxHeight:"52vh",overflowY:"auto",paddingRight:4}}>
+              {["English","French","Spanish","Portuguese","Arabic","German","Italian","Dutch","Chinese (Simplified)","Chinese (Traditional)","Japanese","Korean","Hindi","Bengali","Urdu","Indonesian","Malay","Thai","Vietnamese","Turkish","Swahili","Hausa","Yoruba","Amharic","Hebrew","Russian","Ukrainian","Polish","Romanian","Greek","Czech","Hungarian","Swedish","Norwegian","Danish","Finnish"].map(v=><LightChoice key={v} value={v} current={settingsPrefs.language||"English"} title={v} onSelect={x=>{persistSettings({language:x,region:x==="English"?"Ghana":x});setSettingsSheet(null)}} />)}
+            </div>
+          </>}
+          {settingsSheet === "cookies" && <>
+            <LightSheetTitle title="Cookie & tracking preferences" desc="Optional controls. Essential security and session storage remain enabled." />
+            <LightToggleRow icon={Activity} title="Analytics" subtitle="Help RainX understand how features are used" prefKey="analyticsCookies" />
+            <LightToggleRow icon={Users2} title="Personalized recommendations" subtitle="Use activity to improve content and market suggestions" prefKey="personalizationCookies" />
+            <LightToggleRow icon={Bell} title="Marketing notifications" subtitle="Allow promotional product and creator updates" prefKey="marketingNotifications" defaultValue={false} />
+          </>}
+          {settingsSheet === "downloadData" && <>
+            <LightSheetTitle title="Download your data" desc="Create a local copy of the preferences currently stored on this device." />
+            <LightRow icon={Download} title="Export local preferences" subtitle="Save your RainX settings as a JSON file" onPress={()=>{try{const payload={exportedAt:new Date().toISOString(),settings:settingsPrefs,security:{...securityPrefs,pinHash:undefined,biometricCredentialId:undefined}};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="rainx-settings.json";a.click();URL.revokeObjectURL(url);setSettingsSheet(null)}catch{alert("Unable to export local preferences on this device.")}}} right={<ChevronRight size={18} color={PREF_MUTED} />} />
+          </>}
+        </LightSheet>}
       </div>
     </MoreSubScreen>
   );
 
   if (morePage === "notifications") return (
-    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Notifications" subtitle="Alert preferences &amp; push settings">
-      <NotificationSettingsScreen account={account} activeMarkets={activeMarkets} />
+    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Notifications" subtitle="Alert preferences & push settings">
+      <div style={{ background:PREF_BG, minHeight:"100%" }}><NotificationSettingsScreen account={account} activeMarkets={activeMarkets} /></div>
     </MoreSubScreen>
   );
 
   if (morePage === "security") return (
-    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Security" subtitle="Protect your account">
-      <div style={{ padding: 16 }}>
-        {/* Reset password */}
-        <SecuritySection
-          icon={Key}
-          title="Change Password"
-          desc="Update your account password"
-          onPress={async () => {
-            const { error } = await supabase.auth.resetPasswordForEmail(account?.email || "");
-            if (!error) alert("Password reset link sent to your email.");
-            else alert("Could not send reset email. Try again.");
-          }}
-          label="Send Reset Email"
-        />
-        {/* 2FA */}
-        <SecuritySection
-          icon={Smartphone}
-          title="Two-Step Authentication"
-          desc="Add an extra layer of protection to your account"
-          onPress={() => alert("2FA setup is coming soon. Check back for updates.")}
-          label="Set Up 2FA"
-          comingSoon
-        />
-        {/* Phone number */}
-        <SecuritySection
-          icon={Smartphone}
-          title="Phone Number"
-          desc="Add a phone number for account recovery"
-          onPress={() => alert("Phone verification is coming soon.")}
-          label="Add Phone"
-          comingSoon
-        />
-        {/* Active sessions */}
-        <SecuritySection
-          icon={Eye}
-          title="Active Sessions"
-          desc="View and manage your active login sessions"
-          onPress={() => alert("Session management coming soon.")}
-          label="View Sessions"
-          comingSoon
-        />
-        {/* Delete account */}
-        <div style={{ marginTop: 24 }}>
-          <button onClick={() => {
-            if (window.confirm("Are you sure you want to delete your account? This cannot be undone.")) {
-              alert("Please contact support to delete your account.");
-            }
-          }} style={{ width: "100%", background: "none", border: `1px solid ${T.rust}44`, borderRadius: 13, padding: "13px 0", fontFamily: FONT_HEAD, fontWeight: 700, fontSize: 13, color: T.rust, cursor: "pointer" }}>
-            Delete Account
-          </button>
-        </div>
+    <MoreSubScreen onBack={() => setMorePage("profile-menu")} title="Security" subtitle="Protect your account & device">
+      <div style={{ background:PREF_BG, minHeight:"100%", padding:"16px 16px 28px" }}>
+        {(() => {
+          const checks = [
+            securityPrefs.pinEnabled,
+            securityPrefs.biometricEnabled,
+            securityPrefs.loginAlerts !== false,
+            securityPrefs.tradeConfirmations !== false,
+            securityPrefs.withdrawConfirmations !== false,
+            securityPrefs.securityEmails !== false,
+          ];
+          const score = Math.round((checks.filter(Boolean).length / checks.length) * 100);
+          const scoreLabel = score >= 85 ? "Strong" : score >= 60 ? "Good" : "Needs attention";
+          return (
+            <div style={{ background:"#FFFFFF", border:`1px solid ${PREF_BORDER}`, borderRadius:16, padding:"15px 16px", marginBottom:16 }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+                <div>
+                  <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:PREF_TEXT }}>Security Center</div>
+                  <div style={{ fontSize:11, color:PREF_MUTED, marginTop:3 }}>Account protection score · {scoreLabel}</div>
+                </div>
+                <div style={{ fontFamily:FONT_HEAD, fontWeight:900, fontSize:20, color:score >= 85 ? "#1A7A50" : score >= 60 ? "#A87500" : "#C0392B" }}>{score}%</div>
+              </div>
+              <div style={{ height:7, borderRadius:8, background:"#EEF1F3", overflow:"hidden", marginTop:12 }}>
+                <div style={{ height:"100%", width:`${score}%`, background:PREF_YELLOW, borderRadius:8 }} />
+              </div>
+              <button onClick={()=>setSecuritySheet("checkup")} style={{ marginTop:12, width:"100%", border:`1px solid ${PREF_BORDER}`, background:"#FFFFFF", borderRadius:10, padding:"9px 12px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:11.5, color:PREF_TEXT, cursor:"pointer" }}>Run security checkup</button>
+            </div>
+          );
+        })()}
+        <LightSection title="Sign-in security">
+          <LightRow icon={Key} title="Change Password" subtitle="Update your account password" onPress={async()=>{const {error}=await supabase.auth.resetPasswordForEmail(account?.email||""); if(!error) alert("Password reset link sent to your email."); else alert("Could not send reset email. Try again.");}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={ShieldCheck} title="Two-Step Authentication (2FA)" subtitle={securityPrefs.twoFactorEnabled ? "2FA is enabled for this account" : "Add an authenticator app or verified factor"} onPress={()=>setSecuritySheet("twoFactor")} right={<span style={{fontSize:10.5,fontWeight:800,color:securityPrefs.twoFactorEnabled?"#1A7A50":PREF_MUTED,border:`1px solid ${securityPrefs.twoFactorEnabled?"#B9DCCB":PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>{securityPrefs.twoFactorEnabled?"ENABLED":"BACKEND"}</span>} />
+          <LightDivider />
+          <LightRow icon={Smartphone} title="Phone & recovery methods" subtitle="Manage verified phone numbers and recovery factors" onPress={()=>setSecuritySheet("recovery")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={Activity} title="Login history" subtitle="Review sign-ins, devices, locations and security events" onPress={()=>setSecuritySheet("loginHistory")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+        </LightSection>
+
+        <LightSection title="Device security">
+          <LightRow icon={Lock} title="App Lock" subtitle="Require device authentication before opening RainX" onPress={()=>{ if (!(securityPrefs.pinEnabled || securityPrefs.biometricEnabled)) { setSecuritySheet("appLockSetup"); return; } persistSecurity({appLock:!(securityPrefs.appLock ?? false)}); }} right={<LightToggle on={securityPrefs.appLock ?? false} onChange={()=>{ if (!(securityPrefs.pinEnabled || securityPrefs.biometricEnabled)) { setSecuritySheet("appLockSetup"); return; } persistSecurity({appLock:!(securityPrefs.appLock ?? false)}); }} />} />
+          <LightDivider />
+          <LightRow icon={Key} title="PIN Lock" subtitle={securityPrefs.pinEnabled ? "A RainX device PIN is set" : "Create a 4–6 digit RainX device PIN"} onPress={()=>{setPinValue("");setPinConfirm("");setPinError("");setSecuritySheet("pin")}} right={<span style={{fontSize:10.5,fontWeight:800,color:securityPrefs.pinEnabled?PREF_YELLOW:PREF_MUTED,border:`1px solid ${securityPrefs.pinEnabled?PREF_YELLOW:PREF_BORDER}`,borderRadius:20,padding:"4px 9px"}}>{securityPrefs.pinEnabled?"ENABLED":"SET UP"}</span>} />
+          <LightDivider />
+          <LightRow icon={Smartphone} title="Face ID / Device Passkey" subtitle={securityPrefs.biometricEnabled?"Biometric sign-in is enabled on this device":"Use Face ID, fingerprint or device biometrics"} onPress={setupPasskey} right={<span style={{fontSize:10.5,fontWeight:800,color:securityPrefs.biometricEnabled?PREF_YELLOW:PREF_MUTED,border:`1px solid ${securityPrefs.biometricEnabled?PREF_YELLOW:PREF_BORDER}`,borderRadius:20,padding:"4px 9px"}}>{securityPrefs.biometricEnabled?"ENABLED":"SET UP"}</span>} />
+        </LightSection>
+
+        <LightSection title="Account protection">
+          <LightSecurityToggleRow title="New login alerts" subtitle="Notify me when a new device signs in" prefKey="loginAlerts" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Trade confirmations" subtitle="Confirm sensitive trading actions before they are submitted" prefKey="tradeConfirmations" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Withdrawal confirmations" subtitle="Require an extra confirmation before wallet withdrawals" prefKey="withdrawConfirmations" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Security emails" subtitle="Receive important security and account notices" prefKey="securityEmails" />
+        </LightSection>
+
+        <LightSection title="Sessions & recovery">
+          <LightRow icon={Smartphone} title="Active Sessions" subtitle="View and manage devices signed in to RainX" onPress={()=>setSecuritySheet("sessions")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={Mail} title="Recovery email" subtitle={account?.email?"Your account email is set":"Add a recovery email"} onPress={()=>alert(account?.email?"Your RainX account email is the current recovery email.":"Add a recovery email from your account profile.")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={ShieldCheck} title="Security checkup" subtitle="Review your account protection settings" onPress={()=>setSecuritySheet("checkup")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+        </LightSection>
+
+        <LightSection title="Suspicious activity & protection">
+          <LightSecurityToggleRow title="Suspicious activity alerts" subtitle="Warn me about unusual sign-ins and high-risk account activity" prefKey="suspiciousActivityAlerts" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Require confirmation for sensitive actions" subtitle="Add an extra confirmation before security or wallet changes" prefKey="sensitiveActionConfirmations" />
+          <LightDivider />
+          <LightRow icon={ShieldCheck} title="Report a security issue" subtitle="Open the security-report flow for a suspected compromise" onPress={()=>setSecuritySheet("reportSecurity")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+        </LightSection>
+
+        <LightSection title="Creator Space security">
+          <LightSecurityToggleRow title="Creator security alerts" subtitle="Notify me about creator-space permission and payout changes" prefKey="creatorSecurityAlerts" />
+          <LightDivider />
+          <LightSecurityToggleRow title="Token reporting reminders" subtitle="Show reporting and moderation actions on token pages" prefKey="tokenReporting" />
+          <LightDivider />
+          <LightRow icon={ShieldCheck} title="Token risk & disclosure" subtitle="Review internal-token risk warnings before creator actions" onPress={()=>setSecuritySheet("tokenRisk")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={Lock} title="Premium creator controls" subtitle="Creator permissions, payout protection and moderation access" onPress={()=>setSecuritySheet("creatorControls")} right={<span style={{fontSize:10.5,fontWeight:800,color:PREF_MUTED,border:`1px solid ${PREF_BORDER}`,borderRadius:20,padding:"4px 8px"}}>BACKEND</span>} />
+        </LightSection>
+
+        <LightSection title="Account status & control">
+          <LightRow icon={UserX} title="Deactivate account" subtitle="Temporarily hide your account and sign you out" right={<LightToggle danger on={!!securityPrefs.deactivated} onChange={()=>{if(securityPrefs.deactivated){persistSecurity({deactivated:false});return;}if(window.confirm("Deactivate your RainX account on this device? You can reactivate later.")){persistSecurity({deactivated:true});onLogout?.();}}} />} />
+          <LightDivider />
+          <LightRow icon={Database} title="Account data" subtitle="Review your account data and privacy controls" onPress={()=>setSecuritySheet("accountData")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          <LightDivider />
+          <LightRow icon={Trash2} title="Delete account" subtitle="Permanently request account deletion" right={<LightToggle danger on={!!securityPrefs.deleteArmed} onChange={()=>{if(securityPrefs.deleteArmed){persistSecurity({deleteArmed:false});return;}if(window.confirm("Arm permanent account deletion? You will still need to confirm on the next screen.")){persistSecurity({deleteArmed:true});setSecuritySheet("deleteAccount");}}} />} />
+        </LightSection>
+
+        {securitySheet && <LightSheet onClose={()=>setSecuritySheet(null)}>
+          {securitySheet === "twoFactor" && <>
+            <LightSheetTitle title="Two-Step Authentication" desc="Backend registration is required before 2FA can protect the account. This screen is ready for the authenticated setup flow." />
+            <div style={{background:"#FFF8E5",border:"1px solid #EAD28A",borderRadius:12,padding:"12px 13px",fontSize:11,color:"#765B00",lineHeight:1.5,marginBottom:12}}>UI is ready; the server must issue and verify the authenticator secret, recovery codes and challenge before enabling the account flag.</div>
+            <LightRow icon={ShieldCheck} title="Authenticator app" subtitle="Register TOTP and verify a one-time code" onPress={()=>alert("Backend required: TOTP enrollment endpoint and verification.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+            <LightDivider />
+            <LightRow icon={FileText} title="Recovery codes" subtitle="Generate and rotate one-time recovery codes" onPress={()=>alert("Backend required: secure recovery-code generation.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+          </>}
+          {securitySheet === "recovery" && <>
+            <LightSheetTitle title="Recovery methods" desc="Keep at least two trusted ways to regain access." />
+            <LightRow icon={Mail} title="Account email" subtitle={account?.email || "Not available"} right={<span style={{fontSize:10,fontWeight:800,color:"#1A7A50"}}>VERIFIED</span>} />
+            <LightDivider />
+            <LightRow icon={Smartphone} title="Verified phone" subtitle="Add and verify a recovery phone number" onPress={()=>alert("Backend required: phone verification and recovery-factor storage.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+            <LightDivider />
+            <LightRow icon={Key} title="Recovery codes" subtitle="One-time codes for account recovery" onPress={()=>alert("Backend required: recovery-code generation.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+          </>}
+          {securitySheet === "loginHistory" && <>
+            <LightSheetTitle title="Login history" desc="Recent RainX sign-ins and the devices currently holding sessions." />
+            {loginHistoryLoading ? <div style={{padding:"18px 0",fontSize:12,color:PREF_MUTED,textAlign:"center"}}>Loading secure sign-in history…</div> : <>
+              {loginHistoryRows.length === 0 && securitySessions.length === 0 && <div style={{padding:"12px 0",fontSize:12,color:PREF_MUTED}}>No recorded sign-in events yet.</div>}
+              {loginHistoryRows.map((row) => {
+                const meta = row.meta || {};
+                return <div key={row.id} style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:14,padding:"12px 13px",marginBottom:8}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}><LightIcon Icon={Activity}/><div style={{flex:1}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>{row.action === "signup" ? "Account created" : "Successful sign-in"}</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>{new Date(row.created_at).toLocaleString()}</div></div><span style={{fontSize:9.5,fontWeight:800,color:"#1A7A50"}}>RECORDED</span></div>
+                  <div style={{fontSize:10.5,color:PREF_MUTED,marginTop:8,lineHeight:1.45}}>{meta.platform || "Device"} · {meta.timezone || "Timezone unavailable"}</div>
+                </div>;
+              })}
+              {securitySessions.length > 0 && <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:12,color:PREF_MUTED,margin:"14px 0 8px"}}>ACTIVE AUTH SESSIONS</div>}
+              {securitySessions.map((s) => <div key={s.session_id} style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:14,padding:"12px 13px",marginBottom:8}}><div style={{display:"flex",alignItems:"center",gap:10}}><LightIcon Icon={Smartphone}/><div style={{flex:1,minWidth:0}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>{s.user_agent ? s.user_agent.slice(0,72) : "RainX session"}</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>{s.created_at ? new Date(s.created_at).toLocaleString() : ""} · {s.ip_address || "IP unavailable"}</div></div><span style={{fontSize:9.5,color:"#1A7A50",fontWeight:800}}>ACTIVE</span></div></div>)}
+            </>}
+          </>}
+          {securitySheet === "reportSecurity" && <>
+            <LightSheetTitle title="Report a security issue" desc="Use the authenticated security-report endpoint when this flow is wired to the backend." />
+            <LightRow icon={ShieldCheck} title="Account may be compromised" subtitle="Start an urgent account-security review" onPress={()=>alert("Backend required: authenticated security incident/report endpoint.")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+            <LightDivider />
+            <LightRow icon={Mail} title="Contact security support" subtitle="Send a protected security report with account context" onPress={()=>alert("Backend required: secure support/report submission.")} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          </>}
+          {securitySheet === "tokenRisk" && <>
+            <LightSheetTitle title="Internal-token risk & disclosure" desc="Creator tokens can carry market, liquidity, smart-contract and loss risks." />
+            <div style={{background:"#FFF4F4",border:"1px solid #F2B8B8",borderRadius:13,padding:"12px 13px",fontSize:11,color:"#8E2A2A",lineHeight:1.55,marginBottom:12}}>Treat every creator token as high risk until verified. Do not present internal-token balances or creator projections as guaranteed value. Final risk disclosures and acknowledgement records must be enforced server-side.</div>
+            <LightSecurityToggleRow title="Require risk acknowledgement" subtitle="Require a user acknowledgement before sensitive creator-token actions" prefKey="tokenRiskAcknowledgement" />
+          </>}
+          {securitySheet === "creatorControls" && <>
+            <LightSheetTitle title="Premium creator controls" desc="Permissions that should be backed by server-side role and entitlement checks." />
+            <LightRow icon={Lock} title="Creator permissions" subtitle="Manage who can publish, moderate and change creator settings" onPress={()=>alert("Backend required: role/permission management.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+            <LightDivider />
+            <LightRow icon={Wallet} title="Payout protection" subtitle="Require verification before payout destination changes" onPress={()=>alert("Backend required: payout-change verification.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+            <LightDivider />
+            <LightRow icon={FileCheck} title="Moderation & reports" subtitle="Review token reports, takedowns and creator disputes" onPress={()=>alert("Backend required: moderation/report queue.")} right={<span style={{fontSize:10,fontWeight:800,color:PREF_MUTED}}>BACKEND</span>} />
+          </>}
+          {securitySheet === "pin" && <>
+            <LightSheetTitle title={securityPrefs.pinEnabled?"Change RainX PIN":"Set up RainX PIN"} desc="Your PIN is hashed before it is stored on this device." />
+            <input value={pinValue} onChange={e=>setPinValue(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" type="password" placeholder="New PIN" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",color:PREF_TEXT,fontFamily:FONT_HEAD,fontSize:15,outline:"none",marginBottom:10}} />
+            <input value={pinConfirm} onChange={e=>setPinConfirm(e.target.value.replace(/\D/g,"").slice(0,6))} inputMode="numeric" type="password" placeholder="Confirm PIN" style={{width:"100%",boxSizing:"border-box",background:"#fff",border:`1px solid ${PREF_BORDER}`,borderRadius:12,padding:"12px 13px",color:PREF_TEXT,fontFamily:FONT_HEAD,fontSize:15,outline:"none",marginBottom:6}} />
+            {pinError&&<div style={{fontSize:11,color:T.rust,margin:"5px 0 10px"}}>{pinError}</div>}
+            <button onClick={setupPin} style={{width:"100%",background:PREF_YELLOW,color:T.ink,border:0,borderRadius:12,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:13,cursor:"pointer",marginTop:8}}>Save PIN</button>
+          </>}
+          {securitySheet === "sessions" && <>
+            <LightSheetTitle title="Active Sessions" desc="Review devices currently signed in to RainX." />
+            {securitySessionsLoading ? <div style={{padding:"18px 0",fontSize:12,color:PREF_MUTED,textAlign:"center"}}>Loading sessions…</div> : securitySessions.length === 0 ? <div style={{padding:"10px 0",fontSize:12,color:PREF_MUTED}}>No active session details are available.</div> : securitySessions.map((s) => <div key={s.session_id} style={{background:PREF_BG,border:`1px solid ${PREF_BORDER}`,borderRadius:14,padding:"13px 14px",display:"flex",alignItems:"center",gap:12,marginBottom:8}}><LightIcon Icon={Smartphone}/><div style={{flex:1,minWidth:0}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>{s.user_agent ? s.user_agent.slice(0,72) : "RainX device"}</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>{s.ip_address || "IP unavailable"} · {s.updated_at ? new Date(s.updated_at).toLocaleString() : ""}</div></div><span style={{fontSize:9.5,color:"#1A7A50",fontWeight:800}}>ACTIVE</span></div>)}
+          </>}
+          {securitySheet === "appLockSetup" && <>
+            <LightSheetTitle title="Set up App Lock" desc="RainX needs a PIN or device biometric before App Lock can be enabled." />
+            <LightRow icon={Key} title="Set up PIN" subtitle="Create a 4–6 digit RainX PIN" onPress={()=>{setPinValue("");setPinConfirm("");setPinError("");setSecuritySheet("pin")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+            <LightDivider />
+            <LightRow icon={Smartphone} title="Set up Face ID / device passkey" subtitle="Use your device biometric when supported" onPress={setupPasskey} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          </>}
+          {securitySheet === "accountData" && <>
+            <LightSheetTitle title="Account data" desc="Manage the privacy and account-data actions available from this device." />
+            <LightRow icon={Download} title="Export local settings" subtitle="Download your RainX preferences as JSON" onPress={()=>{setSecuritySheet(null);setMorePage("settings");setSettingsSheet("downloadData")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+            <LightDivider />
+            <LightRow icon={FileCheck} title="Privacy controls" subtitle="Review discovery, messaging and personalization settings" onPress={()=>{setSecuritySheet(null);setMorePage("settings")}} right={<ChevronRight size={18} color={PREF_MUTED}/>} />
+          </>}
+          {securitySheet === "deleteAccount" && <>
+            <LightSheetTitle title="Delete account" desc="Account deletion is permanent. Real deletion should require re-authentication and a trusted server-side deletion flow." />
+            <div style={{background:"#FFF4F4",border:"1px solid #F2B8B8",borderRadius:13,padding:"12px 13px",fontSize:11,color:"#8E2A2A",lineHeight:1.5,marginBottom:12}}>This client screen does not delete server data by itself. Connect it to your authenticated account-deletion endpoint before enabling permanent deletion.</div>
+            <button onClick={()=>{setSecuritySheet(null);alert("Deletion was not performed. A secure server-side account-deletion flow is required.")}} style={{width:"100%",background:"#C0392B",color:"#FFFFFF",border:0,borderRadius:12,padding:"12px 0",fontFamily:FONT_HEAD,fontWeight:800,fontSize:13,cursor:"pointer"}}>Continue</button>
+          </>}
+          {securitySheet === "checkup" && <>
+            <LightSheetTitle title="Security checkup" desc="A quick view of your current protection." />
+            {[['Password','Managed by RainX account authentication',true],['PIN lock',securityPrefs.pinEnabled?'Enabled on this device':'Not set',!!securityPrefs.pinEnabled],['Face ID / Passkey',securityPrefs.biometricEnabled?'Enabled on this device':'Not set',!!securityPrefs.biometricEnabled],['Login alerts',securityPrefs.loginAlerts!==false?'Enabled':'Disabled',securityPrefs.loginAlerts!==false],['Withdrawal confirmations',securityPrefs.withdrawConfirmations!==false?'Enabled':'Disabled',securityPrefs.withdrawConfirmations!==false]].map(([t,d,on])=><div key={t} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 0",borderBottom:`1px solid ${PREF_BORDER}`}}><div style={{flex:1}}><div style={{fontFamily:FONT_HEAD,fontWeight:700,fontSize:12.5,color:PREF_TEXT}}>{t}</div><div style={{fontSize:10.5,color:PREF_MUTED,marginTop:2}}>{d}</div></div><span style={{fontSize:10,fontWeight:800,color:on?"#1A7A50":PREF_MUTED}}>{on?"ON":"OFF"}</span></div>)}
+          </>}
+        </LightSheet>}
       </div>
     </MoreSubScreen>
   );
@@ -7237,7 +7133,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
               <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#1d9bf0" />
             </svg>
             <svg width="16" height="16" viewBox="1.604 1.604 18.792 18.792" style={{ position:"absolute", right:6, top:10 }}>
-              <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#D89E00" />
+              <path d="m20.396 11a3.487 3.487 0 0 0 -2.008-3.062 3.474 3.474 0 0 0 -.742-3.584 3.474 3.474 0 0 0 -3.584-.742 3.468 3.468 0 0 0 -3.062-2.008 3.463 3.463 0 0 0 -3.053 2.008 3.472 3.472 0 0 0 -1.902-.14c-.635.13-1.22.436-1.69.882a3.461 3.461 0 0 0 -.734 3.584 3.49 3.49 0 0 0 -2.017 3.062 3.496 3.496 0 0 0 2.017 3.062 3.471 3.471 0 0 0 .733 3.584 3.49 3.49 0 0 0 3.584.742 3.487 3.487 0 0 0 3.062 2.008 3.476 3.476 0 0 0 3.062-2.007 3.335 3.335 0 0 0 4.326-4.327 3.487 3.487 0 0 0 2.008-3.062zm-10.734 3.85-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" fill="#F4D35E" />
             </svg>
           </div>
           <div style={{ flex:1, textAlign:"left" }}>
@@ -7295,8 +7191,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       </MoreSection>
 
       <MoreSection title="More">
-        <MoreRow icon={ScrollText} title="Trade History" onPress={() => setMorePage("history")} />
-        <MoreRowDivider />
         <MoreRow
           icon={Zap}
           title="Scalping"
@@ -7304,8 +7198,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           badgeColor={hasAccess(entitlement.tier, "weekly") ? T.sage : T.muted}
           onPress={() => setMorePage("scalping")}
         />
-        <MoreRowDivider />
-        <MoreRow icon={Bell} title="Notifications" subtitle="Alerts, sounds, categories" onPress={() => setMorePage("notifications")} />
         <MoreRowDivider />
         {appInstalled
           ? <MoreRow icon={Smartphone} title="App Installed" subtitle="RainX is on your home screen" />
@@ -7358,191 +7250,6 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   );
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Analytics Screen — TikTok-style creator dashboard
-// ─────────────────────────────────────────────────────────────────────────────
-function AnalyticsScreen({ account }) {
-  const TABS = ["Overview", "Content", "Viewers", "Followers"];
-  const PERIODS = ["7 Days", "28 Days", "60 Days", "365 Days"];
-  const [activeTab, setActiveTab] = useState("Overview");
-  const [period, setPeriod] = useState("28 Days");
-  const [customRange, setCustomRange] = useState({ from:"", to:"" });
-  const [showCustom, setShowCustom] = useState(false);
-  // Start with zeros so the UI renders immediately — supabase resolves will update it
-  const [stats, setStats] = useState({ posts:0, views:0, likes:0, comments:0, newFollowers:0, daily:[] });
-
-  useEffect(() => {
-    if (!account?.id) return;
-    const days = period === "7 Days" ? 7 : period === "28 Days" ? 28 : period === "60 Days" ? 60 : 365;
-    const since = new Date(Date.now() - days * 864e5).toISOString();
-    // Reset to zeros for the new period before loading
-    setStats({ posts:0, views:0, likes:0, comments:0, newFollowers:0, daily:[] });
-    const safeFetch = (q) => q.then(r => r, () => ({ data: [] }));
-    Promise.all([
-      safeFetch(supabase.from("community_posts").select("id,views,created_at").eq("user_id",account.id).gte("created_at",since)),
-      safeFetch(supabase.from("post_likes").select("created_at").eq("liker_id",account.id).gte("created_at",since))
-        .then(r => (r.data||[]).length ? r : safeFetch(supabase.from("post_likes").select("created_at").eq("user_id",account.id).gte("created_at",since))),
-      safeFetch(supabase.from("post_comments").select("created_at").eq("user_id",account.id).gte("created_at",since)),
-      safeFetch(supabase.from("follows").select("created_at").eq("followed_id",account.id).gte("created_at",since)),
-    ]).then(([posts,likes,comments,follows])=>{
-      const postData = posts.data||[];
-      const totalViews = postData.reduce((s,p)=>s+(p.views||0),0);
-      setStats({
-        posts: postData.length,
-        views: totalViews,
-        likes: (likes.data||[]).length,
-        comments: (comments.data||[]).length,
-        newFollowers: (follows.data||[]).length,
-        daily: buildDailySeries(postData, "views", days),
-      });
-    }).catch(()=>{});
-  },[account?.id, period]);
-
-  function buildDailySeries(rows, field, days) {
-    const buckets = {};
-    for (let i=0; i<days; i++) {
-      const d = new Date(Date.now() - (days-1-i)*864e5);
-      buckets[d.toISOString().slice(0,10)] = 0;
-    }
-    rows.forEach(r => {
-      const k = r.created_at?.slice(0,10);
-      if (k in buckets) buckets[k] += (r[field]||0);
-    });
-    return Object.entries(buckets).map(([date,val])=>({date:date.slice(5),val}));
-  }
-
-  const MetricCard = ({ label, value, delta }) => (
-    <div style={{ flex:1, minWidth:"45%", background:T.ink, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:"14px 16px", marginBottom:10, boxShadow: T.ink==="#FFFFFF" ? "0 1px 6px rgba(0,0,0,0.07)" : "none" }}>
-      <div style={{ fontSize:11, color:T.muted, fontWeight:600, marginBottom:4 }}>{label}</div>
-      <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:24, color:T.paper }}>{typeof value==="number"?value.toLocaleString():value}</div>
-      {delta!==undefined && (
-        <div style={{ fontSize:11, fontWeight:700, color:delta>=0?T.sage:T.rust, marginTop:4 }}>{delta>=0?"↑":"↓"} {Math.abs(delta).toLocaleString()} vs prev</div>
-      )}
-    </div>
-  );
-
-  // Simple bar chart using divs
-  const BarChart = ({ data, color }) => {
-    if (!data||!data.length) return null;
-    const max = Math.max(...data.map(d=>d.val), 1);
-    return (
-      <div style={{ display:"flex", alignItems:"flex-end", gap:2, height:80, marginTop:12, overflowX:"auto" }}>
-        {data.map((d,i)=>(
-          <div key={i} style={{ flex:1, minWidth:6, display:"flex", flexDirection:"column", alignItems:"center", gap:2 }}>
-            <div style={{ width:"100%", height:`${(d.val/max)*72}px`, background:color||T.muted, borderRadius:2, minHeight:2, transition:"height 0.4s ease" }} />
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  return (
-    <div style={{ padding:"0 0 24px", background:T.card, minHeight:"100%" }}>
-      {/* Header */}
-      <div style={{ padding:"20px 16px 12px", borderBottom:`1px solid ${T.cardBorder}` }}>
-        <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:22, color:T.paper, letterSpacing:-0.5 }}>ANALYTICS</div>
-        <div style={{ fontSize:12, color:T.muted, marginTop:2 }}>Track your creator performance</div>
-      </div>
-
-      {/* Period selector */}
-      <div style={{ display:"flex", gap:6, padding:"12px 16px", overflowX:"auto" }}>
-        {PERIODS.map(p=>(
-          <button key={p} onClick={()=>{setPeriod(p);setShowCustom(false);}} style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, border:`1px solid ${period===p?T.muted:T.cardBorder}`, background:period===p?"rgba(140,140,140,0.15)":"none", color:period===p?T.paper:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer" }}>{p}</button>
-        ))}
-        <button onClick={()=>setShowCustom(v=>!v)} style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, border:`1px solid ${showCustom?T.muted:T.cardBorder}`, background:showCustom?"rgba(140,140,140,0.15)":"none", color:showCustom?T.paper:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer" }}>Custom</button>
-      </div>
-      {showCustom && (
-        <div style={{ display:"flex", gap:10, padding:"0 16px 12px" }}>
-          <input type="date" value={customRange.from} onChange={e=>setCustomRange(r=>({...r,from:e.target.value}))} style={{ flex:1, ...getInputStyle() }} />
-          <input type="date" value={customRange.to} onChange={e=>setCustomRange(r=>({...r,to:e.target.value}))} style={{ flex:1, ...getInputStyle() }} />
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div style={{ display:"flex", borderBottom:`1px solid ${T.cardBorder}`, marginBottom:16 }}>
-        {TABS.map(t=>(
-          <button key={t} onClick={()=>setActiveTab(t)} style={{ flex:1, padding:"10px 0", background:"none", border:"none", borderBottom:`2px solid ${activeTab===t?T.paper:"transparent"}`, color:activeTab===t?T.paper:T.muted, fontFamily:FONT_HEAD, fontWeight:700, fontSize:11.5, cursor:"pointer", transition:"color 0.15s" }}>{t}</button>
-        ))}
-      </div>
-
-      {/* Tab content */}
-      <div style={{ padding:"0 16px" }}>
-        {activeTab === "Overview" && (
-          <>
-            {false ? (
-              <div style={{ color:T.muted, fontSize:13, textAlign:"center", paddingTop:32 }}>Loading analytics…</div>
-            ) : (
-              <>
-                <div style={{ display:"flex", flexWrap:"wrap", gap:10, marginBottom:16 }}>
-                  <MetricCard label="Post Views" value={stats.views} />
-                  <MetricCard label="Posts" value={stats.posts} />
-                  <MetricCard label="Likes" value={stats.likes} />
-                  <MetricCard label="Comments" value={stats.comments} />
-                  <MetricCard label="New Followers" value={stats.newFollowers} />
-                </div>
-                <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:16, marginBottom:16 }}>
-                  <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, marginBottom:4 }}>Post Views — {period}</div>
-                  <BarChart data={stats.daily} color={T.muted} />
-                  <div style={{ display:"flex", justifyContent:"space-between", fontSize:9.5, color:T.muted, marginTop:6 }}>
-                    {stats.daily.filter((_,i)=>i===0||i===Math.floor(stats.daily.length/2)||i===stats.daily.length-1).map(d=><span key={d.date}>{d.date}</span>)}
-                  </div>
-                </div>
-              </>
-            )}
-          </>
-        )}
-
-        {activeTab === "Content" && (
-          <div style={{ textAlign:"center", paddingTop:40 }}>
-            <div style={{ fontSize:36, marginBottom:12 }}>📄</div>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:8 }}>Content Breakdown</div>
-            <div style={{ fontSize:12, color:T.muted, lineHeight:1.8 }}>Views, likes, and comments per post will appear here.<br/>Post more to see your top-performing content.</div>
-            {stats && stats.posts > 0 && (
-              <div style={{ marginTop:20, fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:T.paper }}>{stats.posts} posts in this period</div>
-            )}
-          </div>
-        )}
-
-        {activeTab === "Viewers" && (
-          <div style={{ textAlign:"center", paddingTop:40 }}>
-            <div style={{ fontSize:36, marginBottom:12 }}>👥</div>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:T.paper, marginBottom:8 }}>Viewer Insights</div>
-            <div style={{ fontSize:12, color:T.muted, lineHeight:1.8, marginBottom:20 }}>Demographics, locations, age groups, and active times.<br/>Available once your posts reach broader audiences.</div>
-            <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:18, textAlign:"left" }}>
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, marginBottom:12 }}>Most Active Times (UTC)</div>
-              {["00–04","04–08","08–12","12–16","16–20","20–24"].map((slot,i)=>{
-                const h = [20,35,70,100,85,60][i];
-                return (
-                  <div key={slot} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
-                    <span style={{ width:40, fontSize:11, color:T.muted, flexShrink:0 }}>{slot}</span>
-                    <div style={{ flex:1, height:8, borderRadius:4, background:T.cardBorder, overflow:"hidden" }}>
-                      <div style={{ height:"100%", width:`${h}%`, borderRadius:4, background:T.muted }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "Followers" && (
-          <div>
-            <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:18, marginBottom:16 }}>
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, marginBottom:4 }}>New Followers</div>
-              <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:28, color:T.paper }}>{stats?.newFollowers||0}</div>
-              <div style={{ fontSize:11, color:T.muted, marginTop:2 }}>in the last {period}</div>
-              {stats && <BarChart data={stats.daily.map(d=>({...d,val:0}))} color={T.sage} />}
-            </div>
-            <div style={{ textAlign:"center", paddingTop:8 }}>
-              <div style={{ fontSize:12, color:T.muted, lineHeight:1.8 }}>Detailed follower demographics and<br/>growth charts will appear as you grow.</div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function Section({ title, icon: Icon, children }) {
   return (
