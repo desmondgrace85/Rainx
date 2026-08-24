@@ -5502,7 +5502,7 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
         <div aria-label="Referral earnings" style={{position:"absolute",right:-2,width:34,height:34,borderRadius:"50%",background:"#17191B",display:"grid",placeItems:"center"}}><Coins size={17} color="#FFFFFF" strokeWidth={2}/></div>
       </div>
       <div ref={animationRef} aria-label="Creator rewards animation" style={{width:"100%",height:205,margin:"0 auto 2px"}}/>
-      <h1 style={{textAlign:"center",fontFamily:FONT_HEAD,fontWeight:900,fontSize:26,lineHeight:1.12,margin:"12px auto 8px",maxWidth:360}}>Refer Friends, They Subscribe.<br/><span style={{color:"#C99512"}}>You Earn!</span></h1>
+      <h1 style={{textAlign:"center",fontFamily:FONT_HEAD,fontWeight:900,fontSize:26,lineHeight:1.12,margin:"12px auto 8px",maxWidth:360}}>Refer Friends, They Subscribe.<br/><span style={{color:"#F4D35E"}}>You Earn!</span></h1>
       <p style={{textAlign:"center",color:"#596269",fontSize:13,lineHeight:1.55,margin:"0 auto 24px",maxWidth:330}}>Invite friends to join and earn a percentage when they subscribe to a package.</p>
       <img src={referralEarningsTransparent} alt="Creators earning rewards together" draggable="false" style={{display:"block",width:"100%",height:190,objectFit:"contain",margin:"2px auto 16px"}}/>
       <h2 style={{fontFamily:FONT_HEAD,fontWeight:900,fontSize:21,lineHeight:1.15,margin:"0 0 8px"}}>Share More. Earn More.</h2>
@@ -5511,13 +5511,13 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
       <h2 style={{fontFamily:FONT_HEAD,fontWeight:900,fontSize:21,lineHeight:1.15,margin:"0 0 8px"}}>Your Friends. Your Network. Your Rewards.</h2>
       <p style={{color:"#596269",fontSize:13,lineHeight:1.6,margin:"0 0 15px"}}>Build your network, earn together, and celebrate every successful referral.</p>
       <div style={{color:"#596269",fontSize:13,lineHeight:1.8,marginBottom:18}}>
-        <div>GHS 150 package — <strong style={{color:"#D4AF37"}}>10% earned</strong></div>
-        <div>GHS 500 package — <strong style={{color:"#D4AF37"}}>15% earned</strong></div>
-        <div>GHS 6,000 package — <strong style={{color:"#D4AF37"}}>20% earned</strong></div>
+        <div>GHS 150 package — <strong style={{color:"#F4D35E"}}>10% earned</strong></div>
+        <div>GHS 500 package — <strong style={{color:"#F4D35E"}}>15% earned</strong></div>
+        <div>GHS 6,000 package — <strong style={{color:"#F4D35E"}}>20% earned</strong></div>
       </div>
       <button type="button" onClick={() => { if (referralCode) navigator.clipboard?.writeText(`https://rainx.app/?ref=${referralCode}`); }} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",border:"1px solid #E6E6E6",borderRadius:13,padding:"13px 14px",background:"#FFFFFF",textAlign:"left",cursor:referralCode?"pointer":"default",marginBottom:18}}>
         <span><span style={{display:"block",fontFamily:FONT_HEAD,fontWeight:800,fontSize:14}}>Referral code</span><span style={{display:"block",color:"#747B80",fontSize:11.5,marginTop:3}}>{referralCode || "Code being prepared"}</span></span>
-        <span style={{display:"inline-flex",alignItems:"center",gap:6,color:"#D4AF37",fontFamily:FONT_HEAD,fontWeight:800,fontSize:12}}><Copy size={17}/>Copy</span>
+        <span style={{display:"inline-flex",alignItems:"center",gap:6,color:"#F4D35E",fontFamily:FONT_HEAD,fontWeight:800,fontSize:12}}><Copy size={17}/>Copy</span>
       </button>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",borderTop:"1px solid #ECECEC",paddingTop:16}}>
         <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:15}}>Referrals</div>
@@ -5526,7 +5526,7 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
           <span className="referralToggle" style={{position:"absolute",inset:0,borderRadius:999,background:"#D7DADD",transition:"background .34s cubic-bezier(.22,1,.36,1)",cursor:"pointer"}}/>
         </label>
       </div>
-      <style>{`.referralToggle:after{content:"";position:absolute;width:26px;height:26px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.18);transition:transform .34s cubic-bezier(.22,1.2,.36,1)}label.is-on .referralToggle{background:#D4AF37}label.is-on .referralToggle:after{transform:translateX(20px)}`}</style>
+      <style>{`.referralToggle:after{content:"";position:absolute;width:26px;height:26px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.18);transition:transform .34s cubic-bezier(.22,1.2,.36,1)}label.is-on .referralToggle{background:#F4D35E}label.is-on .referralToggle:after{transform:translateX(20px)}`}</style>
     </div>
   </div>;
 }
