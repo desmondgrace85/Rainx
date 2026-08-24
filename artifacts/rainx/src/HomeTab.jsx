@@ -384,25 +384,16 @@ function useBottomSheet(onClose) {
 
   const bind = {
     onPointerDown: (event) => {
-      const sheet = event.currentTarget;
-      const onHandle = event.target.closest?.("[data-sheet-handle]");
-      if (!onHandle && sheet.scrollTop > 0) return;
-      sheet.setPointerCapture?.(event.pointerId);
-      dragRef.current = { startY: event.clientY, lastY: event.clientY, lastTime: performance.now(), offset, onHandle: !!onHandle };
+      if (!event.target.closest?.("[data-sheet-handle]")) return;
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+      dragRef.current = { startY: event.clientY, lastY: event.clientY, lastTime: performance.now(), offset };
       setDragging(true);
     },
     onPointerMove: (event) => {
       const start = dragRef.current;
       if (!start) return;
-      const delta = event.clientY - start.startY;
-      if (!start.onHandle && delta < -6) {
-        dragRef.current = null;
-        setDragging(false);
-        event.currentTarget.releasePointerCapture?.(event.pointerId);
-        return;
-      }
       const now = performance.now();
-      const next = Math.max(0, Math.min(window.innerHeight, start.offset + delta));
+      const next = Math.max(0, Math.min(window.innerHeight, start.offset + event.clientY - start.startY));
       start.lastY = event.clientY;
       start.lastTime = now;
       setOffset(next);
@@ -430,7 +421,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
   if (mode === "manage" && managedAsset) {
     return (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:1000, display:"flex", alignItems:"flex-end", overflow:"hidden" }} onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px", height:"min(96dvh, 820px)", maxHeight:"96dvh", overflowY:"scroll", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"auto", touchAction:"pan-y" }}>
+        <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px", height:"min(96dvh, 820px)", maxHeight:"96dvh", overflowY:"scroll", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"none", touchAction:"pan-y" }}>
           <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} /></div>
           <div style={{ padding:"0 20px 20px" }}>
             <button onClick={() => { setMode(null); setManagedAsset(null); }} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
