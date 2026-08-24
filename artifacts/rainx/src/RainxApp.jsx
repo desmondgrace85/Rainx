@@ -19,8 +19,6 @@ import HomeTab from "./HomeTab";
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
 import referralEarningsTransparent from "./assets/referral-earnings-transparent.png";
 import referralNetworkOptimized from "./assets/referral-network-optimized.png";
-import referralAnimation from "./assets/social-media-influencer.json";
-import lottie from "lottie-web";
 import { resolveMarketLogo, resolveMarketDirection, isMarketNotification, FALLBACK_NEWS_LOGO, FALLBACK_RAINX_LOGO, MARKET_NAMES } from "./MarketLogos";
 
 // ---------- Design tokens ----------
@@ -5469,14 +5467,8 @@ function HeaderAvatar({ account, morePage, T }) {
 
 
 function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
-  const animationRef = useRef(null);
   const touchStartX = useRef(null);
   const [closing, setClosing] = useState(false);
-  useEffect(() => {
-    if (!animationRef.current) return undefined;
-    const player = lottie.loadAnimation({ container: animationRef.current, renderer: "svg", loop: true, autoplay: true, animationData: referralAnimation });
-    return () => player.destroy();
-  }, []);
   const close = () => {
     if (closing) return;
     setClosing(true);
@@ -5493,7 +5485,7 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
     style={{position:"fixed",inset:0,zIndex:450,overflowY:"auto",overscrollBehaviorY:"contain",WebkitOverflowScrolling:"touch",touchAction:"pan-y",background:"#FFFFFF",color:"#17191B"}}
   >
     <style>{`@keyframes referralSheetIn{from{transform:translateY(100%)}to{transform:translateY(0)}}@keyframes referralSheetOut{from{transform:translateY(0)}to{transform:translateY(100%)}}`}</style>
-    <div style={{maxWidth:480,minHeight:"100%",margin:"0 auto",padding:"10px 22px 34px",boxSizing:"border-box",background:"#FFFFFF",animation:closing?"referralSheetOut .42s cubic-bezier(.32,.72,0,1) both":"referralSheetIn .62s cubic-bezier(.22,1.18,.36,1) both"}}>
+    <div style={{maxWidth:480,minHeight:"100%",margin:"0 auto",padding:"10px 22px 34px",boxSizing:"border-box",background:"#FFFFFF",animation:closing?"referralSheetOut .36s cubic-bezier(.22,1,.36,1) both":"referralSheetIn .42s cubic-bezier(.22,1,.36,1) both"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:48,position:"relative",marginBottom:2}}>
         <button onClick={close} aria-label="Back" style={{position:"absolute",left:-8,width:42,height:42,border:0,background:"transparent",display:"grid",placeItems:"center",color:"#17191B",cursor:"pointer",padding:0}}>
           <ChevronLeft size={28} strokeWidth={2.2}/>
@@ -5501,8 +5493,7 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
         <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:19}}>Refer &amp; Earn</div>
         <div aria-label="Referral earnings" style={{position:"absolute",right:-2,width:34,height:34,borderRadius:"50%",background:"#17191B",display:"grid",placeItems:"center"}}><Coins size={17} color="#FFFFFF" strokeWidth={2}/></div>
       </div>
-      <div ref={animationRef} aria-label="Creator rewards animation" style={{width:"100%",height:205,margin:"0 auto 2px"}}/>
-      <h1 style={{textAlign:"center",fontFamily:FONT_HEAD,fontWeight:900,fontSize:26,lineHeight:1.12,margin:"12px auto 8px",maxWidth:360}}>Refer Friends, They Subscribe.<br/><span style={{color:"#C99512"}}>You Earn!</span></h1>
+      <h1 style={{textAlign:"center",fontFamily:FONT_HEAD,fontWeight:900,fontSize:26,lineHeight:1.12,margin:"12px auto 8px",maxWidth:360}}>Refer Friends, They Subscribe.<br/><span style={{color:"#D4AF37"}}>You Earn!</span></h1>
       <p style={{textAlign:"center",color:"#596269",fontSize:13,lineHeight:1.55,margin:"0 auto 24px",maxWidth:330}}>Invite friends to join and earn a percentage when they subscribe to a package.</p>
       <img src={referralEarningsTransparent} alt="Creators earning rewards together" draggable="false" style={{display:"block",width:"100%",height:190,objectFit:"contain",margin:"2px auto 16px"}}/>
       <h2 style={{fontFamily:FONT_HEAD,fontWeight:900,fontSize:21,lineHeight:1.15,margin:"0 0 8px"}}>Share More. Earn More.</h2>
