@@ -5481,7 +5481,7 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
     if (closing) return;
     setClosing(true);
     // Keep the opaque wrapper mounted until the inner screen has fully left.
-    window.setTimeout(onBack, 320);
+    window.setTimeout(onBack, 360);
   };
   return <div
     onTouchStart={(event) => { touchStartX.current = event.touches[0]?.clientX ?? null; }}
@@ -5494,7 +5494,7 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
     style={{position:"fixed",inset:0,zIndex:1000,overflowY:"auto",overscrollBehaviorY:"contain",WebkitOverflowScrolling:"touch",touchAction:"pan-y",background:"#FFFFFF",color:"#17191B",isolation:"isolate",contain:"paint"}}
   >
     <style>{`@keyframes referralSheetIn{from{transform:translateY(18px)}to{transform:translateY(0)}}@keyframes referralSheetOut{from{transform:translateY(0)}to{transform:translateY(100%)}}`}</style>
-    <div style={{maxWidth:480,minHeight:"100%",margin:"0 auto",padding:"10px 22px 34px",boxSizing:"border-box",background:"#FFFFFF",willChange:"transform",animation:closing?"referralSheetOut .32s cubic-bezier(.4,0,1,1) both":"referralSheetIn .42s cubic-bezier(.22,1,.36,1) both"}}>
+    <div style={{maxWidth:480,minHeight:"100dvh",margin:"0 auto",padding:"10px 22px 34px",boxSizing:"border-box",background:"#FFFFFF",willChange:"transform",animation:closing?"referralSheetOut .32s cubic-bezier(.4,0,1,1) both":"referralSheetIn .42s cubic-bezier(.22,1,.36,1) both"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:48,position:"relative",marginBottom:2}}>
         <button onClick={close} aria-label="Back" style={{position:"absolute",left:-8,width:42,height:42,border:0,background:"transparent",display:"grid",placeItems:"center",color:"#17191B",cursor:"pointer",padding:0}}>
           <ChevronLeft size={28} strokeWidth={2.2}/>
