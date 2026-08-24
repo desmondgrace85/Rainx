@@ -465,7 +465,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 16px" }}>
               {ASSET_CATALOG.map(cat => (
-                <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:"#FFFFFF", border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:0, overflow:"hidden", textAlign:"left", cursor:"pointer", minHeight:142 }}>
+                <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:"#FFFFFF", border:"none", borderRadius:14, padding:0, overflow:"hidden", textAlign:"left", cursor:"pointer", minHeight:142, boxShadow:"0 4px 0 #0F0E0B, 0 8px 18px rgba(0,0,0,.18)" }}>
                   <div style={{ height:72, backgroundImage:`linear-gradient(180deg, rgba(15,14,11,.04), rgba(15,14,11,.54)), url(${CATEGORY_ART[cat.id]})`, backgroundSize:"cover", backgroundPosition:"center", display:"flex", alignItems:"flex-end", padding:"0 12px 9px", color:"#FFFFFF", fontSize:23 }}>{cat.emoji}</div>
                   <div style={{ padding:"10px 12px 12px" }}>
                     <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>{cat.label}</div>
@@ -587,7 +587,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
             )}
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, padding:"0 16px" }}>
               {ASSET_CATALOG.map(cat => (
-                   <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:"#FFFFFF", border:`1px solid ${T.cardBorder}`, borderRadius:14, padding:0, overflow:"hidden", textAlign:"left", cursor:"pointer", minHeight:142 }}>
+                   <button key={cat.id} onClick={() => setCategory(cat)} style={{ background:"#FFFFFF", border:"none", borderRadius:14, padding:0, overflow:"hidden", textAlign:"left", cursor:"pointer", minHeight:142, boxShadow:"0 4px 0 #0F0E0B, 0 8px 18px rgba(0,0,0,.18)" }}>
                    <div style={{ height:72, backgroundImage:`linear-gradient(180deg, rgba(15,14,11,.04), rgba(15,14,11,.54)), url(${CATEGORY_ART[cat.id]})`, backgroundSize:"cover", backgroundPosition:"center", display:"flex", alignItems:"flex-end", padding:"0 12px 9px", color:"#FFFFFF", fontSize:23 }}>{cat.emoji}</div>
                    <div style={{ padding:"10px 12px 12px" }}>
                      <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>{cat.label}</div>
