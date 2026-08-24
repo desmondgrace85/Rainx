@@ -127,6 +127,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
     confidence: rawSignal.confidence,
     reason: rawSignal.reason,
   } : null;
+  const analysisAvailable = !!session || !!sessionSetup;
 
   // Chart refs
   const containerRef = useRef(null);
@@ -829,7 +830,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13, color: TK.paper }}>Raina AI Analysis</span>
-              {session && session.state !== "completed" && (
+              {analysisAvailable && session?.state !== "completed" && (
                 <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10.5, fontWeight: 700, color: BULL, fontFamily: FONT }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: BULL, display: "inline-block", animation: "pulse 1.5s infinite" }} />
                   Analyzing
@@ -837,11 +838,11 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
               )}
             </div>
             <span style={{ fontSize: 10, color: TK.muted, fontFamily: FONT }}>
-              {session ? `Updated ${new Date().toLocaleTimeString("en-GH", { hour: "2-digit", minute: "2-digit" })}` : "No active session"}
+              {analysisAvailable ? `Updated ${new Date().toLocaleTimeString("en-GH", { hour: "2-digit", minute: "2-digit" })}` : "No active session"}
             </span>
           </div>
 
-          {!session ? (
+          {!analysisAvailable ? (
             <div style={{ fontSize: 12, color: TK.muted, textAlign: "center", padding: "12px 0" }}>
               Start an analysis session on the home screen to see Raina AI draw on this chart.
             </div>
