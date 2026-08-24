@@ -409,7 +409,7 @@ function useBottomSheet(onClose) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Add Market bottom sheet — supports add, replace when full, and manage active
 // ─────────────────────────────────────────────────────────────────────────────
-function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets = [], maxActiveMarkets = 3, onRemoveMarket, seriesMap = {} }) {
+function AddMarketSheet({ onClose, onSelect, onReplaceMarket, activeSessions = [], activeMarkets = [], maxActiveMarkets = 3, onRemoveMarket, seriesMap = {} }) {
   const [category, setCategory] = useState(null);
   // mode: null = category grid | "manage" = replace/delete active | "pick_replacement" = pick who to replace
   const [mode, setMode] = useState(null);
@@ -451,7 +451,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
     if (!category) {
       return (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-          <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", height:"min(88dvh, 760px)", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain", touchAction:"pan-y" }}>
+          <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", height:"min(96dvh, 820px)", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain", touchAction:"pan-y" }}>
             <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} /></div>
             <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:10 }}>
               <button onClick={() => { setMode(backMode === "pick_category_for_replace" ? "manage" : null); }} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
@@ -479,7 +479,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
     }
     return (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-          <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", height:"min(88dvh, 760px)", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain", touchAction:"pan-y" }}>
+          <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", height:"min(96dvh, 820px)", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain", touchAction:"pan-y" }}>
           <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} /></div>
           <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:12 }}>
             <button onClick={() => setCategory(null)} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer" }}><ChevronLeft size={20} /></button>
@@ -533,7 +533,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
   if (mode === "pick_who_to_replace" && managedAsset) {
     return (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-          <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px", height:"min(88dvh, 760px)", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain", touchAction:"pan-y" }}>
+          <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 40px", height:"min(96dvh, 820px)", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain", touchAction:"pan-y" }}>
           <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}><div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} /></div>
           <div style={{ padding:"0 20px 20px" }}>
             <button onClick={() => setMode("pick_new_when_full")} style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, marginBottom:14, padding:0 }}>
@@ -546,7 +546,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
                 const a = ALL_ASSETS.find(x => x.symbol === sym);
                 if (!a) return null;
                 return (
-                   <button key={sym} onClick={() => { onRemoveMarket(sym); onSelect(managedAsset); }} style={{ background:"#FFFFFF", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"11px 12px", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
+                   <button key={sym} onClick={() => { onReplaceMarket?.(sym, managedAsset.symbol); }} style={{ background:"#FFFFFF", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"11px 12px", display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
                      <img src={resolveMarketLogo({symbol:a.symbol})?.src} alt="" style={{ width:34, height:34, borderRadius:"50%" }} />
                     <div style={{ textAlign:"left" }}>
                       <div style={{ fontFamily:FONT_HEAD, fontWeight:700, fontSize:14, color:"#0F0E0B" }}>{a.symbol}</div>
@@ -566,7 +566,7 @@ function AddMarketSheet({ onClose, onSelect, activeSessions = [], activeMarkets 
   // ── Default: category grid + asset list ─────────────────────────────────
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:80, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-           <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", height:"min(88dvh, 760px)", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain", touchAction:"pan-y" }}>
+           <div onClick={e => e.stopPropagation()} {...sheet.bind} style={{ ...sheet.style, background:"#FFFFFF", borderRadius:"20px 20px 0 0", width:"100%", maxWidth:480, margin:"0 auto", padding:"0 0 32px", height:"min(96dvh, 820px)", overflowY:"auto", WebkitOverflowScrolling:"touch", overscrollBehaviorY:"contain", touchAction:"pan-y" }}>
         <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}>
           <div data-sheet-handle style={{ width:36, height:4, borderRadius:2, background:T.cardBorder, touchAction:"none" }} />
         </div>
@@ -670,12 +670,18 @@ function fmtTime(secs) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Home Tab — main redesigned screen
 // ─────────────────────────────────────────────────────────────────────────────
-function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessions, sessionSecsLeft, startAnalysisSession, seriesMap, signalsMap, themeMode, activeMarkets: activeMarketsProp = [], addActiveMarket, removeActiveMarket, maxActiveMarkets = 3 }) {
+function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSymbol, setActiveSymbol, entitlement, onSubscribe, session, sessions, sessionSecsLeft, startAnalysisSession, seriesMap, signalsMap, themeMode, activeMarkets: activeMarketsProp = [], addActiveMarket, removeActiveMarket, replaceActiveMarket, reorderActiveMarkets, maxActiveMarkets = 3 }) {
   const activeMarkets = Array.isArray(activeMarketsProp) ? activeMarketsProp : [];
   const [displayMarkets, setDisplayMarkets] = useState(activeMarkets);
   useEffect(() => { setDisplayMarkets(activeMarkets); }, [activeMarkets]);
   const safeSeries = Array.isArray(series) ? series : [];
   const [showAddMarket, setShowAddMarket] = useState(false);
+  const [longPressAsset, setLongPressAsset] = useState(null);
+  const [reorderMode, setReorderMode] = useState(false);
+  const pressTimer = useRef(null);
+  const dragSymbol = useRef(null);
+  const startLongPress = (asset) => { clearTimeout(pressTimer.current); pressTimer.current = setTimeout(() => { if (navigator.vibrate) navigator.vibrate(18); setLongPressAsset(asset); }, 520); };
+  const cancelLongPress = () => clearTimeout(pressTimer.current);
   const [showActivity, setShowActivity] = useState(false);
   const [showFullChart, setShowFullChart] = useState(false);
   const [activeChartTf, setActiveChartTf] = useState("15m");   // chart candle timeframe — does NOT control AI analysis duration
@@ -832,7 +838,7 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
   function handleAssetSelect(asset) {
     setShowAddMarket(false);
     // Update the homepage cards immediately, then keep the subscription prompt separate.
-    setDisplayMarkets(prev => prev.includes(asset.symbol) ? prev : [...prev, asset.symbol].slice(-maxActiveMarkets));
+    setDisplayMarkets(prev => prev.includes(asset.symbol) ? prev : [...prev, asset.symbol].slice(0, maxActiveMarkets));
     if (addActiveMarket) addActiveMarket(asset.symbol);
     if (!hasAccess(entitlement?.tier, "weekly")) {
       setShowSubLock(true);
@@ -860,6 +866,7 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
     }
   };
   const marketCards = displayMarkets.slice(0,3).map(symbol => ALL_ASSETS.find(a=>a.symbol===symbol)).filter(Boolean);
+  const replaceMarket = (oldSymbol, newSymbol) => { setShowAddMarket(false); setDisplayMarkets(prev => { const next = [...prev]; const index = next.indexOf(oldSymbol); if (index >= 0) next[index] = newSymbol; return next; }); replaceActiveMarket?.(oldSymbol, newSymbol); const asset = ALL_ASSETS.find(a => a.symbol === newSymbol); if (asset && !sessions?.[newSymbol]) startAnalysisSession(asset); setActiveSymbol(newSymbol); };
 
   return (
     <div style={{background:"transparent",minHeight:"100%",color:T.ink}}>
@@ -874,7 +881,7 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
             </div>
             <button onClick={openSignalChart} style={{width:150,minHeight:92,flexShrink:0,background:"#11110F",border:"1px solid #4A432A",borderRadius:18,padding:"10px 9px",textAlign:"left",cursor:"pointer",boxShadow:"0 0 18px rgba(244,211,94,0.08)"}}>
               <div style={{display:"flex",alignItems:"center",gap:7}}>
-                <div style={{width:30,height:30,borderRadius:"50%",background:T.gold,display:"grid",placeItems:"center",fontSize:17,color:"#0F0E0B"}}>₿</div>
+                <img src={resolveMarketLogo({symbol:signalSymbol})?.src} alt={signalInst?.name || signalSymbol} style={{width:30,height:30,borderRadius:"50%",objectFit:"cover"}}/>
                 <div><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:14,color:"#F5F1E8"}}>{signalSymbol}</div><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:11,color:signalBias==="SELL"?"#E27661":signalBias==="HOLD"?"#B4AD9D":"#4FE26E"}}>{signalLabel}</div></div>
               </div>
               <div style={{marginTop:10,border:"1px solid #8E741D",borderRadius:13,padding:"7px",display:"flex",alignItems:"center",justifyContent:"center",gap:5,color:T.gold,fontFamily:FONT_HEAD,fontSize:10.5,fontWeight:800,animation:"rx-breathe 2.2s ease-in-out infinite"}}>Tap to view setup <ArrowUpRight size={12}/></div>
@@ -900,7 +907,7 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
          <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:6,marginTop:6}}>
                             {marketCards.map(asset=>{
                               const logo=resolveMarketLogo({symbol:asset.symbol})?.src; const arr=seriesMap?.[asset.symbol]||[]; const price=arr.length?arr[arr.length-1].price:asset.base; const prev=arr.length>1?arr[arr.length-2].price:price; const up=price>=prev;
-                               return <button key={asset.symbol} onClick={()=>openMarket(asset.symbol)} style={{minWidth:0,minHeight:86,borderRadius:13,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"5px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                               return <button key={asset.symbol} draggable={reorderMode} onDragStart={()=>{dragSymbol.current=asset.symbol;}} onDragOver={e=>e.preventDefault()} onDrop={()=>{ if(dragSymbol.current && dragSymbol.current!==asset.symbol){ const next=[...displayMarkets]; const from=next.indexOf(dragSymbol.current), to=next.indexOf(asset.symbol); if(from>=0&&to>=0){ next.splice(from,1); next.splice(to,0,dragSymbol.current); setDisplayMarkets(next); reorderActiveMarkets?.(next); } } dragSymbol.current=null; }} onPointerDown={()=>startLongPress(asset)} onPointerUp={cancelLongPress} onPointerCancel={cancelLongPress} onContextMenu={e=>e.preventDefault()} onClick={()=>{ if(!reorderMode) openMarket(asset.symbol); }} style={{minWidth:0,minHeight:86,borderRadius:13,border:`1px solid ${T.cardBorder}`,background:"#1C1913",color:"#F5F1E8",padding:"5px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
                                  {logo?<img src={logo} alt="" style={{width:25,height:25,borderRadius:"50%",objectFit:"cover",marginBottom:4}}/>:<div style={{width:25,height:25,borderRadius:"50%",background:T.gold,marginBottom:4}}/>}
                                 <div style={{fontFamily:FONT_HEAD,fontSize:11,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"}}>{asset.symbol}</div>
                                 <div style={{marginTop:4,fontFamily:FONT_HEAD,fontSize:10,fontWeight:700,color:up?"#5EDB78":"#E27661",fontVariantNumeric:"tabular-nums"}}>{Number(price).toFixed(Math.min(asset.digits,2))}</div>
@@ -925,7 +932,9 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
           <button onClick={()=>setShowSubLock(false)} style={{width:"100%",background:"none",border:`1px solid ${T.cardBorder}`,borderRadius:12,padding:"11px 0",fontFamily:FONT_HEAD,fontWeight:700,fontSize:13,color:T.muted,cursor:"pointer"}}>Close</button>
         </div>
       </div>}
-      {showAddMarket&&<AddMarketSheet onClose={()=>setShowAddMarket(false)} onSelect={handleAssetSelect} activeMarkets={displayMarkets} maxActiveMarkets={maxActiveMarkets} onRemoveMarket={removeActiveMarket} seriesMap={seriesMap}/>}
+      {showAddMarket&&<AddMarketSheet onClose={()=>setShowAddMarket(false)} onSelect={handleAssetSelect} onReplaceMarket={replaceMarket} activeMarkets={displayMarkets} maxActiveMarkets={maxActiveMarkets} onRemoveMarket={removeActiveMarket} seriesMap={seriesMap}/>}
+       {longPressAsset&&<div onClick={()=>setLongPressAsset(null)} style={{position:"fixed",inset:0,zIndex:1200,background:"rgba(15,14,11,.42)",display:"grid",placeItems:"center",padding:24,backdropFilter:"blur(5px)"}}><div onClick={e=>e.stopPropagation()} style={{width:"min(340px,100%)",background:"#fff",borderRadius:26,padding:"12px 18px 18px",boxShadow:"0 22px 70px rgba(0,0,0,.28)",animation:"rx-modal-spring .46s cubic-bezier(.16,1.25,.3,1) both"}}><div style={{width:38,height:4,borderRadius:3,background:"#ddd",margin:"0 auto 18px"}}/><div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}><img src={resolveMarketLogo({symbol:longPressAsset.symbol})?.src} alt="" style={{width:42,height:42,borderRadius:"50%"}}/><div><div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:16,color:"#0F0E0B"}}>{longPressAsset.symbol}</div><div style={{fontSize:12,color:T.muted}}>{longPressAsset.name}</div></div></div><div style={{display:"grid",gap:8}}><button onClick={()=>{setLongPressAsset(null);setShowAddMarket(true);}} style={{padding:14,border:0,borderRadius:14,background:"#F7F5EF",textAlign:"left",fontFamily:FONT_HEAD,fontWeight:800}}>Replace</button><button onClick={()=>{removeActiveMarket(longPressAsset.symbol);setLongPressAsset(null);}} style={{padding:14,border:0,borderRadius:14,background:"#FFF0EC",color:T.rust,textAlign:"left",fontFamily:FONT_HEAD,fontWeight:800}}>Close market</button><button onClick={()=>{setReorderMode(true);setLongPressAsset(null);}} style={{padding:14,border:0,borderRadius:14,background:"#F7F5EF",textAlign:"left",fontFamily:FONT_HEAD,fontWeight:800}}>Rearrange</button></div></div></div>}
+       {reorderMode&&<button onClick={()=>setReorderMode(false)} style={{position:"fixed",right:16,bottom:92,zIndex:50,border:0,borderRadius:20,padding:"10px 14px",background:T.ink,color:T.gold,fontFamily:FONT_HEAD,fontWeight:800}}>Done rearranging</button>}
     </div>
   );
 }
