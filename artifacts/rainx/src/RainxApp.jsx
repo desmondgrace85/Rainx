@@ -17,6 +17,7 @@ import SpaceCoinsDashboard from "./SpaceCoinsDashboard";
 import HomeTab from "./HomeTab";
 
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
+import goodbyeLoloAnimation from "./assets/goodbye-lolo.webm";
 import { resolveMarketLogo, resolveMarketDirection, isMarketNotification, FALLBACK_NEWS_LOGO, FALLBACK_RAINX_LOGO, MARKET_NAMES } from "./MarketLogos";
 
 // ---------- Design tokens ----------
@@ -2914,20 +2915,18 @@ function MainAppContent({ account, onLogout }) {
 
       {/* ── Logout confirmation modal ── */}
       {showLogoutConfirm && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px" }}>
-          <div style={{ background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:20, padding:24, maxWidth:360, width:"100%" }}>
-            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:17, color:T.paper, marginBottom:10 }}>Log Out of RainX?</div>
-            <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.8, marginBottom:20 }}>
-              If you log out, you will stop receiving:<br/>
-              <span style={{ color:T.paper }}>• Live trading signals &amp; Raina AI alerts</span><br/>
-              <span style={{ color:T.paper }}>• TP / SL hit notifications</span><br/>
-              <span style={{ color:T.paper }}>• CPI, NFP &amp; economic news updates</span><br/>
-              <span style={{ color:T.paper }}>• Community mentions &amp; replies</span><br/><br/>
-              You can log back in at any time.
+        <div onClick={() => setShowLogoutConfirm(false)} style={{ position:"fixed", inset:0, background:T.gold, zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 20px", animation:"logoutOverlayIn 0.28s ease-out" }}>
+          <style>{"@keyframes logoutOverlayIn { from { opacity:0 } to { opacity:1 } } @keyframes logoutPopupSpring { 0% { transform:translateY(34px) scale(.82); opacity:0 } 60% { transform:translateY(-5px) scale(1.025); opacity:1 } 82% { transform:translateY(2px) scale(.99) } 100% { transform:translateY(0) scale(1); opacity:1 } }"}</style>
+          <div onClick={e => e.stopPropagation()} style={{ position:"relative", background:"#FFFFFF", borderRadius:28, padding:"20px 22px 18px", maxWidth:320, width:"100%", textAlign:"center", boxShadow:"0 18px 40px rgba(15,14,11,.16)", animation:"logoutPopupSpring .72s cubic-bezier(.22,1,.36,1) both" }}>
+            <button onClick={() => setShowLogoutConfirm(false)} aria-label="Close logout dialog" style={{ position:"absolute", top:12, right:14, width:28, height:28, display:"grid", placeItems:"center", background:"none", border:"none", color:"#17191B", fontSize:22, lineHeight:1, cursor:"pointer" }}>×</button>
+            <video src={goodbyeLoloAnimation} autoPlay loop muted playsInline aria-label="Goodbye animation" style={{ display:"block", width:132, height:104, objectFit:"contain", margin:"0 auto 4px" }} />
+            <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:18, lineHeight:1.2, color:"#17191B", marginBottom:9 }}>Leaving already?</div>
+            <div style={{ fontSize:12.5, color:"#596269", lineHeight:1.55, margin:"0 auto 20px", maxWidth:260 }}>
+              Come back soon. There’s always more to discover and earn.
             </div>
-            <div style={{ display:"flex", gap:10 }}>
-              <button onClick={() => setShowLogoutConfirm(false)} style={{ flex:1, background:"none", border:`1px solid ${T.cardBorder}`, borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:T.paper, cursor:"pointer" }}>Cancel</button>
-              <button onClick={() => { setShowLogoutConfirm(false); onLogout(); }} style={{ flex:1, background:"#E53935", border:"none", borderRadius:12, padding:"13px 0", fontFamily:FONT_HEAD, fontWeight:700, fontSize:13, color:"#fff", cursor:"pointer" }}>Log Out</button>
+            <div style={{ display:"flex", justifyContent:"center", gap:10 }}>
+              <button onClick={() => setShowLogoutConfirm(false)} style={{ minWidth:88, background:"#FFFFFF", border:"1.5px solid #17191B", borderRadius:999, padding:"10px 17px", fontFamily:FONT_HEAD, fontWeight:700, fontSize:12.5, color:"#17191B", cursor:"pointer" }}>Cancel</button>
+              <button onClick={() => { setShowLogoutConfirm(false); onLogout(); }} style={{ minWidth:88, background:T.gold, border:"1.5px solid #F4D35E", borderRadius:999, padding:"10px 17px", fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, color:"#17191B", cursor:"pointer" }}>Log out</button>
             </div>
           </div>
         </div>
@@ -6048,12 +6047,11 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
 
         {/* Logout */}
         <button onClick={() => onLogoutConfirm && onLogoutConfirm()}
-          style={{ width:"calc(100% - 16px)", justifySelf:"center", minHeight:64, gridColumn:"1 / -1", background:"#C0392B", border:"none", borderRadius:32, padding:"11px 18px", textAlign:"center", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:10, position:"relative", boxShadow:"0 8px 18px rgba(192,57,43,.18)" }}>
-          <div style={{ width:38, height:38, borderRadius:"50%", background:"rgba(255,255,255,.14)", display:"grid", placeItems:"center", flexShrink:0 }}>
-            <LogOut size={18} color="#FFFFFF" />
+          style={{ width:"calc(100% - 28px)", justifySelf:"center", minHeight:52, gridColumn:"1 / -1", background:T.gold, border:"none", borderRadius:28, padding:"7px 18px", textAlign:"center", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:10, position:"relative", boxShadow:"0 6px 14px rgba(244,211,94,.24)" }}>
+          <div style={{ width:34, height:34, borderRadius:"50%", background:"rgba(15,14,11,.10)", display:"grid", placeItems:"center", flexShrink:0 }}>
+            <LogOut size={17} color={T.ink} />
           </div>
-          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:15, color:"#FFFFFF", textAlign:"center" }}>Logout</div>
-          <ChevronRight size={17} color="#FFFFFF" style={{ position:"absolute", top:"50%", right:16, transform:"translateY(-50%)" }} />
+          <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:14, color:T.ink, textAlign:"center" }}>Logout</div>
         </button>
       </div>
       <div style={{ padding:"24px 20px 0", textAlign:"center" }}>
