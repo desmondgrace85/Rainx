@@ -6,8 +6,7 @@ import {
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
   CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet, Landmark, Gift, Trophy,
   Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle, Plus, ChevronDown,
-  BrainCircuit, Cpu, Palette, Globe, Trash2, UserX, Download, FileCheck, Cookie, Database, Coins, Crown, Gem,
-  Rocket, Copy,
+  BrainCircuit, Cpu, Palette, Globe, Trash2, UserX, Download, FileCheck, Cookie, Database, Coins, Copy,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, Badge as CommunityBadge, formatCount } from "./CommunityTab";
@@ -5481,11 +5480,6 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
     setClosing(true);
     window.setTimeout(onBack, 360);
   };
-  const tiers = [
-    { icon: Crown, package: "GHS 150", percent: "10%" },
-    { icon: Gem, package: "GHS 500", percent: "15%" },
-    { icon: Rocket, package: "GHS 6,000", percent: "20%" },
-  ];
   return <div
     onTouchStart={(event) => { touchStartX.current = event.touches[0]?.clientX ?? null; }}
     onTouchEnd={(event) => {
@@ -5494,10 +5488,10 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
       touchStartX.current = null;
       if (start !== null && end - start > 72) close();
     }}
-    style={{position:"fixed",inset:0,zIndex:450,overflowY:"auto",overscrollBehaviorY:"contain",WebkitOverflowScrolling:"touch",touchAction:"pan-y",background:"#FFFFFF",color:"#17191B",animation:closing?"referralSheetOut .42s cubic-bezier(.32,.72,0,1) both":"referralSheetIn .62s cubic-bezier(.22,1.18,.36,1) both"}}
+    style={{position:"fixed",inset:0,zIndex:450,overflowY:"auto",overscrollBehaviorY:"contain",WebkitOverflowScrolling:"touch",touchAction:"pan-y",background:"#FFFFFF",color:"#17191B"}}
   >
     <style>{`@keyframes referralSheetIn{from{transform:translateY(100%)}to{transform:translateY(0)}}@keyframes referralSheetOut{from{transform:translateY(0)}to{transform:translateY(100%)}}`}</style>
-    <div style={{maxWidth:480,minHeight:"100%",margin:"0 auto",padding:"10px 22px 34px",boxSizing:"border-box"}}>
+    <div style={{maxWidth:480,minHeight:"100%",margin:"0 auto",padding:"10px 22px 34px",boxSizing:"border-box",background:"#FFFFFF",animation:closing?"referralSheetOut .42s cubic-bezier(.32,.72,0,1) both":"referralSheetIn .62s cubic-bezier(.22,1.18,.36,1) both"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:48,position:"relative",marginBottom:2}}>
         <button onClick={close} aria-label="Back" style={{position:"absolute",left:-8,width:42,height:42,border:0,background:"transparent",display:"grid",placeItems:"center",color:"#17191B",cursor:"pointer",padding:0}}>
           <ChevronLeft size={28} strokeWidth={2.2}/>
@@ -5508,17 +5502,21 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
       <div ref={animationRef} aria-label="Creator rewards animation" style={{width:"100%",height:205,margin:"0 auto 2px"}}/>
       <h1 style={{textAlign:"center",fontFamily:FONT_HEAD,fontWeight:900,fontSize:26,lineHeight:1.12,margin:"12px auto 8px",maxWidth:360}}>Refer Friends, They Subscribe.<br/><span style={{color:"#C99512"}}>You Earn!</span></h1>
       <p style={{textAlign:"center",color:"#596269",fontSize:13,lineHeight:1.55,margin:"0 auto 24px",maxWidth:330}}>Invite friends to join and earn a percentage when they subscribe to a package.</p>
-      <img src="/referral-earnings.jpg" alt="Creators earning rewards together" draggable="false" style={{display:"block",width:"100%",height:190,objectFit:"contain",margin:"2px auto 16px"}}/>
+      <img src="/referral-earnings-transparent.png" alt="Creators earning rewards together" draggable="false" style={{display:"block",width:"100%",height:190,objectFit:"contain",margin:"2px auto 16px"}}/>
       <h2 style={{fontFamily:FONT_HEAD,fontWeight:900,fontSize:21,lineHeight:1.15,margin:"0 0 8px"}}>Share More. Earn More.</h2>
       <p style={{color:"#596269",fontSize:13,lineHeight:1.6,margin:"0 0 22px"}}>Earn rewards when your referrals subscribe, with every successful referral adding to your earnings.</p>
-      <img src="/referral-network.jpg" alt="Friends building a network together" draggable="false" style={{display:"block",width:"100%",height:245,objectFit:"contain",margin:"0 auto 16px"}}/>
+      <img src="/referral-network-optimized.png" alt="Friends building a network together" draggable="false" style={{display:"block",width:"100%",height:245,objectFit:"contain",margin:"0 auto 16px"}}/>
       <h2 style={{fontFamily:FONT_HEAD,fontWeight:900,fontSize:21,lineHeight:1.15,margin:"0 0 8px"}}>Your Friends. Your Network. Your Rewards.</h2>
       <p style={{color:"#596269",fontSize:13,lineHeight:1.6,margin:"0 0 15px"}}>Build your network, earn together, and celebrate every successful referral.</p>
       <div style={{color:"#596269",fontSize:13,lineHeight:1.8,marginBottom:18}}>
-        <div>GHS 150 package — <strong style={{color:"#C99512"}}>10% earned</strong></div>
-        <div>GHS 500 package — <strong style={{color:"#C99512"}}>15% earned</strong></div>
-        <div>GHS 6,000 package — <strong style={{color:"#C99512"}}>20% earned</strong></div>
+        <div>GHS 150 package — <strong style={{color:"#D4AF37"}}>10% earned</strong></div>
+        <div>GHS 500 package — <strong style={{color:"#D4AF37"}}>15% earned</strong></div>
+        <div>GHS 6,000 package — <strong style={{color:"#D4AF37"}}>20% earned</strong></div>
       </div>
+      <button type="button" onClick={() => { if (referralCode) navigator.clipboard?.writeText(`https://rainx.app/?ref=${referralCode}`); }} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",border:"1px solid #E6E6E6",borderRadius:13,padding:"13px 14px",background:"#FFFFFF",textAlign:"left",cursor:referralCode?"pointer":"default",marginBottom:18}}>
+        <span><span style={{display:"block",fontFamily:FONT_HEAD,fontWeight:800,fontSize:14}}>Referral code</span><span style={{display:"block",color:"#747B80",fontSize:11.5,marginTop:3}}>{referralCode || "Code being prepared"}</span></span>
+        <span style={{display:"inline-flex",alignItems:"center",gap:6,color:"#D4AF37",fontFamily:FONT_HEAD,fontWeight:800,fontSize:12}}><Copy size={17}/>Copy</span>
+      </button>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",borderTop:"1px solid #ECECEC",paddingTop:16}}>
         <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:15}}>Referrals</div>
         <label style={{position:"relative",width:52,height:32,display:"inline-block"}}>
@@ -5526,13 +5524,7 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
           <span className="referralToggle" style={{position:"absolute",inset:0,borderRadius:999,background:"#D7DADD",transition:"background .34s cubic-bezier(.22,1,.36,1)",cursor:"pointer"}}/>
         </label>
       </div>
-      <style>{`.referralToggle:after{content:"";position:absolute;width:26px;height:26px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.18);transition:transform .34s cubic-bezier(.22,1.2,.36,1)}label.is-on .referralToggle{background:#F4D35E}label.is-on .referralToggle:after{transform:translateX(20px)}`}</style>
-      <button type="button" onClick={() => { if (referralCode) navigator.clipboard?.writeText(`https://rainx.app/?ref=${referralCode}`); }} style={{width:"100%",marginTop:22,border:"1px dashed #D9B94A",borderRadius:16,padding:"14px 15px",display:"flex",alignItems:"center",gap:12,background:"#FFFDF6",textAlign:"left",cursor:referralCode?"pointer":"default"}}>
-        <div style={{width:46,height:46,borderRadius:"50%",background:"#D5A91A",color:"#FFFFFF",display:"grid",placeItems:"center",flexShrink:0}}><Copy size={22} strokeWidth={2}/></div>
-        <div style={{fontSize:13,lineHeight:1.45}}><strong style={{fontSize:15}}>Swipe to copy</strong><br/><span style={{color:"#596269"}}>{referralCode ? "your referral code" : "your referral code is being prepared"}</span></div>
-        <div style={{marginLeft:"auto",color:"#DDBD5B",fontSize:28,letterSpacing:-8}}>&gt;&gt;&gt;</div>
-      </button>
-      <div style={{textAlign:"center",color:"#8A9297",fontSize:10.5,marginTop:14}}>🔒 Earnings are added automatically to your account.</div>
+      <style>{`.referralToggle:after{content:"";position:absolute;width:26px;height:26px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.18);transition:transform .34s cubic-bezier(.22,1.2,.36,1)}label.is-on .referralToggle{background:#D4AF37}label.is-on .referralToggle:after{transform:translateX(20px)}`}</style>
     </div>
   </div>;
 }
