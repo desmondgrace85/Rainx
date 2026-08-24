@@ -353,14 +353,14 @@ export default function MoreLandingOverride({ account }) {
             }}
           >
             {[
-              ["Gifts", Gift],
-              ["Referrals", UsersRound],
-              ["Space Talk\nEarnings", CircleDollarSign],
-            ].map(([label, Icon]) => (
+              ["Gifts", Gift, "#more/rewards"],
+              ["Referrals", UsersRound, "#more/referrals"],
+              ["Space Talk\nEarnings", CircleDollarSign, "#more/rewards"],
+            ].map(([label, Icon, route]) => (
               <button
                 key={label}
                 type="button"
-                onClick={() => go("#more/rewards")}
+                onClick={() => go(route)}
                 style={{
                   minWidth: 0,
                   border: 0,
