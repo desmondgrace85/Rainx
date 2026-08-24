@@ -2909,7 +2909,7 @@ function MainAppContent({ account, onLogout }) {
           <div style={{fontSize:12.5,color:"#596269",lineHeight:1.55,margin:"0 auto 20px",maxWidth:260}}>Come back soon. There’s always more to discover and earn.</div>
           <div style={{display:"flex",justifyContent:"center",gap:10}}><button onClick={closeLogoutConfirm} style={{minWidth:88,background:"#FFFFFF",border:"1.5px solid #17191B",borderRadius:999,padding:"10px 17px",fontFamily:FONT_HEAD,fontWeight:700,cursor:"pointer"}}>Cancel</button><button onClick={()=>{setShowLogoutConfirm(false);onLogout();}} style={{minWidth:88,background:"#E53935",border:"1.5px solid #C62828",borderRadius:999,padding:"10px 17px",fontFamily:FONT_HEAD,fontWeight:800,color:"#FFFFFF",cursor:"pointer"}}>Log out</button></div>
         </div>
-      </div>)}
+      </div>}
 
       {!communityProfileOpen && !spaceCoinsScreen && (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", zIndex: 100, background: T.card, opacity: 1, borderTop: `1px solid ${T.cardBorder}`, boxShadow: "0 -8px 24px rgba(0,0,0,0.12)", display: "flex", justifyContent: "space-around", padding: "6px 0 calc(20px + env(safe-area-inset-bottom))", "--rx-logo-bg": isDark ? "#000" : "#fff" }}>
