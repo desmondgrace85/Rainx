@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Area, ComposedChart, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import {
   Bell, Home, Briefcase, MessageCircle, MoreHorizontal, Settings, X, Repeat2,
@@ -5471,31 +5472,28 @@ function HeaderAvatar({ account, morePage, T }) {
 function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
   const animationRef = useRef(null);
   const touchStartX = useRef(null);
-  const [closing, setClosing] = useState(false);
+  const touchStartY = useRef(null);
   const [referralsEnabled, setReferralsEnabled] = useState(false);
   useEffect(() => {
     if (!animationRef.current) return undefined;
     const player = lottie.loadAnimation({ container: animationRef.current, renderer: "svg", loop: true, autoplay: true, animationData: referralAnimation });
-    return () => player.destroy();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { player.destroy(); document.body.style.overflow = previousOverflow; };
   }, []);
-  const close = () => {
-    if (closing) return;
-    setClosing(true);
-    // Keep the opaque wrapper mounted until the inner screen has fully left.
-    window.setTimeout(onBack, 360);
-  };
-  return <div
-    onTouchStart={(event) => { touchStartX.current = event.touches[0]?.clientX ?? null; }}
+  const close = () => onBack();
+  return createPortal(<div
+    onTouchStart={(event) => { touchStartX.current = event.touches[0]?.clientX ?? null; touchStartY.current = event.touches[0]?.clientY ?? null; }}
     onTouchEnd={(event) => {
-      const start = touchStartX.current;
-      const end = event.changedTouches[0]?.clientX;
-      touchStartX.current = null;
-      if (start !== null && end - start > 72) close();
+      const startX = touchStartX.current, startY = touchStartY.current, end = event.changedTouches[0];
+      touchStartX.current = null; touchStartY.current = null;
+      const dx = (end?.clientX ?? 0) - (startX ?? 0), dy = (end?.clientY ?? 0) - (startY ?? 0);
+      if (startX !== null && startY !== null && dx > 72 && Math.abs(dx) > Math.abs(dy) * 1.25) close();
     }}
-    style={{position:"fixed",inset:0,zIndex:1000,overflowY:"auto",overscrollBehaviorY:"contain",WebkitOverflowScrolling:"touch",touchAction:"pan-y",background:"#FFFFFF",color:"#17191B",isolation:"isolate",contain:"paint"}}
+    style={{position:"fixed",inset:0,zIndex:1000,overflowY:"auto",overflowX:"hidden",overscrollBehavior:"none",overscrollBehaviorY:"none",overscrollBehaviorX:"none",WebkitOverflowScrolling:"auto",touchAction:"pan-y",background:"#FFFFFF",color:"#17191B",isolation:"isolate",contain:"layout paint"}}
   >
     <style>{`@keyframes referralSheetIn{from{transform:translateY(18px)}to{transform:translateY(0)}}@keyframes referralSheetOut{from{transform:translateY(0)}to{transform:translateY(100%)}}`}</style>
-    <div style={{maxWidth:480,minHeight:"100dvh",margin:"0 auto",padding:"10px 22px 34px",boxSizing:"border-box",background:"#FFFFFF",willChange:"transform",animation:closing?"referralSheetOut .32s cubic-bezier(.4,0,1,1) both":"referralSheetIn .42s cubic-bezier(.22,1,.36,1) both"}}>
+    <div style={{maxWidth:480,minHeight:"100dvh",margin:"0 auto",padding:"10px 22px 34px",boxSizing:"border-box",background:"#FFFFFF",willChange:"transform",animation:"referralSheetIn .34s cubic-bezier(.22,1,.36,1) both"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:48,position:"relative",marginBottom:2}}>
         <button onClick={close} aria-label="Back" style={{position:"absolute",left:-8,width:42,height:42,border:0,background:"transparent",display:"grid",placeItems:"center",color:"#17191B",cursor:"pointer",padding:0}}>
           <ChevronLeft size={28} strokeWidth={2.2}/>
@@ -5530,7 +5528,7 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
       </div>
       <style>{`@keyframes referral-toggle-on{0%{left:3px;width:26px}34%{left:3px;width:34px}70%{left:15px;width:34px}100%{left:23px;width:26px}}@keyframes referral-toggle-off{0%{left:23px;width:26px}30%{left:15px;width:34px}66%{left:3px;width:34px}100%{left:3px;width:26px}}.referralToggle:after{content:"";position:absolute;width:26px;height:26px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.18);animation:referral-toggle-off .62s cubic-bezier(.22,1,.36,1) both}label.is-on .referralToggle:after{animation:referral-toggle-on .72s cubic-bezier(.22,1,.36,1) both}`}</style>
     </div>
-  </div>;
+  </div>, document.body);
 }
 
 function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, onLogoutConfirm, setTab, entitlement, themeMode, setThemeMode, morePage, setMorePage, setProfileFromHeader, activeMarkets = [] }) {
