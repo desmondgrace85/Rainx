@@ -1530,6 +1530,7 @@ function PullToRefresh({ children }) {
   };
   const excluded = (target) => target?.closest?.("button, input, textarea, select, [contenteditable='true'], canvas, svg, video, a");
   const onTouchStart = (event) => {
+    if (event.target?.closest?.(".rx-referral-screen")) return;
     if (refreshing || excluded(event.target)) return;
     const parent = getScrollParent(event.target);
     if (parent.scrollTop === 0) touch.current = { x: event.touches[0].clientX, y: event.touches[0].clientY, parent, vertical: false };
@@ -5525,7 +5526,7 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack, onActivi
     return () => { player.destroy(); document.body.style.overflow = previousOverflow; };
   }, []);
   const close = () => onBack();
-  return createPortal(<div
+  return createPortal(<div className="rx-referral-screen"
     onTouchStart={(event) => { touchStartX.current = event.touches[0]?.clientX ?? null; touchStartY.current = event.touches[0]?.clientY ?? null; }}
     onTouchEnd={(event) => {
       const startX = touchStartX.current, startY = touchStartY.current, end = event.changedTouches[0];
