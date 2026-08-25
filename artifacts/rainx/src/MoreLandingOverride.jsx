@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowLeft, ChevronRight, Gift, UsersRound, CircleDollarSign } from "lucide-react";
+import { ArrowLeft, ChevronRight, Gift, UsersRound, CircleDollarSign, Share2 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 
 const FONT = "'Montserrat', sans-serif";
@@ -48,8 +48,37 @@ const cardStyle = {
   boxShadow: "0 1px 8px rgba(17,20,24,0.045)",
 };
 
+
+function GiftsRewardsScreen({ onBack }) {
+  const touchStart = React.useRef(null);
+  const [closing, setClosing] = useState(false);
+  const close = () => { if (closing) return; setClosing(true); window.setTimeout(onBack, 360); };
+  const onTouchStart = (event) => { touchStart.current = event.touches[0].clientX; };
+  const onTouchEnd = (event) => { if (touchStart.current !== null && event.changedTouches[0].clientX - touchStart.current > 70) close(); touchStart.current = null; };
+  return (
+    <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ position: "fixed", inset: 0, zIndex: 20, background: "#FFFFFF", color: "#17191B", overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', sans-serif", animation: closing ? "rainxGiftOut .36s cubic-bezier(.4,0,1,1) both" : "rainxGiftIn .48s cubic-bezier(.22,1,.36,1) both" }}>
+      <style>{'@keyframes rainxGiftIn{from{transform:translateX(100%);opacity:.9}to{transform:translateX(0);opacity:1}}@keyframes rainxGiftOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:.9}}'}</style>
+      <main style={{ maxWidth: 480, minHeight: "100dvh", margin: "0 auto", padding: "10px 22px 34px", boxSizing: "border-box" }}>
+        <header style={{ height: 48, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <button type="button" onClick={close} aria-label="Back" style={{ width: 42, height: 42, marginLeft: -9, border: 0, background: "transparent", display: "grid", placeItems: "center", color: "#17191B", padding: 0 }}><ArrowLeft size={28} strokeWidth={2.2} /></button>
+          <button type="button" onClick={() => { try { navigator.share?.({ title: "RainX Rewards Program", text: "Earn more with RainX" }); } catch {} }} aria-label="Share rewards" style={{ width: 38, height: 38, marginRight: -6, border: 0, background: "transparent", display: "grid", placeItems: "center", color: "#17191B", padding: 0 }}><Share2 size={25} strokeWidth={2.1} /></button>
+        </header>
+        <h2 style={{ textAlign: "center", color: "#BD8C05", fontSize: 24, lineHeight: 1.2, fontWeight: 700, margin: "12px 0 12px" }}>RainX Rewards Program</h2>
+        <h1 style={{ textAlign: "center", fontSize: 41, lineHeight: 1.06, letterSpacing: -1.3, fontWeight: 750, margin: "0 auto 12px", maxWidth: 390 }}>Earn more with RainX</h1>
+        <p style={{ textAlign: "center", color: "#596269", fontSize: 20, lineHeight: 1.45, margin: "0 auto 14px", maxWidth: 385 }}>RainX Rewards is now live! Earn gifts for your Posts and Profile. More activity, more rewards.</p>
+        <img src="/rewards-gifts-hero.webp" alt="Creator holding a gift and earning rewards" draggable="false" style={{ display: "block", width: "calc(100% + 24px)", margin: "0 -12px 16px", height: "auto", objectFit: "contain" }} />
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 14, margin: "0 8px 18px" }}><span style={{ flex: "0 0 22px", width: 22, height: 22, marginTop: 2, borderRadius: "50%", background: "linear-gradient(90deg,#1555C9 0 50%,#F4D35E 50%)" }} /><p style={{ margin: 0, color: "#3F474D", fontSize: 17, lineHeight: 1.35 }}>Stay active on RainX and unlock exciting gifts.<br />Your activity powers your rewards.</p></div>
+        <div style={{ borderTop: "2px dotted #E0E1E2", paddingTop: 18 }}><h3 style={{ fontSize: 24, lineHeight: 1.2, fontWeight: 750, margin: "0 0 18px 78px" }}>How to earn rewards</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "64px 1fr", columnGap: 14, rowGap: 18, alignItems: "center" }}><div style={{ fontSize: 35, textAlign: "center" }}>🎁</div><div><strong style={{ fontSize: 21 }}>Gifts for your <span style={{ color: "#BD8C05" }}>Posts</span></strong><p style={{ margin: "4px 0 0", color: "#596269", fontSize: 17, lineHeight: 1.3 }}>Create and share quality posts to earn gifts from the RainX community.</p></div><div style={{ fontSize: 35, textAlign: "center" }}>👥</div><div><strong style={{ fontSize: 21 }}>Gifts for your <span style={{ color: "#BD8C05" }}>Profile</span></strong><p style={{ margin: "4px 0 0", color: "#596269", fontSize: 17, lineHeight: 1.3 }}>Keep your profile active and engaging to receive more profile gifts.</p></div></div>
+        </div><div style={{ display: "flex", gap: 14, alignItems: "center", background: "#FFF8E7", borderRadius: 12, padding: "13px 16px", marginTop: 20, color: "#30363B", fontSize: 16, lineHeight: 1.3 }}><span style={{ fontSize: 31 }}>🛡️</span><span>Stay active, create meaningful content,<br />and enjoy exclusive rewards only on RainX.</span></div>
+      </main>
+    </div>
+  );
+}
+
 export default function MoreLandingOverride({ account }) {
   const [analytics, setAnalytics] = useState({ views: 0, followers: 0, likes: 0 });
+  const [giftScreen, setGiftScreen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +89,8 @@ export default function MoreLandingOverride({ account }) {
     }
     return () => { cancelled = true; };
   }, [account?.id]);
+
+  if (giftScreen) return <GiftsRewardsScreen onBack={() => setGiftScreen(false)} />;
 
   return (
     <div
@@ -353,14 +384,14 @@ export default function MoreLandingOverride({ account }) {
             }}
           >
             {[
-              ["Gifts", Gift, "#more/rewards"],
+              ["Gifts", Gift, "#more/rewards", true],
               ["Referrals", UsersRound, "#more/referrals"],
               ["Space Talk\nEarnings", CircleDollarSign, "#more/rewards"],
-            ].map(([label, Icon, route]) => (
+            ].map(([label, Icon, route, gift]) => (
               <button
                 key={label}
                 type="button"
-                onClick={() => go(route)}
+                onClick={() => gift ? setGiftScreen(true) : go(route)}
                 style={{
                   minWidth: 0,
                   border: 0,
