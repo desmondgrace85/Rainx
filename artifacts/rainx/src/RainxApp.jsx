@@ -5679,7 +5679,62 @@ function LegacyReferralActivityScreen({ account, onBack }) {
   </div>, document.body);
 }
 
-function ReferralRewardsScreen({ count, earnings, referralCode, account, onBack, onActivity }) {
+function ReferralRewardsScreen({ count, earnings, referralCode, onBack, onActivity }) {
+  const animationRef = useRef(null);
+  const [referralsEnabled, setReferralsEnabled] = useState(false);
+  useEffect(() => {
+    if (!animationRef.current) return undefined;
+    const player = lottie.loadAnimation({ container: animationRef.current, renderer: "svg", loop: true, autoplay: true, animationData: referralAnimation });
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { player.destroy(); document.body.style.overflow = previousOverflow; };
+  }, []);
+  const close = () => onBack();
+  return createPortal(<ReferralPullRefresh><div className="rx-referral-screen"
+    style={{position:"fixed",inset:0,zIndex:1000,overflow:"hidden",overscrollBehavior:"none",touchAction:"pan-y",background:"#FFFFFF",color:"#17191B",isolation:"isolate",contain:"layout paint"}}
+  >
+    <style>{`@keyframes referralSheetIn{from{transform:translateY(18px)}to{transform:translateY(0)}}@keyframes referralSheetOut{from{transform:translateY(0)}to{transform:translateY(100%)}}`}</style>
+    <div className="rx-referral-scroll" style={{position:"absolute",inset:0,overflowY:"auto",overflowX:"hidden",overscrollBehavior:"none",WebkitOverflowScrolling:"auto",touchAction:"pan-y"}}>
+    <div style={{maxWidth:480,minHeight:"100dvh",margin:"0 auto",padding:"10px 22px 34px",boxSizing:"border-box",background:"#FFFFFF",willChange:"transform",animation:"referralSheetIn .34s cubic-bezier(.22,1,.36,1) both"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:48,position:"relative",marginBottom:2}}>
+        <button onClick={close} aria-label="Back" style={{position:"absolute",left:-8,width:42,height:42,border:0,background:"transparent",display:"grid",placeItems:"center",color:"#17191B",cursor:"pointer",padding:0}}>
+          <ChevronLeft size={28} strokeWidth={2.2}/>
+        </button>
+        <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:19}}>Refer &amp; Earn</div>
+        <button type="button" onClick={onActivity} aria-label="View referrals" style={{position:"absolute",right:-2,width:34,height:34,borderRadius:"50%",border:0,background:"#17191B",display:"grid",placeItems:"center",cursor:"pointer"}}><Coins size={17} color="#FFFFFF" strokeWidth={2}/></button>
+      </div>
+      <div ref={animationRef} aria-label="Creator rewards animation" style={{width:"100%",height:205,margin:"0 auto 2px"}}/>
+      <h1 style={{textAlign:"center",fontFamily:FONT_HEAD,fontWeight:900,fontSize:26,lineHeight:1.12,margin:"12px auto 8px",maxWidth:360}}>Refer Friends, They Subscribe.<br/><span style={{color:"#F4D35E"}}>You Earn!</span></h1>
+      <p style={{textAlign:"center",color:"#596269",fontSize:13,lineHeight:1.55,margin:"0 auto 24px",maxWidth:330}}>Invite friends to join and earn a percentage when they subscribe to a package.</p>
+      <img src={referralEarningsTransparent} alt="Creators earning rewards together" draggable="false" style={{display:"block",width:"100%",height:190,objectFit:"contain",margin:"2px auto 16px"}}/>
+      <h2 style={{fontFamily:FONT_HEAD,fontWeight:900,fontSize:21,lineHeight:1.15,margin:"0 0 8px"}}>Share More. Earn More.</h2>
+      <p style={{color:"#596269",fontSize:13,lineHeight:1.6,margin:"0 0 22px"}}>Earn rewards when your referrals subscribe, with every successful referral adding to your earnings.</p>
+      <img src={referralNetworkOptimized} alt="Friends building a network together" draggable="false" style={{display:"block",width:"100%",height:245,objectFit:"contain",margin:"0 auto 16px"}}/>
+      <h2 style={{fontFamily:FONT_HEAD,fontWeight:900,fontSize:21,lineHeight:1.15,margin:"0 0 8px"}}>Your Friends. Your Network. Your Rewards.</h2>
+      <p style={{color:"#596269",fontSize:13,lineHeight:1.6,margin:"0 0 15px"}}>Build your network, earn together, and celebrate every successful referral.</p>
+      <div style={{color:"#596269",fontSize:13,lineHeight:1.8,marginBottom:18}}>
+        <div>GHS 150 package — <strong style={{color:"#F4D35E"}}>10% earned</strong></div>
+        <div>GHS 500 package — <strong style={{color:"#F4D35E"}}>15% earned</strong></div>
+        <div>GHS 6,000 package — <strong style={{color:"#F4D35E"}}>20% earned</strong></div>
+      </div>
+      <button type="button" onClick={() => { if (referralCode) navigator.clipboard?.writeText(`https://rainx.app/?ref=${referralCode}`); }} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",border:"1px solid #E6E6E6",borderRadius:13,padding:"13px 14px",background:"#FFFFFF",textAlign:"left",cursor:referralCode?"pointer":"default",marginBottom:18}}>
+        <span><span style={{display:"block",fontFamily:FONT_HEAD,fontWeight:800,fontSize:14}}>Referral code</span><span style={{display:"block",color:"#747B80",fontSize:11.5,marginTop:3}}>{referralCode || "Code being prepared"}</span></span>
+        <span style={{display:"inline-flex",alignItems:"center",gap:6,color:"#F4D35E",fontFamily:FONT_HEAD,fontWeight:800,fontSize:12}}><Copy size={17}/>Copy</span>
+      </button>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",borderTop:"1px solid #ECECEC",paddingTop:16}}>
+        <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:15}}>Referrals</div>
+        <label className={referralsEnabled ? "is-on" : ""} style={{position:"relative",width:52,height:32,display:"inline-block"}}>
+          <input type="checkbox" checked={referralsEnabled} onChange={(event) => setReferralsEnabled(event.target.checked)} style={{opacity:0,width:0,height:0}}/>
+          <span className="referralToggle" style={{position:"absolute",inset:0,borderRadius:999,background:referralsEnabled?"#F4D35E":"#D7DADD",transition:"background .46s cubic-bezier(.22,1,.36,1)",cursor:"pointer"}}/>
+        </label>
+      </div>
+      <style>{`@keyframes referral-toggle-on{0%{left:3px;width:26px;border-radius:50%}34%{left:3px;width:34px;border-radius:13px}70%{left:15px;width:34px;border-radius:13px}100%{left:23px;width:26px;border-radius:50%}}@keyframes referral-toggle-off{0%{left:23px;width:26px;border-radius:50%}30%{left:15px;width:34px;border-radius:13px}66%{left:3px;width:34px;border-radius:13px}100%{left:3px;width:26px;border-radius:50%}}.referralToggle:after{content:"";position:absolute;width:26px;height:26px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.18);animation:referral-toggle-off .62s cubic-bezier(.22,1,.36,1) both}label.is-on .referralToggle:after{animation:referral-toggle-on .72s cubic-bezier(.22,1,.36,1) both}`}</style>
+    </div>
+    </div>
+  </div></ReferralPullRefresh>, document.body);
+}
+
+function MyReferralsScreen({ count, earnings, referralCode, account, onBack, onActivity }) {
   const [rows,setRows]=useState([]); const [page,setPage]=useState(0); const [claimed,setClaimed]=useState(() => new Set()); const touch=useRef(null);
   useEffect(() => { let alive=true; supabase.from("referrals").select("*").eq("referrer_id",account?.id).order("created_at",{ascending:false}).then(async ({data}) => { const source=data||[]; const ids=[...new Set(source.map(row=>row.referred_id||row.referred_user_id||row.user_id).filter(Boolean))]; let profiles={}; if(ids.length){const result=await supabase.from("profiles").select("id,full_name,username").in("id",ids); profiles=Object.fromEntries((result.data||[]).map(profile=>[profile.id,profile]));} if(alive)setRows(source.map(row=>({...row,profile:profiles[row.referred_id||row.referred_user_id||row.user_id]}))); }).catch(()=>{}); return () => {alive=false}; },[]);
   const demo=[{name:"Sarah Smith",detail:"Subscribed",plan:"Monthly",date:"Today 10:42am",amount:24,tone:"#DCA07A"},{name:"Mark Malbert",detail:"Subscribed",plan:"Yearly",date:"Yesterday",amount:999.5,tone:"#BC815B"},{name:"Desmond Banful",detail:"Subscribed",plan:"Monthly",date:"12 Dec. 2026",amount:100,tone:"#35C874"}];
@@ -6158,7 +6213,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     }
   };
 
-  if (morePage === "referral-activity") return <ReferralActivityScreen account={account} onBack={() => setMorePage("referrals")} />;
+  if (morePage === "referral-activity") return <MyReferralsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} account={account} onBack={() => setMorePage("referrals")} onActivity={() => setMorePage("referral-activity")} />;
   if (morePage === "referrals") return <ReferralRewardsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} account={account} onBack={() => setMorePage(null)} onActivity={() => setMorePage("referral-activity")} />;
 
   if (cropFile) return <CoverCropModal file={cropFile} onConfirm={blob => { setCropFile(null); uploadCoverBlob(blob); }} onCancel={() => { setCropFile(null); }} T={T} FONT_HEAD={FONT_HEAD} />;
