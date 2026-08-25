@@ -5472,6 +5472,73 @@ function HeaderAvatar({ account, morePage, T }) {
 
 function ReferralActivityScreen({ account, onBack }) {
   const [rows, setRows] = useState([]);
+  const [filter, setFilter] = useState("Paid");
+  const swipeStart = useRef(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data } = await supabase.from("referrals").select("*").eq("referrer_id", account?.id).order("created_at", { ascending: false });
+      const source = data || [];
+      const ids = [...new Set(source.map(row => row.referred_id || row.referred_user_id || row.user_id).filter(Boolean))];
+      let profiles = {};
+      if (ids.length) {
+        const result = await supabase.from("profiles").select("id, full_name, username, avatar_url").in("id", ids);
+        profiles = Object.fromEntries((result.data || []).map(profile => [profile.id, profile]));
+      }
+      if (alive) setRows(source.map(row => ({ ...row, profile: profiles[row.referred_id || row.referred_user_id || row.user_id] })));
+    })().catch(() => {});
+    return () => { alive = false; };
+  }, [account?.id]);
+  const isPaid = row => ["qualified", "active", "paid", "subscribed"].includes(String(row.status || "").toLowerCase());
+  const earned = rows.filter(isPaid).reduce((sum, row) => sum + Number(row.reward_amount ?? row.earnings ?? row.amount ?? row.commission ?? 0), 0);
+  const demoRows = [
+    { name:"Sarah Smith", detail:"A bagel", amount:"- GHS 24.00", tone:"#D8A47F", dot:"#EE5C6C" },
+    { name:"Mark Malbert", detail:"Referred a new member", amount:"+ GHS 999.50", tone:"#B77955", dot:"#35C66A" },
+    { name:"Added HYDRO", detail:"From Ethereum Wallet", amount:"+ GHS 100.00", tone:"#35C66A", dot:"#35C66A" },
+  ];
+  const visibleRows = rows.length ? rows : demoRows;
+  const tabs = ["All", "Paid", "Requested", "Pending"];
+  const changeTab = (next) => setFilter(tabs[(tabs.indexOf(filter) + next + tabs.length) % tabs.length]);
+  const handleTouchStart = event => { swipeStart.current = event.touches[0].clientX; };
+  const handleTouchEnd = event => {
+    if (swipeStart.current == null) return;
+    const delta = event.changedTouches[0].clientX - swipeStart.current;
+    if (Math.abs(delta) > 40) changeTab(delta < 0 ? 1 : -1);
+    swipeStart.current = null;
+  };
+  return createPortal(<div style={{ position:"fixed", inset:0, zIndex:1000, overflowY:"auto", overflowX:"hidden", overscrollBehaviorY:"contain", WebkitOverflowScrolling:"touch", background:"#F7F8F8", color:"#17191B", fontFamily:'-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif' }}>
+    <div style={{ maxWidth:480, minHeight:"100dvh", margin:"0 auto", padding:"10px 22px 34px", boxSizing:"border-box" }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div style={{ height:48, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <button onClick={onBack} aria-label="Back" style={{ width:42, height:42, border:0, background:"transparent", display:"grid", placeItems:"center", color:"#17191B", padding:0 }}><ChevronLeft size={28}/></button>
+        <div style={{ fontSize:20, fontWeight:700, letterSpacing:-.4 }}>My Referrals</div><div style={{ width:42 }} />
+      </div>
+      <section style={{ height:166, borderRadius:20, padding:"18px 20px", boxSizing:"border-box", color:"#FFF", background:"linear-gradient(135deg,#2956F5,#2549D1)", boxShadow:"0 8px 18px rgba(37,73,209,.22)", position:"relative", overflow:"hidden", margin:"8px 0 16px" }}>
+        <div style={{ position:"absolute", width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,.07)", left:-56, bottom:-84 }} />
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", position:"relative" }}><strong style={{ fontSize:20, letterSpacing:-.5 }}>hydro</strong><span style={{ fontSize:11, border:"1px solid rgba(255,255,255,.22)", borderRadius:14, padding:"6px 10px" }}>GHS ↕</span></div>
+        <div style={{ position:"absolute", left:20, bottom:42, fontSize:10, letterSpacing:1.4, opacity:.75 }}>YOUR BALANCE</div>
+        <div style={{ position:"absolute", left:20, bottom:10, fontSize:27, letterSpacing:-.8 }}>GHS {earned.toFixed(2)}</div><span style={{ position:"absolute", right:20, bottom:20, fontSize:26 }}>⋮</span>
+      </section>
+      <div style={{ display:"flex", gap:20, marginBottom:18 }}><button style={{ flex:1, height:34, border:0, borderRadius:20, color:"#FFF", background:"#2956F5", fontSize:12 }}>Request</button><button style={{ flex:1, height:34, border:0, borderRadius:20, color:"#FFF", background:"#3A3A3A", fontSize:12 }}>Pay</button></div>
+      <div style={{ display:"flex", alignItems:"center", gap:5, height:34, color:"#A4A7AA", fontSize:11, borderBottom:"1px solid #E8E9EA", marginBottom:2, touchAction:"pan-x" }}>
+        {tabs.map(label => <button key={label} onClick={() => setFilter(label)} style={{ border:0, color:filter===label?"#17191B":"#A4A7AA", fontWeight:filter===label?600:400, background:filter===label?"#EDEEEF":"transparent", borderRadius:12, padding:"5px 9px", fontSize:11 }}>{label}</button>)}<span style={{ marginLeft:"auto", fontSize:22, color:"#333" }}>↻</span>
+      </div>
+      <div style={{ paddingTop:4 }}>
+        {visibleRows.map((row,index) => {
+          const real = rows.length > 0, paid = real ? isPaid(row) : index > 0, name = real ? (row.profile?.full_name || row.profile?.username || "RainX member") : row.name;
+          const amount = real ? Number(row.reward_amount ?? row.earnings ?? row.amount ?? row.commission ?? 0) : 0;
+          return <div key={row.id||index} style={{ minHeight:59, display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid #ECEDEE", padding:"8px 0", boxSizing:"border-box" }}>
+            <div style={{ position:"relative", width:36, height:36, flex:"0 0 36px", borderRadius:"50%", display:"grid", placeItems:"center", color:"#FFF", background:real ? (paid?"#35C66A":"#AEB3B7") : row.tone, fontSize:14, fontWeight:600 }}>{real ? name.charAt(0).toUpperCase() : name.split(" ").map(x=>x[0]).join("").slice(0,1)}{!real && <i style={{ position:"absolute", right:-1, bottom:1, width:7, height:7, borderRadius:"50%", background:row.dot, border:"1px solid #F7F8F8" }} />}</div>
+            <div style={{ minWidth:0, flex:1 }}><div style={{ fontSize:11.5, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{real ? name : (index===2 ? "Added HYDRO" : index===0 ? "You paid Sarah Smith" : "Mark Malbert referred you")}</div><div style={{ fontSize:10, color:"#A1A5A8", marginTop:3 }}>{real ? (row.subscription_plan||row.plan||"Referral") : row.detail}</div></div>
+            <div style={{ textAlign:"right", whiteSpace:"nowrap" }}><div style={{ fontSize:12, fontWeight:600, color:paid?"#2C2C2C":"#9DA1A4" }}>{real ? (paid?`+ GHS ${amount.toFixed(2)}`:"Pending") : row.amount}</div><div style={{ fontSize:9.5, color:"#B0B3B5", marginTop:3 }}>{real ? (paid?"earned":"awaiting subscription") : (index===0?"referral reward":"0.0823 HYDRO")}</div></div>
+          </div>;
+        })}
+      </div>
+    </div>
+  </div>, document.body);
+}
+
+function ReferralActivityScreenV1({ account, onBack }) {
+  const [rows, setRows] = useState([]);
   useEffect(() => {
     let alive = true;
     (async () => {
