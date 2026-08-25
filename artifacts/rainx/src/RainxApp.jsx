@@ -1531,6 +1531,7 @@ function PullToRefresh({ children }) {
   };
   const excluded = (target) => target?.closest?.("button, input, textarea, select, [contenteditable='true'], canvas, svg, video, a");
   const onTouchStart = (event) => {
+    if (event.target?.closest?.(".rx-referral-screen")) return;
     if (refreshing || excluded(event.target)) return;
     const parent = getScrollParent(event.target);
     if (parent.scrollTop === 0) touch.current = { x: event.touches[0].clientX, y: event.touches[0].clientY, parent, vertical: false };
@@ -1572,6 +1573,49 @@ function PullToRefresh({ children }) {
       {children}
     </div>
   );
+}
+
+// Referral screens use their own portal, so the refresh affordance must live
+// inside the portal as well. This keeps the indicator visible without changing
+// the app-wide refresh behavior.
+function ReferralPullRefresh({ children }) {
+  const [distance, setDistance] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const touch = useRef(null);
+  const threshold = 28;
+  const scrollParent = target => target?.closest?.(".rx-referral-scroll, .rx-referral-screen") || document.scrollingElement;
+  const onStart = event => {
+    if (refreshing || event.target?.closest?.("button, input, textarea, a, svg")) return;
+    const parent = scrollParent(event.target);
+    if (parent?.scrollTop === 0) touch.current = { x:event.touches[0].clientX, y:event.touches[0].clientY, parent, vertical:false };
+  };
+  const onMove = event => {
+    const active = touch.current;
+    if (!active || refreshing) return;
+    const dx = event.touches[0].clientX - active.x;
+    const dy = event.touches[0].clientY - active.y;
+    if (!active.vertical) {
+      if (dy <= 0 || Math.abs(dx) > Math.abs(dy) || dy < 2) { if (dy < 0 || Math.abs(dx) > 10) touch.current = null; return; }
+      active.vertical = true;
+    }
+    if (active.parent.scrollTop > 0) { touch.current = null; setDistance(0); return; }
+    event.preventDefault();
+    setDistance(Math.min(88, dy * 0.9));
+  };
+  const onEnd = () => {
+    const active = touch.current;
+    touch.current = null;
+    if (!active?.vertical) { setDistance(0); return; }
+    if (distance >= threshold) {
+      setRefreshing(true);
+      setDistance(threshold);
+      window.setTimeout(() => window.location.reload(), 220);
+    } else setDistance(0);
+  };
+  return <div onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd} onTouchCancel={onEnd} style={{ position:"relative", width:"100%", height:"100%" }}>
+    <div className={`rx-pull-refresh-indicator${refreshing ? " is-refreshing" : ""}`} style={{ opacity:Math.min(1, distance / threshold), transform:`translate(-50%, ${Math.max(-52, distance - 58)}px) scale(${Math.min(1, .65 + distance / (threshold * 3))})`, transition:distance > 0 && !refreshing ? "none" : undefined, zIndex:2000 }} aria-hidden="true"><img src={rainxLogoTransparent} alt="" /></div>
+    {children}
+  </div>;
 }
 
 function WalletTab({ account }) {
@@ -5474,6 +5518,8 @@ function ReferralActivityScreen({ account, onBack }) {
   const [rows, setRows] = useState([]);
   const [filter, setFilter] = useState("Paid");
   const [claimed, setClaimed] = useState(() => new Set());
+  const [leaving, setLeaving] = useState(false);
+  const [dragX, setDragX] = useState(0);
   const swipeStart = useRef(null);
   useEffect(() => {
     let alive = true;
@@ -5501,10 +5547,16 @@ function ReferralActivityScreen({ account, onBack }) {
   const tabs = ["All", "Paid", "Requested", "Pending"];
   const changeTab = (next) => setFilter(tabs[(tabs.indexOf(filter) + next + tabs.length) % tabs.length]);
   const handleTouchStart = event => { swipeStart.current = event.touches[0].clientX; };
+  const handleTouchMove = event => {
+    if (swipeStart.current == null) return;
+    const delta = event.touches[0].clientX - swipeStart.current;
+    if (Math.abs(delta) > 8) { event.preventDefault(); setDragX(Math.max(-82, Math.min(82, delta))); }
+  };
   const handleTouchEnd = event => {
     if (swipeStart.current == null) return;
     const delta = event.changedTouches[0].clientX - swipeStart.current;
     if (Math.abs(delta) > 40) changeTab(delta < 0 ? 1 : -1);
+    setDragX(0);
     swipeStart.current = null;
   };
   const readableDate = value => {
@@ -5515,16 +5567,19 @@ function ReferralActivityScreen({ account, onBack }) {
     if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
     return date.toLocaleDateString(undefined, { day:"numeric", month:"short", year:"numeric" });
   };
-  return createPortal(<div style={{ position:"fixed", inset:0, zIndex:1000, overflowY:"auto", overflowX:"hidden", overscrollBehaviorY:"contain", WebkitOverflowScrolling:"touch", background:"#F7F8F8", color:"#17191B", fontFamily:'-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif' }}>
-    <div style={{ maxWidth:480, minHeight:"100dvh", margin:"0 auto", padding:"10px 22px 34px", boxSizing:"border-box" }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+  const close = () => { setLeaving(true); window.setTimeout(onBack, 260); };
+  return createPortal(<ReferralPullRefresh><div className="rx-referral-screen" style={{ position:"fixed", inset:0, zIndex:1000, overflow:"hidden", overscrollBehavior:"none", background:"#F7F8F8", color:"#17191B", fontFamily:'-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif' }}>
+    <div className="rx-referral-scroll" style={{ position:"absolute", inset:0, overflowY:"auto", overflowX:"hidden", overscrollBehavior:"none", WebkitOverflowScrolling:"auto" }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+    <div style={{ maxWidth:480, minHeight:"100dvh", margin:"0 auto", padding:"10px 22px 34px", boxSizing:"border-box", animation:`${leaving ? "referralSheetOut" : "referralSheetIn"} .34s cubic-bezier(.22,1,.36,1) both` }}>
       <div style={{ height:48, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <button onClick={onBack} aria-label="Back" style={{ width:42, height:42, border:0, background:"transparent", display:"grid", placeItems:"center", color:"#17191B", padding:0 }}><ChevronLeft size={28}/></button>
+        <button onClick={close} aria-label="Back" style={{ width:42, height:42, border:0, background:"transparent", display:"grid", placeItems:"center", color:"#17191B", padding:0 }}><ChevronLeft size={28}/></button>
         <div style={{ fontSize:20, fontWeight:700, letterSpacing:-.4 }}>My Referrals</div><div style={{ width:42 }} />
       </div>
       <img src={referralActivityBanner} alt="Earn from referrals" draggable="false" style={{ display:"block", width:"100%", height:166, objectFit:"cover", borderRadius:20, margin:"8px 0 16px", boxShadow:"0 8px 18px rgba(15,14,11,.12)" }} />
       <div style={{ display:"flex", gap:20, marginBottom:18 }}><button style={{ flex:1, height:34, border:0, borderRadius:20, color:"#FFF", background:"#2956F5", fontSize:12 }}>Request</button><button style={{ flex:1, height:34, border:0, borderRadius:20, color:"#FFF", background:"#3A3A3A", fontSize:12 }}>Pay</button></div>
-      <div style={{ display:"flex", alignItems:"center", gap:5, height:34, color:"#A4A7AA", fontSize:11, borderBottom:"1px solid #E8E9EA", marginBottom:2, touchAction:"pan-x" }}>
-        {tabs.map(label => <button key={label} onClick={() => setFilter(label)} style={{ border:0, color:filter===label?"#17191B":"#A4A7AA", fontWeight:filter===label?600:400, background:filter===label?"#EDEEEF":"transparent", borderRadius:12, padding:"5px 9px", fontSize:12 }}>{label}</button>)}<span style={{ marginLeft:"auto", fontSize:22, color:"#333" }}>↻</span>
+      <div style={{ position:"relative", display:"flex", alignItems:"center", height:34, color:"#A4A7AA", fontSize:11, borderBottom:"1px solid #E8E9EA", marginBottom:2, touchAction:"pan-x" }}>
+        <span style={{ position:"absolute", left:13, width:57, height:27, borderRadius:14, background:"#EDEEEF", transform:`translateX(${tabs.indexOf(filter) * 70 + dragX}px)`, transition:dragX ? "none" : "transform .24s cubic-bezier(.22,1,.36,1)", pointerEvents:"none" }} />
+        {tabs.map(label => <button key={label} onClick={() => { setFilter(label); setDragX(0); }} style={{ position:"relative", zIndex:1, width:70, border:0, color:filter===label?"#17191B":"#A4A7AA", fontWeight:filter===label?600:400, background:"transparent", borderRadius:12, padding:"5px 0", fontSize:12 }}>{label}</button>)}<span style={{ marginLeft:"auto", fontSize:22, color:"#333" }}>↻</span>
       </div>
       <div style={{ paddingTop:4 }}>
         {visibleRows.map((row,index) => {
@@ -5535,12 +5590,14 @@ function ReferralActivityScreen({ account, onBack }) {
           return <div key={row.id||index} style={{ minHeight:59, display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid #ECEDEE", padding:"8px 0", boxSizing:"border-box" }}>
             <div style={{ position:"relative", width:36, height:36, flex:"0 0 36px", borderRadius:"50%", display:"grid", placeItems:"center", color:"#FFF", background:real ? (paid?"#35C66A":"#AEB3B7") : row.tone, fontSize:14, fontWeight:600 }}>{real ? name.charAt(0).toUpperCase() : name.split(" ").map(x=>x[0]).join("").slice(0,1)}{!real && <i style={{ position:"absolute", right:-1, bottom:1, width:7, height:7, borderRadius:"50%", background:row.dot, border:"1px solid #F7F8F8" }} />}</div>
             <div style={{ minWidth:0, flex:1 }}><div style={{ fontSize:13, fontWeight:700, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{name} <span style={{ fontSize:12, fontWeight:400, color:"#687078" }}>{real ? (paid ? "Subscribed" : "Signed up") : row.detail}</span></div><div style={{ display:"inline-block", padding:"3px 8px", marginTop:5, borderRadius:999, background:"#E1F5EA", color:"#167A49", fontSize:11, fontWeight:600 }}>{real ? (row.subscription_plan||row.plan||row.package||"Subscription") : row.plan}</div><div style={{ fontSize:11, color:"#A1A5A8", marginTop:5 }}>{real ? readableDate(row.created_at || row.signup_date) : row.date}</div></div>
-            <button type="button" disabled={isClaimed} onClick={() => setClaimed(previous => { const next = new Set(previous); next.add(rowKey); return next; })} style={{ border:0, borderRadius:999, minWidth:76, padding:"7px 9px", background:isClaimed?"#E8ECEA":"#DDF5E7", color:isClaimed?"#87918B":"#167A49", textAlign:"center", cursor:isClaimed?"default":"pointer" }}><span style={{ display:"block", fontSize:10, fontWeight:700 }}>{isClaimed?"Claimed":"Claim"}</span><span style={{ display:"block", fontSize:12, fontWeight:700, marginTop:2 }}>{real ? `GHS ${amount.toFixed(2)}` : `GHS ${row.amount.toFixed(2)}`}</span></button>
+            <button type="button" disabled={isClaimed} onClick={() => setClaimed(previous => { const next = new Set(previous); next.add(rowKey); return next; })} style={{ border:0, borderRadius:999, minWidth:76, padding:"7px 9px", background:isClaimed?"#A9D8B5":"#70C486", color:"#FFF", textAlign:"center", cursor:isClaimed?"default":"pointer", boxShadow:"0 2px 7px rgba(65,157,91,.14)" }}><span style={{ display:"block", fontSize:10, fontWeight:700 }}>{isClaimed?"Claimed":"Claim"}</span><span style={{ display:"block", fontSize:12, fontWeight:700, marginTop:2 }}>{real ? `GHS ${amount.toFixed(2)}` : `GHS ${row.amount.toFixed(2)}`}</span></button>
           </div>;
         })}
       </div>
     </div>
-  </div>, document.body);
+    </div>
+    </div>
+  </div></ReferralPullRefresh>, document.body);
 }
 
 function ReferralActivityScreenV1({ account, onBack }) {
@@ -5634,10 +5691,11 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack, onActivi
     return () => { player.destroy(); document.body.style.overflow = previousOverflow; };
   }, []);
   const close = () => onBack();
-  return createPortal(<div className="rx-referral-screen"
-    style={{position:"fixed",inset:0,zIndex:1000,overflowY:"auto",overflowX:"hidden",overscrollBehavior:"none",overscrollBehaviorY:"none",overscrollBehaviorX:"none",WebkitOverflowScrolling:"auto",touchAction:"pan-y",background:"#FFFFFF",color:"#17191B",isolation:"isolate",contain:"layout paint"}}
+  return createPortal(<ReferralPullRefresh><div className="rx-referral-screen"
+    style={{position:"fixed",inset:0,zIndex:1000,overflow:"hidden",overscrollBehavior:"none",touchAction:"pan-y",background:"#FFFFFF",color:"#17191B",isolation:"isolate",contain:"layout paint"}}
   >
     <style>{`@keyframes referralSheetIn{from{transform:translateY(18px)}to{transform:translateY(0)}}@keyframes referralSheetOut{from{transform:translateY(0)}to{transform:translateY(100%)}}`}</style>
+    <div className="rx-referral-scroll" style={{position:"absolute",inset:0,overflowY:"auto",overflowX:"hidden",overscrollBehavior:"none",WebkitOverflowScrolling:"auto",touchAction:"pan-y"}}>
     <div style={{maxWidth:480,minHeight:"100dvh",margin:"0 auto",padding:"10px 22px 34px",boxSizing:"border-box",background:"#FFFFFF",willChange:"transform",animation:"referralSheetIn .34s cubic-bezier(.22,1,.36,1) both"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:48,position:"relative",marginBottom:2}}>
         <button onClick={close} aria-label="Back" style={{position:"absolute",left:-8,width:42,height:42,border:0,background:"transparent",display:"grid",placeItems:"center",color:"#17191B",cursor:"pointer",padding:0}}>
@@ -5673,7 +5731,8 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack, onActivi
       </div>
       <style>{`@keyframes referral-toggle-on{0%{left:3px;width:26px;border-radius:50%}34%{left:3px;width:34px;border-radius:13px}70%{left:15px;width:34px;border-radius:13px}100%{left:23px;width:26px;border-radius:50%}}@keyframes referral-toggle-off{0%{left:23px;width:26px;border-radius:50%}30%{left:15px;width:34px;border-radius:13px}66%{left:3px;width:34px;border-radius:13px}100%{left:3px;width:26px;border-radius:50%}}.referralToggle:after{content:"";position:absolute;width:26px;height:26px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.18);animation:referral-toggle-off .62s cubic-bezier(.22,1,.36,1) both}label.is-on .referralToggle:after{animation:referral-toggle-on .72s cubic-bezier(.22,1,.36,1) both}`}</style>
     </div>
-  </div>, document.body);
+    </div>
+  </div></ReferralPullRefresh>, document.body);
 }
 
 function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogout, onLogoutConfirm, setTab, entitlement, themeMode, setThemeMode, morePage, setMorePage, setProfileFromHeader, activeMarkets = [] }) {
