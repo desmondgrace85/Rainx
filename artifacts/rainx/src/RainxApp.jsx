@@ -19,6 +19,7 @@ import HomeTab from "./HomeTab";
 
 import rainxLogoTransparent from "./assets/rainx-logo-transparent.png";
 import referralEarningsTransparent from "./assets/referral-earnings-transparent.png";
+import referralBanner from "./assets/referral-banner.png";
 import referralNetworkOptimized from "./assets/referral-network-optimized.png";
 import referralAnimation from "./assets/social-media-influencer.json";
 import lottie from "lottie-web";
@@ -5469,7 +5470,49 @@ function HeaderAvatar({ account, morePage, T }) {
 }
 
 
-function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
+function ReferralActivityScreen({ account, onBack }) {
+  const [rows, setRows] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data } = await supabase.from("referrals").select("*").eq("referrer_id", account?.id).order("created_at", { ascending: false });
+      if (!alive) return;
+      const referralRows = data || [];
+      const ids = [...new Set(referralRows.map(row => row.referred_id || row.referred_user_id || row.user_id).filter(Boolean))];
+      let profiles = {};
+      if (ids.length) {
+        const result = await supabase.from("profiles").select("id, full_name, username, avatar_url").in("id", ids);
+        profiles = Object.fromEntries((result.data || []).map(profile => [profile.id, profile]));
+      }
+      if (alive) setRows(referralRows.map(row => ({ ...row, profile: profiles[row.referred_id || row.referred_user_id || row.user_id] })));
+    })().catch(() => {});
+    return () => { alive = false; };
+  }, [account?.id]);
+  const isActive = row => ["qualified", "active", "paid", "subscribed"].includes(String(row.status || "").toLowerCase());
+  const earned = rows.filter(isActive).reduce((sum, row) => sum + Number(row.reward_amount ?? row.earnings ?? row.amount ?? row.commission ?? 0), 0);
+  const formatDate = value => value ? new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "";
+  return createPortal(<div style={{ position:"fixed", inset:0, zIndex:1000, overflowY:"auto", overflowX:"hidden", overscrollBehavior:"none", overscrollBehaviorY:"none", WebkitOverflowScrolling:"auto", background:"#F7F8F8", color:"#17191B", isolation:"isolate" }}>
+    <div style={{ maxWidth:480, minHeight:"100dvh", margin:"0 auto", padding:"10px 18px 34px", boxSizing:"border-box", fontFamily:FONT_BODY }}>
+      <div style={{ height:48, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <button onClick={onBack} aria-label="Back" style={{ width:42, height:42, border:0, background:"transparent", display:"grid", placeItems:"center", color:"#17191B" }}><ChevronLeft size={28}/></button>
+        <div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:19 }}>My Referrals</div><div style={{ width:42 }} />
+      </div>
+      <img src={referralBanner} alt="Referral rewards" draggable="false" style={{ display:"block", width:"100%", height:150, objectFit:"cover", borderRadius:20, margin:"8px 0 16px", boxShadow:"0 8px 20px rgba(15,14,11,.12)" }} />
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:18 }}>
+        {[ ["Referrals", rows.length], ["Active referrals", rows.filter(isActive).length], ["Total earned", `GHS ${earned.toFixed(2)}`] ].map(([label,value]) => <div key={label} style={{ background:"#FFFFFF", borderRadius:16, padding:"14px 10px", boxShadow:"0 2px 10px rgba(15,14,11,.06)" }}><div style={{ fontSize:10.5, color:"#687078", lineHeight:1.25 }}>{label}</div><div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, marginTop:7, whiteSpace:"nowrap" }}>{value}</div></div>)}
+      </div>
+      <div style={{ background:"#FFFFFF", borderRadius:22, padding:"8px 16px", boxShadow:"0 2px 10px rgba(15,14,11,.06)" }}>
+        {rows.length === 0 ? <div style={{ padding:"32px 0", textAlign:"center", color:"#687078", fontSize:13 }}>No referrals yet.</div> : rows.map((row, index) => { const profile=row.profile||{}; const active=isActive(row); const name=profile.full_name||profile.username||"RainX member"; const plan=row.subscription_plan||row.plan||row.package||"Subscription pending"; const amount=active ? Number(row.reward_amount ?? row.earnings ?? row.amount ?? row.commission ?? 0) : null; return <div key={row.id||index} style={{ display:"flex", alignItems:"center", gap:11, padding:"14px 0", borderBottom:index===rows.length-1?0:"1px solid #ECEEEF" }}>
+          {profile.avatar_url ? <img src={profile.avatar_url} alt="" style={{ width:43, height:43, borderRadius:"50%", objectFit:"cover", background:"#E8F5EE" }} /> : <div style={{ width:43, height:43, borderRadius:"50%", background:"#E8F5EE", display:"grid", placeItems:"center", fontFamily:FONT_HEAD, fontWeight:800, color:"#167A49" }}>{name.slice(0,2).toUpperCase()}</div>}
+          <div style={{ flex:1, minWidth:0 }}><div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:13 }}>{name} <span style={{ fontFamily:FONT_BODY, fontWeight:400, color:"#687078" }}>{active?"subscribed":"signed up"}</span></div><div style={{ display:"inline-block", marginTop:5, padding:"3px 8px", borderRadius:999, background:active?"#E1F5EA":"#FFF1D6", color:active?"#167A49":"#9A6818", fontSize:10.5, fontWeight:700 }}>{plan}</div><div style={{ color:"#687078", fontSize:10.5, marginTop:5 }}>{formatDate(row.created_at || row.signup_date)}</div></div>
+          <div style={{ textAlign:"right", whiteSpace:"nowrap" }}><div style={{ display:"inline-block", padding:"4px 8px", borderRadius:999, background:active?"#E1F5EA":"#FFF1D6", color:active?"#167A49":"#9A6818", fontSize:10.5, fontWeight:700 }}>{active?"Paid":"Pending"}</div><div style={{ fontFamily:FONT_HEAD, fontWeight:800, fontSize:13, marginTop:6 }}>{amount===null?"—":`+ GHS ${amount.toFixed(2)}`}</div></div>
+        </div>; })}
+      </div>
+    </div>
+  </div>, document.body);
+}
+
+function ReferralRewardsScreen({ count, earnings, referralCode, onBack, onActivity }) {
   const animationRef = useRef(null);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
@@ -5499,7 +5542,7 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack }) {
           <ChevronLeft size={28} strokeWidth={2.2}/>
         </button>
         <div style={{fontFamily:FONT_HEAD,fontWeight:800,fontSize:19}}>Refer &amp; Earn</div>
-        <div aria-label="Referral earnings" style={{position:"absolute",right:-2,width:34,height:34,borderRadius:"50%",background:"#17191B",display:"grid",placeItems:"center"}}><Coins size={17} color="#FFFFFF" strokeWidth={2}/></div>
+        <button type="button" onClick={onActivity} aria-label="View referrals" style={{position:"absolute",right:-2,width:34,height:34,borderRadius:"50%",border:0,background:"#17191B",display:"grid",placeItems:"center",cursor:"pointer"}}><Coins size={17} color="#FFFFFF" strokeWidth={2}/></button>
       </div>
       <div ref={animationRef} aria-label="Creator rewards animation" style={{width:"100%",height:205,margin:"0 auto 2px"}}/>
       <h1 style={{textAlign:"center",fontFamily:FONT_HEAD,fontWeight:900,fontSize:26,lineHeight:1.12,margin:"12px auto 8px",maxWidth:360}}>Refer Friends, They Subscribe.<br/><span style={{color:"#F4D35E"}}>You Earn!</span></h1>
@@ -5999,7 +6042,8 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     }
   };
 
-  if (morePage === "referrals") return <ReferralRewardsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} onBack={() => setMorePage(null)} />;
+  if (morePage === "referral-activity") return <ReferralActivityScreen account={account} onBack={() => setMorePage("referrals")} />;
+  if (morePage === "referrals") return <ReferralRewardsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} onBack={() => setMorePage(null)} onActivity={() => setMorePage("referral-activity")} />;
 
   if (cropFile) return <CoverCropModal file={cropFile} onConfirm={blob => { setCropFile(null); uploadCoverBlob(blob); }} onCancel={() => { setCropFile(null); }} T={T} FONT_HEAD={FONT_HEAD} />;
 
