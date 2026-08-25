@@ -5429,7 +5429,7 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack, onActivi
   const [closing, setClosing] = useState(false);
   const close = () => { if (closing) return; setClosing(true); window.setTimeout(onBack, 520); };
   return createPortal(<div className="rx-referral-screen"
-    style={{position:"fixed",inset:0,zIndex:1000,overflow:"hidden",overscrollBehavior:"none",touchAction:"pan-y",background:"#FFFFFF",color:"#17191B",isolation:"isolate",contain:"layout paint"}}
+    style={{position:"fixed",inset:0,zIndex:1000,overflow:"hidden",overscrollBehavior:"none",touchAction:"pan-y",background:"#FFFFFF",color:"#17191B",isolation:"isolate",contain:"layout paint",animation:"none"}}
   >
     <style>{`@keyframes referralSheetIn{from{transform:translateY(18px)}to{transform:translateY(0)}}@keyframes referralSheetOut{from{transform:translateY(0)}to{transform:translateY(100%)}}`}</style>
     <div className="rx-referral-scroll" style={{position:"absolute",inset:0,overflowY:"auto",overflowX:"hidden",overscrollBehavior:"none",WebkitOverflowScrolling:"auto",touchAction:"pan-y"}}>
