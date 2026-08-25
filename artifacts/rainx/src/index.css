@@ -780,3 +780,12 @@ svg path[fill="#F4D35E"] {
 /* App-wide contract: screens stay opaque during transitions and never invoke native pull-to-refresh. */
 html, body, #root { overscroll-behavior-y: none; }
 .rx-app-root, .rx-referral-screen, .rx-native-screen { overscroll-behavior: none; }
+
+
+/* Native screen contract: opaque layers prevent the previous route flashing through. */
+html, body, #root { background: #0F0E0B; }
+.rx-app-surface { background: #0F0E0B; isolation: isolate; }
+.rx-referral-screen, .rx-native-screen, .rx-standalone-route { background: #0F0E0B; isolation: isolate; }
+.rx-referral-screen { animation: rx-native-screen-in 520ms cubic-bezier(.22,1,.36,1) both; }
+@keyframes rx-native-screen-in { from { opacity: .98; transform: translateX(42px); } to { opacity: 1; transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .rx-referral-screen { animation: none; } }
