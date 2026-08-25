@@ -41,11 +41,12 @@ function installRouteBridge() {
 const APP_SURFACE = {
   position: "relative",
   width: "100%",
+  height: "100dvh",
   minHeight: "100dvh",
   overflowX: "hidden",
   background: "#0F0E0B",
   isolation: "isolate",
-  overflowY: "auto",
+  overflowY: "hidden",
   overscrollBehavior: "none",
   touchAction: "pan-y",
 } as const;
