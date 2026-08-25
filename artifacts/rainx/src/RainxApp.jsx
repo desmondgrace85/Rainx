@@ -4980,8 +4980,8 @@ function GoldBarsIcon() {
 
 function StableLightSheet({ children, onClose }) {
   return (
-    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(15,20,25,.20)", backdropFilter:"blur(7px)", WebkitBackdropFilter:"blur(7px)", zIndex:100, display:"flex", alignItems:"flex-end" }}>
-      <div onClick={e=>e.stopPropagation()} style={{ width:"100%", maxWidth:480, margin:"0 auto", background:"#FFFFFF", border:"1px solid #E7E9EC", borderBottom:0, borderRadius:"22px 22px 0 0", padding:"11px 18px 28px", boxShadow:"0 -10px 35px rgba(15,20,25,.12)", transform:"translateY(0)", willChange:"transform", animation:"rxLightSheetUp .26s cubic-bezier(.22,1,.36,1)" }}>
+    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(15,20,25,.20)", backdropFilter:"blur(7px)", WebkitBackdropFilter:"blur(7px)", zIndex:600, display:"flex", alignItems:"flex-end", overscrollBehaviorY:"none" }}>
+      <div onClick={e=>e.stopPropagation()} style={{ width:"100%", maxWidth:480, margin:"0 auto", background:"#FFFFFF", border:"1px solid #E7E9EC", borderBottom:0, borderRadius:"22px 22px 0 0", padding:"11px 18px 28px", boxShadow:"0 -10px 35px rgba(15,20,25,.12)", transform:"translateY(0)", willChange:"transform", animation:"rxLightSheetUp .26s cubic-bezier(.22,1,.36,1)", maxHeight:"90dvh", overflowY:"auto", overscrollBehaviorY:"contain", WebkitOverflowScrolling:"touch" }}>
         <div style={{ width:42, height:5, borderRadius:3, background:"#D9DDE1", margin:"0 auto 18px" }} />
         {children}
       </div>
