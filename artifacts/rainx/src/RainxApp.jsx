@@ -2623,7 +2623,7 @@ function MainAppContent({ account, onLogout }) {
 
   return (
     <PullToRefresh>
-      <div className="rx-app-root" style={{ height: "100dvh", minHeight: "100dvh", overflowY: "auto", overflowX: "hidden", background: tab === "home" ? "#F8F9FA" : T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative", isolation: "isolate", overscrollBehaviorY: "none", touchAction: "pan-y" }}>
+      <div className="rx-app-root" style={{ height: "100dvh", minHeight: "100dvh", overflowY: "auto", overflowX: "hidden", background: tab === "home" ? "#F8F9FA" : T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative", isolation: "isolate", overscrollBehaviorY: "none", touchAction: "pan-y", paddingBottom: "calc(96px + env(safe-area-inset-bottom))" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
