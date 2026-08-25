@@ -5515,8 +5515,6 @@ function ReferralActivityScreen({ account, onBack }) {
 
 function ReferralRewardsScreen({ count, earnings, referralCode, onBack, onActivity }) {
   const animationRef = useRef(null);
-  const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
   const [referralsEnabled, setReferralsEnabled] = useState(false);
   useEffect(() => {
     if (!animationRef.current) return undefined;
@@ -5527,13 +5525,7 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack, onActivi
   }, []);
   const close = () => onBack();
   return createPortal(<div className="rx-referral-screen"
-    onTouchStart={(event) => { touchStartX.current = event.touches[0]?.clientX ?? null; touchStartY.current = event.touches[0]?.clientY ?? null; }}
-    onTouchEnd={(event) => {
-      const startX = touchStartX.current, startY = touchStartY.current, end = event.changedTouches[0];
-      touchStartX.current = null; touchStartY.current = null;
-      const dx = (end?.clientX ?? 0) - (startX ?? 0), dy = (end?.clientY ?? 0) - (startY ?? 0);
-      if (startX !== null && startY !== null && dx > 72 && Math.abs(dx) > Math.abs(dy) * 1.25) close();
-    }}
+    onScroll={(event) => { const node = event.currentTarget; const max = Math.max(0, node.scrollHeight - node.clientHeight); if (node.scrollTop < 0) node.scrollTop = 0; else if (node.scrollTop > max) node.scrollTop = max; }}
     style={{position:"fixed",inset:0,zIndex:1000,overflowY:"auto",overflowX:"hidden",overscrollBehavior:"none",overscrollBehaviorY:"none",overscrollBehaviorX:"none",WebkitOverflowScrolling:"auto",touchAction:"pan-y",background:"#FFFFFF",color:"#17191B",isolation:"isolate",contain:"layout paint"}}
   >
     <style>{`@keyframes referralSheetIn{from{transform:translateY(18px)}to{transform:translateY(0)}}@keyframes referralSheetOut{from{transform:translateY(0)}to{transform:translateY(100%)}}`}</style>
