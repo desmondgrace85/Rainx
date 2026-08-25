@@ -1513,109 +1513,16 @@ function classifyNotification(notification) {
 }
 
 function PullToRefresh({ children }) {
-  const [distance, setDistance] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
-  const touch = useRef(null);
-  const threshold = 28;
-
-  const getScrollParent = (target) => {
-    let node = target;
-    while (node && node !== document.body) {
-      if (node instanceof HTMLElement) {
-        const style = window.getComputedStyle(node);
-        if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight) return node;
-      }
-      node = node.parentElement;
-    }
-    return document.scrollingElement || document.documentElement;
-  };
-  const excluded = (target) => target?.closest?.("button, input, textarea, select, [contenteditable='true'], canvas, svg, video, a");
-  const onTouchStart = (event) => {
-    if (event.target?.closest?.(".rx-referral-screen")) return;
-    if (refreshing || excluded(event.target)) return;
-    const parent = getScrollParent(event.target);
-    if (parent.scrollTop === 0) touch.current = { x: event.touches[0].clientX, y: event.touches[0].clientY, parent, vertical: false };
-  };
-  const onTouchMove = (event) => {
-    const active = touch.current;
-    if (!active || refreshing) return;
-    const dx = event.touches[0].clientX - active.x;
-    const dy = event.touches[0].clientY - active.y;
-    if (!active.vertical) {
-      if (dy <= 0 || Math.abs(dx) > Math.abs(dy) || dy < 2) {
-        if (dy < 0 || Math.abs(dx) > 10) touch.current = null;
-        return;
-      }
-      active.vertical = true;
-    }
-    if (active.parent.scrollTop > 0) { touch.current = null; setDistance(0); return; }
-    event.preventDefault();
-    setDistance(Math.min(88, dy * 0.9));
-  };
-  const onTouchEnd = () => {
-    const active = touch.current;
-    touch.current = null;
-    if (!active?.vertical) { setDistance(0); return; }
-    if (distance >= threshold && !sessionStorage.getItem("rainx-pull-refreshing")) {
-      sessionStorage.setItem("rainx-pull-refreshing", "1");
-      setRefreshing(true);
-      setDistance(threshold);
-      window.setTimeout(() => window.location.reload(), 220);
-    } else setDistance(0);
-  };
-  useEffect(() => { sessionStorage.removeItem("rainx-pull-refreshing"); }, []);
-
-  return (
-    <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
-      <div className={`rx-pull-refresh-indicator${refreshing ? " is-refreshing" : ""}`} style={{ opacity: Math.min(1, distance / threshold), transform: `translate(-50%, ${Math.max(-52, distance - 58)}px) scale(${Math.min(1, 0.65 + distance / (threshold * 3))})`, transition: distance > 0 && !refreshing ? "none" : undefined }} aria-hidden="true">
-        <img src={rainxLogoTransparent} alt="" />
-      </div>
-      {children}
-    </div>
-  );
+  // Pull-to-refresh is intentionally disabled globally. Refreshes are internal.
+  return children;
 }
 
 // Referral screens use their own portal, so the refresh affordance must live
 // inside the portal as well. This keeps the indicator visible without changing
 // the app-wide refresh behavior.
 function ReferralPullRefresh({ children }) {
-  const [distance, setDistance] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
-  const touch = useRef(null);
-  const threshold = 28;
-  const scrollParent = target => target?.closest?.(".rx-referral-scroll, .rx-referral-screen") || document.scrollingElement;
-  const onStart = event => {
-    if (refreshing || event.target?.closest?.("button, input, textarea, a, svg")) return;
-    const parent = scrollParent(event.target);
-    if (parent?.scrollTop === 0) touch.current = { x:event.touches[0].clientX, y:event.touches[0].clientY, parent, vertical:false };
-  };
-  const onMove = event => {
-    const active = touch.current;
-    if (!active || refreshing) return;
-    const dx = event.touches[0].clientX - active.x;
-    const dy = event.touches[0].clientY - active.y;
-    if (!active.vertical) {
-      if (dy <= 0 || Math.abs(dx) > Math.abs(dy) || dy < 2) { if (dy < 0 || Math.abs(dx) > 10) touch.current = null; return; }
-      active.vertical = true;
-    }
-    if (active.parent.scrollTop > 0) { touch.current = null; setDistance(0); return; }
-    event.preventDefault();
-    setDistance(Math.min(88, dy * 0.9));
-  };
-  const onEnd = () => {
-    const active = touch.current;
-    touch.current = null;
-    if (!active?.vertical) { setDistance(0); return; }
-    if (distance >= threshold) {
-      setRefreshing(true);
-      setDistance(threshold);
-      window.setTimeout(() => window.location.reload(), 220);
-    } else setDistance(0);
-  };
-  return <div onTouchStart={onStart} onTouchMove={onMove} onTouchEnd={onEnd} onTouchCancel={onEnd} style={{ position:"relative", width:"100%", height:"100%" }}>
-    <div className={`rx-pull-refresh-indicator${refreshing ? " is-refreshing" : ""}`} style={{ opacity:Math.min(1, distance / threshold), transform:`translate(-50%, ${Math.max(-52, distance - 58)}px) scale(${Math.min(1, .65 + distance / (threshold * 3))})`, transition:distance > 0 && !refreshing ? "none" : undefined, zIndex:2000 }} aria-hidden="true"><img src={rainxLogoTransparent} alt="" /></div>
-    {children}
-  </div>;
+  // Referral screens use internal refresh actions; never intercept downward swipes.
+  return children;
 }
 
 function WalletTab({ account }) {
@@ -2729,11 +2636,11 @@ function MainAppContent({ account, onLogout }) {
         @keyframes slideDown { from { transform: translateY(-30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
         @keyframes priceFlash { 0% { opacity:0.4; } 100% { opacity:1; } }
-        @keyframes rx-slide-in-right { from { transform:translateX(40px); opacity:0; } to { transform:translateX(0); opacity:1; } }
-        @keyframes rx-slide-in-left  { from { transform:translateX(-40px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+        @keyframes rx-slide-in-right { from { transform:translateX(40px); } to { transform:translateX(0); } }
+        @keyframes rx-slide-in-left  { from { transform:translateX(-40px); } to { transform:translateX(0); } }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }\n        @keyframes rx-breathe { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.68; transform:scale(.985); } }
-        .rx-slide-right { animation: rx-slide-in-right 0.22s cubic-bezier(0.25,0.46,0.45,0.94) backwards; }
-        .rx-slide-left  { animation: rx-slide-in-left  0.22s cubic-bezier(0.25,0.46,0.45,0.94) backwards; }
+        .rx-slide-right { animation: rx-slide-in-right 0.42s cubic-bezier(0.22,1,0.36,1) both; }
+        .rx-slide-left  { animation: rx-slide-in-left  0.42s cubic-bezier(0.22,1,0.36,1) both; }
         .hide-scroll::-webkit-scrollbar { display:none; }
         .hide-scroll { -ms-overflow-style:none; scrollbar-width:none; }
         /* Disable rubber-band overscroll only; scrolling and pull-to-refresh remain enabled. */
@@ -5568,7 +5475,7 @@ function ReferralActivityScreen({ account, onBack }) {
     return date.toLocaleDateString(undefined, { day:"numeric", month:"short", year:"numeric" });
   };
   const close = () => { setLeaving(true); window.setTimeout(onBack, 260); };
-  return createPortal(<ReferralPullRefresh><div className="rx-referral-screen" style={{ position:"fixed", inset:0, zIndex:1000, overflow:"hidden", overscrollBehavior:"none", background:"#F7F8F8", color:"#17191B", fontFamily:'-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif' }}>
+  return createPortal(<div className="rx-referral-screen" style={{ position:"fixed", inset:0, zIndex:1000, overflow:"hidden", overscrollBehavior:"none", background:"#F7F8F8", color:"#17191B", fontFamily:'-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif' }}>
     <div className="rx-referral-scroll" style={{ position:"absolute", inset:0, overflowY:"auto", overflowX:"hidden", overscrollBehavior:"none", WebkitOverflowScrolling:"auto" }} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
     <div style={{ maxWidth:480, minHeight:"100dvh", margin:"0 auto", padding:"10px 22px 34px", boxSizing:"border-box", animation:`${leaving ? "referralSheetOut" : "referralSheetIn"} .34s cubic-bezier(.22,1,.36,1) both` }}>
       <div style={{ height:48, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -5596,7 +5503,7 @@ function ReferralActivityScreen({ account, onBack }) {
       </div>
     </div>
     </div>
-  </div></ReferralPullRefresh>, document.body);
+  </div>, document.body);
 }
 
 function ReferralActivityScreenV1({ account, onBack }) {
