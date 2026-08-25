@@ -43,8 +43,11 @@ const APP_SURFACE = {
   width: "100%",
   minHeight: "100dvh",
   overflowX: "hidden",
-  background: "#FFFFFF",
+  background: "#0F0E0B",
   isolation: "isolate",
+  overflowY: "hidden",
+  overscrollBehavior: "none",
+  touchAction: "pan-y",
 } as const;
 
 export default function App() {
