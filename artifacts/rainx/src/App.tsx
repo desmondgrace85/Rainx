@@ -45,7 +45,7 @@ const APP_SURFACE = {
   overflowX: "hidden",
   background: "#0F0E0B",
   isolation: "isolate",
-  overflowY: "hidden",
+  overflowY: "auto",
   overscrollBehavior: "none",
   touchAction: "pan-y",
 } as const;
