@@ -664,7 +664,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
 
   return (
     <div style={{
-      position: "fixed", inset: 0, zIndex: 500, display: "flex", flexDirection: "column",
+      position: "fixed", inset: 0, zIndex: 1500, display: "flex", flexDirection: "column",
       background: TK.bg, fontFamily: FONT,
       // Prevent body scroll
       overflow: "hidden",
@@ -824,7 +824,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
           </div>
           <div style={{
             flex: 1 - chartHeightRatio, background: TK.card, borderTop: `1px solid ${TK.border}`,
-            padding: "12px 14px 16px", overflowY: "auto", minHeight: 0
+            padding: "12px 14px 112px", overflowY: "auto", minHeight: 0, WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain", touchAction: "pan-y"
           }}>
           {/* Panel header */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
