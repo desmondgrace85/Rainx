@@ -5679,7 +5679,7 @@ function LegacyReferralActivityScreen({ account, onBack }) {
   </div>, document.body);
 }
 
-function ReferralRewardsScreen({ count, earnings, referralCode, onBack, onActivity }) {
+function ReferralRewardsScreen({ count, earnings, referralCode, account, onBack, onActivity }) {
   const [rows,setRows]=useState([]); const [page,setPage]=useState(0); const [claimed,setClaimed]=useState(() => new Set()); const touch=useRef(null);
   useEffect(() => { let alive=true; supabase.from("referrals").select("*").eq("referrer_id",account?.id).order("created_at",{ascending:false}).then(async ({data}) => { const source=data||[]; const ids=[...new Set(source.map(row=>row.referred_id||row.referred_user_id||row.user_id).filter(Boolean))]; let profiles={}; if(ids.length){const result=await supabase.from("profiles").select("id,full_name,username").in("id",ids); profiles=Object.fromEntries((result.data||[]).map(profile=>[profile.id,profile]));} if(alive)setRows(source.map(row=>({...row,profile:profiles[row.referred_id||row.referred_user_id||row.user_id]}))); }).catch(()=>{}); return () => {alive=false}; },[]);
   const demo=[{name:"Sarah Smith",detail:"Subscribed",plan:"Monthly",date:"Today 10:42am",amount:24,tone:"#DCA07A"},{name:"Mark Malbert",detail:"Subscribed",plan:"Yearly",date:"Yesterday",amount:999.5,tone:"#BC815B"},{name:"Desmond Banful",detail:"Subscribed",plan:"Monthly",date:"12 Dec. 2026",amount:100,tone:"#35C874"}];
@@ -6159,7 +6159,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
   };
 
   if (morePage === "referral-activity") return <ReferralActivityScreen account={account} onBack={() => setMorePage("referrals")} />;
-  if (morePage === "referrals") return <ReferralRewardsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} onBack={() => setMorePage(null)} onActivity={() => setMorePage("referral-activity")} />;
+  if (morePage === "referrals") return <ReferralRewardsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} account={account} onBack={() => setMorePage(null)} onActivity={() => setMorePage("referral-activity")} />;
 
   if (cropFile) return <CoverCropModal file={cropFile} onConfirm={blob => { setCropFile(null); uploadCoverBlob(blob); }} onCancel={() => { setCropFile(null); }} T={T} FONT_HEAD={FONT_HEAD} />;
 
