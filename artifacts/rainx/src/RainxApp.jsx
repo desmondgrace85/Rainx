@@ -5470,8 +5470,45 @@ function HeaderAvatar({ account, morePage, T }) {
     : <div style={{ width:42, height:42, borderRadius:"50%", background:T.goldGradient, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:FONT_HEAD, fontWeight:800, fontSize:16, color:T.ink }}>{initial}</div>;
 }
 
-
 function ReferralActivityScreen({ account, onBack }) {
+  const [rows, setRows] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data } = await supabase.from("referrals").select("*").eq("referrer_id", account?.id).order("created_at", { ascending: false });
+      const referralRows = data || [];
+      const ids = [...new Set(referralRows.map(row => row.referred_id || row.referred_user_id || row.user_id).filter(Boolean))];
+      let profiles = {};
+      if (ids.length) {
+        const result = await supabase.from("profiles").select("id, full_name, username, avatar_url").in("id", ids);
+        profiles = Object.fromEntries((result.data || []).map(profile => [profile.id, profile]));
+      }
+      if (alive) setRows(referralRows.map(row => ({ ...row, profile: profiles[row.referred_id || row.referred_user_id || row.user_id] })));
+    })().catch(() => {});
+    return () => { alive = false; };
+  }, [account?.id]);
+  const active = row => ["qualified", "active", "paid", "subscribed"].includes(String(row.status || "").toLowerCase());
+  const earned = rows.filter(active).reduce((sum, row) => sum + Number(row.reward_amount ?? row.earnings ?? row.amount ?? row.commission ?? 0), 0);
+  return createPortal(<div style={{ position:"fixed", inset:0, zIndex:1000, overflowY:"auto", overflowX:"hidden", overscrollBehaviorY:"contain", WebkitOverflowScrolling:"touch", background:"#F7F8F8", color:"#17191B", fontFamily:'-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif' }}>
+    <div style={{ maxWidth:480, minHeight:"100dvh", margin:"0 auto", padding:"10px 22px 30px", boxSizing:"border-box" }}>
+      <div style={{ height:48, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <button onClick={onBack} aria-label="Back" style={{ width:42, height:42, border:0, background:"transparent", display:"grid", placeItems:"center", color:"#17191B", padding:0 }}><ChevronLeft size={28}/></button>
+        <div style={{ fontSize:20, fontWeight:700, letterSpacing:-.4 }}>My Referrals</div><div style={{ width:42 }} />
+      </div>
+      <section style={{ height:166, borderRadius:20, padding:"18px 20px", boxSizing:"border-box", color:"#FFF", background:"linear-gradient(135deg,#2956F5,#2549D1)", boxShadow:"0 8px 18px rgba(37,73,209,.22)", position:"relative", overflow:"hidden", margin:"8px 0 16px" }}>
+        <div style={{ position:"absolute", width:160, height:160, borderRadius:"50%", background:"rgba(255,255,255,.07)", left:-56, bottom:-84 }} />
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", position:"relative" }}><strong style={{ fontSize:20, letterSpacing:-.5 }}>hydro</strong><span style={{ fontSize:11, border:"1px solid rgba(255,255,255,.22)", borderRadius:14, padding:"6px 10px" }}>GHS ↕</span></div>
+        <div style={{ position:"absolute", left:20, bottom:42, fontSize:10, letterSpacing:1.4, opacity:.75 }}>YOUR EARNINGS</div>
+        <div style={{ position:"absolute", left:20, bottom:10, fontSize:27, letterSpacing:-.8 }}>GHS {earned.toFixed(2)}</div><span style={{ position:"absolute", right:20, bottom:20, fontSize:26 }}>⋮</span>
+      </section>
+      <div style={{ display:"flex", gap:20, marginBottom:18 }}><button style={{ flex:1, height:34, border:0, borderRadius:20, color:"#FFF", background:"#2956F5", fontSize:12 }}>Invite</button><button style={{ flex:1, height:34, border:0, borderRadius:20, color:"#FFF", background:"#3A3A3A", fontSize:12 }}>Share</button></div>
+      <div style={{ display:"flex", alignItems:"center", gap:17, height:34, color:"#A4A7AA", fontSize:11, borderBottom:"1px solid #E8E9EA" }}>{["All","Active","Pending"].map((label,i)=><span key={label} style={{ color:i===1?"#17191B":"#A4A7AA", fontWeight:i===1?600:400, background:i===1?"#EDEEEF":"transparent", borderRadius:12, padding:"5px 9px" }}>{label}</span>)}<span style={{ marginLeft:"auto", fontSize:22, color:"#333" }}>↻</span></div>
+      <div style={{ paddingTop:5 }}>{rows.length === 0 ? <div style={{ background:"#FFF", borderRadius:16, marginTop:9, padding:"27px 15px", textAlign:"center", color:"#7E8388", fontSize:13 }}>No referrals yet.</div> : rows.map((row,index) => { const on=active(row), name=row.profile?.full_name||row.profile?.username||"RainX member", amount=Number(row.reward_amount ?? row.earnings ?? row.amount ?? row.commission ?? 0); return <div key={row.id||index} style={{ minHeight:60, display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid #ECEDEE", padding:"8px 0", boxSizing:"border-box" }}><div style={{ width:36, height:36, flex:"0 0 36px", borderRadius:"50%", display:"grid", placeItems:"center", color:"#FFF", background:on?"#35C66A":"#AEB3B7", fontSize:14, fontWeight:600 }}>{name.charAt(0).toUpperCase()}</div><div style={{ minWidth:0, flex:1 }}><div style={{ fontSize:11.5, fontWeight:600, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{name}</div><div style={{ fontSize:10, color:"#A1A5A8", marginTop:3 }}>{row.subscription_plan||row.plan||"Referral"}</div></div><div style={{ textAlign:"right", whiteSpace:"nowrap" }}><div style={{ fontSize:12, fontWeight:600, color:on?"#2C2C2C":"#9DA1A4" }}>{on?`+ GHS ${amount.toFixed(2)}`:"Pending"}</div><div style={{ fontSize:9.5, color:"#B0B3B5", marginTop:3 }}>{on?"earned":"awaiting subscription"}</div></div></div>; })}</div>
+    </div>
+  </div>, document.body);
+}
+
+function LegacyReferralActivityScreen({ account, onBack }) {
   const [rows, setRows] = useState([]);
   useEffect(() => {
     let alive = true;
