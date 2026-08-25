@@ -7,7 +7,7 @@ import {
   Calculator, Mail, ShieldCheck, LogOut, Mic, Square, FileText, ScrollText, Users2,
   CreditCard as CreditCardIcon, Zap, ArrowRight, ChevronRight, ChevronLeft, Wallet, Landmark, Gift, Trophy,
   Maximize2, User, Lock, Smartphone, Eye, EyeOff, Key, ArrowUpCircle, ArrowDownCircle, Plus, ChevronDown,
-  BrainCircuit, Cpu, Palette, Globe, Trash2, UserX, Download, FileCheck, Cookie, Database, Coins, Copy,
+  BrainCircuit, Cpu, Palette, Globe, Trash2, UserX, Download, FileCheck, Cookie, Database, Coins, Copy, RefreshCw,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, Badge as CommunityBadge, formatCount } from "./CommunityTab";
