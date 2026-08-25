@@ -2636,8 +2636,8 @@ function MainAppContent({ account, onLogout }) {
         @keyframes slideDown { from { transform: translateY(-30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
         @keyframes priceFlash { 0% { opacity:0.4; } 100% { opacity:1; } }
-        @keyframes rx-slide-in-right { from { transform:translateX(40px); } to { transform:translateX(0); } }
-        @keyframes rx-slide-in-left  { from { transform:translateX(-40px); } to { transform:translateX(0); } }
+        @keyframes rx-slide-in-right { from { opacity:0; } to { opacity:1; } }
+        @keyframes rx-slide-in-left  { from { opacity:0; } to { opacity:1; } }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }\n        @keyframes rx-breathe { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.68; transform:scale(.985); } }
         .rx-slide-right { animation: rx-slide-in-right 0.42s cubic-bezier(0.22,1,0.36,1) both; }
         .rx-slide-left  { animation: rx-slide-in-left  0.42s cubic-bezier(0.22,1,0.36,1) both; }
