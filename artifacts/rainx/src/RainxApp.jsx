@@ -5596,7 +5596,7 @@ function ReferralActivityScreen({ account, onBack }) {
       </div>
     </div>
     </div>
-  </div></ReferralPullRefresh>, document.body;
+  </div></ReferralPullRefresh>, document.body);
 }
 
 function ReferralActivityScreenV1({ account, onBack }) {
