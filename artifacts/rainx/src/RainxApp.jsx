@@ -5957,9 +5957,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
     }
   };
 
-  if (morePage === "referral-performance") return <ReferralPerformanceScreen onBack={() => setMorePage("referral-activity")} />;
-  if (morePage === "referral-activity") return <MyReferralsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} account={account} onBack={() => setMorePage("referrals")} onActivity={(target) => setMorePage(target === "performance" ? "referral-performance" : "referral-activity")} />;
-  if (morePage === "referrals") return <ReferralRewardsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} account={account} onBack={() => setMorePage(null)} onActivity={() => setMorePage("referral-activity")} />;
+  // Keep the More landing mounted beneath referral portals so the previous route cannot flash through during close animations.
 
   if (cropFile) return <CoverCropModal file={cropFile} onConfirm={blob => { setCropFile(null); uploadCoverBlob(blob); }} onCancel={() => { setCropFile(null); }} T={T} FONT_HEAD={FONT_HEAD} />;
 
@@ -7233,6 +7231,10 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           </div>
         </div>
       )}
+      {morePage === "referral-performance" && <ReferralPerformanceScreen onBack={() => setMorePage("referral-activity")} />}
+      {morePage === "referral-activity" && <MyReferralsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} account={account} onBack={() => setMorePage("referrals")} onActivity={(target) => setMorePage(target === "performance" ? "referral-performance" : "referral-activity")} />}
+      {morePage === "referrals" && <ReferralRewardsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} account={account} onBack={() => setMorePage(null)} onActivity={() => setMorePage("referral-activity")} />}
+
       {showLegal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 500, display: "flex", alignItems: "flex-end" }}>
           <div style={{ background: T.card, width: "100%", maxWidth: 480, margin: "0 auto", borderRadius: "16px 16px 0 0", padding: 22, maxHeight: "80vh", overflowY: "auto" }}>
