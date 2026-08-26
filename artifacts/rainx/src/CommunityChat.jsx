@@ -8,7 +8,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import "./RainXTelegramChat.css";
 import {
   ArrowLeft, MoreVertical, Send, X, ChevronRight,
-  Search, AlertCircle, Check, Settings, Lock, Pin,
+  Search, AlertCircle, Check, Settings, Lock, Pin, MessagesSquare, Megaphone,
   Edit2, Trash2, Share, Copy, FileText, ChevronDown,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
@@ -1561,11 +1561,12 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
           />;
         })()}
         {[
-          { name: "Chats", outline: "nav_0_outline.svg", filled: "nav_0_filled.svg" },
-          { name: "Channels", outline: "nav_1_outline.svg", filled: "telegram-icons/channel_filled.svg" },
-          { name: "Settings", outline: "nav_2_outline.svg", filled: "telegram-icons/settings_filled.svg" },
-          { name: "Space Talks", outline: "nav_3_outline.svg", filled: "telegram-icons/round_chats_filled.svg" },
+          { name: "Chats", active: "nav_0_outline.svg", inactive: MessagesSquare },
+          { name: "Channels", active: "nav_1_outline.svg", inactive: Megaphone },
+          { name: "Settings", active: "nav_2_outline.svg", inactive: Settings },
+          { name: "Space Talks", active: "nav_3_outline.svg", inactive: MessagesSquare },
         ].map((item, i) => {
+          const InactiveIcon = item.inactive;
           const active = Math.round(gestureProgress) === i;
           return (
             <button
@@ -1576,8 +1577,11 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
               aria-current={active && !isSwiping ? "page" : undefined}
             >
               <span className="rx-nav-icon" aria-hidden="true">
-                <img className="rx-nav-icon-outline" src={item.outline} alt="" />
-                <img className={item.name === "Chats" ? "rx-nav-icon-filled rx-nav-icon-filled-chats" : "rx-nav-icon-filled"} style={item.name === "Chats" ? { filter: "none" } : undefined} src={item.filled} alt="" />
+                {active && !isSwiping ? (
+                  <img className="rx-nav-icon-filled" src={item.active} alt="" />
+                ) : (
+                  <InactiveIcon className="rx-nav-icon-outline" size={24} strokeWidth={2} color="#0F0E0B" fill="none" />
+                )}
               </span>
               <span>{item.name}</span>
             </button>
