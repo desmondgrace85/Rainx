@@ -7,3 +7,12 @@
     .rx-pages{cursor:grab}
     .rx-pages.dragging{cursor:grabbing;transition:none}
     
+
+/* Native direct-manipulation chat navigation and touch feedback */
+.rx-pages.full-height{height:calc(100% - 72px)}
+.rx-chat-row{position:relative;overflow:hidden;isolation:isolate}
+.rx-chat-row>.rx-avatar,.rx-chat-row>.rx-chat-copy,.rx-chat-row>.rx-unread{position:relative;z-index:1}
+.rx-chat-ripple{position:absolute;z-index:0;width:132px;height:132px;border-radius:50%;pointer-events:none;background:rgba(30,30,30,.12);transform:translate(-50%,-50%) scale(.18);opacity:.72;animation:rxRippleIn .18s cubic-bezier(.2,.8,.2,1) forwards}
+.rx-chat-ripple.fading{animation:rxRippleOut .18s ease-out forwards}
+@keyframes rxRippleIn{to{transform:translate(-50%,-50%) scale(1);opacity:.38}}
+@keyframes rxRippleOut{from{transform:translate(-50%,-50%) scale(1);opacity:.38}to{transform:translate(-50%,-50%) scale(1.08);opacity:0}}
