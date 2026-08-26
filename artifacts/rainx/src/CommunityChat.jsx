@@ -1426,6 +1426,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
     const swipeVelocityRef = useRef(0);
     const swipeDragging = useRef(false);
     const swipeViewportWidth = useRef(0);
+    const touchGesture = useRef(false);
     const pageCount = 4;
     const [chatRipple, setChatRipple] = useState(null);
     const rippleTimerRef = useRef(null);
@@ -1464,29 +1465,40 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
       rippleTimerRef.current = setTimeout(() => setChatRipple(null), 180);
     };
 
+    const getGesturePoint = (event) => {
+      const touch = event.touches?.[0] || event.changedTouches?.[0];
+      return {
+        x: touch?.clientX ?? event.clientX ?? 0,
+        y: touch?.clientY ?? event.clientY ?? 0,
+      };
+    };
+
     const handleSwipeStart = (event) => {
+      if (event.type === "touchstart") touchGesture.current = true;
+      if (event.type.startsWith("pointer") && touchGesture.current) return;
       if (event.pointerType === "mouse" && event.button !== 0) return;
       if (event.target.closest?.("input, textarea")) return;
+      const point = getGesturePoint(event);
       const viewportWidth = event.currentTarget.parentElement?.getBoundingClientRect().width || (typeof window !== "undefined" ? window.innerWidth : 1);
       swipeViewportWidth.current = viewportWidth;
       const now = Date.now();
-      swipeStart.current = { x: event.clientX, y: event.clientY, time: now };
-      swipeLast.current = { x: event.clientX, time: now };
+      swipeStart.current = { x: point.x, y: point.y, time: now };
+      swipeLast.current = { x: point.x, time: now };
       swipeVelocityRef.current = 0;
       swipeDragging.current = false;
     };
     const handleSwipeMove = (event) => {
+      if (event.type === "pointermove" && touchGesture.current) return;
       if (!swipeStart.current) return;
-      const dx = event.clientX - swipeStart.current.x;
-      const dy = event.clientY - swipeStart.current.y;
+      const point = getGesturePoint(event);
+      const dx = point.x - swipeStart.current.x;
+      const dy = point.y - swipeStart.current.y;
       if (!swipeDragging.current) {
         if (Math.abs(dx) < 8 || Math.abs(dy) > Math.abs(dx)) return;
         swipeDragging.current = true;
         setIsSwiping(true);
-        // A horizontal page drag owns the pointer after the intent is clear.
-        // Remove the row press state so it cannot remain stuck after capture.
         setChatRipple(null);
-        event.currentTarget.setPointerCapture?.(event.pointerId);
+        if (event.pointerId != null) event.currentTarget.setPointerCapture?.(event.pointerId);
       }
       event.preventDefault();
       // Measure the visible viewport, not the pageCount-wide track.
@@ -1495,13 +1507,18 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
       gestureProgressRef.current = nextProgress;
       setGestureProgress(nextProgress);
       const now = Date.now();
-      if (swipeLast.current) swipeVelocityRef.current = (event.clientX - swipeLast.current.x) / Math.max(now - swipeLast.current.time, 1);
-      swipeLast.current = { x: event.clientX, time: now };
+      if (swipeLast.current) swipeVelocityRef.current = (point.x - swipeLast.current.x) / Math.max(now - swipeLast.current.time, 1);
+      swipeLast.current = { x: point.x, time: now };
     };
     const handleSwipeEnd = (event) => {
-      if (!swipeStart.current) return;
+      if (event.type === "pointerup" && touchGesture.current) return;
+      if (!swipeStart.current) {
+        if (event.type === "touchend" || event.type === "touchcancel" || event.type === "pointercancel") touchGesture.current = false;
+        return;
+      }
+      const point = getGesturePoint(event);
       const start = swipeStart.current;
-      const last = swipeLast.current || { x: event.clientX ?? start.x, time: Date.now() };
+      const last = swipeLast.current || { x: point.x, time: Date.now() };
       const distance = last.x - start.x;
       const width = swipeViewportWidth.current || (typeof window !== "undefined" ? window.innerWidth : 1);
       const velocity = swipeVelocityRef.current;
@@ -1522,7 +1539,8 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
         setPage(target);
         if (target === 2) setShowGeneralSettings(true);
       }
-      if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      if (event.type === "touchend" || event.type === "touchcancel" || event.type === "pointercancel") touchGesture.current = false;
+      if (event.pointerId != null && event.currentTarget.hasPointerCapture?.(event.pointerId)) {
         event.currentTarget.releasePointerCapture?.(event.pointerId);
       }
     };
@@ -1544,6 +1562,10 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
           onPointerMove={handleSwipeMove}
           onPointerUp={handleSwipeEnd}
           onPointerCancel={handleSwipeEnd}
+          onTouchStart={handleSwipeStart}
+          onTouchMove={handleSwipeMove}
+          onTouchEnd={handleSwipeEnd}
+          onTouchCancel={handleSwipeEnd}
         >
         {[0, 1, 2, 3].map((p) => (
           <section className="rx-page" key={p} style={{ width: navSlotPercent + "%", flex: "0 0 " + navSlotPercent + "%", minWidth: 0, minHeight: "calc(100dvh - 88px)", height: "calc(100dvh - 88px)", background: "#FFFFFF", boxSizing: "border-box" }}>
