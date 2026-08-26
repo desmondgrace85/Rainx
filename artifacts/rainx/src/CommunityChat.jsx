@@ -12,7 +12,7 @@ import {
   Edit2, Trash2, Share, Copy, FileText, ChevronDown,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import chatWallpaper from "./assets/chat-wallpaper.jpg";
+import chatWallpaper from "./assets/chat-wallpaper.png";
 const BASE_URL = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
 const API_BASE = "https://rainx-webapp.vercel.app";
 const PRESENCE_EVENT = "RAINX_PRESENCE";
