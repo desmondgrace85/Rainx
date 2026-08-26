@@ -1428,6 +1428,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
     const pageCount = 4;
     const [chatRipple, setChatRipple] = useState(null);
     const rippleTimerRef = useRef(null);
+    const navSlotPercent = 100 / pageCount;
 
     const normalizedSearch = searchQuery.trim().toLowerCase();
     const filteredConvos = (convos || []).filter((row) => {
@@ -1451,14 +1452,10 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
 
     const startChatRipple = (event, rowKey) => {
       if (event.pointerType === "mouse" && event.button !== 0) return;
-      const rect = event.currentTarget.getBoundingClientRect();
       clearTimeout(rippleTimerRef.current);
-      setChatRipple({ key: rowKey, x: event.clientX - rect.left, y: event.clientY - rect.top, fading: false });
-    };
-    const moveChatRipple = (event, rowKey) => {
-      if (!chatRipple || chatRipple.key !== rowKey) return;
-      const rect = event.currentTarget.getBoundingClientRect();
-      setChatRipple((current) => current && current.key === rowKey ? { ...current, x: event.clientX - rect.left, y: event.clientY - rect.top } : current);
+      // Keep the press state attached to the whole conversation row. A
+      // fingertip-sized ripple makes the row look only partly selected.
+      setChatRipple({ key: rowKey, fading: false });
     };
     const endChatRipple = () => {
       setChatRipple((current) => current ? { ...current, fading: true } : current);
@@ -1483,10 +1480,15 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
         if (Math.abs(dx) < 8 || Math.abs(dy) > Math.abs(dx)) return;
         swipeDragging.current = true;
         setIsSwiping(true);
+        // A horizontal page drag owns the pointer after the intent is clear.
+        // Remove the row press state so it cannot remain stuck after capture.
+        setChatRipple(null);
         event.currentTarget.setPointerCapture?.(event.pointerId);
       }
       event.preventDefault();
-      const width = event.currentTarget.clientWidth || (typeof window !== "undefined" ? window.innerWidth : 1);
+      const width = event.currentTarget.getBoundingClientRect().width || (typeof window !== "undefined" ? window.innerWidth : 1);
+      // The track is pageCount screens wide, so progress is measured in
+      // viewport widths rather than translating the full track by 100%.
       const nextProgress = Math.max(0, Math.min(pageCount - 1, page - dx / Math.max(width, 1)));
       gestureProgressRef.current = nextProgress;
       setGestureProgress(nextProgress);
@@ -1497,9 +1499,9 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
     const handleSwipeEnd = (event) => {
       if (!swipeStart.current) return;
       const start = swipeStart.current;
-      const last = swipeLast.current || { x: event.clientX, time: Date.now() };
+      const last = swipeLast.current || { x: event.clientX ?? start.x, time: Date.now() };
       const distance = last.x - start.x;
-      const width = event.currentTarget.clientWidth || (typeof window !== "undefined" ? window.innerWidth : 1);
+      const width = event.currentTarget.getBoundingClientRect().width || (typeof window !== "undefined" ? window.innerWidth : 1);
       const velocity = swipeVelocityRef.current;
       const wasDragging = swipeDragging.current;
       const direction = distance < 0 ? 1 : -1;
@@ -1517,21 +1519,29 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
         setPage(target);
         if (target === 2) setShowGeneralSettings(true);
       }
-      if (wasDragging) event.currentTarget.releasePointerCapture?.(event.pointerId);
+      if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+        event.currentTarget.releasePointerCapture?.(event.pointerId);
+      }
     };
 
   return (
     <div className="rx-chat">
       <main
           className={isSwiping ? "rx-pages dragging" : (page === 0 ? "rx-pages" : "rx-pages full-height")}
-          style={{ transform: "translate3d(" + (-gestureProgress * 100) + "%, 0, 0)" }}
+          style={{
+            width: (pageCount * 100) + "%",
+            transform: "translate3d(" + (-(gestureProgress * navSlotPercent)) + "%, 0, 0)",
+            transition: isSwiping ? "none" : "transform 320ms cubic-bezier(0.22, 1, 0.36, 1)",
+            touchAction: "pan-y",
+            willChange: "transform",
+          }}
           onPointerDown={handleSwipeStart}
           onPointerMove={handleSwipeMove}
           onPointerUp={handleSwipeEnd}
           onPointerCancel={handleSwipeEnd}
         >
         {[0, 1, 2, 3].map((p) => (
-          <section className="rx-page" key={p}>
+          <section className="rx-page" key={p} style={{ width: navSlotPercent + "%", flex: "0 0 " + navSlotPercent + "%", minWidth: 0 }}>
             {p === 0 && <>
               <header className="rx-header">
                 <button className="rx-icon rx-back" onClick={onClose} aria-label="Back to community" type="button">
@@ -1561,12 +1571,21 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
               const lastContent = isDeleted(lastMsg && lastMsg.content) ? "This message was deleted" : ((lastMsg && lastMsg.content) || "");
               const rowKey = (profile && profile.id) || (lastMsg && lastMsg.id) || name;
               return (
-                <button className="rx-chat-row" key={rowKey} onPointerDown={(event) => startChatRipple(event, rowKey)} onPointerMove={(event) => moveChatRipple(event, rowKey)} onPointerUp={endChatRipple} onPointerCancel={endChatRipple} onClick={() => {
+                <button className="rx-chat-row" key={rowKey} style={{ position: "relative", overflow: "hidden" }} onPointerDown={(event) => startChatRipple(event, rowKey)} onPointerUp={endChatRipple} onPointerCancel={endChatRipple} onClick={() => {
                   setConvos((prev) => (prev || []).map((row) => row.profile && row.profile.id === (profile && profile.id) ? { ...row, unread: 0 } : row));
                   refreshPins();
                   onOpenDM(profile);
                 }}>
-                  {chatRipple?.key === rowKey && <span className={chatRipple.fading ? "rx-chat-ripple fading" : "rx-chat-ripple"} style={{ left: chatRipple.x, top: chatRipple.y }} aria-hidden="true" />}
+                  {chatRipple?.key === rowKey && <span
+                     className={chatRipple.fading ? "rx-chat-ripple fading" : "rx-chat-ripple"}
+                     style={{
+                       position: "absolute", inset: 0, width: "auto", height: "auto", left: 0, top: 0, right: 0, bottom: 0,
+                       borderRadius: "inherit", background: "rgba(244, 211, 94, 0.34)",
+                       opacity: chatRipple.fading ? 0 : 1, transform: "none", pointerEvents: "none",
+                       transition: "opacity 180ms ease", zIndex: 0,
+                     }}
+                     aria-hidden="true"
+                   />}
                   <span className="rx-avatar">{avatar}</span>
                   <span className="rx-chat-copy">
                     <span><strong>{name}</strong><time>{lastMsg ? fmt(lastMsg.created_at) : ""}</time></span>
@@ -1585,6 +1604,21 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
       </main>
 
       <nav className={isSwiping ? "rx-bottom dragging" : "rx-bottom"} style={{ "--page-progress": gestureProgress }} aria-label="Primary navigation">
+        {isSwiping && (() => {
+          const fraction = gestureProgress - Math.floor(gestureProgress);
+          const stretch = Math.sin(fraction * Math.PI) * 0.72;
+          const highlightWidth = navSlotPercent * (1 + stretch);
+          const highlightLeft = gestureProgress * navSlotPercent - ((highlightWidth - navSlotPercent) / 2);
+          return <span
+            className="rx-nav-swipe-highlight"
+            aria-hidden="true"
+            style={{
+              position: "absolute", left: highlightLeft + "%", width: highlightWidth + "%", top: 4, bottom: 4,
+              borderRadius: 999, background: T.gold, boxShadow: "0 3px 10px rgba(244, 211, 94, 0.28)",
+              pointerEvents: "none", zIndex: 0,
+            }}
+          />;
+        })()}
         {[
           { name: "Chats", outline: "nav_0_outline.svg", filled: "telegram-icons/round_chats_filled.svg" },
           { name: "Channels", outline: "nav_1_outline.svg", filled: "telegram-icons/channel_filled.svg" },
@@ -1594,7 +1628,8 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
           const active = Math.round(gestureProgress) === i;
           return (
             <button
-              className={active ? "active" : ""}
+              className={active && !isSwiping ? "active" : ""}
+              style={{ position: "relative", zIndex: 1 }}
               onClick={() => goToPage(i)}
               key={item.name}
               aria-current={active ? "page" : undefined}
