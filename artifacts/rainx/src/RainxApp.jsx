@@ -1887,6 +1887,18 @@ function MainAppContent({ account, onLogout }) {
       routeReplace(tab, morePage, profileFromHeader ? "h" : null);
     }
   }, [tab, morePage, profileFromHeader, spaceCoinsScreen]);
+  const pushReferralPage = (page) => {
+    const state = { ...(window.history.state || {}), rainxReferralPage: page };
+    routeWrite("more", page, profileFromHeader ? "h" : null);
+    window.history.replaceState(state, "", window.location.href);
+    setMorePage(page);
+  };
+  const backReferralPage = () => {
+    if (window.history.state?.rainxReferralPage) { window.history.back(); return; }
+    setMorePage(null);
+    routeReplace("more", null, profileFromHeader ? "h" : null);
+  };
+
   // Sync browser Back/Forward to React state
   useEffect(() => {
     const onPop = () => {
@@ -7095,7 +7107,7 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
       {/* User account header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0 16px" }}>
         <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 16, color: T.paper, lineHeight: 1.2 }}>{fullName || (profileLoaded ? "User" : "…")}</div>{username ? <div style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>@{username}</div> : null}</div>
-        <button onClick={() => setMorePage("referrals")} aria-label="Open referral rewards" style={{ width:42, height:42, borderRadius:"50%", border:"none", background:"#17191B", display:"grid", placeItems:"center", cursor:"pointer" }}><Coins size={21} color={T.gold}/></button>
+        <button onClick={() => pushReferralPage("referrals")} aria-label="Open referral rewards" style={{ width:42, height:42, borderRadius:"50%", border:"none", background:"#17191B", display:"grid", placeItems:"center", cursor:"pointer" }}><Coins size={21} color={T.gold}/></button>
       </div>
 
       {/* Analytics preview card */}
@@ -7231,9 +7243,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           </div>
         </div>
       )}
-      {morePage === "referral-performance" && <ReferralPerformanceScreen onBack={() => setMorePage("referral-activity")} />}
-      {morePage === "referral-activity" && <MyReferralsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} account={account} onBack={() => setMorePage("referrals")} onActivity={(target) => setMorePage(target === "performance" ? "referral-performance" : "referral-activity")} />}
-      {morePage === "referrals" && <ReferralRewardsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} account={account} onBack={() => setMorePage(null)} onActivity={() => setMorePage("referral-activity")} />}
+      {morePage === "referral-performance" && <ReferralPerformanceScreen onBack={backReferralPage} />}
+      {morePage === "referral-activity" && <MyReferralsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} account={account} onBack={backReferralPage} onActivity={(target) => pushReferralPage(target === "performance" ? "referral-performance" : "referral-activity")} />}
+      {morePage === "referrals" && <ReferralRewardsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} account={account} onBack={backReferralPage} onActivity={() => pushReferralPage("referral-activity")} />}
 
       {showLegal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 500, display: "flex", alignItems: "flex-end" }}>
