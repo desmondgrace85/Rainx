@@ -846,6 +846,8 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
   const [replyTo, setReplyTo] = useState(null); // comment id being replied to (uses the main bottom box)
   const [commentSort, setCommentSort] = useState("relevant");
   const [showCommentSort, setShowCommentSort] = useState(false);
+  const [expandedReplyThreads, setExpandedReplyThreads] = useState({});
+  const [expandedCommentText, setExpandedCommentText] = useState({});
   const mainInputRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -1029,7 +1031,10 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
             <Badge isAdmin={p?.is_admin} badge={p?.badge} />
             <span style={{ fontSize: 11, color: T.muted }}>· {timeAgo(c.created_at)}</span>
           </div>
-          <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 2, lineHeight: 1.5, fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>{renderTextWithTags(c.text, onOpenProfile)}</div>
+          <div style={{ fontSize: 15.5, fontWeight: 500, color: T.paper, marginTop: 2, lineHeight: 1.5, fontFamily: "'Montserrat', sans-serif", letterSpacing: 0.1 }}>
+            {renderTextWithTags(expandedCommentText[c.id] || (c.text || "").length <= 220 ? c.text : (c.text || "").slice(0, 220).trimEnd() + "…", onOpenProfile)}
+            {(c.text || "").length > 220 && <button onClick={() => setExpandedCommentText((prev) => ({ ...prev, [c.id]: !prev[c.id] }))} style={{ background: "none", border: "none", padding: "0 0 0 5px", color: T.gold, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{expandedCommentText[c.id] ? "See less" : "See more"}</button>}
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 6 }}>
             <button onClick={() => toggleCommentLike(c.id, c.user_id, postId, account.id, likeData, setLikeData)} style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "none", cursor: "pointer", color: ld.likedByMe ? T.rust : engAsh() }}>
               <Heart size={16} strokeWidth={2} fill={ld.likedByMe ? T.rust : "none"}  /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>{ld.count}</span>
@@ -1040,9 +1045,18 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
           </div>
           {/* Keep replies in one bounded vertical column with a single thread rail. */}
           {childReplies.length > 0 && (
-            <div style={{ marginTop: 8, paddingLeft: 14, borderLeft: "2px dashed #CFD9DE", display: "grid", gap: 0 }}>
-              {childReplies.map((r) => renderCommentBlock(r, true, false))}
-            </div>
+            <>
+              <button onClick={() => setExpandedReplyThreads((prev) => ({ ...prev, [c.id]: !prev[c.id] }))} style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 8, padding: 0, background: "none", border: "none", color: T.gold, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                <MessageCircle size={15} strokeWidth={2} />
+                <span>{childReplies.length} {childReplies.length === 1 ? "comment" : "comments"}</span>
+                <ChevronDown size={14} style={{ transform: expandedReplyThreads[c.id] ? "rotate(180deg)" : "none", transition: "transform .18s" }} />
+              </button>
+              {expandedReplyThreads[c.id] && (
+                <div style={{ marginTop: 8, paddingLeft: 14, borderLeft: "2px dashed #CFD9DE", display: "grid", gap: 0 }}>
+                  {childReplies.map((r) => renderCommentBlock(r, true, false))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
