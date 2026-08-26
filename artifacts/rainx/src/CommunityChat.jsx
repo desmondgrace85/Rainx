@@ -5,6 +5,7 @@
  *       premium-gated last-seen/online controls, pin conversations (max 3).
  */
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import "./RainXTelegramChat.css";
 import {
   ArrowLeft, MoreVertical, Send, X, ChevronRight,
   Search, AlertCircle, Check, Settings, Lock, Pin,
@@ -1413,72 +1414,89 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
     };
   }, [aid]);
 
+  const [page, setPage] = useState(0);
+  const [topTab, setTopTab] = useState("All");
+
+  const filteredConvos = (convos || []).filter((row) => topTab === "Unread" ? row.unread > 0 : topTab === "Groups" ? false : true);
+  const unreadTotal = (convos || []).reduce((sum, row) => sum + (row.unread || 0), 0);
+
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 150, display: "flex", flexDirection: "column", background: T.ink, fontFamily: "-apple-system,BlinkMacSystemFont,'Inter',sans-serif" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderBottom: "1px solid " + T.cardBorder, background: T.card }}>
-        <button onClick={onClose} style={{ background: "none", border: "none", color: T.paper, cursor: "pointer", padding: 4 }}><X size={22} /></button>
-        <div style={{ fontWeight: 800, fontSize: 17, color: T.paper, flex: 1 }}>Messages</div>
+    <div className="rx-chat">
+      <header className="rx-header">
+        <button className="rx-icon">☰</button>
+        <div className="rx-logo">R</div>
+        <strong>RainX</strong>
+        <button className="rx-icon">⌕</button>
+        <button className="rx-icon">⋮</button>
+      </header>
+
+      <div className="rx-search">⌕ <span>Search Chats</span></div>
+
+      <div className="rx-top-tabs">
+        {["All", "Unread", "Groups"].map((tab) => (
+          <button className={topTab === tab ? "active" : ""} onClick={() => setTopTab(tab)} key={tab}>
+            {tab}{tab !== "Groups" && <b>{tab === "All" ? (convos || []).length : unreadTotal}</b>}
+          </button>
+        ))}
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto" }}>
-        {convos === null && <div style={{ textAlign: "center", color: T.muted, fontSize: 13, paddingTop: 40 }}>Loading…</div>}
-        {convos !== null && convos.length === 0 && (
-          <div style={{ textAlign: "center", color: T.muted, fontSize: 13, paddingTop: 48, lineHeight: 2 }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>💬</div>
-            No messages yet.<br />Tap someone&#39;s profile to start a chat.
-          </div>
-        )}
-        {(convos || []).map(({ profile, lastMsg, unread }) => {
-          const pid       = profile && profile.id;
-          const isPinned  = pinnedChats.includes(pid);
-          const lastContent = lastMsg && lastMsg.content;
-          const lastDisplay = isDeleted(lastContent) ? "This message was deleted" : (lastContent || "");
+      <main className="rx-pages" style={{ transform: "translateX(-" + (page * 100) + "%)" }}>
+        {[0, 1, 2, 3].map((p) => (
+          <section className="rx-page" key={p}>
+            {p === 0 && convos === null && <div className="rx-empty"><strong>Loading…</strong><span>Loading your chats.</span></div>}
+            {p === 0 && convos !== null && filteredConvos.map(({ profile, lastMsg, unread }) => {
+              const name = (profile && (profile.display_name || profile.username)) || "User";
+              const avatar = name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+              const lastContent = isDeleted(lastMsg && lastMsg.content) ? "This message was deleted" : ((lastMsg && lastMsg.content) || "");
+              return (
+                <button className="rx-chat-row" key={(profile && profile.id) || (lastMsg && lastMsg.id)} onClick={() => {
+                  setConvos((prev) => (prev || []).map((row) => row.profile && row.profile.id === (profile && profile.id) ? { ...row, unread: 0 } : row));
+                  refreshPins();
+                  onOpenDM(profile);
+                }}>
+                  <span className="rx-avatar">{avatar}</span>
+                  <span className="rx-chat-copy">
+                    <span><strong>{name}</strong><time>{lastMsg ? fmt(lastMsg.created_at) : ""}</time></span>
+                    <span className="rx-preview">{lastMsg && lastMsg.sender_id === aid ? "You: " : ""}{lastContent}</span>
+                  </span>
+                  {unread > 0 && <b className="rx-unread">{unread}</b>}
+                </button>
+              );
+            })}
+            {p === 0 && convos !== null && filteredConvos.length === 0 && <div className="rx-empty"><strong>{topTab === "Groups" ? "Groups" : "No chats yet"}</strong><span>{topTab === "Groups" ? "Your groups appear here." : "Your chats appear here."}</span></div>}
+            {p === 1 && <div className="rx-empty"><strong>Channels</strong><span>Your channels appear here.</span></div>}
+            {p === 2 && <div className="rx-empty"><strong>Settings</strong><span>Chat settings appear here.</span></div>}
+            {p === 3 && <div className="rx-empty"><strong>Space Talks</strong><span>Your Space Talks communities appear here.</span></div>}
+          </section>
+        ))}
+      </main>
+
+      <nav className="rx-bottom" aria-label="Primary navigation">
+        {[
+          { name: "Chats", outline: "nav_0_outline.svg", filled: "telegram-icons/round_chats_filled.svg" },
+          { name: "Channels", outline: "nav_1_outline.svg", filled: "telegram-icons/channel_filled.svg" },
+          { name: "Settings", outline: "nav_2_outline.svg", filled: "telegram-icons/settings_filled.svg" },
+          { name: "Space Talks", outline: "nav_3_outline.svg", filled: "telegram-icons/round_chats_filled.svg" },
+        ].map((item, i) => {
+          const active = page === i;
           return (
-            <button key={pid || lastMsg.id} onClick={() => {
-              // Clear this conversation's badge immediately; don't wait for
-              // the next poll or a page refresh.
-              setConvos(prev => (prev || []).map(row =>
-                row.profile?.id === pid ? { ...row, unread: 0 } : row
-              ));
-              refreshPins();
-              onOpenDM(profile);
-            }}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: isPinned ? "rgba(244,211,94,0.06)" : "none", border: "none", cursor: "pointer", borderBottom: "1px solid " + T.cardBorder }}>
-              <div style={{ position: "relative", flexShrink: 0 }}>
-                <Avatar name={profile && profile.display_name} avatarUrl={profile && profile.avatar_url} size={46} T={T} />
-                {isOnline(profile && profile.last_seen) && (
-                  <div style={{ position: "absolute", bottom: 1, right: 1, width: 11, height: 11, borderRadius: "50%", background: "#4CAF50", border: "2px solid " + T.ink }} />
-                )}
-                {unread > 0 && (
-                  <div style={{ position: "absolute", top: -2, right: -2, background: T.goldGradient, color: "#0F0E0B", borderRadius: "50%", minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, padding: "0 4px" }}>{unread}</div>
-                )}
-              </div>
-              <div style={{ flex: 1, minWidth: 0, textAlign: "left" }} data-chatlist-row>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <span style={{ fontWeight: 700, fontSize: 15, color: T.paper, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>
-                      {(profile && profile.display_name) || "Unknown"}
-                    </span>
-                      {typingUsers[pid] && <span style={{ fontSize: 11, color: T.goldBright, fontWeight: 600 }}>typing…</span>}
-                    {isPinned && <Pin size={11} color={T.gold} />}
-                  </div>
-                  <div style={{ fontSize: 11, color: unread > 0 ? T.gold : T.muted, flexShrink: 0, marginLeft: 8 }}>{timeAgo(lastMsg.created_at)}</div>
-                </div>
-                <div style={{ fontSize: 13, color: unread > 0 ? T.paper : T.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: unread > 0 ? 600 : 400 }}>
-                  {lastMsg.sender_id === aid ? "You: " : ""}{lastDisplay}
-                </div>
-              </div>
+            <button
+              className={active ? "active" : ""}
+              onClick={() => { setPage(i); if (i === 2) setShowGeneralSettings(true); }}
+              key={item.name}
+              aria-current={active ? "page" : undefined}
+            >
+              <span className="rx-nav-icon" aria-hidden="true">
+                <img className="rx-nav-icon-outline" src={item.outline} alt="" />
+                <img className="rx-nav-icon-filled" src={item.filled} alt="" />
+              </span>
+              <span>{item.name}</span>
             </button>
           );
         })}
-      </div>
+      </nav>
 
-      <div style={{ borderTop: "1px solid " + T.cardBorder, background: T.card, padding: "10px 16px 14px" }}>
-        <button onClick={() => setShowGeneralSettings(true)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "none", border: "1px solid " + T.cardBorder, borderRadius: 12, padding: "11px 0", color: T.muted, cursor: "pointer" }}>
-          <Settings size={16} />
-          <span style={{ fontSize: 13, fontWeight: 600 }}>General Chat Settings</span>
-        </button>
-      </div>
+      <button className="rx-fab">+</button>
 
       {showGeneralSettings && (
         <GeneralChatSettings
