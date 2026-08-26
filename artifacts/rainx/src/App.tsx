@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import RainXApp from "./RainxApp";
 import MoreLandingOverride from "./MoreLandingOverride";
 import NativeLockOverride from "./NativeLockOverride";
-import AnalyticsScreen from "./AnalyticsScreen";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { supabase } from "./supabaseClient";
@@ -162,12 +161,10 @@ export default function App() {
   },[account?.id,authReady]);
 
   const isMoreLanding=route.tab==="more"&&!route.sub;
-  const isAnalyticsRoute=route.tab==="analytics"||(route.tab==="more"&&route.sub==="analytics");
 
   if(Capacitor.isNativePlatform()&&!authReady)return <div style={APP_SURFACE}/>;
   if(Capacitor.isNativePlatform()&&account?.id&&!lockReady)return <div style={APP_SURFACE}/>;
   if(Capacitor.isNativePlatform()&&account?.id&&locked)return <div style={APP_SURFACE}><NativeLockOverride account={account} initialLocked/></div>;
-  if(account?.id&&isAnalyticsRoute)return <div style={APP_SURFACE}><AnalyticsScreen account={account} onBack={()=>{window.location.hash="#more";}}/></div>;
   if(account?.id&&isMoreLanding)return <div style={APP_SURFACE}><MoreLandingOverride account={account}/></div>;
   return <div style={APP_SURFACE}><RainXApp/><>{account?.id&&<NativeLockOverride account={account} initialLocked={false}/>}</></div>;
 }
