@@ -1416,13 +1416,25 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
 
   const [page, setPage] = useState(0);
     const [topTab, setTopTab] = useState("All");
+    const [searchQuery, setSearchQuery] = useState("");
+    const searchInputRef = useRef(null);
+    const [isSwiping, setIsSwiping] = useState(false);
     const swipeStart = useRef(null);
     const swipeOffsetRef = useRef(0);
     const swipeDragging = useRef(false);
     const [swipeOffset, setSwipeOffset] = useState(0);
     const pageCount = 4;
 
-    const filteredConvos = (convos || []).filter((row) => topTab === "Unread" ? row.unread > 0 : topTab === "Groups" ? false : true);
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+    const filteredConvos = (convos || []).filter((row) => {
+      const matchesTab = topTab === "Unread" ? row.unread > 0 : topTab === "Groups" ? false : true;
+      if (!matchesTab || !normalizedSearch) return matchesTab;
+      const name = row.profile && (row.profile.display_name || row.profile.username) || "User";
+      const message = row.lastMsg && row.lastMsg.content || "";
+      return (name + " " + message).toLowerCase().includes(normalizedSearch);
+    });
+    const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1;
+    const pageProgress = Math.max(0, Math.min(pageCount - 1, page - swipeOffset / Math.max(viewportWidth, 1)));
     const unreadTotal = (convos || []).reduce((sum, row) => sum + (row.unread || 0), 0);
 
     const handleSwipeStart = (event) => {
@@ -1437,6 +1449,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
       if (!swipeDragging.current) {
         if (Math.abs(dx) < 8 || Math.abs(dy) > Math.abs(dx)) return;
         swipeDragging.current = true;
+        setIsSwiping(true);
         event.currentTarget.setPointerCapture?.(event.pointerId);
       }
       event.preventDefault();
@@ -1453,6 +1466,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
       swipeOffsetRef.current = 0;
       const wasDragging = swipeDragging.current;
       swipeDragging.current = false;
+      setIsSwiping(false);
       if (wasDragging && Math.abs(distance) > 60) {
         setPage((current) => distance < 0 ? Math.min(current + 1, pageCount - 1) : Math.max(current - 1, 0));
       }
@@ -1467,11 +1481,15 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
             <ArrowLeft size={24} strokeWidth={2} />
           </button>
           <strong>Chats</strong>
-          <button className="rx-icon">⌕</button>
-          <button className="rx-icon">⋮</button>
+          <button className="rx-icon" onClick={() => searchInputRef.current?.focus()} aria-label="Focus chat search" type="button"><Search size={21} strokeWidth={2} /></button>
+          <button className="rx-icon" aria-label="Chat menu" type="button">⋮</button>
         </header>
 
-      <div className="rx-search">⌕ <span>Search Chats</span></div>
+      <label className="rx-search">
+        <Search size={17} strokeWidth={2} aria-hidden="true" />
+        <input ref={searchInputRef} value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search Chats" aria-label="Search Chats" />
+        {searchQuery && <button className="rx-search-clear" onClick={() => setSearchQuery("")} aria-label="Clear chat search" type="button"><X size={15} /></button>}
+      </label>
 
       <div className="rx-top-tabs">
         {["All", "Unread", "Groups"].map((tab) => (
@@ -1482,7 +1500,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
       </div>
 
       <main
-          className={swipeDragging.current ? "rx-pages dragging" : "rx-pages"}
+          className={isSwiping ? "rx-pages dragging" : "rx-pages"}
           style={{ transform: "translate3d(calc(-" + (page * 100) + "% + " + swipeOffset + "px), 0, 0)" }}
           onPointerDown={handleSwipeStart}
           onPointerMove={handleSwipeMove}
@@ -1519,7 +1537,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
         ))}
       </main>
 
-      <nav className="rx-bottom" aria-label="Primary navigation">
+      <nav className={isSwiping ? "rx-bottom dragging" : "rx-bottom"} style={{ "--page-progress": pageProgress }} aria-label="Primary navigation">
         {[
           { name: "Chats", outline: "nav_0_outline.svg", filled: "telegram-icons/round_chats_filled.svg" },
           { name: "Channels", outline: "nav_1_outline.svg", filled: "telegram-icons/channel_filled.svg" },
@@ -1543,8 +1561,6 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
           );
         })}
       </nav>
-
-      <button className="rx-fab">+</button>
 
       {showGeneralSettings && (
         <GeneralChatSettings
