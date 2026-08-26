@@ -2894,7 +2894,7 @@ function MainAppContent({ account, onLogout }) {
             )},
             { key: "space-coins", center: true },
             { key: "community", label: "Community", icon: (active) => (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "url(#rxNavGold)" : "none"} stroke={active ? "none" : "currentColor"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "#F4D35E" : "none"} stroke={active ? "none" : "#0F0E0B"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="9" cy="7" r="3"/>
                 <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
                 <circle cx="18" cy="8" r="2.2"/>
