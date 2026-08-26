@@ -472,10 +472,9 @@ export default function MoreLandingOverride({ account }) {
           </button>
         </section>
       </div>
-      {giftScreen && moreOverlay === "gifts-settings" && <GiftsRewardsScreen underlying settingsOpen={false} onOpenSettings={() => openOverlay("gifts-settings")} onBackFromSettings={backOverlay} onBack={backOverlay} account={account} />}
       {giftScreen && <GiftsRewardsScreen settingsOpen={moreOverlay === "gifts-settings"} onOpenSettings={() => openOverlay("gifts-settings")} onBackFromSettings={backOverlay} onBack={backOverlay} account={account} />}
-      {referralPage && <ReferralRewardsScreen count={0} earnings={0} referralCode={null} onBack={backOverlay} onActivity={() => openOverlay("referral-activity")} />}
-      {(referralPage === "activity" || referralPage === "performance") && <MyReferralsScreen count={0} earnings={0} referralCode={null} account={account} onBack={backOverlay} onActivity={() => openOverlay("referral-performance")} />}
+      {referralPage === "referrals" && <ReferralRewardsScreen count={0} earnings={0} referralCode={null} onBack={backOverlay} onActivity={() => openOverlay("referral-activity")} />}
+      {referralPage === "activity" && <MyReferralsScreen count={0} earnings={0} referralCode={null} account={account} onBack={backOverlay} onActivity={() => openOverlay("referral-performance")} />}
       {referralPage === "performance" && <ReferralPerformanceScreen onBack={backOverlay} />}
     </div>
   );
