@@ -1065,13 +1065,13 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
 
   return (
     <div style={{ marginTop: 0, paddingTop: 0, background: "#FFFFFF" }}>
-      <div style={{ position:"relative", display:"flex", alignItems:"center", padding:"10px 2px 9px", borderBottom:`1px solid ${"#FFFFFF"Border}` }}>
+      <div style={{ position:"relative", display:"flex", alignItems:"center", padding:"10px 2px 9px", borderBottom:`1px solid ${"#FFFFFF"}` }}>
         <button onClick={() => setShowCommentSort(v => !v)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", color:T.paper, fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, cursor:"pointer", padding:0 }}>
           <span>{commentSort === "recent" ? "Most recent" : commentSort === "oldest" ? "Oldest" : "Most relevant"}</span>
           <ChevronDown size={15} strokeWidth={2.4} style={{ transform:showCommentSort ? "rotate(180deg)" : "none", transition:"transform .18s" }} />
         </button>
         {showCommentSort && (
-          <div style={{ position:"absolute", top:"calc(100% + 5px)", left:0, zIndex:30, minWidth:170, background:"#FFFFFF", border:`1px solid ${"#FFFFFF"Border}`, borderRadius:14, boxShadow:"0 12px 30px rgba(0,0,0,.24)", overflow:"hidden" }}>
+          <div style={{ position:"absolute", top:"calc(100% + 5px)", left:0, zIndex:30, minWidth:170, background:"#FFFFFF", border:`1px solid ${"#FFFFFF"}`, borderRadius:14, boxShadow:"0 12px 30px rgba(0,0,0,.24)", overflow:"hidden" }}>
             {[['relevant','Most relevant'],['recent','Most recent'],['oldest','Oldest']].map(([value,label]) => (
               <button key={value} onClick={() => { setCommentSort(value); setShowCommentSort(false); }} style={{ width:"100%", textAlign:"left", padding:"12px 14px", background:commentSort===value ? `${T.gold}18` : "none", border:"none", color:commentSort===value ? T.gold : T.paper, fontSize:12.5, fontWeight:commentSort===value ? 800 : 600, cursor:"pointer" }}>{label}</button>
             ))}
@@ -1098,7 +1098,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
               rows={1}
               maxLength={300}
               data-rainx-comment-input="true"
-              style={{ width: "100%", background: T.ink, border: `1px solid ${"#FFFFFF"Border}`, borderRadius: 16, color: T.paper, padding: "10px 13px", fontFamily: FONT_BODY, fontSize: 13, resize: "none", boxSizing: "border-box", minHeight: 40 }}
+              style={{ width: "100%", background: T.ink, border: `1px solid ${"#FFFFFF"}`, borderRadius: 16, color: T.paper, padding: "10px 13px", fontFamily: FONT_BODY, fontSize: 13, resize: "none", boxSizing: "border-box", minHeight: 40 }}
             />
           </div>
           <button onClick={handleSubmit} disabled={!text.trim()} style={{ background: T.goldGradient, color: T.ink, border: "none", borderRadius: 14, padding: "10px 15px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 11.5, cursor: "pointer", flexShrink: 0, opacity: text.trim() ? 1 : 0.5, minHeight: 40 }}>{replyTo ? "Reply" : "Post"}</button>
