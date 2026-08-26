@@ -1415,20 +1415,61 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
   }, [aid]);
 
   const [page, setPage] = useState(0);
-  const [topTab, setTopTab] = useState("All");
+    const [topTab, setTopTab] = useState("All");
+    const swipeStart = useRef(null);
+    const swipeOffsetRef = useRef(0);
+    const swipeDragging = useRef(false);
+    const [swipeOffset, setSwipeOffset] = useState(0);
+    const pageCount = 4;
 
-  const filteredConvos = (convos || []).filter((row) => topTab === "Unread" ? row.unread > 0 : topTab === "Groups" ? false : true);
-  const unreadTotal = (convos || []).reduce((sum, row) => sum + (row.unread || 0), 0);
+    const filteredConvos = (convos || []).filter((row) => topTab === "Unread" ? row.unread > 0 : topTab === "Groups" ? false : true);
+    const unreadTotal = (convos || []).reduce((sum, row) => sum + (row.unread || 0), 0);
+
+    const handleSwipeStart = (event) => {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      swipeStart.current = { x: event.clientX, y: event.clientY };
+      swipeOffsetRef.current = 0;
+    };
+    const handleSwipeMove = (event) => {
+      if (!swipeStart.current) return;
+      const dx = event.clientX - swipeStart.current.x;
+      const dy = event.clientY - swipeStart.current.y;
+      if (!swipeDragging.current) {
+        if (Math.abs(dx) < 8 || Math.abs(dy) > Math.abs(dx)) return;
+        swipeDragging.current = true;
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      }
+      event.preventDefault();
+      const atFirst = page === 0 && dx > 0;
+      const atLast = page === pageCount - 1 && dx < 0;
+      const nextOffset = atFirst || atLast ? dx / 3 : dx;
+      swipeOffsetRef.current = nextOffset;
+      setSwipeOffset(nextOffset);
+    };
+    const handleSwipeEnd = (event) => {
+      if (!swipeStart.current) return;
+      const distance = swipeOffsetRef.current;
+      swipeStart.current = null;
+      swipeOffsetRef.current = 0;
+      const wasDragging = swipeDragging.current;
+      swipeDragging.current = false;
+      if (wasDragging && Math.abs(distance) > 60) {
+        setPage((current) => distance < 0 ? Math.min(current + 1, pageCount - 1) : Math.max(current - 1, 0));
+      }
+      setSwipeOffset(0);
+      if (wasDragging) event.currentTarget.releasePointerCapture?.(event.pointerId);
+    };
 
   return (
     <div className="rx-chat">
       <header className="rx-header">
-        <button className="rx-icon">☰</button>
-        <div className="rx-logo">R</div>
-        <strong>RainX</strong>
-        <button className="rx-icon">⌕</button>
-        <button className="rx-icon">⋮</button>
-      </header>
+          <button className="rx-icon rx-back" onClick={onClose} aria-label="Back to community" type="button">
+            <ArrowLeft size={24} strokeWidth={2} />
+          </button>
+          <strong>Chats</strong>
+          <button className="rx-icon">⌕</button>
+          <button className="rx-icon">⋮</button>
+        </header>
 
       <div className="rx-search">⌕ <span>Search Chats</span></div>
 
@@ -1440,7 +1481,14 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
         ))}
       </div>
 
-      <main className="rx-pages" style={{ transform: "translateX(-" + (page * 100) + "%)" }}>
+      <main
+          className={swipeDragging.current ? "rx-pages dragging" : "rx-pages"}
+          style={{ transform: "translate3d(calc(-" + (page * 100) + "% + " + swipeOffset + "px), 0, 0)" }}
+          onPointerDown={handleSwipeStart}
+          onPointerMove={handleSwipeMove}
+          onPointerUp={handleSwipeEnd}
+          onPointerCancel={handleSwipeEnd}
+        >
         {[0, 1, 2, 3].map((p) => (
           <section className="rx-page" key={p}>
             {p === 0 && convos === null && <div className="rx-empty"><strong>Loading…</strong><span>Loading your chats.</span></div>}
