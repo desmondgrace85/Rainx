@@ -1415,160 +1415,80 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
   }, [aid]);
 
   const [page, setPage] = useState(0);
-    const [topTab, setTopTab] = useState("All");
-    const [searchQuery, setSearchQuery] = useState("");
-    const searchInputRef = useRef(null);
-    const [isSwiping, setIsSwiping] = useState(false);
-    const [gestureProgress, setGestureProgress] = useState(0);
-    const gestureProgressRef = useRef(0);
-    const swipeStart = useRef(null);
-    const swipeLast = useRef(null);
-    const swipeVelocityRef = useRef(0);
-    const swipeDragging = useRef(false);
-    const swipeViewportWidth = useRef(0);
-    const touchGesture = useRef(false);
-    const pageCount = 4;
-    const [chatRipple, setChatRipple] = useState(null);
-    const rippleTimerRef = useRef(null);
-    const navSlotPercent = 100 / pageCount;
+  const [topTab, setTopTab] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef(null);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const [gestureProgress, setGestureProgress] = useState(0);
+  const pagesRef = useRef(null);
+  const pageCount = 4;
+  const [chatRipple, setChatRipple] = useState(null);
+  const rippleTimerRef = useRef(null);
+  const navSlotPercent = 100 / pageCount;
 
-    const normalizedSearch = searchQuery.trim().toLowerCase();
-    const filteredConvos = (convos || []).filter((row) => {
-      const matchesTab = topTab === "Unread" ? row.unread > 0 : topTab === "Groups" ? false : true;
-      if (!matchesTab || !normalizedSearch) return matchesTab;
-      const name = row.profile && (row.profile.display_name || row.profile.username) || "User";
-      const message = row.lastMsg && row.lastMsg.content || "";
-      return (name + " " + message).toLowerCase().includes(normalizedSearch);
-    });
-    const unreadTotal = (convos || []).reduce((sum, row) => sum + (row.unread || 0), 0);
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredConvos = (convos || []).filter((row) => {
+    const matchesTab = topTab === "Unread" ? row.unread > 0 : topTab === "Groups" ? false : true;
+    if (!matchesTab || !normalizedSearch) return matchesTab;
+    const name = row.profile && (row.profile.display_name || row.profile.username) || "User";
+    const message = row.lastMsg && row.lastMsg.content || "";
+    return (name + " " + message).toLowerCase().includes(normalizedSearch);
+  });
+  const unreadTotal = (convos || []).reduce((sum, row) => sum + (row.unread || 0), 0);
 
-    useEffect(() => () => clearTimeout(rippleTimerRef.current), []);
+  useEffect(() => () => clearTimeout(rippleTimerRef.current), []);
 
-    const goToPage = (nextPage) => {
-      const target = Math.max(0, Math.min(pageCount - 1, nextPage));
-      gestureProgressRef.current = target;
-      setGestureProgress(target);
-      setPage(target);
-      if (target === 2) setShowGeneralSettings(true);
-    };
+  const handlePagesScroll = (event) => {
+    const track = event.currentTarget;
+    const viewportWidth = track.clientWidth || (typeof window !== "undefined" ? window.innerWidth : 1);
+    const nextProgress = Math.max(0, Math.min(pageCount - 1, track.scrollLeft / Math.max(viewportWidth, 1)));
+    const nearestPage = Math.round(nextProgress);
+    setGestureProgress(nextProgress);
+    setPage(nearestPage);
+    setIsSwiping(Math.abs(nextProgress - nearestPage) > 0.01);
+    if (nearestPage === 2) setShowGeneralSettings(true);
+  };
 
-    const startChatRipple = (event, rowKey) => {
-      if (event.pointerType === "mouse" && event.button !== 0) return;
-      clearTimeout(rippleTimerRef.current);
-      // Keep the press state attached to the whole conversation row. A
-      // fingertip-sized ripple makes the row look only partly selected.
-      setChatRipple({ key: rowKey, fading: false });
-    };
-    const endChatRipple = () => {
-      setChatRipple((current) => current ? { ...current, fading: true } : current);
-      clearTimeout(rippleTimerRef.current);
-      rippleTimerRef.current = setTimeout(() => setChatRipple(null), 180);
-    };
+  const goToPage = (nextPage) => {
+    const target = Math.max(0, Math.min(pageCount - 1, nextPage));
+    setPage(target);
+    if (target === 2) setShowGeneralSettings(true);
+    const track = pagesRef.current;
+    if (track) track.scrollTo({ left: target * track.clientWidth, behavior: "smooth" });
+  };
 
-    const getGesturePoint = (event) => {
-      const touch = event.touches?.[0] || event.changedTouches?.[0];
-      return {
-        x: touch?.clientX ?? event.clientX ?? 0,
-        y: touch?.clientY ?? event.clientY ?? 0,
-      };
-    };
-
-    const handleSwipeStart = (event) => {
-      if (event.type === "touchstart") touchGesture.current = true;
-      if (event.type.startsWith("pointer") && touchGesture.current) return;
-      if (event.pointerType === "mouse" && event.button !== 0) return;
-      if (event.target.closest?.("input, textarea")) return;
-      const point = getGesturePoint(event);
-      const viewportWidth = event.currentTarget.parentElement?.getBoundingClientRect().width || (typeof window !== "undefined" ? window.innerWidth : 1);
-      swipeViewportWidth.current = viewportWidth;
-      const now = Date.now();
-      swipeStart.current = { x: point.x, y: point.y, time: now };
-      swipeLast.current = { x: point.x, time: now };
-      swipeVelocityRef.current = 0;
-      swipeDragging.current = false;
-    };
-    const handleSwipeMove = (event) => {
-      if (event.type === "pointermove" && touchGesture.current) return;
-      if (!swipeStart.current) return;
-      const point = getGesturePoint(event);
-      const dx = point.x - swipeStart.current.x;
-      const dy = point.y - swipeStart.current.y;
-      if (!swipeDragging.current) {
-        if (Math.abs(dx) < 8 || Math.abs(dy) > Math.abs(dx)) return;
-        swipeDragging.current = true;
-        setIsSwiping(true);
-        setChatRipple(null);
-        if (event.pointerId != null) event.currentTarget.setPointerCapture?.(event.pointerId);
-      }
-      event.preventDefault();
-      // Measure the visible viewport, not the pageCount-wide track.
-      const width = swipeViewportWidth.current || (typeof window !== "undefined" ? window.innerWidth : 1);
-      const nextProgress = Math.max(0, Math.min(pageCount - 1, page - dx / Math.max(width, 1)));
-      gestureProgressRef.current = nextProgress;
-      setGestureProgress(nextProgress);
-      const now = Date.now();
-      if (swipeLast.current) swipeVelocityRef.current = (point.x - swipeLast.current.x) / Math.max(now - swipeLast.current.time, 1);
-      swipeLast.current = { x: point.x, time: now };
-    };
-    const handleSwipeEnd = (event) => {
-      if (event.type === "pointerup" && touchGesture.current) return;
-      if (!swipeStart.current) {
-        if (event.type === "touchend" || event.type === "touchcancel" || event.type === "pointercancel") touchGesture.current = false;
-        return;
-      }
-      const point = getGesturePoint(event);
-      const start = swipeStart.current;
-      const last = swipeLast.current || { x: point.x, time: Date.now() };
-      const distance = last.x - start.x;
-      const width = swipeViewportWidth.current || (typeof window !== "undefined" ? window.innerWidth : 1);
-      const velocity = swipeVelocityRef.current;
-      const wasDragging = swipeDragging.current;
-      const direction = distance < 0 ? 1 : -1;
-      const enoughProgress = Math.abs(distance) >= Math.max(56, width * 0.22);
-      const fastSwipe = Math.abs(velocity) >= 0.55 && Math.sign(velocity) === Math.sign(distance);
-      const target = wasDragging && (enoughProgress || fastSwipe) ? Math.max(0, Math.min(pageCount - 1, page + direction)) : page;
-      swipeStart.current = null;
-      swipeLast.current = null;
-      swipeVelocityRef.current = 0;
-      swipeDragging.current = false;
-      swipeViewportWidth.current = 0;
-      setIsSwiping(false);
-      gestureProgressRef.current = target;
-      setGestureProgress(target);
-      if (target !== page) {
-        setPage(target);
-        if (target === 2) setShowGeneralSettings(true);
-      }
-      if (event.type === "touchend" || event.type === "touchcancel" || event.type === "pointercancel") touchGesture.current = false;
-      if (event.pointerId != null && event.currentTarget.hasPointerCapture?.(event.pointerId)) {
-        event.currentTarget.releasePointerCapture?.(event.pointerId);
-      }
-    };
+  const startChatRipple = (event, rowKey) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    clearTimeout(rippleTimerRef.current);
+    setChatRipple({ key: rowKey, fading: false });
+  };
+  const endChatRipple = () => {
+    setChatRipple((current) => current ? { ...current, fading: true } : current);
+    clearTimeout(rippleTimerRef.current);
+    rippleTimerRef.current = setTimeout(() => setChatRipple(null), 180);
+  };
 
   return (
     <div className="rx-chat">
       <main
-          className={isSwiping ? "rx-pages dragging" : (page === 0 ? "rx-pages" : "rx-pages full-height")}
-          style={{
-            width: (pageCount * 100) + "%",
-            transform: "translate3d(" + (-(gestureProgress * navSlotPercent)) + "%, 0, 0)",
-            transition: isSwiping ? "none" : "transform 320ms cubic-bezier(0.22, 1, 0.36, 1)",
-            touchAction: "pan-y",
-            overscrollBehaviorX: "contain",
-            userSelect: isSwiping ? "none" : undefined,
-            willChange: "transform",
-          }}
-          onPointerDown={handleSwipeStart}
-          onPointerMove={handleSwipeMove}
-          onPointerUp={handleSwipeEnd}
-          onPointerCancel={handleSwipeEnd}
-          onTouchStart={handleSwipeStart}
-          onTouchMove={handleSwipeMove}
-          onTouchEnd={handleSwipeEnd}
-          onTouchCancel={handleSwipeEnd}
-        >
+        ref={pagesRef}
+        className="rx-pages native-swipe-track"
+        style={{
+          width: "100%",
+          display: "flex",
+          overflowX: "auto",
+          overflowY: "hidden",
+          scrollSnapType: "x mandatory",
+          scrollSnapStop: "always",
+          WebkitOverflowScrolling: "touch",
+          overscrollBehaviorX: "contain",
+          touchAction: "pan-x pan-y",
+          scrollbarWidth: "none",
+        }}
+        onScroll={handlePagesScroll}
+      >
         {[0, 1, 2, 3].map((p) => (
-          <section className="rx-page" key={p} style={{ width: navSlotPercent + "%", flex: "0 0 " + navSlotPercent + "%", minWidth: 0, minHeight: "calc(100dvh - 88px)", height: "calc(100dvh - 88px)", background: "#FFFFFF", boxSizing: "border-box" }}>
+          <section className="rx-page" key={p} style={{ width: "100%", flex: "0 0 100%", minWidth: 0, minHeight: "calc(100dvh - 88px)", height: "calc(100dvh - 88px)", background: "#FFFFFF", boxSizing: "border-box", overflowY: "auto", scrollSnapAlign: "start" }}>
             {p === 0 && <>
               <header className="rx-header">
                 <button className="rx-icon rx-back" onClick={onClose} aria-label="Back to community" type="button">
