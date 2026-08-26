@@ -5429,9 +5429,9 @@ function ReferralRewardsScreen({ count, earnings, referralCode, onBack, onActivi
   const [closing, setClosing] = useState(false);
   const close = () => { if (closing) return; setClosing(true); window.setTimeout(onBack, 520); };
   return createPortal(<div className="rx-referral-screen"
-    style={{position:"fixed",inset:0,zIndex:1000,overflow:"hidden",overscrollBehavior:"none",touchAction:"pan-y",background:"#FFFFFF",color:"#17191B",isolation:"isolate",contain:"layout paint",animation:"none"}}
+    style={{position:"fixed",inset:0,zIndex:1000,overflow:"hidden",overscrollBehavior:"none",touchAction:"pan-y",background:"transparent",color:"#17191B",isolation:"isolate",contain:"layout paint",animation:"none"}}
   >
-    <style>{`@keyframes referralSheetIn{from{transform:translateY(18px)}to{transform:translateY(0)}}@keyframes referralSheetOut{from{transform:translateY(0)}to{transform:translateY(100%)}}`}</style>
+    <style>{`@keyframes referralSheetIn{from{transform:translateX(100%)}to{transform:translateX(0)}}@keyframes referralSheetOut{from{transform:translateX(0)}to{transform:translateX(100%)}}`}</style>
     <div className="rx-referral-scroll" style={{position:"absolute",inset:0,overflowY:"auto",overflowX:"hidden",overscrollBehavior:"none",WebkitOverflowScrolling:"auto",touchAction:"pan-y"}}>
     <div style={{maxWidth:480,minHeight:"100dvh",margin:"0 auto",padding:"10px 22px 34px",boxSizing:"border-box",background:"#FFFFFF",willChange:"transform",animation:closing ? "referralSheetOut .52s cubic-bezier(.22,1,.36,1) both" : "referralSheetIn .52s cubic-bezier(.22,1,.36,1) both"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:48,position:"relative",marginBottom:2}}>
