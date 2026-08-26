@@ -1553,7 +1553,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
                   </button>
                 ))}
               </div>
-            </>
+            </>}
             {p === 0 && convos === null && <div className="rx-empty"><strong>Loading…</strong><span>Loading your chats.</span></div>}
             {p === 0 && convos !== null && filteredConvos.map(({ profile, lastMsg, unread }) => {
               const name = (profile && (profile.display_name || profile.username)) || "User";
