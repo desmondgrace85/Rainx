@@ -1419,11 +1419,15 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
     const [searchQuery, setSearchQuery] = useState("");
     const searchInputRef = useRef(null);
     const [isSwiping, setIsSwiping] = useState(false);
+    const [gestureProgress, setGestureProgress] = useState(0);
+    const gestureProgressRef = useRef(0);
     const swipeStart = useRef(null);
-    const swipeOffsetRef = useRef(0);
+    const swipeLast = useRef(null);
+    const swipeVelocityRef = useRef(0);
     const swipeDragging = useRef(false);
-    const [swipeOffset, setSwipeOffset] = useState(0);
     const pageCount = 4;
+    const [chatRipple, setChatRipple] = useState(null);
+    const rippleTimerRef = useRef(null);
 
     const normalizedSearch = searchQuery.trim().toLowerCase();
     const filteredConvos = (convos || []).filter((row) => {
@@ -1433,14 +1437,43 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
       const message = row.lastMsg && row.lastMsg.content || "";
       return (name + " " + message).toLowerCase().includes(normalizedSearch);
     });
-    const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1;
-    const pageProgress = Math.max(0, Math.min(pageCount - 1, page - swipeOffset / Math.max(viewportWidth, 1)));
     const unreadTotal = (convos || []).reduce((sum, row) => sum + (row.unread || 0), 0);
+
+    useEffect(() => () => clearTimeout(rippleTimerRef.current), []);
+
+    const goToPage = (nextPage) => {
+      const target = Math.max(0, Math.min(pageCount - 1, nextPage));
+      gestureProgressRef.current = target;
+      setGestureProgress(target);
+      setPage(target);
+      if (target === 2) setShowGeneralSettings(true);
+    };
+
+    const startChatRipple = (event, rowKey) => {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      const rect = event.currentTarget.getBoundingClientRect();
+      clearTimeout(rippleTimerRef.current);
+      setChatRipple({ key: rowKey, x: event.clientX - rect.left, y: event.clientY - rect.top, fading: false });
+    };
+    const moveChatRipple = (event, rowKey) => {
+      if (!chatRipple || chatRipple.key !== rowKey) return;
+      const rect = event.currentTarget.getBoundingClientRect();
+      setChatRipple((current) => current && current.key === rowKey ? { ...current, x: event.clientX - rect.left, y: event.clientY - rect.top } : current);
+    };
+    const endChatRipple = () => {
+      setChatRipple((current) => current ? { ...current, fading: true } : current);
+      clearTimeout(rippleTimerRef.current);
+      rippleTimerRef.current = setTimeout(() => setChatRipple(null), 180);
+    };
 
     const handleSwipeStart = (event) => {
       if (event.pointerType === "mouse" && event.button !== 0) return;
-      swipeStart.current = { x: event.clientX, y: event.clientY };
-      swipeOffsetRef.current = 0;
+      if (event.target.closest?.("input, textarea")) return;
+      const now = Date.now();
+      swipeStart.current = { x: event.clientX, y: event.clientY, time: now };
+      swipeLast.current = { x: event.clientX, time: now };
+      swipeVelocityRef.current = 0;
+      swipeDragging.current = false;
     };
     const handleSwipeMove = (event) => {
       if (!swipeStart.current) return;
@@ -1453,55 +1486,45 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
         event.currentTarget.setPointerCapture?.(event.pointerId);
       }
       event.preventDefault();
-      const atFirst = page === 0 && dx > 0;
-      const atLast = page === pageCount - 1 && dx < 0;
-      const nextOffset = atFirst || atLast ? dx / 3 : dx;
-      swipeOffsetRef.current = nextOffset;
-      setSwipeOffset(nextOffset);
+      const width = event.currentTarget.clientWidth || (typeof window !== "undefined" ? window.innerWidth : 1);
+      const nextProgress = Math.max(0, Math.min(pageCount - 1, page - dx / Math.max(width, 1)));
+      gestureProgressRef.current = nextProgress;
+      setGestureProgress(nextProgress);
+      const now = Date.now();
+      if (swipeLast.current) swipeVelocityRef.current = (event.clientX - swipeLast.current.x) / Math.max(now - swipeLast.current.time, 1);
+      swipeLast.current = { x: event.clientX, time: now };
     };
     const handleSwipeEnd = (event) => {
       if (!swipeStart.current) return;
-      const distance = swipeOffsetRef.current;
-      swipeStart.current = null;
-      swipeOffsetRef.current = 0;
+      const start = swipeStart.current;
+      const last = swipeLast.current || { x: event.clientX, time: Date.now() };
+      const distance = last.x - start.x;
+      const width = event.currentTarget.clientWidth || (typeof window !== "undefined" ? window.innerWidth : 1);
+      const velocity = swipeVelocityRef.current;
       const wasDragging = swipeDragging.current;
+      const direction = distance < 0 ? 1 : -1;
+      const enoughProgress = Math.abs(distance) >= Math.max(56, width * 0.22);
+      const fastSwipe = Math.abs(velocity) >= 0.55 && Math.sign(velocity) === Math.sign(distance);
+      const target = wasDragging && (enoughProgress || fastSwipe) ? Math.max(0, Math.min(pageCount - 1, page + direction)) : page;
+      swipeStart.current = null;
+      swipeLast.current = null;
+      swipeVelocityRef.current = 0;
       swipeDragging.current = false;
       setIsSwiping(false);
-      if (wasDragging && Math.abs(distance) > 60) {
-        setPage((current) => distance < 0 ? Math.min(current + 1, pageCount - 1) : Math.max(current - 1, 0));
+      gestureProgressRef.current = target;
+      setGestureProgress(target);
+      if (target !== page) {
+        setPage(target);
+        if (target === 2) setShowGeneralSettings(true);
       }
-      setSwipeOffset(0);
       if (wasDragging) event.currentTarget.releasePointerCapture?.(event.pointerId);
     };
 
   return (
     <div className="rx-chat">
-      <header className="rx-header">
-          <button className="rx-icon rx-back" onClick={onClose} aria-label="Back to community" type="button">
-            <ArrowLeft size={24} strokeWidth={2} />
-          </button>
-          <strong>Chats</strong>
-          <button className="rx-icon" onClick={() => searchInputRef.current?.focus()} aria-label="Focus chat search" type="button"><Search size={21} strokeWidth={2} /></button>
-          <button className="rx-icon" aria-label="Chat menu" type="button">⋮</button>
-        </header>
-
-      <label className="rx-search">
-        <Search size={17} strokeWidth={2} aria-hidden="true" />
-        <input ref={searchInputRef} value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search Chats" aria-label="Search Chats" />
-        {searchQuery && <button className="rx-search-clear" onClick={() => setSearchQuery("")} aria-label="Clear chat search" type="button"><X size={15} /></button>}
-      </label>
-
-      <div className="rx-top-tabs">
-        {["All", "Unread", "Groups"].map((tab) => (
-          <button className={topTab === tab ? "active" : ""} onClick={() => setTopTab(tab)} key={tab}>
-            {tab}{tab !== "Groups" && <b>{tab === "All" ? (convos || []).length : unreadTotal}</b>}
-          </button>
-        ))}
-      </div>
-
       <main
-          className={isSwiping ? "rx-pages dragging" : "rx-pages"}
-          style={{ transform: "translate3d(calc(-" + (page * 100) + "% + " + swipeOffset + "px), 0, 0)" }}
+          className={isSwiping ? "rx-pages dragging" : (page === 0 ? "rx-pages" : "rx-pages full-height")}
+          style={{ transform: "translate3d(" + (-gestureProgress * 100) + "%, 0, 0)" }}
           onPointerDown={handleSwipeStart}
           onPointerMove={handleSwipeMove}
           onPointerUp={handleSwipeEnd}
@@ -1509,17 +1532,41 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
         >
         {[0, 1, 2, 3].map((p) => (
           <section className="rx-page" key={p}>
+            {p === 0 && <>
+              <header className="rx-header">
+                <button className="rx-icon rx-back" onClick={onClose} aria-label="Back to community" type="button">
+                  <ArrowLeft size={24} strokeWidth={2} />
+                </button>
+                <strong>Chats</strong>
+                <button className="rx-icon" onClick={() => searchInputRef.current?.focus()} aria-label="Focus chat search" type="button"><Search size={21} strokeWidth={2} /></button>
+                <button className="rx-icon" aria-label="Chat menu" type="button">⋮</button>
+              </header>
+              <label className="rx-search">
+                <Search size={17} strokeWidth={2} aria-hidden="true" />
+                <input ref={searchInputRef} value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} onPointerDown={(event) => event.stopPropagation()} placeholder="Search Chats" aria-label="Search Chats" />
+                {searchQuery && <button className="rx-search-clear" onClick={() => setSearchQuery("")} onPointerDown={(event) => event.stopPropagation()} aria-label="Clear chat search" type="button"><X size={15} /></button>}
+              </label>
+              <div className="rx-top-tabs">
+                {["All", "Unread", "Groups"].map((tab) => (
+                  <button className={topTab === tab ? "active" : ""} onClick={() => setTopTab(tab)} key={tab}>
+                    {tab}{tab !== "Groups" && <b>{tab === "All" ? (convos || []).length : unreadTotal}</b>}
+                  </button>
+                ))}
+              </div>
+            </>
             {p === 0 && convos === null && <div className="rx-empty"><strong>Loading…</strong><span>Loading your chats.</span></div>}
             {p === 0 && convos !== null && filteredConvos.map(({ profile, lastMsg, unread }) => {
               const name = (profile && (profile.display_name || profile.username)) || "User";
               const avatar = name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
               const lastContent = isDeleted(lastMsg && lastMsg.content) ? "This message was deleted" : ((lastMsg && lastMsg.content) || "");
+              const rowKey = (profile && profile.id) || (lastMsg && lastMsg.id) || name;
               return (
-                <button className="rx-chat-row" key={(profile && profile.id) || (lastMsg && lastMsg.id)} onClick={() => {
+                <button className="rx-chat-row" key={rowKey} onPointerDown={(event) => startChatRipple(event, rowKey)} onPointerMove={(event) => moveChatRipple(event, rowKey)} onPointerUp={endChatRipple} onPointerCancel={endChatRipple} onClick={() => {
                   setConvos((prev) => (prev || []).map((row) => row.profile && row.profile.id === (profile && profile.id) ? { ...row, unread: 0 } : row));
                   refreshPins();
                   onOpenDM(profile);
                 }}>
+                  {chatRipple?.key === rowKey && <span className={chatRipple.fading ? "rx-chat-ripple fading" : "rx-chat-ripple"} style={{ left: chatRipple.x, top: chatRipple.y }} aria-hidden="true" />}
                   <span className="rx-avatar">{avatar}</span>
                   <span className="rx-chat-copy">
                     <span><strong>{name}</strong><time>{lastMsg ? fmt(lastMsg.created_at) : ""}</time></span>
@@ -1537,18 +1584,18 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
         ))}
       </main>
 
-      <nav className={isSwiping ? "rx-bottom dragging" : "rx-bottom"} style={{ "--page-progress": pageProgress }} aria-label="Primary navigation">
+      <nav className={isSwiping ? "rx-bottom dragging" : "rx-bottom"} style={{ "--page-progress": gestureProgress }} aria-label="Primary navigation">
         {[
           { name: "Chats", outline: "nav_0_outline.svg", filled: "telegram-icons/round_chats_filled.svg" },
           { name: "Channels", outline: "nav_1_outline.svg", filled: "telegram-icons/channel_filled.svg" },
           { name: "Settings", outline: "nav_2_outline.svg", filled: "telegram-icons/settings_filled.svg" },
           { name: "Space Talks", outline: "nav_3_outline.svg", filled: "telegram-icons/round_chats_filled.svg" },
         ].map((item, i) => {
-          const active = page === i;
+          const active = Math.round(gestureProgress) === i;
           return (
             <button
               className={active ? "active" : ""}
-              onClick={() => { setPage(i); if (i === 2) setShowGeneralSettings(true); }}
+              onClick={() => goToPage(i)}
               key={item.name}
               aria-current={active ? "page" : undefined}
             >
