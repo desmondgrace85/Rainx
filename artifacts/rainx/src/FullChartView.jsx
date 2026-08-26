@@ -4,11 +4,12 @@
  * Blue bullish · Black bearish · White background · Gold Raina AI overlay markings
  */
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { createChart, CrosshairMode, LineStyle } from "lightweight-charts";
 import { X, ChevronLeft, Activity, TrendingUp, TrendingDown, Minus, Maximize2, Minimize2 } from "lucide-react";
 
-const GOLD        = "#F4D35E";
-const GOLD_BRIGHT = "#F4D35E";
+const GOLD        = "#FFD24D";
+const GOLD_BRIGHT = "#FFD24D";
 const BULL        = "#1D6FE8";
 const BEAR        = "#131722";
 const WICK_BEAR   = "#374151";
@@ -127,7 +128,6 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
     confidence: rawSignal.confidence,
     reason: rawSignal.reason,
   } : null;
-  const analysisAvailable = !!session || !!sessionSetup;
 
   // Chart refs
   const containerRef = useRef(null);
@@ -554,7 +554,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
           const t1 = bars[Math.max(0, bars.length - 6)].time;
           addLineSeries([{ time: t0, value: o.price1 }, { time: t1, value: o.price2 }], GOLD, 1.5, LineStyle.Dashed);
           if (o.price3 != null) {
-            addLineSeries([{ time: t0, value: o.price3 }, { time: t1, value: o.price4 }], "rgba(244,211,94,0.5)", 1, LineStyle.Dashed);
+            addLineSeries([{ time: t0, value: o.price3 }, { time: t1, value: o.price4 }], "rgba(255,210,77,0.58)", 1, LineStyle.Dashed);
           }
           break;
         }
@@ -662,9 +662,9 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
     { label: "AI Bias",          value: sessionSetup?.bias ? (sessionSetup.bias === "BUY" ? "Looking for Buy Opportunity" : "Looking for Sell Opportunity") : "Analyzing…", color: BULL },
   ];
 
-  return (
+  return createPortal(
     <div style={{
-      position: "fixed", inset: 0, zIndex: 1500, display: "flex", flexDirection: "column",
+      position: "fixed", inset: 0, zIndex: 500, display: "flex", flexDirection: "column",
       background: TK.bg, fontFamily: FONT,
       // Prevent body scroll
       overflow: "hidden",
@@ -703,7 +703,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
 
         {/* Live price pill */}
         {!ohlc && price != null && (
-          <div style={{ background: `linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)`, borderRadius: 8, padding: "4px 10px", fontFamily: FONT, fontWeight: 800, fontSize: 13, color: "#0F0E0B" }}>
+          <div style={{ background: GOLD, borderRadius: 8, padding: "4px 10px", fontFamily: FONT, fontWeight: 800, fontSize: 13, color: "#fff" }}>
             {fmtPrice(price)}
           </div>
         )}
@@ -721,9 +721,9 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
             onClick={() => setActiveTf(tf.key)}
             style={{
               flexShrink: 0, padding: "6px 14px", borderRadius: 8,
-              border: `1px solid ${activeTf === tf.key ? "transparent" : TK.border}`,
-              background: activeTf === tf.key ? `linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)` : "transparent",
-              color: activeTf === tf.key ? "#0F0E0B" : TK.muted,
+              border: `1px solid ${activeTf === tf.key ? GOLD : TK.border}`,
+              background: activeTf === tf.key ? GOLD : "transparent",
+              color: activeTf === tf.key ? "#fff" : TK.muted,
               fontFamily: FONT, fontWeight: 700, fontSize: 12,
               cursor: "pointer",
             }}
@@ -824,13 +824,13 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
           </div>
           <div style={{
             flex: 1 - chartHeightRatio, background: TK.card, borderTop: `1px solid ${TK.border}`,
-            padding: "12px 14px 112px", overflowY: "auto", minHeight: 0, WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain", touchAction: "pan-y"
+            padding: "12px 14px 16px", overflowY: "auto", minHeight: 0
           }}>
           {/* Panel header */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13, color: TK.paper }}>Raina AI Analysis</span>
-              {analysisAvailable && session?.state !== "completed" && (
+              {session && session.state !== "completed" && (
                 <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10.5, fontWeight: 700, color: BULL, fontFamily: FONT }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: BULL, display: "inline-block", animation: "pulse 1.5s infinite" }} />
                   Analyzing
@@ -838,11 +838,11 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
               )}
             </div>
             <span style={{ fontSize: 10, color: TK.muted, fontFamily: FONT }}>
-              {analysisAvailable ? `Updated ${new Date().toLocaleTimeString("en-GH", { hour: "2-digit", minute: "2-digit" })}` : "No active session"}
+              {session ? `Updated ${new Date().toLocaleTimeString("en-GH", { hour: "2-digit", minute: "2-digit" })}` : "No active session"}
             </span>
           </div>
 
-          {!analysisAvailable ? (
+          {!session ? (
             <div style={{ fontSize: 12, color: TK.muted, textAlign: "center", padding: "12px 0" }}>
               Start an analysis session on the home screen to see Raina AI draw on this chart.
             </div>
@@ -890,6 +890,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
         </div>
       </>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
