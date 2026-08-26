@@ -997,10 +997,25 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
     }
   });
 
+  const flattenReplies = (parentId) => {
+    const flattened = [];
+    const seen = new Set();
+    const visit = (id) => {
+      (repliesByParent[id] || []).forEach((reply) => {
+        if (seen.has(reply.id)) return;
+        seen.add(reply.id);
+        flattened.push(reply);
+        visit(reply.id);
+      });
+    };
+    visit(parentId);
+    return flattened;
+  };
+
   const renderCommentBlock = (c, isReply = false, isFirstTopLevel = false) => {
     const p = profilesMap[c.user_id];
     const ld = likeData[c.id] || { count: 0, likedByMe: false };
-    const childReplies = repliesByParent[c.id] || [];
+    const childReplies = isReply ? [] : flattenReplies(c.id);
     return (
       <div key={c.id} style={{ display: "flex", gap: 9, marginBottom: isReply ? 6 : 10, padding: isReply ? "9px 10px 9px 12px" : "11px 12px", background: isReply ? `${T.ink}55` : T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, boxSizing: "border-box", marginLeft: isReply ? 10 : 0, borderLeft: isReply ? `2px solid ${T.gold}66` : `1px solid ${T.cardBorder}` }}>
         <button onClick={() => onOpenProfile(c.user_id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
@@ -1023,9 +1038,9 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
               <MessageCircle size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>Reply</span>
             </button>
           </div>
-          {/* Nested replies */}
+          {/* Keep every reply in one bounded vertical column instead of nesting cards horizontally. */}
           {childReplies.length > 0 && (
-            <div style={{ marginTop: 8 }}>
+            <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
               {childReplies.map((r) => renderCommentBlock(r, true, false))}
             </div>
           )}
