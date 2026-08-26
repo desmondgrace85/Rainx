@@ -7243,9 +7243,9 @@ function MoreTab({ autoScan, setAutoScan, analysis, inst, last, account, onLogou
           </div>
         </div>
       )}
+      {(morePage === "referrals" || morePage === "referral-activity" || morePage === "referral-performance") && <ReferralRewardsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} account={account} onBack={backReferralPage} onActivity={() => pushReferralPage("referral-activity")} />}
+      {(morePage === "referral-activity" || morePage === "referral-performance") && <MyReferralsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} account={account} onBack={backReferralPage} onActivity={(target) => pushReferralPage(target === "performance" ? "referral-performance" : "referral-activity")} />}
       {morePage === "referral-performance" && <ReferralPerformanceScreen onBack={backReferralPage} />}
-      {morePage === "referral-activity" && <MyReferralsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} account={account} onBack={backReferralPage} onActivity={(target) => pushReferralPage(target === "performance" ? "referral-performance" : "referral-activity")} />}
-      {morePage === "referrals" && <ReferralRewardsScreen count={referralCount} earnings={referralEarnings} referralCode={referralCode} account={account} onBack={backReferralPage} onActivity={() => pushReferralPage("referral-activity")} />}
 
       {showLegal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 500, display: "flex", alignItems: "flex-end" }}>
