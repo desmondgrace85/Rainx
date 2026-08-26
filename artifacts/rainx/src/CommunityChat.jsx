@@ -12,7 +12,7 @@ import {
   Edit2, Trash2, Share, Copy, FileText, ChevronDown,
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
-import chatWallpaper from "./assets/chat-wallpaper.png";
+import chatWallpaper from "./assets/chat-wallpaper.jpg";
 const BASE_URL = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
 const API_BASE = "https://rainx-webapp.vercel.app";
 const PRESENCE_EVENT = "RAINX_PRESENCE";
@@ -1415,145 +1415,98 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
   }, [aid]);
 
   const [page, setPage] = useState(0);
-    const [menuOpen, setMenuOpen] = useState(false);
-    const dragStart = useRef(null);
-    const dragOffsetRef = useRef(0);
-    const [dragOffset, setDragOffset] = useState(0);
-    const pageCount = 3;
-    const unreadTotal = (convos || []).reduce((sum, row) => sum + (row.unread || 0), 0);
-    const groupConvos = (convos || []).filter((row) => row.is_group || row.profile?.is_group || row.profile?.type === "group");
-    const tabLabels = [
-      { name: "All", count: (convos || []).length },
-      { name: "Unread", count: (convos || []).filter((row) => row.unread > 0).length },
-      { name: "Groups", count: groupConvos.length },
-    ];
-    const visibleConvos = page === 0 ? (convos || []) : page === 1 ? (convos || []).filter((row) => row.unread > 0) : groupConvos;
+  const [topTab, setTopTab] = useState("All");
 
-    const onPointerDown = (event) => {
-      if (event.pointerType === "mouse" && event.button !== 0) return;
-      dragStart.current = { x: event.clientX, y: event.clientY };
-      dragOffsetRef.current = 0;
-      event.currentTarget.setPointerCapture?.(event.pointerId);
-    };
-    const onPointerMove = (event) => {
-      if (!dragStart.current) return;
-      const dx = event.clientX - dragStart.current.x;
-      const dy = event.clientY - dragStart.current.y;
-      if (Math.abs(dx) < 8 || Math.abs(dy) > Math.abs(dx)) return;
-      event.preventDefault();
-      const atFirst = page === 0 && dx > 0;
-      const atLast = page === pageCount - 1 && dx < 0;
-      const nextOffset = atFirst || atLast ? dx / 3 : dx;
-      dragOffsetRef.current = nextOffset;
-      setDragOffset(nextOffset);
-    };
-    const onPointerUp = (event) => {
-      const distance = dragOffsetRef.current;
-      dragStart.current = null;
-      dragOffsetRef.current = 0;
-      if (Math.abs(distance) > 60) {
-        setPage((current) => distance < 0 ? Math.min(current + 1, pageCount - 1) : Math.max(current - 1, 0));
-      }
-      setDragOffset(0);
-      event.currentTarget.releasePointerCapture?.(event.pointerId);
-    };
-    const markAllRead = () => {
-      setConvos((current) => (current || []).map((row) => ({ ...row, unread: 0 })));
-      onUnreadCleared?.();
-      setMenuOpen(false);
-    };
+  const filteredConvos = (convos || []).filter((row) => topTab === "Unread" ? row.unread > 0 : topTab === "Groups" ? false : true);
+  const unreadTotal = (convos || []).reduce((sum, row) => sum + (row.unread || 0), 0);
 
-    return (
-      <div className="rx-chat">
-        <div className="rx-top-tabs" role="tablist" aria-label="Chat filters">
-          {tabLabels.map((tab, index) => (
-            <button
-              className={page === index ? "active" : ""}
-              onClick={() => { setPage(index); setDragOffset(0); }}
-              key={tab.name}
-              role="tab"
-              aria-selected={page === index}
-            >
-              {tab.name}<b>{tab.count}</b>
-            </button>
-          ))}
-          <button
-            className={menuOpen ? "rx-chat-menu active" : "rx-chat-menu"}
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-label={menuOpen ? "Close chat menu" : "Open chat menu"}
-            aria-pressed={menuOpen}
-            type="button"
-          >
-            <MoreVertical size={21} strokeWidth={menuOpen ? 3 : 1.8} fill={menuOpen ? "currentColor" : "none"} />
+  return (
+    <div className="rx-chat">
+      <header className="rx-header">
+        <button className="rx-icon">☰</button>
+        <div className="rx-logo">R</div>
+        <strong>RainX</strong>
+        <button className="rx-icon">⌕</button>
+        <button className="rx-icon">⋮</button>
+      </header>
+
+      <div className="rx-search">⌕ <span>Search Chats</span></div>
+
+      <div className="rx-top-tabs">
+        {["All", "Unread", "Groups"].map((tab) => (
+          <button className={topTab === tab ? "active" : ""} onClick={() => setTopTab(tab)} key={tab}>
+            {tab}{tab !== "Groups" && <b>{tab === "All" ? (convos || []).length : unreadTotal}</b>}
           </button>
-        </div>
-
-        {menuOpen && (
-          <div className="rx-chat-menu-popover" role="menu">
-            <button type="button" role="menuitem" onClick={markAllRead}>Mark all as read</button>
-            <button type="button" role="menuitem" onClick={() => { setShowGeneralSettings(true); setMenuOpen(false); }}>Chat settings</button>
-          </div>
-        )}
-
-        <main
-          className={dragStart.current ? "rx-pages dragging" : "rx-pages"}
-          style={{ transform: "translate3d(calc(-" + (page * 100) + "% + " + dragOffset + "px), 0, 0)" }}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          aria-label="Swipe between chat filters"
-        >
-          {[0, 1, 2].map((p) => (
-            <section className="rx-page" key={p} role="tabpanel">
-              {p < 2 && convos === null && <div className="rx-empty"><strong>Loading…</strong><span>Loading your chats.</span></div>}
-              {p < 2 && convos !== null && visibleConvos.map(({ profile, lastMsg, unread }) => {
-                const name = (profile && (profile.display_name || profile.username)) || "User";
-                const avatar = name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
-                const lastContent = isDeleted(lastMsg && lastMsg.content) ? "This message was deleted" : ((lastMsg && lastMsg.content) || "");
-                return (
-                  <button className="rx-chat-row" key={(profile && profile.id) || (lastMsg && lastMsg.id)} onClick={() => {
-                    setConvos((prev) => (prev || []).map((row) => row.profile && row.profile.id === (profile && profile.id) ? { ...row, unread: 0 } : row));
-                    refreshPins();
-                    onOpenDM(profile);
-                  }}>
-                    <span className="rx-avatar">{avatar}</span>
-                    <span className="rx-chat-copy">
-                      <span><strong>{name}</strong><time>{lastMsg ? fmt(lastMsg.created_at) : ""}</time></span>
-                      <span className="rx-preview">{lastMsg && lastMsg.sender_id === aid ? "You: " : ""}{lastContent}</span>
-                    </span>
-                    {unread > 0 && <b className="rx-unread">{unread}</b>}
-                  </button>
-                );
-              })}
-              {p === 2 && groupConvos.map(({ profile, lastMsg, unread }) => {
-                const name = (profile && (profile.display_name || profile.username)) || "Group";
-                const avatar = name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
-                const lastContent = isDeleted(lastMsg && lastMsg.content) ? "This message was deleted" : ((lastMsg && lastMsg.content) || "");
-                return (
-                  <button className="rx-chat-row" key={(profile && profile.id) || (lastMsg && lastMsg.id)} onClick={() => onOpenDM(profile)}>
-                    <span className="rx-avatar">{avatar}</span>
-                    <span className="rx-chat-copy"><span><strong>{name}</strong><time>{lastMsg ? fmt(lastMsg.created_at) : ""}</time></span><span className="rx-preview">{lastContent}</span></span>
-                    {unread > 0 && <b className="rx-unread">{unread}</b>}
-                  </button>
-                );
-              })}
-              {((p < 2 && convos !== null && visibleConvos.length === 0) || (p === 2 && groupConvos.length === 0)) && (
-                <div className="rx-empty"><strong>{p === 2 ? "Groups" : p === 1 ? "No unread chats" : "No chats yet"}</strong><span>{p === 2 ? "Your groups appear here." : p === 1 ? "You are all caught up." : "Your chats appear here."}</span></div>
-              )}
-            </section>
-          ))}
-        </main>
-
-        {showGeneralSettings && (
-          <GeneralChatSettings
-            account={account} isPro={isPro || false}
-            onClose={() => setShowGeneralSettings(false)}
-            T={T}
-          />
-        )}
+        ))}
       </div>
-    );
+
+      <main className="rx-pages" style={{ transform: "translateX(-" + (page * 100) + "%)" }}>
+        {[0, 1, 2, 3].map((p) => (
+          <section className="rx-page" key={p}>
+            {p === 0 && convos === null && <div className="rx-empty"><strong>Loading…</strong><span>Loading your chats.</span></div>}
+            {p === 0 && convos !== null && filteredConvos.map(({ profile, lastMsg, unread }) => {
+              const name = (profile && (profile.display_name || profile.username)) || "User";
+              const avatar = name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+              const lastContent = isDeleted(lastMsg && lastMsg.content) ? "This message was deleted" : ((lastMsg && lastMsg.content) || "");
+              return (
+                <button className="rx-chat-row" key={(profile && profile.id) || (lastMsg && lastMsg.id)} onClick={() => {
+                  setConvos((prev) => (prev || []).map((row) => row.profile && row.profile.id === (profile && profile.id) ? { ...row, unread: 0 } : row));
+                  refreshPins();
+                  onOpenDM(profile);
+                }}>
+                  <span className="rx-avatar">{avatar}</span>
+                  <span className="rx-chat-copy">
+                    <span><strong>{name}</strong><time>{lastMsg ? fmt(lastMsg.created_at) : ""}</time></span>
+                    <span className="rx-preview">{lastMsg && lastMsg.sender_id === aid ? "You: " : ""}{lastContent}</span>
+                  </span>
+                  {unread > 0 && <b className="rx-unread">{unread}</b>}
+                </button>
+              );
+            })}
+            {p === 0 && convos !== null && filteredConvos.length === 0 && <div className="rx-empty"><strong>{topTab === "Groups" ? "Groups" : "No chats yet"}</strong><span>{topTab === "Groups" ? "Your groups appear here." : "Your chats appear here."}</span></div>}
+            {p === 1 && <div className="rx-empty"><strong>Channels</strong><span>Your channels appear here.</span></div>}
+            {p === 2 && <div className="rx-empty"><strong>Settings</strong><span>Chat settings appear here.</span></div>}
+            {p === 3 && <div className="rx-empty"><strong>Space Talks</strong><span>Your Space Talks communities appear here.</span></div>}
+          </section>
+        ))}
+      </main>
+
+      <nav className="rx-bottom" aria-label="Primary navigation">
+        {[
+          { name: "Chats", outline: "nav_0_outline.svg", filled: "telegram-icons/round_chats_filled.svg" },
+          { name: "Channels", outline: "nav_1_outline.svg", filled: "telegram-icons/channel_filled.svg" },
+          { name: "Settings", outline: "nav_2_outline.svg", filled: "telegram-icons/settings_filled.svg" },
+          { name: "Space Talks", outline: "nav_3_outline.svg", filled: "telegram-icons/round_chats_filled.svg" },
+        ].map((item, i) => {
+          const active = page === i;
+          return (
+            <button
+              className={active ? "active" : ""}
+              onClick={() => { setPage(i); if (i === 2) setShowGeneralSettings(true); }}
+              key={item.name}
+              aria-current={active ? "page" : undefined}
+            >
+              <span className="rx-nav-icon" aria-hidden="true">
+                <img className="rx-nav-icon-outline" src={item.outline} alt="" />
+                <img className="rx-nav-icon-filled" src={item.filled} alt="" />
+              </span>
+              <span>{item.name}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      <button className="rx-fab">+</button>
+
+      {showGeneralSettings && (
+        <GeneralChatSettings
+          account={account} isPro={isPro || false}
+          onClose={() => setShowGeneralSettings(false)}
+          T={T}
+        />
+      )}
+    </div>
+  );
 }
 
 // ── Main export ────────────────────────────────────────────────────────────
