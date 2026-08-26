@@ -1425,6 +1425,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
     const swipeLast = useRef(null);
     const swipeVelocityRef = useRef(0);
     const swipeDragging = useRef(false);
+    const swipeViewportWidth = useRef(0);
     const pageCount = 4;
     const [chatRipple, setChatRipple] = useState(null);
     const rippleTimerRef = useRef(null);
@@ -1466,6 +1467,8 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
     const handleSwipeStart = (event) => {
       if (event.pointerType === "mouse" && event.button !== 0) return;
       if (event.target.closest?.("input, textarea")) return;
+      const viewportWidth = event.currentTarget.parentElement?.getBoundingClientRect().width || (typeof window !== "undefined" ? window.innerWidth : 1);
+      swipeViewportWidth.current = viewportWidth;
       const now = Date.now();
       swipeStart.current = { x: event.clientX, y: event.clientY, time: now };
       swipeLast.current = { x: event.clientX, time: now };
@@ -1486,9 +1489,8 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
         event.currentTarget.setPointerCapture?.(event.pointerId);
       }
       event.preventDefault();
-      const width = event.currentTarget.getBoundingClientRect().width || (typeof window !== "undefined" ? window.innerWidth : 1);
-      // The track is pageCount screens wide, so progress is measured in
-      // viewport widths rather than translating the full track by 100%.
+      // Measure the visible viewport, not the pageCount-wide track.
+      const width = swipeViewportWidth.current || (typeof window !== "undefined" ? window.innerWidth : 1);
       const nextProgress = Math.max(0, Math.min(pageCount - 1, page - dx / Math.max(width, 1)));
       gestureProgressRef.current = nextProgress;
       setGestureProgress(nextProgress);
@@ -1501,7 +1503,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
       const start = swipeStart.current;
       const last = swipeLast.current || { x: event.clientX ?? start.x, time: Date.now() };
       const distance = last.x - start.x;
-      const width = event.currentTarget.getBoundingClientRect().width || (typeof window !== "undefined" ? window.innerWidth : 1);
+      const width = swipeViewportWidth.current || (typeof window !== "undefined" ? window.innerWidth : 1);
       const velocity = swipeVelocityRef.current;
       const wasDragging = swipeDragging.current;
       const direction = distance < 0 ? 1 : -1;
@@ -1512,6 +1514,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
       swipeLast.current = null;
       swipeVelocityRef.current = 0;
       swipeDragging.current = false;
+      swipeViewportWidth.current = 0;
       setIsSwiping(false);
       gestureProgressRef.current = target;
       setGestureProgress(target);
@@ -1533,6 +1536,8 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
             transform: "translate3d(" + (-(gestureProgress * navSlotPercent)) + "%, 0, 0)",
             transition: isSwiping ? "none" : "transform 320ms cubic-bezier(0.22, 1, 0.36, 1)",
             touchAction: "pan-y",
+            overscrollBehaviorX: "contain",
+            userSelect: isSwiping ? "none" : undefined,
             willChange: "transform",
           }}
           onPointerDown={handleSwipeStart}
@@ -1541,7 +1546,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
           onPointerCancel={handleSwipeEnd}
         >
         {[0, 1, 2, 3].map((p) => (
-          <section className="rx-page" key={p} style={{ width: navSlotPercent + "%", flex: "0 0 " + navSlotPercent + "%", minWidth: 0 }}>
+          <section className="rx-page" key={p} style={{ width: navSlotPercent + "%", flex: "0 0 " + navSlotPercent + "%", minWidth: 0, minHeight: "calc(100dvh - 88px)", height: "calc(100dvh - 88px)", background: "#FFFFFF", boxSizing: "border-box" }}>
             {p === 0 && <>
               <header className="rx-header">
                 <button className="rx-icon rx-back" onClick={onClose} aria-label="Back to community" type="button">
@@ -1571,21 +1576,14 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
               const lastContent = isDeleted(lastMsg && lastMsg.content) ? "This message was deleted" : ((lastMsg && lastMsg.content) || "");
               const rowKey = (profile && profile.id) || (lastMsg && lastMsg.id) || name;
               return (
-                <button className="rx-chat-row" key={rowKey} style={{ position: "relative", overflow: "hidden" }} onPointerDown={(event) => startChatRipple(event, rowKey)} onPointerUp={endChatRipple} onPointerCancel={endChatRipple} onClick={() => {
+                <button className="rx-chat-row" key={rowKey} style={{
+                   background: chatRipple?.key === rowKey && !chatRipple.fading ? "rgba(244, 211, 94, 0.34)" : undefined,
+                   transition: "background-color 180ms ease",
+                 }} onPointerDown={(event) => startChatRipple(event, rowKey)} onPointerUp={endChatRipple} onPointerCancel={endChatRipple} onClick={() => {
                   setConvos((prev) => (prev || []).map((row) => row.profile && row.profile.id === (profile && profile.id) ? { ...row, unread: 0 } : row));
                   refreshPins();
                   onOpenDM(profile);
                 }}>
-                  {chatRipple?.key === rowKey && <span
-                     className={chatRipple.fading ? "rx-chat-ripple fading" : "rx-chat-ripple"}
-                     style={{
-                       position: "absolute", inset: 0, width: "auto", height: "auto", left: 0, top: 0, right: 0, bottom: 0,
-                       borderRadius: "inherit", background: "rgba(244, 211, 94, 0.34)",
-                       opacity: chatRipple.fading ? 0 : 1, transform: "none", pointerEvents: "none",
-                       transition: "opacity 180ms ease", zIndex: 0,
-                     }}
-                     aria-hidden="true"
-                   />}
                   <span className="rx-avatar">{avatar}</span>
                   <span className="rx-chat-copy">
                     <span><strong>{name}</strong><time>{lastMsg ? fmt(lastMsg.created_at) : ""}</time></span>
@@ -1632,7 +1630,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
               style={{ position: "relative", zIndex: 1 }}
               onClick={() => goToPage(i)}
               key={item.name}
-              aria-current={active ? "page" : undefined}
+              aria-current={active && !isSwiping ? "page" : undefined}
             >
               <span className="rx-nav-icon" aria-hidden="true">
                 <img className="rx-nav-icon-outline" src={item.outline} alt="" />
