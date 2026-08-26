@@ -206,7 +206,7 @@ export default function MoreLandingOverride({ account }) {
         >
           <button
             type="button"
-            onClick={() => go("#more/analytics")}
+            onClick={() => go("#more")}
             style={{
               width: "100%",
               padding: 0,
