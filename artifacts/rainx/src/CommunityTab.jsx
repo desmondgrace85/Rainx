@@ -1015,9 +1015,9 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
   const renderCommentBlock = (c, isReply = false, isFirstTopLevel = false) => {
     const p = profilesMap[c.user_id];
     const ld = likeData[c.id] || { count: 0, likedByMe: false };
-    const childReplies = isReply ? [] : flattenReplies(c.id);
+    const childReplies = isReply ? [] : flattenReplies(c.id).sort((a, b) => { const aMine = a.user_id === account.id; const bMine = b.user_id === account.id; return aMine === bMine ? 0 : aMine ? -1 : 1; });
     return (
-      <div key={c.id} style={{ display: "flex", gap: 9, marginBottom: isReply ? 6 : 10, padding: isReply ? "9px 10px 9px 12px" : "11px 12px", background: isReply ? `${T.ink}55` : T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, boxSizing: "border-box", marginLeft: isReply ? 10 : 0, borderLeft: isReply ? `2px solid ${T.gold}66` : `1px solid ${T.cardBorder}` }}>
+      <div key={c.id} style={{ display: "flex", gap: 12, width: "100%", marginBottom: 0, padding: isReply ? "12px 0" : "15px 0", background: "#FFFFFF", border: 0, borderRadius: 0, boxSizing: "border-box", marginLeft: 0, borderBottom: !isReply ? "1px solid #EFF3F4" : 0 }}>
         <button onClick={() => onOpenProfile(c.user_id)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
           <Avatar name={p?.display_name} size={isReply ? 22 : 24} avatarUrl={p?.avatar_url} />
         </button>
@@ -1038,9 +1038,9 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
               <MessageCircle size={16} strokeWidth={2} /> <span style={{ fontSize: 11.5, fontWeight: 600 }}>Reply</span>
             </button>
           </div>
-          {/* Keep every reply in one bounded vertical column instead of nesting cards horizontally. */}
+          {/* Keep replies in one bounded vertical column with a single thread rail. */}
           {childReplies.length > 0 && (
-            <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
+            <div style={{ marginTop: 8, paddingLeft: 14, borderLeft: "2px dashed #CFD9DE", display: "grid", gap: 0 }}>
               {childReplies.map((r) => renderCommentBlock(r, true, false))}
             </div>
           )}
@@ -1054,21 +1054,24 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
   const replyTargetName = replyTargetProfile?.full_name || replyTargetProfile?.display_name || replyTargetProfile?.username || "comment";
 
   const sortedTopLevel = [...topLevel].sort((a, b) => {
+    const aMine = a.user_id === account.id;
+    const bMine = b.user_id === account.id;
+    if (aMine !== bMine) return aMine ? -1 : 1;
     if (commentSort === "recent") return new Date(b.created_at) - new Date(a.created_at);
     if (commentSort === "oldest") return new Date(a.created_at) - new Date(b.created_at);
-    const score = (c) => Number(likeData[c.id]?.count || 0) * 10 + (repliesByParent[c.id]?.length || 0) * 5;
-    return score(b) - score(a) || new Date(a.created_at) - new Date(b.created_at);
+    // Relevant order stays stable so likes never move a comment.
+    return 0;
   });
 
   return (
-    <div style={{ marginTop: 0, paddingTop: 0 }}>
-      <div style={{ position:"relative", display:"flex", alignItems:"center", padding:"10px 2px 9px", borderBottom:`1px solid ${T.cardBorder}` }}>
+    <div style={{ marginTop: 0, paddingTop: 0, background: "#FFFFFF" }}>
+      <div style={{ position:"relative", display:"flex", alignItems:"center", padding:"10px 2px 9px", borderBottom:`1px solid ${"#FFFFFF"Border}` }}>
         <button onClick={() => setShowCommentSort(v => !v)} style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", color:T.paper, fontFamily:FONT_HEAD, fontWeight:800, fontSize:12.5, cursor:"pointer", padding:0 }}>
           <span>{commentSort === "recent" ? "Most recent" : commentSort === "oldest" ? "Oldest" : "Most relevant"}</span>
           <ChevronDown size={15} strokeWidth={2.4} style={{ transform:showCommentSort ? "rotate(180deg)" : "none", transition:"transform .18s" }} />
         </button>
         {showCommentSort && (
-          <div style={{ position:"absolute", top:"calc(100% + 5px)", left:0, zIndex:30, minWidth:170, background:T.card, border:`1px solid ${T.cardBorder}`, borderRadius:14, boxShadow:"0 12px 30px rgba(0,0,0,.24)", overflow:"hidden" }}>
+          <div style={{ position:"absolute", top:"calc(100% + 5px)", left:0, zIndex:30, minWidth:170, background:"#FFFFFF", border:`1px solid ${"#FFFFFF"Border}`, borderRadius:14, boxShadow:"0 12px 30px rgba(0,0,0,.24)", overflow:"hidden" }}>
             {[['relevant','Most relevant'],['recent','Most recent'],['oldest','Oldest']].map(([value,label]) => (
               <button key={value} onClick={() => { setCommentSort(value); setShowCommentSort(false); }} style={{ width:"100%", textAlign:"left", padding:"12px 14px", background:commentSort===value ? `${T.gold}18` : "none", border:"none", color:commentSort===value ? T.gold : T.paper, fontSize:12.5, fontWeight:commentSort===value ? 800 : 600, cursor:"pointer" }}>{label}</button>
             ))}
@@ -1076,7 +1079,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
         )}
       </div>
       {sortedTopLevel.map((c, i) => renderCommentBlock(c, false, i === 0))}
-      <div style={{ position: "sticky", bottom: 0, background: T.card, padding: "10px 0 12px", marginTop: 8 }}>
+      <div style={{ position: "sticky", bottom: 0, background: "#FFFFFF", padding: "10px 0 12px", marginTop: 8 }}>
         {replyTo && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 2px 8px" }}>
             <span style={{ fontSize: 12.5, color: T.muted }}>
@@ -1095,7 +1098,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
               rows={1}
               maxLength={300}
               data-rainx-comment-input="true"
-              style={{ width: "100%", background: T.ink, border: `1px solid ${T.cardBorder}`, borderRadius: 16, color: T.paper, padding: "10px 13px", fontFamily: FONT_BODY, fontSize: 13, resize: "none", boxSizing: "border-box", minHeight: 40 }}
+              style={{ width: "100%", background: T.ink, border: `1px solid ${"#FFFFFF"Border}`, borderRadius: 16, color: T.paper, padding: "10px 13px", fontFamily: FONT_BODY, fontSize: 13, resize: "none", boxSizing: "border-box", minHeight: 40 }}
             />
           </div>
           <button onClick={handleSubmit} disabled={!text.trim()} style={{ background: T.goldGradient, color: T.ink, border: "none", borderRadius: 14, padding: "10px 15px", fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 11.5, cursor: "pointer", flexShrink: 0, opacity: text.trim() ? 1 : 0.5, minHeight: 40 }}>{replyTo ? "Reply" : "Post"}</button>
