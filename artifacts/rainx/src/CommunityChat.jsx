@@ -1475,6 +1475,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
         className="rx-pages native-swipe-track"
         style={{
           width: "100%",
+          height: "calc(100% - 72px)",
           display: "flex",
           overflowX: "auto",
           overflowY: "hidden",
@@ -1488,7 +1489,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
         onScroll={handlePagesScroll}
       >
         {[0, 1, 2, 3].map((p) => (
-          <section className="rx-page" key={p} style={{ width: "100%", flex: "0 0 100%", minWidth: 0, minHeight: "calc(100dvh - 88px)", height: "calc(100dvh - 88px)", background: "#FFFFFF", boxSizing: "border-box", overflowY: "auto", scrollSnapAlign: "start" }}>
+          <section className="rx-page" key={p} style={{ width: "100%", flex: "0 0 100%", minWidth: 0, minHeight: "100%", height: "100%", background: "#FFFFFF", boxSizing: "border-box", overflowY: "auto", scrollSnapAlign: "start" }}>
             {p === 0 && <>
               <header className="rx-header">
                 <button className="rx-icon rx-back" onClick={onClose} aria-label="Back to community" type="button">
@@ -1560,7 +1561,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
           />;
         })()}
         {[
-          { name: "Chats", outline: "nav_0_outline.svg", filled: "telegram-icons/round_chats_filled.svg" },
+          { name: "Chats", outline: "nav_0_outline.svg", filled: "nav_0_filled.svg" },
           { name: "Channels", outline: "nav_1_outline.svg", filled: "telegram-icons/channel_filled.svg" },
           { name: "Settings", outline: "nav_2_outline.svg", filled: "telegram-icons/settings_filled.svg" },
           { name: "Space Talks", outline: "nav_3_outline.svg", filled: "telegram-icons/round_chats_filled.svg" },
@@ -1576,7 +1577,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
             >
               <span className="rx-nav-icon" aria-hidden="true">
                 <img className="rx-nav-icon-outline" src={item.outline} alt="" />
-                <img className="rx-nav-icon-filled" src={item.filled} alt="" />
+                <img className={item.name === "Chats" ? "rx-nav-icon-filled rx-nav-icon-filled-chats" : "rx-nav-icon-filled"} style={item.name === "Chats" ? { filter: "none" } : undefined} src={item.filled} alt="" />
               </span>
               <span>{item.name}</span>
             </button>
