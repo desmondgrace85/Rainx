@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ArrowLeft, ChevronRight, Gift, UsersRound, CircleDollarSign, Share2, Check, ShieldCheck, CircleHelp, ArrowUpRight } from "lucide-react";
+import { ReferralRewardsScreen, MyReferralsScreen, ReferralPerformanceScreen } from "./RainxApp";
 import { supabase } from "./supabaseClient";
 
 const FONT = "'Montserrat', sans-serif";
@@ -77,6 +78,7 @@ function GiftsRewardsScreen({ onBack, account }) {
 export default function MoreLandingOverride({ account }) {
   const [analytics, setAnalytics] = useState({ views: 0, followers: 0, likes: 0 });
   const [giftScreen, setGiftScreen] = useState(false);
+  const [referralPage, setReferralPage] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -381,13 +383,13 @@ export default function MoreLandingOverride({ account }) {
           >
             {[
               ["Gifts", Gift, "#more/rewards", true],
-              ["Referrals", UsersRound, "#more/referrals"],
+              ["Referrals", UsersRound, "#more/referrals", false, "referrals"],
               ["Space Talk\nEarnings", CircleDollarSign, "#more/rewards"],
-            ].map(([label, Icon, route, gift]) => (
+            ].map(([label, Icon, route, gift, referral]) => (
               <button
                 key={label}
                 type="button"
-                onClick={() => gift ? setGiftScreen(true) : go(route)}
+                onClick={() => gift ? setGiftScreen(true) : referral ? setReferralPage(referral) : go(route)}
                 style={{
                   minWidth: 0,
                   border: 0,
@@ -452,6 +454,9 @@ export default function MoreLandingOverride({ account }) {
         </section>
       </div>
       {giftScreen && <GiftsRewardsScreen onBack={() => setGiftScreen(false)} account={account} />}
+      {referralPage === "referrals" && <ReferralRewardsScreen count={0} earnings={0} referralCode={null} onBack={() => setReferralPage(null)} onActivity={() => setReferralPage("activity")} />}
+      {referralPage === "activity" && <MyReferralsScreen count={0} earnings={0} referralCode={null} account={account} onBack={() => setReferralPage("referrals")} onActivity={() => setReferralPage("performance")} />}
+      {referralPage === "performance" && <ReferralPerformanceScreen onBack={() => setReferralPage("activity")} />}
     </div>
   );
 }
