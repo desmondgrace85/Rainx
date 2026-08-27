@@ -1555,7 +1555,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
             aria-hidden="true"
             style={{
               position: "absolute", left: highlightLeft + "%", width: highlightWidth + "%", top: 4, bottom: 4,
-              borderRadius: 999, background: T.gold, boxShadow: "0 3px 10px rgba(244, 211, 94, 0.28)",
+              borderRadius: 999, background: "#FFF4C9", boxShadow: "0 3px 10px rgba(244, 211, 94, 0.22)",
               pointerEvents: "none", zIndex: 0,
             }}
           />;
