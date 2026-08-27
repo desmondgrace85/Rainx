@@ -2753,7 +2753,9 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
   // New: feed tabs, chat, post analytics
   const [feedTab, setFeedTab] = useState("foryou");
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatClosing, setChatClosing] = useState(false);
   const [chatInitUser, setChatInitUser] = useState(null);
+  const chatCloseTimerRef = useRef(null);
   const [postActivity, setPostActivity] = useState(null); // { post, profile }
   const [openPostId, setOpenPostId] = useState(null); // set when a notification should open a specific post's detail
   const [followingIds, setFollowingIds] = useState(new Set());
@@ -2762,6 +2764,9 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
   const [unreadDmCount, setUnreadDmCount] = useState(0);
   const [fabVisible, setFabVisible] = useState(true);
   const fabScrollRef = useRef(0);
+  const openChat=useCallback((user=null)=>{clearTimeout(chatCloseTimerRef.current);setChatClosing(false);setChatInitUser(user);setChatOpen(true);},[]);
+  const closeChat=useCallback(()=>{clearTimeout(chatCloseTimerRef.current);setChatClosing(true);chatCloseTimerRef.current=setTimeout(()=>{setChatOpen(false);setChatInitUser(null);setChatClosing(false);},280);},[]);
+  useEffect(()=>()=>clearTimeout(chatCloseTimerRef.current),[]);
 
   // Load following IDs for the "Following" feed tab
   useEffect(() => {
@@ -3062,7 +3067,7 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
   const deletePost = async (id) => { await supabase.from("community_posts").delete().eq("id", id); loadPosts(); };
   const reportPost = async (id) => { await supabase.from("post_reports").insert({ post_id: id, reported_by: account.id }); alert("Reported. Thanks for flagging this."); };
 
-  if (viewingUserId) return <ProfileView userId={viewingUserId} account={account} onBack={() => setViewingUserId(null)} onOpenProfile={setViewingUserId} onDmUser={(profile) => { setViewingUserId(null); setChatInitUser(profile); setChatOpen(true); }} />;
+  if (viewingUserId) return <ProfileView userId={viewingUserId} account={account} onBack={() => setViewingUserId(null)} onOpenProfile={setViewingUserId} onDmUser={(profile) => { setViewingUserId(null); openChat(profile); }} />;
 
   // Filter posts for "Following" tab — must be declared BEFORE visiblePosts uses it
   const filteredByFeedTab = feedTab === "following"
@@ -3084,8 +3089,9 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
           themeTokens={T}
           initialUser={chatInitUser}
           isPro={isAccountPro}
-          onUnreadCleared={(count) => setUnreadDmCount((current) => Math.max(0, current - count))}
-          onClose={() => { setChatOpen(false); setChatInitUser(null); }}
+           isClosing={chatClosing}
+           onUnreadCleared={(count) => setUnreadDmCount((current) => Math.max(0, current - count))}
+          onClose={closeChat}
           onViewProfile={(userId) => { setChatOpen(false); setChatInitUser(null); setViewingUserId(userId); }}
         />
       )}
@@ -3111,7 +3117,7 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
           <button onClick={() => setFeedTab("foryou")} style={{ background: "none", border: "none", cursor: "pointer", padding: "8px 16px", borderBottom: `2px solid ${feedTab==="foryou"?T.gold:"transparent"}`, color: feedTab==="foryou"?T.paper:T.muted, fontWeight: feedTab==="foryou"?700:500, fontSize: 14, transition: "color 0.15s" }}>For you</button>
           <button onClick={() => setFeedTab("following")} style={{ background: "none", border: "none", cursor: "pointer", padding: "8px 16px", borderBottom: `2px solid ${feedTab==="following"?T.gold:"transparent"}`, color: feedTab==="following"?T.paper:T.muted, fontWeight: feedTab==="following"?700:500, fontSize: 14, transition: "color 0.15s" }}>Following</button>
         </div>
-        <button onClick={() => { setChatInitUser(null); setChatOpen(true); }} style={{ position: "relative", background: "none", border: "none", color: T.paper, cursor: "pointer", padding: 4 }}>
+        <button onClick={() => openChat(null)} style={{ position: "relative", background: "none", border: "none", color: T.paper, cursor: "pointer", padding: 4 }}>
           <MessageSquare size={22} />
           {unreadDmCount > 0 && (
             <span style={{ position: "absolute", top: -4, right: -4, background: T.gold, color: T.ink, borderRadius: "50%", minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, padding: "0 3px" }}>
@@ -3166,7 +3172,7 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
           repostData={repostData} onToggleRepost={toggleRepost}
           onOpenProfile={setViewingUserId} onOpenPost={setOpenPostId} onDelete={deletePost} onHidePost={(id) => setPosts(prev => prev.filter(x => x.id !== id))} onEdit={loadPosts} onReport={reportPost}
           onActivityOpen={(post) => setPostActivity({ post, profile: profilesMap[post.user_id] })}
-          onDmUser={(profile) => { setChatInitUser(profile); setChatOpen(true); }}
+          onDmUser={(profile) => openChat(profile)}
           forceOpen={openPostId === p.id}
           onOpened={() => setOpenPostId(null)}
         />
