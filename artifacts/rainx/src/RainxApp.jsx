@@ -1908,7 +1908,7 @@ function MainAppContent({ account, onLogout }) {
         return;
       }
       setSpaceCoinsScreen(null);
-      if (t) { prevTabRef.current = t; setTab(t); }
+      if (t) { const ORDER={home:0,wallet:1,community:2,more:3,history:3,scalping:3,subscribe:3}; tabDirRef.current=(ORDER[t]??0)>=(ORDER[prevTabRef.current]??0)?1:-1; prevTabRef.current=t; setTab(t); }
       setMorePage(mp ?? null);
       setProfileFromHeader(flag === "h");
     };
