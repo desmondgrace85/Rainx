@@ -4,7 +4,7 @@
  *       forward messages, PDF export, confirmation dialogs, edge-swipe back,
  *       premium-gated last-seen/online controls, pin conversations (max 3).
  */
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import "./RainXTelegramChat.css";
 import {
   ArrowLeft, MoreVertical, Send, X, ChevronRight,
@@ -575,7 +575,7 @@ function EditBar({ editText, setEditText, onSave, onCancel, T }) {
 }
 
 // ── DMScreen ───────────────────────────────────────────────────────────────
-function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleared, isPro }) {
+function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleared, isPro , isLeaving = false, isClosing = false }) {
   const [messages, setMessages]             = useState([]);
   const [text, setText]                     = useState("");
   const [loading, setLoading]               = useState(true);
@@ -1057,6 +1057,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
 
   return (
     <div
+      className={isLeaving || isClosing ? "rx-chat-screen-exit" : "rx-dm-screen-enter"}
       style={{ position: "fixed", inset: 0, zIndex: 150, display: "flex", flexDirection: "column", background: T.ink, fontFamily: "-apple-system,BlinkMacSystemFont,'Inter',sans-serif" }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
@@ -1276,7 +1277,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
 }
 
 // ── ChatList ───────────────────────────────────────────────────────────────
-function ChatList({ account, T, onClose, onOpenDM, isPro }) {
+function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) {
   const [convos, setConvos]               = useState(null);
   const [showGeneralSettings, setShowGeneralSettings] = useState(false);
   const [pinnedChats, setPinnedChatsState] = useState(() => getPinnedChats());
@@ -1424,6 +1425,11 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
   const pageCount = 4;
   const [chatRipple, setChatRipple] = useState(null);
   const rippleTimerRef = useRef(null);
+  const chatOpenTimerRef = useRef(null);
+  const topTabsRef = useRef(null);
+  const topTabRefs = useRef({});
+  const topTabIndicatorRef = useRef(null);
+  const [topTabIndicator, setTopTabIndicator] = useState(null);
   const navSlotPercent = 100 / pageCount;
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
@@ -1436,7 +1442,11 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
   });
   const unreadTotal = (convos || []).reduce((sum, row) => sum + (row.unread || 0), 0);
 
-  useEffect(() => () => clearTimeout(rippleTimerRef.current), []);
+  useEffect(() => () => { clearTimeout(rippleTimerRef.current); clearTimeout(chatOpenTimerRef.current); }, []);
+  const measureTopTab = useCallback((name) => { const container=topTabsRef.current, button=topTabRefs.current[name]; if (!container || !button) return null; const cr=container.getBoundingClientRect(), br=button.getBoundingClientRect(); return { left:br.left-cr.left+container.scrollLeft, width:br.width }; }, []);
+  useLayoutEffect(() => { const next=measureTopTab(topTab); if(next){topTabIndicatorRef.current=next;setTopTabIndicator(next);} }, [topTab, measureTopTab]);
+  useEffect(() => { const onResize=()=>{const next=measureTopTab(topTab);if(next){topTabIndicatorRef.current=next;setTopTabIndicator(next);}}; window.addEventListener("resize",onResize); return ()=>window.removeEventListener("resize",onResize); }, [topTab,measureTopTab]);
+  const selectTopTab = (nextTab) => { if(nextTab===topTab)return; const target=measureTopTab(nextTab), start=topTabIndicatorRef.current||target; if(target&&start){const left=Math.min(start.left,target.left), right=Math.max(start.left+start.width,target.left+target.width), stretched={left,width:right-left}; topTabIndicatorRef.current=stretched; setTopTabIndicator(stretched); window.requestAnimationFrame(()=>{const settled=measureTopTab(nextTab);if(settled){topTabIndicatorRef.current=settled;setTopTabIndicator(settled);}});} setTopTab(nextTab); };
 
   const handlePagesScroll = (event) => {
     const track = event.currentTarget;
@@ -1457,19 +1467,12 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
     if (track) track.scrollTo({ left: target * track.clientWidth, behavior: "smooth" });
   };
 
-  const startChatRipple = (event, rowKey) => {
-    if (event.pointerType === "mouse" && event.button !== 0) return;
-    clearTimeout(rippleTimerRef.current);
-    setChatRipple({ key: rowKey, fading: false });
-  };
-  const endChatRipple = () => {
-    setChatRipple((current) => current ? { ...current, fading: true } : current);
-    clearTimeout(rippleTimerRef.current);
-    rippleTimerRef.current = setTimeout(() => setChatRipple(null), 180);
-  };
+  const startChatRipple = (event, rowKey) => { if (event.pointerType === "mouse" && event.button !== 0) return; clearTimeout(rippleTimerRef.current); clearTimeout(chatOpenTimerRef.current); setChatRipple({key:rowKey,fading:false}); };
+  const cancelChatRipple = () => { setChatRipple(current => current ? {...current,fading:true} : current); clearTimeout(rippleTimerRef.current); rippleTimerRef.current=setTimeout(()=>setChatRipple(null),180); };
+  const openChatAfterPress = (profile,rowKey) => { clearTimeout(chatOpenTimerRef.current); setChatRipple({key:rowKey,fading:false}); chatOpenTimerRef.current=setTimeout(()=>{setChatRipple(null);onOpenDM(profile);},140); };
 
   return (
-    <div className="rx-chat">
+    <div className={isClosing ? "rx-chat rx-chat-screen-exit" : "rx-chat rx-chat-screen-enter"}>
       <main
         ref={pagesRef}
         className="rx-pages native-swipe-track"
@@ -1504,13 +1507,10 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
                 <input ref={searchInputRef} value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} onPointerDown={(event) => event.stopPropagation()} placeholder="Search Chats" aria-label="Search Chats" />
                 {searchQuery && <button className="rx-search-clear" onClick={() => setSearchQuery("")} onPointerDown={(event) => event.stopPropagation()} aria-label="Clear chat search" type="button"><X size={15} /></button>}
               </label>
-              <div className="rx-top-tabs">
-                {["All", "Unread", "Groups"].map((tab) => (
-                  <button className={topTab === tab ? "active" : ""} onClick={() => setTopTab(tab)} key={tab}>
-                    {tab}{tab !== "Groups" && <b>{tab === "All" ? (convos || []).length : unreadTotal}</b>}
-                  </button>
-                ))}
-              </div>
+              <div className="rx-top-tabs" ref={topTabsRef}>
+                 <span className="rx-top-tab-indicator" aria-hidden="true" style={topTabIndicator ? {left:topTabIndicator.left,width:topTabIndicator.width} : undefined} />
+                 {["All","Unread","Groups"].map((tab)=><button ref={node=>{topTabRefs.current[tab]=node;}} className={topTab===tab?"active":""} onClick={()=>selectTopTab(tab)} key={tab}>{tab}{tab!=="Groups"&&<b>{tab==="All"?(convos||[]).length:unreadTotal}</b>}</button>)}
+               </div>
             </>}
             {p === 0 && convos === null && <div className="rx-empty"><strong>Loading…</strong><span>Loading your chats.</span></div>}
             {p === 0 && convos !== null && filteredConvos.map(({ profile, lastMsg, unread }) => {
@@ -1522,10 +1522,9 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
                 <button className="rx-chat-row" key={rowKey} style={{
                    background: chatRipple?.key === rowKey && !chatRipple.fading ? "rgba(244, 211, 94, 0.34)" : undefined,
                    transition: "background-color 180ms ease",
-                 }} onPointerDown={(event) => startChatRipple(event, rowKey)} onPointerUp={endChatRipple} onPointerCancel={endChatRipple} onClick={() => {
+                 }} onPointerDown={(event) => startChatRipple(event, rowKey)} onPointerCancel={cancelChatRipple} onClick={() => {
                   setConvos((prev) => (prev || []).map((row) => row.profile && row.profile.id === (profile && profile.id) ? { ...row, unread: 0 } : row));
-                  refreshPins();
-                  onOpenDM(profile);
+                  refreshPins(); openChatAfterPress(profile,rowKey);
                 }}>
                   <span className="rx-avatar">{avatar}</span>
                   <span className="rx-chat-copy">
@@ -1601,21 +1600,13 @@ function ChatList({ account, T, onClose, onOpenDM, isPro }) {
 }
 
 // ── Main export ────────────────────────────────────────────────────────────
-export default function CommunityChat({ account, themeTokens, onClose, onViewProfile, onUnreadCleared, initialUser, isPro }) {
-  initialUser = initialUser || null;
-  const T = buildT(themeTokens);
-  const [screen, setScreen] = useState(initialUser ? "dm" : "list");
-  const [dmUser, setDmUser] = useState(initialUser);
-  const openDM = (user) => { setDmUser(user); setScreen("dm"); };
-  if (screen === "dm" && dmUser) {
-    return (
-      <DMScreen
-        account={account} otherUser={dmUser} T={T} isPro={isPro || false}
-        onUnreadCleared={onUnreadCleared}
-        onBack={() => { if (initialUser) { onClose(); } else { setScreen("list"); } }}
-        onViewProfile={uid => { onClose(); onViewProfile(uid); }}
-      />
-    );
-  }
-  return <ChatList account={account} T={T} onClose={onClose} onOpenDM={openDM} isPro={isPro || false} />;
+export default function CommunityChat({ account, themeTokens, onClose, onViewProfile, onUnreadCleared, initialUser, isPro, isClosing = false }) {
+  initialUser = initialUser || null; const T = buildT(themeTokens);
+  const [screen,setScreen] = useState(initialUser ? "dm" : "list"); const [dmUser,setDmUser] = useState(initialUser); const [dmLeaving,setDmLeaving] = useState(false);
+  const screenRef=useRef(screen), closeRef=useRef(onClose); screenRef.current=screen; closeRef.current=onClose;
+  useEffect(() => { window.history.pushState({...window.history.state,rainxChatScreen:initialUser?"dm":"list"},"",window.location.href); const onPop=e=>{ if(e.state?.rainxChatScreen==="list"&&screenRef.current==="dm"){setDmLeaving(true);setTimeout(()=>{setDmLeaving(false);setDmUser(null);setScreen("list");},280);return;} if(!e.state?.rainxChatScreen)closeRef.current?.(); }; window.addEventListener("popstate",onPop); return ()=>window.removeEventListener("popstate",onPop); }, []);
+  const openDM=user=>{window.history.pushState({...window.history.state,rainxChatScreen:"dm"},"",window.location.href);setDmUser(user);setScreen("dm");};
+  const back=()=>{if(window.history.state?.rainxChatScreen)window.history.back();else closeRef.current?.();};
+  if(screen==="dm"&&dmUser)return <DMScreen account={account} otherUser={dmUser} T={T} isPro={isPro||false} isLeaving={dmLeaving} isClosing={isClosing} onUnreadCleared={onUnreadCleared} onBack={back} onViewProfile={uid=>{closeRef.current?.();onViewProfile(uid);}} />;
+  return <ChatList account={account} T={T} onClose={back} onOpenDM={openDM} isPro={isPro||false} isClosing={isClosing} />;
 }
