@@ -16,3 +16,6 @@
 .rx-chat-ripple.fading{animation:rxRippleOut .18s ease-out forwards}
 @keyframes rxRippleIn{to{transform:translate(-50%,-50%) scale(1);opacity:.38}}
 @keyframes rxRippleOut{from{transform:translate(-50%,-50%) scale(1);opacity:.38}to{transform:translate(-50%,-50%) scale(1.08);opacity:0}}
+
+
+.rx-chat-screen-enter{animation:rxChatScreenIn .36s cubic-bezier(.22,1,.36,1) both}.rx-chat-screen-exit{animation:rxChatScreenOut .28s cubic-bezier(.4,0,.6,1) both;pointer-events:none}.rx-dm-screen-enter{animation:rxDmScreenIn .38s cubic-bezier(.22,1,.36,1) both}@keyframes rxChatScreenIn{from{transform:translateX(100%);opacity:.96}to{transform:translateX(0);opacity:1}}@keyframes rxChatScreenOut{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:.96}}@keyframes rxDmScreenIn{from{transform:translateX(100%);opacity:.98}to{transform:translateX(0);opacity:1}}.rx-top-tabs{position:relative}.rx-top-tabs button{position:relative;z-index:1;transition:color .18s ease}.rx-top-tabs button.active{background:transparent}.rx-top-tab-indicator{position:absolute;z-index:0;top:3px;bottom:3px;border-radius:17px;background:#fff4c9;pointer-events:none;transition:left .34s cubic-bezier(.2,.8,.2,1),width .34s cubic-bezier(.2,.8,.2,1)}
