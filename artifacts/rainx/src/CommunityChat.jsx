@@ -1525,7 +1525,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
                   gap: isSearchExpanded ? 10 : 0,
                   padding: isSearchExpanded ? "0 16px" : "0 12px",
                   cursor: isSearchExpanded ? "text" : "pointer",
-                  transition: "width 280ms cubic-bezier(.2,.8,.2,1), max-width 280ms cubic-bezier(.2,.8,.2,1), gap 280ms ease, padding 280ms ease",
+                  transition: "width 480ms cubic-bezier(.22,1,.36,1), max-width 480ms cubic-bezier(.22,1,.36,1), gap 480ms cubic-bezier(.22,1,.36,1), padding 480ms cubic-bezier(.22,1,.36,1)",
                 }}
               >
                 <Search size={17} strokeWidth={2} aria-hidden="true" />
@@ -1543,7 +1543,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
                   style={{
                     maxWidth: isSearchExpanded ? 500 : 0,
                     opacity: isSearchExpanded ? 1 : 0,
-                    transition: "max-width 280ms cubic-bezier(.2,.8,.2,1), opacity 180ms ease",
+                    transition: "max-width 480ms cubic-bezier(.22,1,.36,1), opacity 280ms ease",
                   }}
                 />
                 {searchQuery && <button className="rx-search-clear" onClick={() => setSearchQuery("")} onPointerDown={(event) => event.stopPropagation()} aria-label="Clear chat search" type="button"><X size={15} /></button>}
