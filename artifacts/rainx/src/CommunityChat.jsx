@@ -1418,6 +1418,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
   const [page, setPage] = useState(0);
   const [topTab, setTopTab] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const searchInputRef = useRef(null);
   const [isSwiping, setIsSwiping] = useState(false);
   const [gestureProgress, setGestureProgress] = useState(0);
@@ -1431,6 +1432,16 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
   const topTabIndicatorRef = useRef(null);
   const [topTabIndicator, setTopTabIndicator] = useState(null);
   const navSlotPercent = 100 / pageCount;
+
+  const expandSearch = useCallback(() => {
+    setIsSearchExpanded(true);
+    window.requestAnimationFrame(() => searchInputRef.current?.focus());
+  }, []);
+  const handleSearchSubmit = useCallback((event) => {
+    event.preventDefault();
+    setSearchQuery(event.currentTarget.elements.namedItem("chat-search")?.value?.trim() || "");
+    searchInputRef.current?.blur();
+  }, []);
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const filteredConvos = (convos || []).filter((row) => {
@@ -1499,14 +1510,44 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
                   <ArrowLeft size={24} strokeWidth={2} />
                 </button>
                 <strong>Chats</strong>
-                <button className="rx-icon" onClick={() => searchInputRef.current?.focus()} aria-label="Focus chat search" type="button"><Search size={21} strokeWidth={2} /></button>
+                <button className="rx-icon" onClick={() => (isSearchExpanded ? searchInputRef.current?.focus() : expandSearch())} aria-label="Focus chat search" aria-expanded={isSearchExpanded} type="button"><Search size={21} strokeWidth={2} /></button>
                 <button className="rx-icon" aria-label="Chat menu" type="button">⋮</button>
               </header>
-              <label className="rx-search">
+              <form
+                className="rx-search"
+                role="search"
+                onSubmit={handleSearchSubmit}
+                onClick={expandSearch}
+                aria-label="Chat search"
+                style={{
+                  width: isSearchExpanded ? "auto" : 44,
+                  maxWidth: isSearchExpanded ? "none" : 44,
+                  gap: isSearchExpanded ? 10 : 0,
+                  padding: isSearchExpanded ? "0 16px" : "0 12px",
+                  cursor: isSearchExpanded ? "text" : "pointer",
+                  transition: "width 280ms cubic-bezier(.2,.8,.2,1), max-width 280ms cubic-bezier(.2,.8,.2,1), gap 280ms ease, padding 280ms ease",
+                }}
+              >
                 <Search size={17} strokeWidth={2} aria-hidden="true" />
-                <input ref={searchInputRef} value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} onPointerDown={(event) => event.stopPropagation()} placeholder="Search Chats" aria-label="Search Chats" />
+                <input
+                  ref={searchInputRef}
+                  name="chat-search"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onFocus={() => setIsSearchExpanded(true)}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  placeholder="Search Chats"
+                  aria-label="Search Chats"
+                  tabIndex={isSearchExpanded ? 0 : -1}
+                  style={{
+                    maxWidth: isSearchExpanded ? 500 : 0,
+                    opacity: isSearchExpanded ? 1 : 0,
+                    transition: "max-width 280ms cubic-bezier(.2,.8,.2,1), opacity 180ms ease",
+                  }}
+                />
                 {searchQuery && <button className="rx-search-clear" onClick={() => setSearchQuery("")} onPointerDown={(event) => event.stopPropagation()} aria-label="Clear chat search" type="button"><X size={15} /></button>}
-              </label>
+              </form>
               <div className="rx-top-tabs" ref={topTabsRef}>
                  <span className="rx-top-tab-indicator" aria-hidden="true" style={topTabIndicator ? {left:topTabIndicator.left,width:topTabIndicator.width} : undefined} />
                  {["All","Unread","Groups"].map((tab)=><button ref={node=>{topTabRefs.current[tab]=node;}} className={topTab===tab?"active":""} onClick={()=>selectTopTab(tab)} key={tab}>{tab}{tab!=="Groups"&&<b>{tab==="All"?(convos||[]).length:unreadTotal}</b>}</button>)}
