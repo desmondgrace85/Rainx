@@ -1518,8 +1518,9 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
                 onClick={expandSearch}
                 aria-label="Chat search"
                 style={{
-                  width: isSearchExpanded ? "auto" : 44,
-                  maxWidth: isSearchExpanded ? "none" : 44,
+                  width: isSearchExpanded ? "calc(100% - 32px)" : 44,
+                  maxWidth: "calc(100% - 32px)",
+                  willChange: "width",
                   gap: isSearchExpanded ? 10 : 0,
                   padding: isSearchExpanded ? "0 16px" : "0 12px",
                   cursor: isSearchExpanded ? "text" : "pointer",
