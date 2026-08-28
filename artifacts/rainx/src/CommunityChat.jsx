@@ -435,8 +435,8 @@ function GeneralChatSettings({ account, isPro, onClose, T }) {
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 450 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ position: "absolute", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", background: T.card, borderRadius: "20px 20px 0 0", paddingBottom: 40 }}>
+    <div style={{ minHeight: "100%", background: T.card, overflowY: "auto" }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ minHeight: "100%", maxWidth: 480, margin: "0 auto", background: T.card, paddingBottom: 40 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 16px 8px" }}>
           <button onClick={onClose} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer" }}><X size={20} /></button>
           <div>
@@ -1279,7 +1279,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
 // ── ChatList ───────────────────────────────────────────────────────────────
 function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) {
   const [convos, setConvos]               = useState(null);
-  const [showGeneralSettings, setShowGeneralSettings] = useState(false);
+
   const [pinnedChats, setPinnedChatsState] = useState(() => getPinnedChats());
   const [typingUsers, setTypingUsers]     = useState({});
   const conversationsLoadRef              = useRef(null);
@@ -1467,13 +1467,11 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
     setGestureProgress(nextProgress);
     setPage(nearestPage);
     setIsSwiping(Math.abs(nextProgress - nearestPage) > 0.01);
-    if (nearestPage === 2) setShowGeneralSettings(true);
   };
 
   const goToPage = (nextPage) => {
     const target = Math.max(0, Math.min(pageCount - 1, nextPage));
     setPage(target);
-    if (target === 2) setShowGeneralSettings(true);
     const track = pagesRef.current;
     if (track) track.scrollTo({ left: target * track.clientWidth, behavior: "smooth" });
   };
@@ -1578,7 +1576,14 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
             })}
             {p === 0 && convos !== null && filteredConvos.length === 0 && <div className="rx-empty"><strong>{topTab === "Groups" ? "Groups" : "No chats yet"}</strong><span>{topTab === "Groups" ? "Your groups appear here." : "Your chats appear here."}</span></div>}
             {p === 1 && <div className="rx-empty"><strong>Channels</strong><span>Your channels appear here.</span></div>}
-            {p === 2 && <div className="rx-empty"><strong>Settings</strong><span>Chat settings appear here.</span></div>}
+            {p === 2 && (
+              <GeneralChatSettings
+                account={account}
+                isPro={isPro || false}
+                onClose={() => goToPage(0)}
+                T={T}
+              />
+            )}
             {p === 3 && <div className="rx-empty"><strong>Space Talks</strong><span>Your Space Talks communities appear here.</span></div>}
           </section>
         ))}
@@ -1629,13 +1634,6 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
         })}
       </nav>
 
-      {showGeneralSettings && (
-        <GeneralChatSettings
-          account={account} isPro={isPro || false}
-          onClose={() => setShowGeneralSettings(false)}
-          T={T}
-        />
-      )}
     </div>
   );
 }
