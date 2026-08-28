@@ -1444,7 +1444,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
 
   useEffect(() => () => { clearTimeout(rippleTimerRef.current); clearTimeout(chatOpenTimerRef.current); }, []);
   const measureTopTab = useCallback((name) => { const container=topTabsRef.current, button=topTabRefs.current[name]; if (!container || !button) return null; const cr=container.getBoundingClientRect(), br=button.getBoundingClientRect(); return { left:br.left-cr.left+container.scrollLeft, width:br.width }; }, []);
-  useLayoutEffect(() => { const next=measureTopTab(topTab); if(next){topTabIndicatorRef.current=next;setTopTabIndicator(next);} }, [topTab, measureTopTab]);
+  useLayoutEffect(() => { if (topTabIndicatorRef.current) return; const next=measureTopTab(topTab); if(next){topTabIndicatorRef.current=next;setTopTabIndicator(next);} }, [topTab, measureTopTab]);
   useEffect(() => { const onResize=()=>{const next=measureTopTab(topTab);if(next){topTabIndicatorRef.current=next;setTopTabIndicator(next);}}; window.addEventListener("resize",onResize); return ()=>window.removeEventListener("resize",onResize); }, [topTab,measureTopTab]);
   const selectTopTab = (nextTab) => { if(nextTab===topTab)return; const target=measureTopTab(nextTab), start=topTabIndicatorRef.current||target; if(target&&start){const left=Math.min(start.left,target.left), right=Math.max(start.left+start.width,target.left+target.width), stretched={left,width:right-left}; topTabIndicatorRef.current=stretched; setTopTabIndicator(stretched); window.requestAnimationFrame(()=>{const settled=measureTopTab(nextTab);if(settled){topTabIndicatorRef.current=settled;setTopTabIndicator(settled);}});} setTopTab(nextTab); };
 
