@@ -173,7 +173,7 @@ function SpaceTalkScreen({ onOpenDiscovery }) {
     <div style={{ background: "#F5F6F7", minHeight: "100%", padding: "16px 6px 40px", boxSizing: "border-box" }}>
       <section style={{ background: "#FFFFFF", borderRadius: 20, padding: "20px 14px 18px", boxShadow: "0 1px 8px rgba(17,20,24,0.045)" }}>
         <div ref={carouselRef} onPointerDown={(event) => event.stopPropagation()} onPointerMove={(event) => event.stopPropagation()} onPointerUp={(event) => event.stopPropagation()} onPointerCancel={(event) => event.stopPropagation()} style={{ overflow: "hidden", width: "calc(100% + 20px)", marginLeft: -10, aspectRatio: "292 / 331", borderRadius: 22, background: "#FFFFFF", touchAction: "pan-y", perspective: 1000 }}>
-          <motion.div drag="x" dragConstraints={{ left: -(width * (SPACE_TALK_IMAGES.length - 1)), right: 0 }} dragElastic={0.08} style={{ width: SPACE_TALK_IMAGES.length * 100 + "%", height: "100%", perspective: 1000, x }} animate={{ x: -(slide * carouselWidth) }} transition={{ type: "spring", stiffness: 330, damping: 30 }} onDragEnd={handleDragEnd}>
+          <motion.div drag="x" dragConstraints={{ left: -(width * (SPACE_TALK_IMAGES.length - 1)), right: 0 }} dragElastic={0.08} style={{ display: "flex", width: SPACE_TALK_IMAGES.length * 100 + "%", height: "100%", perspective: 1000, x }} animate={{ x: -(slide * carouselWidth) }} transition={{ type: "spring", stiffness: 330, damping: 30 }} onDragEnd={handleDragEnd}>
             {SPACE_TALK_IMAGES.map((src, index) => <SpaceTalkImageCard key={src} src={src} index={index} x={x} width={width} />)}
           </motion.div>
         </div>
@@ -199,7 +199,7 @@ function SpaceTalkDiscoveryScreen({ onOpenLiveRoom }) {
     ["Web3 & The Future", "Crypto Lisa", "856", "#2F80ED"],
   ];
   return (
-    <div style={{ minHeight: "100%", background: "#FFFFFF", padding: "18px 22px 36px", boxSizing: "border-box", color: "#111418" }}>
+    <div style={{ minHeight: "100dvh", height: "100dvh", overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", background: "#FFFFFF", padding: "18px 22px 36px", boxSizing: "border-box", color: "#111418" }}>
       <style>{`@keyframes spaceTalkBreathe{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.035)}}@keyframes spaceTalkPulse{0%,100%{opacity:.65;transform:scale(.96)}50%{opacity:1;transform:scale(1)}}`}</style>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 42 }}>
         <h1 style={{ margin: 0, fontSize: 29, lineHeight: 1, letterSpacing: -1.1, fontWeight: 800 }}>
