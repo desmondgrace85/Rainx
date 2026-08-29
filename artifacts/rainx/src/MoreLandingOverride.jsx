@@ -343,8 +343,8 @@ function LiveRoomScreen({ onBack, account, isHost = false }) {
     return () => { cancelled = true; };
   }, [participantId, isHost]);
   const hostRow = participants.find((row) => row.role === "host" || row.is_host === true) || (isHost ? localProfile : null);
-  const hostProfile = talkProfileFromRow(hostRow || {}, localProfile);
-  const audience = participants.filter((row) => row.role !== "host" && row.is_host !== true && row.user_id !== participantId).map((row) => talkProfileFromRow(row));
+  const hostProfile = talkProfileFromRow(hostRow || {}, isHost ? localProfile : { name: "Space Talk host", country: "Accra, Ghana", flag: "🇬🇭" });
+  const audience = participants.filter((row) => row.role !== "host" && row.is_host !== true).map((row) => talkProfileFromRow(row));
   const listeningCount = participants.length;
   const positions = [{ top: 112, left: 14 }, { top: 112, right: 14 }, { top: 316, left: 21 }, { top: 316, right: 21 }, { top: 462, left: "calc(50% - 31px)" }];
   const sendMessage = async (event) => { event.preventDefault(); const message = messageText.trim(); if (!message) return; const row = { room_id: ROOM_ID, user_id: participantId, message, user_name: localProfile.name, avatar_url: localProfile.avatar_url }; const { error } = await supabase.from("space_talk_messages").insert(row); if (error) setNotice("Your message could not be sent."); else setMessageText(""); };
