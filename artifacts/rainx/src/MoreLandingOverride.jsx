@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { motion, useMotionValue, useTransform } from "motion/react";
 import { ArrowLeft, ChevronRight, Gift, UsersRound, CircleDollarSign, Share2, Check, ShieldCheck, CircleHelp, ArrowUpRight } from "lucide-react";
 import { ReferralRewardsScreen, MyReferralsScreen, ReferralPerformanceScreen } from "./RainxApp";
 import { supabase } from "./supabaseClient";
@@ -82,101 +83,65 @@ function GiftsRewardsScreen({ onBack, account, settingsOpen = false, onOpenSetti
   ];
   const pageStyle = { position: "fixed", inset: 0, zIndex: 20, background: "#FFFFFF", color: "#17191B", overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', sans-serif" };
   if (settings) return <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ ...pageStyle, ...(transitionStyle || {}) }}><main style={{maxWidth:480,minHeight:"100dvh",margin:"0 auto",background:"#FFF"}}><header style={{height:60,borderBottom:"1px solid #E5E5E5",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 20px"}}><button onClick={closeSettings} aria-label="Back" style={{border:0,background:"none",padding:0}}><ArrowLeft size={28}/></button><strong style={{fontSize:20}}>Gifts settings</strong><CircleHelp size={27} strokeWidth={2.3} /></header><section style={{padding:"20px 21px",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div><strong style={{fontSize:18}}>Gifts</strong><p style={{margin:"10px 0 0",color:"#92979B",fontSize:15,lineHeight:1.32,maxWidth:335}}>Viewers can send Gifts on your eligible videos when the feature is turned on</p></div><button aria-label={giftsOn?"Turn gifts off":"Turn gifts on"} onClick={()=>setGiftsOn(v=>!v)} style={{width:giftsOn?60:56,height:34,border:0,borderRadius:22,padding:3,background:giftsOn?"#F4D35E":"#D8DADC",transition:"all 520ms cubic-bezier(.22,1,.36,1)",cursor:"pointer",flexShrink:0}}><span style={{display:"block",width:28,height:28,borderRadius:"50%",background:"#FFF",boxShadow:"0 1px 3px #7775",transform:giftsOn?"translateX(23px) scaleX(1.1)":"translateX(0) scaleX(1)",transition:"transform 520ms cubic-bezier(.22,1,.36,1)"}} /></button></section></main></div>;
-  return <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ ...pageStyle, ...(transitionStyle || {}) }}><main style={{maxWidth:480,minHeight:"100dvh",margin:"0 auto",background:"#FFF",padding:"10px 22px 34px",boxSizing:"border-box"}}><header style={{height:48,display:"flex",alignItems:"center",justifyContent:"space-between"}}><button onClick={close} aria-label="Back" style={{width:42,height:42,marginLeft:-9,border:0,background:"transparent",display:"grid",placeItems:"center"}}><ArrowLeft size={28} strokeWidth={2.2}/></button><button onClick={()=>{try{navigator.share?.({title:"RainX Rewards Program",text:"Earn more with RainX"});}catch{}}} aria-label="Share rewards" style={{width:38,height:38,marginRight:-6,border:0,background:"transparent"}}><ArrowUpRight size={27} strokeWidth={2.1} /></button></header><h2 style={{textAlign:"center",color:"#BD8C05",fontSize:21,lineHeight:1.2,fontWeight:700,margin:"10px 0 10px"}}>RainX Rewards Program</h2><h1 style={{textAlign:"center",fontSize:35,lineHeight:1.06,letterSpacing:-1, fontWeight:750,margin:"0 auto 10px",maxWidth:390}}>Earn more with RainX</h1><p style={{textAlign:"center",color:"#596269",fontSize:17,lineHeight:1.43,margin:"0 auto 12px",maxWidth:385}}>RainX Rewards is now live! Earn gifts for your Posts and Profile. More activity, more rewards.</p><img src="/rewards-gifts-hero.webp" alt="Creator earning rewards" draggable="false" style={{display:"block",width:"calc(100% + 24px)",margin:"0 -12px 12px",height:"auto",objectFit:"contain"}}/><div style={{display:"flex",alignItems:"flex-start",gap:12,margin:"0 8px 16px"}}><span style={{flex:"0 0 21px",width:21,height:21,marginTop:2,borderRadius:"50%",background:"linear-gradient(90deg,#1555C9 0 50%,#F4D35E 50%)"}}/><p style={{margin:0,color:"#3F474D",fontSize:15,lineHeight:1.35}}>Stay active on RainX and unlock exciting gifts.<br/>Your activity powers your rewards.</p></div><div style={{borderTop:"2px dotted #E0E1E2",paddingTop:16}}><h3 style={{fontSize:21,lineHeight:1.2,fontWeight:750,margin:"0 0 15px 68px"}}>How to earn rewards</h3><div style={{display:"grid",gridTemplateColumns:"54px 1fr",columnGap:13,rowGap:16,alignItems:"center"}}><div style={{textAlign:"center",color:"#17191B"}}><Gift size={29} strokeWidth={1.9}/></div><div><strong style={{fontSize:18}}>Gifts for your <span style={{color:"#BD8C05"}}>Posts</span></strong><p style={{margin:"3px 0 0",color:"#596269",fontSize:15,lineHeight:1.3}}>Create and share quality posts to earn gifts from the RainX community.</p></div><div style={{textAlign:"center",color:"#17191B"}}><UsersRound size={29} strokeWidth={1.9}/></div><div><strong style={{fontSize:18}}>Gifts for your <span style={{color:"#BD8C05"}}>Profile</span></strong><p style={{margin:"3px 0 0",color:"#596269",fontSize:15,lineHeight:1.3}}>Keep your profile active and engaging to receive more profile gifts.</p></div></div></div><section style={{marginTop:22}}><p style={{textAlign:"center",color:"#3F474D",fontSize:15,lineHeight:1.4,margin:"0 0 18px"}}>Eligible accounts and videos must be in good standing, follow our Community Guidelines, agree to the Terms of Service, Privacy Policy and Rewards Policy, and meet and maintain certain eligibility criteria, which include:</p>{requirements.map(([met,label])=><div key={label} style={{display:"flex",alignItems:"flex-start",gap:16,margin:"0 4px 16px"}}><span style={{color:met?"#F4D35E":"#D9DCDE",display:"inline-flex",marginTop:1}}><Check size={28} strokeWidth={3}/></span><span style={{fontSize:17,lineHeight:1.3,fontWeight:650}}>{label}</span></div>)}<button onClick={onOpenSettings} style={{width:"78%",height:54,border:0,borderRadius:15,background:"#F4D35E",color:"#17191B",fontSize:18,fontWeight:750,display:"flex",alignItems:"center",justifyContent:"center",gap:12,margin:"4px auto 0"}}><Gift size={23} strokeWidth={2.1}/><span>Turn on Gifts</span></button></section><div style={{display:"flex",gap:14,alignItems:"center",background:"#FFF8E7",borderRadius:12,padding:"12px 14px",marginTop:18,color:"#30363B",fontSize:14,lineHeight:1.3}}><ShieldCheck size={27} strokeWidth={1.9} color="#BD8C05"/><span>Stay active, create meaningful content,<br/>and enjoy exclusive rewards only on RainX.</span></div></main></div>;
+  return <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ ...pageStyle, ...(transitionStyle || {}) }}><main style={{maxWidth:480,minHeight:"100dvh",margin:"0 auto",background:"#FFF",padding:"10px 22px 34px",boxSizing:"border-box"}}><header style={{height:48,display:"flex",alignItems:"center",justifyContent:"space-between"}}><button onClick={close} aria-label="Back" style={{width:42,height:42,marginLeft:-9,border:0,background:"transparent",display:"grid",placeItems:"center"}}><ArrowLeft size={28} strokeWidth={2.2}/></button><button onClick={()=>{try{navigator.share?.({title:"RainX Rewards Program",text:"Earn more with RainX"});}catch{}}} aria-label="Share rewards" style={{width:38,height:38,marginRight:-6,border:0,background:"transparent"}}><ArrowUpRight size={27} strokeWidth={2.1} /></button></header><h2 style={{textAlign:"center",color:"#BD8C05",fontSize:21,lineHeight:1.2,fontWeight:700,margin:"10px 0 10px"}}>RainX Rewards Program</h2><h1 style={{textAlign:"center",fontSize:35,lineHeight:1.06,letterSpacing:-1, fontWeight:750,margin:"0 auto 10px",maxWidth:390}}>Earn more with RainX</h1><p style={{textAlign:"center",color:"#596269",fontSize:17,lineHeight:1.43,margin:"0 auto 12px",maxWidth:385}}>RainX Rewards is now live! Earn gifts for your Posts and Profile. More activity, more rewards.</p><img src="/rewards-gifts-hero.webp" alt="Creator earning rewards" draggable="false" style={{display:"block",width:"calc(100% + 24px)",margin:"0 -12px 12px",height:"auto",objectFit:"contain"}}/><div style={{display:"flex",alignItems:"flex-start",gap:12,margin:"0 8px 16px"}}><span style={{flex:"0 0 21px",width:21,height:21,marginTop:2,borderRadius:"50%",background:"linear-gradient(90deg,#1555C9 0 50%,#F4D35E 50%)"}}/><p style={{margin:0,color:"#3F474D",fontSize:15,lineHeight:1.35}}>Stay active on RainX and unlock exciting gifts.<br/>Your activity powers your rewards.</p></div><div style={{borderTop:"2px dotted #E0E1E2",paddingTop:16}}><h3 style={{fontSize:21,lineHeight:1.2,fontWeight:750,margin:"0 0 15px 68px"}}>How to earn rewards</h3><div style={{display:"grid",gridTemplateColumns:"54px 1fr",columnGap:13,rowGap:16,alignItems:"center"}}><div style={{textAlign:"center",color:"#17191B"}}><Gift size={29} strokeWidth={1.9}/></div><div><strong style={{fontSize:18}}>Gifts for your <span style={{color:"#BD8C05"}}>Posts</span></strong><p style={{margin:"3px 0 0",color:"#596269",fontSize:15,lineHeight:1.3}}>Create and share quality posts to earn gifts from the RainX community.</p></div><div style={{textAlign:"center",color:"#17191B"}}><UsersRound size={29} strokeWidth={1.9}/></div><div><strong style={{fontSize:18}}>Gifts for your <span style={{color:"#BD8C05"}}>Profile</span></strong><p style={{margin:"3px 0 0",color:"#596269",fontSize:15,lineHeight:1.3}}>Keep your profile active and engaging to receive more profile gifts.</p></div></div></div><section style={{marginTop:22}}><p style={{textAlign:"center",color:"#3F474D",fontSize:15,lineHeight:1.4,margin:"0 0 18px"}}>Eligible accounts and videos must be in good standing, follow our Community Guidelines, agree to the Terms of Service, Privacy Policy and Rewards Policy, and meet and maintain certain eligibility criteria, which include:</p>{requirements.map(([met,label])=><div key={label} style={{display:"flex",alignItems:"flex-start",gap:16,margin:"0 4px 16px"}}><span style={{color:met?"#F4D35E":"#D9DCDE",display:"inline-flex",marginTop:1}}><Check size={28} strokeWidth={3}/></span><span style={{fontSize:17,lineHeight:1.3,fontWeight:650}}>{label}</span></div>)}<button onClick={onOpenSettings} style={{width:"78%",height:54,border:0,borderRadius:15,background:"#F4D35E",color:"#17191B",fontSize:18,fontWeight:750,display:"flex",alignItems:"center",justifyContent:"center",gap:12,margin:"4px auto 0"}}><Gift size={23} strokeWidth={2.1}/><span>Turn on Gifts</span></button></section><div style={{display:"flex",gap:14,alignItems:"center",background:"#FFF8E7",borderRadius:12,padding:"12px 14px",marginTop:18,color:"#30363B",fontSize:14,lineHeight:1.3}}><ShieldCheck size={27} strokeWidth={1.9} color="#BD8C05"/><span>Stay active, create meaningful content,<br/>and efunction SpaceTalkImageCard({ src, index, x, width }) {
+  const range = [-(index + 1) * width, -index * width, -(index - 1) * width];
+  const rotateY = useTransform(x, range, [90, 0, -90], { clamp: false });
+  return <motion.div style={{ flex: "0 0 " + (100 / SPACE_TALK_IMAGES.length) + "%", height: "100%", rotateY, transformStyle: "preserve-3d", padding: "0 10px", boxSizing: "border-box" }}><img src={src} alt={index === 0 ? "RainX traders connecting" : index === 1 ? "RainX trader hosting Space Talk" : "RainX trader sharing market insights"} draggable="false" style={{ display: "block", width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", borderRadius: 22, userSelect: "none", pointerEvents: "none" }} /></motion.div>;
 }
-
 
 function SpaceTalkScreen() {
   const [slide, setSlide] = useState(0);
-  const [dragOffset, setDragOffset] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const [copyDirection, setCopyDirection] = useState(1);
+  const [carouselWidth, setCarouselWidth] = useState(0);
   const carouselRef = React.useRef(null);
-  const gesture = React.useRef(null);
-  const settleTimer = React.useRef(null);
+  const x = useMotionValue(0);
 
-  const onPointerDown = (event) => {
-    if (event.pointerType === "mouse" && event.button !== 0) return;
-    event.stopPropagation();
-    if (settleTimer.current) window.clearTimeout(settleTimer.current);
-    gesture.current = { startX: event.clientX, startY: event.clientY, startSlide: slide, lastX: event.clientX, lastTime: Date.now(), dragging: false };
-  };
-  const onPointerMove = (event) => {
-    const active = gesture.current;
-    if (!active) return;
-    event.stopPropagation();
-    const dx = event.clientX - active.startX;
-    const dy = event.clientY - active.startY;
-    if (!active.dragging) {
-      if (Math.abs(dx) < 6 || Math.abs(dx) <= Math.abs(dy)) return;
-      active.dragging = true;
-      event.currentTarget.setPointerCapture?.(event.pointerId);
-      setDragging(true);
+  useEffect(() => {
+    const updateWidth = () => setCarouselWidth(carouselRef.current?.clientWidth || 0);
+    updateWidth();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateWidth) : null;
+    if (observer && carouselRef.current) observer.observe(carouselRef.current);
+    window.addEventListener("resize", updateWidth);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", updateWidth);
+    };
+  }, []);
+
+  const handleDragEnd = (_event, info) => {
+    const offset = info.offset.x;
+    const velocity = info.velocity.x;
+    if (offset < -50 || velocity < -500) {
+      setSlide((current) => Math.min(current + 1, SPACE_TALK_IMAGES.length - 1));
+    } else if (offset > 50 || velocity > 500) {
+      setSlide((current) => Math.max(current - 1, 0));
     }
-    event.preventDefault();
-    const width = carouselRef.current?.clientWidth || 1;
-    let nextOffset = -dx / width;
-    if (slide === 0 && nextOffset < 0) nextOffset *= 0.3;
-    if (slide === SPACE_TALK_IMAGES.length - 1 && nextOffset > 0) nextOffset *= 0.3;
-    active.lastX = event.clientX;
-    active.lastTime = Date.now();
-    setDragOffset(Math.max(-1, Math.min(1, nextOffset)));
-  };
-  const onPointerUp = (event) => {
-    const active = gesture.current;
-    if (!active) return;
-    event.stopPropagation();
-    if (active.dragging) {
-      const elapsed = Math.max(1, Date.now() - active.lastTime);
-      const velocity = (event.clientX - active.lastX) / elapsed;
-      let direction = 0;
-      if (slide < SPACE_TALK_IMAGES.length - 1 && (dragOffset > 0.24 || velocity < -0.65)) direction = 1;
-      if (slide > 0 && (dragOffset < -0.24 || velocity > 0.65)) direction = -1;
-      if (direction) {
-        setCopyDirection(direction);
-        setDragOffset(direction);
-        setDragging(false);
-        settleTimer.current = window.setTimeout(() => {
-          setSlide((current) => current + direction);
-          setDragOffset(0);
-          settleTimer.current = null;
-        }, 360);
-      } else {
-        setDragOffset(0);
-        setDragging(false);
-      }
-      event.currentTarget.releasePointerCapture?.(event.pointerId);
-    }
-    gesture.current = null;
   };
 
   const copy = SPACE_TALK_COPY[slide];
-  const trackPosition = slide + dragOffset;
+  const width = carouselWidth || 1;
 
   return (
     <div style={{ background: "#F5F6F7", minHeight: "100%", padding: "16px 6px 40px", boxSizing: "border-box" }}>
       <section style={{ background: "#FFFFFF", borderRadius: 20, padding: "20px 14px 18px", boxShadow: "0 1px 8px rgba(17,20,24,0.045)" }}>
-        <div ref={carouselRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} style={{ overflow: "hidden", width: "calc(100% + 20px)", marginLeft: -10, aspectRatio: "292 / 331", borderRadius: 22, background: "#FFFFFF", touchAction: "pan-y", cursor: dragging ? "grabbing" : "grab", perspective: 1000 }}>
-          <div style={{ display: "flex", width: "300%", transform: "translate3d(" + (-(trackPosition * 33.333333)) + "%, 0, 0)", transition: dragging ? "none" : "transform 360ms cubic-bezier(.22,1,.36,1)", willChange: "transform" }}>
-            {SPACE_TALK_IMAGES.map((src, index) => {
-              const relativePosition = index - trackPosition;
-              const rotateY = Math.max(-12, Math.min(12, relativePosition * 10));
-              return <div key={src} style={{ flex: "0 0 33.333333%", padding: "0 10px", boxSizing: "border-box", perspective: 1000 }}><img src={src} alt={index === 0 ? "RainX traders connecting" : index === 1 ? "RainX trader hosting Space Talk" : "RainX trader sharing market insights"} draggable="false" style={{ display: "block", width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", borderRadius: 22, userSelect: "none", pointerEvents: "none", transform: "rotateY(" + rotateY + "deg)", transition: dragging ? "none" : "transform 360ms cubic-bezier(.22,1,.36,1)", willChange: "transform" }} /></div>;
-            })}
-          </div>
+        <div ref={carouselRef} onPointerDown={(event) => event.stopPropagation()} onPointerMove={(event) => event.stopPropagation()} onPointerUp={(event) => event.stopPropagation()} onPointerCancel={(event) => event.stopPropagation()} style={{ overflow: "hidden", width: "calc(100% + 20px)", marginLeft: -10, aspectRatio: "292 / 331", borderRadius: 22, background: "#FFFFFF", touchAction: "pan-y", perspective: 1000 }}>
+          <motion.div className="flex" drag="x" dragConstraints={{ left: -(width * (SPACE_TALK_IMAGES.length - 1)), right: 0 }} dragElastic={0.08} style={{ width: SPACE_TALK_IMAGES.length * 100 + "%", height: "100%", perspective: 1000, x }} animate={{ x: -(slide * carouselWidth) }} transition={{ type: "spring", stiffness: 330, damping: 30 }} onDragEnd={handleDragEnd}>
+            {SPACE_TALK_IMAGES.map((src, index) => <SpaceTalkImageCard key={src} src={src} index={index} x={x} width={width} />)}
+          </motion.div>
         </div>
-        <div key={slide} style={{ animation: "rainxSpaceTalkCopy" + (copyDirection < 0 ? "Down" : "Up") + " .36s cubic-bezier(.22,1,.36,1) both" }}>
+        <motion.div key={slide} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}>
           <h1 style={{ margin: "20px 0 6px", textAlign: "center", fontSize: 30, lineHeight: 1.12, letterSpacing: -0.8, fontWeight: 800 }}>{copy.title}</h1>
           <p style={{ margin: "0 auto", maxWidth: 360, color: "#666B72", textAlign: "center", fontSize: 16, lineHeight: 1.4 }}>{copy.body}</p>
-        </div>
+        </motion.div>
         <div style={{ display: "flex", justifyContent: "center", gap: 7, margin: "14px 0 20px" }}>
-          {SPACE_TALK_IMAGES.map((_, index) => <button key={index} type="button" aria-label={"Show Space Talk image " + (index + 1)} onClick={() => { setCopyDirection(index >= slide ? 1 : -1); setSlide(index); }} style={{ width: 8, height: 8, padding: 0, border: 0, borderRadius: "50%", background: slide === index ? "#111418" : "#D5D7D9" }} />)}
+          {SPACE_TALK_IMAGES.map((_, index) => <button key={index} type="button" aria-label={"Show Space Talk image " + (index + 1)} onClick={() => setSlide(index)} style={{ width: 8, height: 8, padding: 0, border: 0, borderRadius: "50%", background: slide === index ? "#111418" : "#D5D7D9" }} />)}
         </div>
         <button type="button" onClick={() => {}} style={{ width: "100%", height: 52, border: 0, borderRadius: 13, background: "#F4D35E", color: "#111418", fontFamily: FONT, fontSize: 17, fontWeight: 800 }}>Host Space Talk</button>
       </section>
       <button type="button" onClick={() => {}} style={{ width: "100%", height: 46, marginTop: 8, padding: "0 16px", border: 0, borderRadius: 14, background: "#FFFFFF", color: "#111418", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: FONT, fontSize: 15, fontWeight: 750, textAlign: "left" }}>Campaigns <ChevronRight size={20} color="#858A91" /></button>
       <button type="button" onClick={() => {}} style={{ width: "100%", height: 46, marginTop: 8, padding: "0 16px", border: 0, borderRadius: 14, background: "#FFFFFF", color: "#111418", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: FONT, fontSize: 15, fontWeight: 750, textAlign: "left" }}>Suggested Traders <ChevronRight size={20} color="#858A91" /></button>
-      <style>{"@keyframes rainxSpaceTalkCopyUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}@keyframes rainxSpaceTalkCopyDown{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:translateY(0)}}"}</style>
+    </div>
+  );
+}x)}to{opacity:1;transform:translateY(0)}}"}</style>
     </div>
   );
 }
