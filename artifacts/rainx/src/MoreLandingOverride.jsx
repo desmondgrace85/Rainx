@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion, useMotionValue, useTransform } from "framer-motion";
-import { ArrowLeft, ArrowUpRight, AudioLines, Bell, ChevronRight, CircleDollarSign, CircleHelp, Check, Gift, MessageCircle, Mic, MicOff, MoreHorizontal, PhoneOff, Radio, Share2, ShieldCheck, UserRound, UsersRound, Video, VideoOff } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, AudioLines, Bell, ChevronRight, CircleDollarSign, CircleHelp, Check, Gift, Hand, MessageCircle, Mic, MicOff, MoreHorizontal, PhoneOff, Radio, Share2, ShieldCheck, UserRound, UsersRound, Video, VideoOff } from "lucide-react";
 import { ReferralRewardsScreen, MyReferralsScreen, ReferralPerformanceScreen } from "./RainxApp";
 import { supabase } from "./supabaseClient";
 
@@ -276,44 +276,158 @@ function SpaceTalkDiscoveryScreen({ onOpenLiveRoom }) {
   );
 }
 
-function LiveRoomScreen({ onBack, activeSession = false, hostStream = null }) {
-  const [muted, setMuted] = useState(false);
-  const [cameraOff, setCameraOff] = useState(false);
+function talkProfileFromRow(row, fallback = {}) {
+  return {
+    id: row?.user_id || row?.id || fallback.id || "",
+    name: row?.name || row?.display_name || row?.username || fallback.name || "Space Talk host",
+    country: row?.country || row?.location || fallback.country || "Accra, Ghana",
+    flag: row?.flag || row?.country_flag || fallback.flag || "🇬🇭",
+    avatar_url: row?.avatar_url || row?.profile_image_url || row?.image_url || row?.avatar || fallback.avatar_url || fallback.avatar || "",
+    role: row?.role || fallback.role || "listener",
+    muted: row?.is_muted ?? row?.muted ?? true,
+  };
+}
+
+function TalkProfileAvatar({ profile, size = 52, center = false }) {
+  if (profile?.avatar_url) return <img src={profile.avatar_url} alt={profile.name || "Participant"} draggable="false" style={{ width: size, height: size, display: "block", objectFit: "cover", borderRadius: "50%", border: center ? "3px solid #F1C533" : "1px solid #D7D9DC", boxSizing: "border-box", background: "#F4F5F6" }} />;
+  return <PlaceholderAvatar size={size} center={center} />;
+}
+
+function LiveRoomScreen({ onBack, account, isHost = false }) {
+  const ROOM_ID = "weekly-crypto-talk";
+  const localProfile = talkProfileFromRow(account || {}, { name: "Space Talk host", country: "Accra, Ghana", flag: "🇬🇭", role: isHost ? "host" : "listener" });
+  const sessionIdRef = React.useRef(account?.id || "guest-" + Date.now());
+  const channelRef = React.useRef(null);
+  const localStreamRef = React.useRef(null);
+  const peerConnectionsRef = React.useRef(new Map());
+  const remoteAudioRef = React.useRef(new Map());
+  const [participantId, setParticipantId] = useState(account?.id || null);
+  const [participants, setParticipants] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [muted, setMuted] = useState(true);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [peopleOpen, setPeopleOpen] = useState(false);
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [requestText, setRequestText] = useState("");
+  const [messageText, setMessageText] = useState("");
+  const [mediaError, setMediaError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [isEnding, setIsEnding] = useState(false);
+  const [messageTick, setMessageTick] = useState(0);
+
+  const refreshParticipants = async () => {
+    const { data } = await supabase.from("space_talk_participants").select("*").eq("room_id", ROOM_ID).order("joined_at", { ascending: true });
+    if (data) setParticipants(data);
+  };
+  const refreshMessages = async () => {
+    const { data } = await supabase.from("space_talk_messages").select("*").eq("room_id", ROOM_ID).order("created_at", { ascending: true }).limit(80);
+    if (data) setMessages(data);
+  };
+  const sendSignal = async (payload) => { if (channelRef.current) await channelRef.current.send({ type: "broadcast", event: "webrtc", payload }); };
+  const createPeer = async (remoteId, initiator) => {
+    if (!remoteId || remoteId === sessionIdRef.current) return null;
+    if (peerConnectionsRef.current.has(remoteId)) return peerConnectionsRef.current.get(remoteId);
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+    peerConnectionsRef.current.set(remoteId, pc);
+    if (localStreamRef.current) localStreamRef.current.getTracks().forEach((track) => pc.addTrack(track, localStreamRef.current));
+    pc.onicecandidate = (event) => { if (event.candidate) sendSignal({ kind: "ice", from: sessionIdRef.current, to: remoteId, candidate: event.candidate }); };
+    pc.ontrack = (event) => { const stream = event.streams?.[0]; if (!stream) return; let audio = remoteAudioRef.current.get(remoteId); if (!audio) { audio = new Audio(); audio.autoplay = true; remoteAudioRef.current.set(remoteId, audio); } audio.srcObject = stream; audio.play?.().catch(() => {}); };
+    pc.onconnectionstatechange = () => { if (["failed", "closed", "disconnected"].includes(pc.connectionState)) { pc.close(); peerConnectionsRef.current.delete(remoteId); } };
+    if (initiator) { const offer = await pc.createOffer(); await pc.setLocalDescription(offer); await sendSignal({ kind: "offer", from: sessionIdRef.current, to: remoteId, description: pc.localDescription }); }
+    return pc;
+  };
+  const enableMicrophone = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) { setMediaError("Microphone access is not supported in this browser."); return false; }
+    if (!localStreamRef.current) {
+      try { localStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); } catch { setMediaError("Microphone permission is required to speak."); return false; }
+      for (const [remoteId, pc] of peerConnectionsRef.current.entries()) { localStreamRef.current.getTracks().forEach((track) => pc.addTrack(track, localStreamRef.current)); const offer = await pc.createOffer(); await pc.setLocalDescription(offer); await sendSignal({ kind: "offer", from: sessionIdRef.current, to: remoteId, description: pc.localDescription }); }
+    }
+    localStreamRef.current.getAudioTracks().forEach((track) => { track.enabled = true; }); setMuted(false);
+    if (participantId) await supabase.from("space_talk_participants").update({ is_muted: false }).eq("room_id", ROOM_ID).eq("user_id", participantId);
+    return true;
+  };
+  const toggleMute = async () => {
+    if (muted) { await enableMicrophone(); return; }
+    localStreamRef.current?.getAudioTracks().forEach((track) => { track.enabled = false; }); setMuted(true);
+    if (participantId) await supabase.from("space_talk_participants").update({ is_muted: true }).eq("room_id", ROOM_ID).eq("user_id", participantId);
+  };
+  useEffect(() => {
+    let cancelled = false;
+    (async () => { let id = account?.id || null; if (!id) { try { id = (await supabase.auth.getUser()).data?.user?.id || null; } catch {} } if (!cancelled && id) setParticipantId(id); })();
+    return () => { cancelled = true; };
+  }, [account?.id]);
+  useEffect(() => {
+    let cancelled = false;
+    const channel = supabase.channel("space-talk-" + ROOM_ID); channelRef.current = channel;
+    channel.on("broadcast", { event: "webrtc" }, async ({ payload }) => {
+      if (!payload || payload.to !== sessionIdRef.current || payload.from === sessionIdRef.current) return;
+      if (payload.kind === "join") { if (String(sessionIdRef.current) < String(payload.from)) await createPeer(payload.from, true); }
+      else if (payload.kind === "offer") { const pc = await createPeer(payload.from, false); await pc.setRemoteDescription(payload.description); const answer = await pc.createAnswer(); await pc.setLocalDescription(answer); await sendSignal({ kind: "answer", from: sessionIdRef.current, to: payload.from, description: pc.localDescription }); }
+      else if (payload.kind === "answer") { const pc = peerConnectionsRef.current.get(payload.from); if (pc) await pc.setRemoteDescription(payload.description); }
+      else if (payload.kind === "ice") { const pc = peerConnectionsRef.current.get(payload.from); if (pc) await pc.addIceCandidate(payload.candidate).catch(() => {}); }
+      else if (payload.kind === "end") setNotice("The host ended this Space Talk.");
+    });
+    channel.on("postgres_changes", { event: "*", schema: "public", table: "space_talk_participants", filter: "room_id=eq." + ROOM_ID }, refreshParticipants);
+    channel.on("postgres_changes", { event: "INSERT", schema: "public", table: "space_talk_messages", filter: "room_id=eq." + ROOM_ID }, (payload) => { setMessages((current) => [...current, payload.new].slice(-80)); setMessageTick((value) => value + 1); });
+    channel.subscribe(async (status) => { if (status === "SUBSCRIBED") { await sendSignal({ kind: "join", from: sessionIdRef.current }); if (!cancelled) { await refreshParticipants(); await refreshMessages(); } } });
+    return () => { cancelled = true; channel.unsubscribe(); if (channelRef.current === channel) channelRef.current = null; peerConnectionsRef.current.forEach((pc) => pc.close()); peerConnectionsRef.current.clear(); remoteAudioRef.current.forEach((audio) => { audio.pause?.(); audio.srcObject = null; }); remoteAudioRef.current.clear(); localStreamRef.current?.getTracks().forEach((track) => track.stop()); localStreamRef.current = null; };
+  }, [participantId]);
+  useEffect(() => {
+    if (!participantId) return undefined;
+    let cancelled = false;
+    (async () => { const row = { room_id: ROOM_ID, user_id: participantId, role: isHost ? "host" : "listener", name: localProfile.name, country: localProfile.country, flag: localProfile.flag, avatar_url: localProfile.avatar_url, is_muted: true }; const { error } = await supabase.from("space_talk_participants").upsert(row, { onConflict: "room_id,user_id" }); if (error && !cancelled) setNotice("Unable to sync your participant status."); await refreshParticipants(); })();
+    return () => { cancelled = true; };
+  }, [participantId, isHost]);
+  const hostRow = participants.find((row) => row.role === "host" || row.is_host === true) || (isHost ? localProfile : null);
+  const hostProfile = talkProfileFromRow(hostRow || {}, localProfile);
+  const audience = participants.filter((row) => row.role !== "host" && row.is_host !== true && row.user_id !== participantId).map((row) => talkProfileFromRow(row));
+  const listeningCount = participants.length;
+  const positions = [{ top: 112, left: 14 }, { top: 112, right: 14 }, { top: 316, left: 21 }, { top: 316, right: 21 }, { top: 462, left: "calc(50% - 31px)" }];
+  const sendMessage = async (event) => { event.preventDefault(); const message = messageText.trim(); if (!message) return; const row = { room_id: ROOM_ID, user_id: participantId, message, user_name: localProfile.name, avatar_url: localProfile.avatar_url }; const { error } = await supabase.from("space_talk_messages").insert(row); if (error) setNotice("Your message could not be sent."); else setMessageText(""); };
+  const submitRequest = async (event) => { event.preventDefault(); const { error } = await supabase.from("space_talk_join_requests").insert({ room_id: ROOM_ID, user_id: participantId, message: requestText.trim(), status: "pending" }); if (error) setNotice("Your request could not be sent."); else { setRequestText(""); setRequestOpen(false); setNotice("Request sent to the host."); } };
+  const leaveRoom = async () => { if (isEnding) return; setIsEnding(true); if (isHost) { await supabase.from("space_talk_rooms").update({ status: "ended", is_live: false, ended_at: new Date().toISOString() }).eq("id", ROOM_ID); await sendSignal({ kind: "end", from: sessionIdRef.current }); } if (participantId) await supabase.from("space_talk_participants").delete().eq("room_id", ROOM_ID).eq("user_id", participantId); onBack(); };
+  const activeMessages = messages.slice(-5);
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 30, background: "#101114", color: "#FFFFFF", fontFamily: FONT, display: "flex", flexDirection: "column" }}>
-      <header style={{ height: 72, padding: "0 18px", display: "flex", alignItems: "center", justifyContent: "space-between", boxSizing: "border-box" }}>
-        <button type="button" onClick={onBack} aria-label="Back to Space Talk" style={{ width: 42, height: 42, display: "grid", placeItems: "center", border: 0, borderRadius: 14, background: "#FFFFFF14", color: "#FFFFFF" }}><ArrowLeft size={23} /></button>
-        <div style={{ textAlign: "center" }}><strong style={{ display: "block", fontSize: 17 }}>Space Talk</strong><span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 3, color: "#B8BBC0", fontSize: 12 }}><Radio size={13} /> Live room</span></div>
-        <button type="button" aria-label="More live room options" style={{ width: 42, height: 42, display: "grid", placeItems: "center", border: 0, borderRadius: 14, background: "#FFFFFF14", color: "#FFFFFF" }}><MoreHorizontal size={23} /></button>
+    <div style={{ position: "fixed", inset: 0, zIndex: 30, overflow: "hidden", background: "#FFFFFF", color: "#111418", fontFamily: FONT }}>
+      <style>{"@keyframes liveCommentUp{0%{opacity:0;transform:translateY(16px)}12%{opacity:1}82%{opacity:1}100%{opacity:0;transform:translateY(-18px)}}@keyframes liveMicPulse{0%,100%{box-shadow:0 0 0 0 #F4C51F33}50%{box-shadow:0 0 0 8px #F4C51F22}}"}</style>
+      <header style={{ height: 90, padding: "20px 26px 0", display: "flex", alignItems: "flex-start", justifyContent: "space-between", boxSizing: "border-box" }}>
+        <button type="button" onClick={leaveRoom} aria-label="Leave Space Talk" style={{ width: 42, height: 42, border: "1px solid #ECEDEF", borderRadius: "50%", background: "#FFFFFF", color: "#111418", display: "grid", placeItems: "center" }}><ChevronRight size={22} style={{ transform: "rotate(180deg)" }} /></button>
+        <div style={{ textAlign: "center", paddingTop: 1 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 20, lineHeight: 1.15, fontWeight: 700 }}>Crypto Market Talk <span style={{ width: 17, height: 17, borderRadius: "50%", background: "#2C82E8", color: "#FFFFFF", fontSize: 11, display: "grid", placeItems: "center" }}>✓</span></div><div style={{ marginTop: 6, color: "#4F5358", fontSize: 15 }}>{formatCount(listeningCount)} listening</div></div>
+        <button type="button" aria-label="More live room options" style={{ width: 42, height: 42, border: 0, background: "transparent", color: "#111418", display: "grid", placeItems: "center" }}><MoreHorizontal size={25} strokeWidth={2.5} /></button>
       </header>
-      <main style={{ flex: 1, minHeight: 0, padding: "8px 18px 0", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
-        <section style={{ flex: 1, minHeight: 290, borderRadius: 24, background: activeSession && hostStream ? "#202329" : "linear-gradient(160deg,#25282E,#17191D)", border: "1px solid #FFFFFF12", display: "grid", placeItems: "center", position: "relative", overflow: "hidden" }}>
-          {activeSession && hostStream ? <video src={hostStream} autoPlay playsInline controls={false} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ textAlign: "center", padding: 24 }}><span style={{ width: 70, height: 70, margin: "0 auto 20px", display: "grid", placeItems: "center", borderRadius: "50%", background: "#F4D35E1A", color: "#F4D35E" }}><AudioLines size={34} /></span><h1 style={{ margin: 0, fontSize: 22, lineHeight: 1.2, letterSpacing: -0.4 }}>Space Talk isn’t live right now</h1><p style={{ margin: "10px auto 0", maxWidth: 250, color: "#AEB2B8", fontSize: 14, lineHeight: 1.45 }}>Check back soon for live market conversations.</p></div>}
-          {activeSession && hostStream && <span style={{ position: "absolute", top: 16, left: 16, display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 12, background: "#E44747", fontSize: 12, fontWeight: 700 }}><i style={{ width: 7, height: 7, borderRadius: "50%", background: "#FFFFFF" }} />LIVE</span>}
-        </section>
-        <section style={{ padding: "19px 2px 13px", display: "flex", alignItems: "center", gap: 12 }}>
-          <PlaceholderAvatar size={48} center />
-          <div style={{ flex: 1 }}><strong style={{ display: "block", fontSize: 16 }}>Space Talk host</strong><span style={{ display: "block", marginTop: 4, color: "#AEB2B8", fontSize: 13 }}>{activeSession ? "Live now" : "Waiting for the host to start"}</span></div>
-          <span style={{ display: "flex", alignItems: "center", gap: 5, color: "#AEB2B8", fontSize: 13 }}><UsersRound size={17} /> 0</span>
-        </section>
-        <section style={{ minHeight: 72, padding: "14px 15px", display: "flex", alignItems: "center", gap: 12, borderRadius: 16, background: "#FFFFFF0D", color: "#AEB2B8", boxSizing: "border-box" }}>
-          <span style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: "50%", background: "#FFFFFF12", color: "#F4D35E" }}><MessageCircle size={17} /></span>
-          <span style={{ fontSize: 13 }}>Join the conversation when the room goes live.</span>
-        </section>
+      <main style={{ position: "relative", height: "calc(100% - 178px)", minHeight: 0, overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: "0 22px 0", pointerEvents: "none" }}>
+          <span style={{ position: "absolute", top: 33, left: "calc(50% - 28px)", padding: "7px 15px", border: "1px solid #E5E6E8", borderRadius: 13, background: "#FFFFFF", color: "#D4A914", fontSize: 14, fontWeight: 650 }}>Host</span>
+          <span style={{ position: "absolute", top: 95, left: "calc(50% - 94px)", width: 188, height: 188, border: "1px solid #E8EAEC", borderRadius: "50%", boxSizing: "border-box" }} /><span style={{ position: "absolute", top: 128, left: "calc(50% - 145px)", width: 290, height: 290, border: "1px solid #EEF0F1", borderRadius: "50%", boxSizing: "border-box" }} /><span style={{ position: "absolute", top: 190, left: "calc(50% - 185px)", width: 370, height: 370, border: "1px solid #F1F2F3", borderRadius: "50%", boxSizing: "border-box" }} />
+          <div style={{ position: "absolute", top: 150, left: "calc(50% - 67px)", width: 134, height: 134, display: "grid", placeItems: "center", border: "3px solid #F1C533", borderRadius: "50%", background: "#FFFFFF", boxSizing: "border-box", animation: muted ? "none" : "liveMicPulse 1.5s ease-in-out infinite" }}><TalkProfileAvatar profile={hostProfile} size={126} center /></div>
+          <div style={{ position: "absolute", top: 276, left: "calc(50% - 19px)", width: 38, height: 38, borderRadius: "50%", background: "#F5BC05", color: "#111418", display: "grid", placeItems: "center", boxShadow: "0 2px 5px #D8A90055" }}><Mic size={19} strokeWidth={2.2} /></div>
+          <div style={{ position: "absolute", top: 290, left: 0, right: 0, textAlign: "center" }}><strong style={{ display: "block", fontSize: 19, fontWeight: 700 }}>{hostProfile.name}</strong><span style={{ display: "block", marginTop: 7, fontSize: 15 }}>{hostProfile.flag} {hostProfile.country}</span></div>
+          {audience.slice(0, 5).map((profile, index) => <div key={profile.id || profile.name + "-" + index} style={{ position: "absolute", ...positions[index], width: 100, textAlign: "center" }}><span style={{ display: "inline-grid", position: "relative", placeItems: "center", width: 72, height: 72, border: "1px solid #D8DADD", borderRadius: "50%", background: "#FFFFFF", boxSizing: "border-box" }}><TalkProfileAvatar profile={profile} size={66} /><span style={{ position: "absolute", right: -1, bottom: 0, width: 20, height: 20, borderRadius: "50%", background: "#2D82E9", border: "2px solid #FFFFFF", color: "#FFFFFF", display: "grid", placeItems: "center" }}><Mic size={10} strokeWidth={2.4} /></span></span><strong style={{ display: "block", marginTop: 7, fontSize: 15, lineHeight: 1.1 }}>{profile.name}</strong><span style={{ display: "block", marginTop: 7, fontSize: 13, whiteSpace: "nowrap" }}>{profile.flag} {profile.country}</span></div>)}
+        </div>
+        {messages.length > 0 && <div aria-live="polite" style={{ position: "absolute", right: 12, bottom: 24, width: 190, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5, pointerEvents: "none" }}>{activeMessages.map((item, index) => <span key={item.id || item.created_at + "-" + index + "-" + messageTick} style={{ maxWidth: "100%", padding: "7px 10px", borderRadius: 15, background: "#111418D9", color: "#FFFFFF", fontSize: 12, lineHeight: 1.25, animation: "liveCommentUp 4.6s ease-out both" }}><b style={{ color: "#F4D35E" }}>{item.user_name || "Trader"}</b> {item.message || item.content}</span>)}</div>}
       </main>
-      <footer style={{ height: 86, padding: "12px 28px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxSizing: "border-box" }}>
-        <button type="button" onClick={() => setMuted((value) => !value)} aria-label={muted ? "Turn microphone on" : "Mute microphone"} style={{ width: 48, height: 48, display: "grid", placeItems: "center", border: 0, borderRadius: "50%", background: "#FFFFFF14", color: "#FFFFFF" }}>{muted ? <MicOff size={21} /> : <Mic size={21} />}</button>
-        <button type="button" onClick={() => setCameraOff((value) => !value)} aria-label={cameraOff ? "Turn camera on" : "Turn camera off"} style={{ width: 48, height: 48, display: "grid", placeItems: "center", border: 0, borderRadius: "50%", background: "#FFFFFF14", color: "#FFFFFF" }}>{cameraOff ? <VideoOff size={21} /> : <Video size={21} />}</button>
-        <button type="button" onClick={onBack} aria-label="Leave live room" style={{ width: 54, height: 48, display: "grid", placeItems: "center", border: 0, borderRadius: 18, background: "#E44747", color: "#FFFFFF" }}><PhoneOff size={21} /></button>
-        <button type="button" aria-label="Share Space Talk" style={{ width: 48, height: 48, display: "grid", placeItems: "center", border: 0, borderRadius: "50%", background: "#FFFFFF14", color: "#FFFFFF" }}><Share2 size={21} /></button>
+      <footer style={{ height: 88, padding: "0 21px 13px", display: "flex", alignItems: "flex-end", justifyContent: "space-between", boxSizing: "border-box" }}>
+        <button type="button" onClick={() => setRequestOpen(true)} aria-label="Request to join" style={{ border: 0, background: "transparent", color: "#111418", display: "flex", flexDirection: "column", alignItems: "center", gap: 7, fontFamily: FONT, fontSize: 12 }}><span style={{ width: 47, height: 47, border: "1px solid #ECEDEF", borderRadius: "50%", display: "grid", placeItems: "center" }}><Hand size={22} /></span>Request</button>
+        <button type="button" onClick={() => setChatOpen(true)} aria-label="Open chat" style={{ border: 0, background: "transparent", color: "#111418", display: "flex", flexDirection: "column", alignItems: "center", gap: 7, fontFamily: FONT, fontSize: 12 }}><span style={{ width: 47, height: 47, border: "1px solid #ECEDEF", borderRadius: "50%", display: "grid", placeItems: "center" }}><MessageCircle size={21} /></span>Chat</button>
+        <button type="button" onClick={toggleMute} aria-label={muted ? "Speak" : "Mute microphone"} style={{ border: 0, background: "transparent", color: "#111418", display: "flex", flexDirection: "column", alignItems: "center", gap: 7, fontFamily: FONT, fontSize: 12 }}><span style={{ width: 66, height: 66, marginTop: -19, border: "3px solid #F4D35E", borderRadius: "50%", background: muted ? "#F8C300" : "#F4D35E", display: "grid", placeItems: "center", boxShadow: muted ? "0 2px 4px #D8A90055" : "0 0 0 7px #F4D35E33" }}>{muted ? <Mic size={28} /> : <MicOff size={28} />}</span>Speak</button>
+        <button type="button" onClick={() => setPeopleOpen(true)} aria-label="Show people" style={{ border: 0, background: "transparent", color: "#111418", display: "flex", flexDirection: "column", alignItems: "center", gap: 7, fontFamily: FONT, fontSize: 12 }}><span style={{ width: 47, height: 47, border: "1px solid #ECEDEF", borderRadius: "50%", display: "grid", placeItems: "center" }}><UsersRound size={22} /></span>People</button>
+        <button type="button" onClick={leaveRoom} aria-label="Leave room" style={{ border: 0, background: "transparent", color: "#C72929", display: "flex", flexDirection: "column", alignItems: "center", gap: 7, fontFamily: FONT, fontSize: 12 }}><span style={{ width: 47, height: 47, border: "1px solid #ECEDEF", borderRadius: "50%", display: "grid", placeItems: "center" }}><PhoneOff size={21} /></span>Leave</button>
       </footer>
+      {notice && <button type="button" onClick={() => setNotice("")} style={{ position: "absolute", left: 18, right: 18, bottom: 94, border: 0, borderRadius: 12, padding: "10px 14px", background: "#111418", color: "#FFFFFF", fontFamily: FONT, fontSize: 13 }}>{notice}</button>}
+      {mediaError && <button type="button" onClick={() => setMediaError("")} style={{ position: "absolute", left: 18, right: 18, bottom: 94, border: 0, borderRadius: 12, padding: "10px 14px", background: "#FFF2F2", color: "#A52222", fontFamily: FONT, fontSize: 13 }}>{mediaError}</button>}
+      {(chatOpen || peopleOpen || requestOpen) && <div style={{ position: "absolute", inset: 0, zIndex: 5, background: "#11141822" }} onClick={() => { setChatOpen(false); setPeopleOpen(false); setRequestOpen(false); }} />}
+      {chatOpen && <section style={{ position: "absolute", zIndex: 6, left: 0, right: 0, bottom: 0, maxHeight: "68%", padding: "18px 18px 22px", borderRadius: "24px 24px 0 0", background: "#FFFFFF", boxShadow: "0 -8px 24px #1114181A" }} onClick={(event) => event.stopPropagation()}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><strong style={{ fontSize: 18 }}>Live chat</strong><button type="button" onClick={() => setChatOpen(false)} style={{ border: 0, background: "transparent", fontSize: 22 }}>×</button></div><div style={{ maxHeight: 230, overflowY: "auto", padding: "12px 0" }}>{messages.map((item, index) => <p key={item.id || index} style={{ margin: "8px 0", fontSize: 13 }}><b>{item.user_name || "Trader"}</b> {item.message || item.content}</p>)}</div><form onSubmit={sendMessage} style={{ display: "flex", gap: 8 }}><input value={messageText} onChange={(event) => setMessageText(event.target.value)} placeholder="Say something..." style={{ flex: 1, minWidth: 0, border: "1px solid #E1E3E5", borderRadius: 18, padding: "11px 13px", fontFamily: FONT, outline: "none" }} /><button type="submit" style={{ border: 0, borderRadius: 18, padding: "0 16px", background: "#F4C51F", fontFamily: FONT, fontWeight: 700 }}>Send</button></form></section>}
+      {peopleOpen && <section style={{ position: "absolute", zIndex: 6, left: 0, right: 0, bottom: 0, maxHeight: "72%", overflowY: "auto", padding: "18px 20px 24px", borderRadius: "24px 24px 0 0", background: "#FFFFFF", boxShadow: "0 -8px 24px #1114181A" }} onClick={(event) => event.stopPropagation()}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><strong style={{ fontSize: 18 }}>People ({participants.length})</strong><button type="button" onClick={() => setPeopleOpen(false)} style={{ border: 0, background: "transparent", fontSize: 22 }}>×</button></div>{participants.map((row, index) => { const profile = talkProfileFromRow(row); return <div key={row.id || row.user_id || index} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 0", borderBottom: "1px solid #F0F1F2" }}><TalkProfileAvatar profile={profile} size={42} /><span style={{ flex: 1 }}><b style={{ display: "block" }}>{profile.name}</b><small>{profile.flag} {profile.country}</small></span><small>{profile.role === "host" ? "Host" : profile.muted ? "Muted" : "Speaking"}</small></div>; })}</section>}
+      {requestOpen && <section style={{ position: "absolute", zIndex: 6, left: 0, right: 0, bottom: 0, padding: "20px 20px 26px", borderRadius: "24px 24px 0 0", background: "#FFFFFF", boxShadow: "0 -8px 24px #1114181A" }} onClick={(event) => event.stopPropagation()}><strong style={{ display: "block", fontSize: 19 }}>Request to join</strong><p style={{ margin: "7px 0 14px", color: "#646970", fontSize: 13 }}>Ask the host to bring you on stage.</p><form onSubmit={submitRequest}><textarea value={requestText} onChange={(event) => setRequestText(event.target.value)} placeholder="Add a note (optional)" rows={3} style={{ width: "100%", resize: "none", border: "1px solid #E1E3E5", borderRadius: 14, padding: 12, boxSizing: "border-box", fontFamily: FONT, outline: "none" }} /><div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 12 }}><button type="button" onClick={() => setRequestOpen(false)} style={{ border: 0, background: "#F2F3F4", borderRadius: 14, padding: "11px 16px", fontFamily: FONT }}>Cancel</button><button type="submit" style={{ border: 0, background: "#F4C51F", borderRadius: 14, padding: "11px 16px", fontFamily: FONT, fontWeight: 700 }}>Send request</button></div></form></section>}
     </div>
   );
 }
+
 export default function MoreLandingOverride({ account }) {
   const [analytics, setAnalytics] = useState({ views: 0, followers: 0, likes: 0 });
   const [spaceTalkDiscovery, setSpaceTalkDiscovery] = useState(false);
   const [spaceTalkRoom, setSpaceTalkRoom] = useState(false);
+  const [spaceTalkHost, setSpaceTalkHost] = useState(false);
   const [pagerPosition, setPagerPosition] = useState(0);
   const [pagerDragging, setPagerDragging] = useState(false);
   const pagerViewportRef = React.useRef(null);
@@ -425,11 +539,11 @@ export default function MoreLandingOverride({ account }) {
   };
 
   if (spaceTalkRoom) {
-    return <LiveRoomScreen onBack={() => setSpaceTalkRoom(false)} />;
+    return <LiveRoomScreen account={account} isHost={spaceTalkHost} onBack={() => setSpaceTalkRoom(false)} />;
   }
 
   if (spaceTalkDiscovery) {
-    return <SpaceTalkDiscoveryScreen onOpenLiveRoom={() => setSpaceTalkRoom(true)} />;
+    return <SpaceTalkDiscoveryScreen onOpenLiveRoom={(host) => { setSpaceTalkHost(Boolean(host)); setSpaceTalkRoom(true); }} />;
   }
 
   return (
