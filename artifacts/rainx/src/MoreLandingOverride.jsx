@@ -87,14 +87,14 @@ function GiftsRewardsScreen({ onBack, account, settingsOpen = false, onOpenSetti
 }
 
 const TALK_AVATARS = [
-  { left: "4%", top: "21%", size: 36 },
-  { left: "20%", top: "34%", size: 36 },
-  { left: "23%", top: "57%", size: 36 },
-  { left: "48%", top: "12%", size: 36 },
-  { left: "51%", top: "75%", size: 36 },
-  { left: "77%", top: "25%", size: 36 },
-  { left: "87%", top: "45%", size: 36 },
-  { left: "88%", top: "68%", size: 36 },
+  { left: "5%", top: "24%", size: 31 },
+  { left: "21%", top: "37%", size: 31 },
+  { left: "24%", top: "58%", size: 31 },
+  { left: "49%", top: "15%", size: 31 },
+  { left: "52%", top: "73%", size: 31 },
+  { left: "78%", top: "28%", size: 31 },
+  { left: "88%", top: "47%", size: 31 },
+  { left: "89%", top: "67%", size: 31 },
 ];
 
 function PlaceholderAvatar({ size = 36, center = false }) {
@@ -121,12 +121,12 @@ function PlaceholderAvatar({ size = 36, center = false }) {
 
 function WorldMap() {
   return (
-    <svg viewBox="0 0 440 230" aria-label="World map" role="img" style={{ width: "100%", height: "100%", display: "block" }}>
-      <g fill="#F0F1F2">
-        <path d="M28 58 45 45l28-4 18 13 25 4 15 18-12 14-25-3-16 15-18-5-4-18-20-5zM76 99l17-3 16 15-8 25-16 27-13-8 4-26-8-18z" />
-        <path d="m145 48 19-10 19 4 11 16-8 15-19 3-8 17-14-10 5-18-12-7zM177 79l19-5 13 17-7 21-11 24-8 30-13 23-9-9 7-32-8-23 10-17z" />
-        <path d="m218 48 25-10 31 6 19 12 31-2 26 14-7 13-29 1-15 12-25-4-16 8-23-13-5-16-21-5zM263 93l20-3 16 15 17 4 9 20-15 10-20-10-16 7-12-14z" />
-        <path d="m330 116 18-6 22 7 8 18-12 18-17-1-15-17zM373 92l26-2 16 10-4 15-24 4-17-10zM355 169l20-4 17 12-4 18-25 7-17-11z" />
+    <svg viewBox="0 0 440 200" aria-label="World map" role="img" style={{ width: "100%", height: "100%", display: "block", opacity: 0.82 }}>
+      <g fill="#EEF0F2">
+        <path d="M25 47 43 34l29-5 21 10 24 4 18 16-7 12-23 4-13 16-20-3-10-13-20-2-10-13zM80 76l18-1 13 13-6 17-10 20-13 18-11-8 5-21-7-17z" />
+        <path d="m145 39 18-10 22 5 18 15-8 12-19 3-8 16-13-8 3-15-13-8zM181 69l20-3 13 15-6 19-11 21-8 28-12 20-9-8 6-27-7-20 8-16z" />
+        <path d="m220 40 25-10 32 5 19 11 31-2 27 13-7 12-28 2-16 11-25-4-17 8-23-12-4-16-21-5zM264 79l20-2 17 13 17 4 10 16-14 10-20-7-16 7-13-14z" />
+        <path d="m331 101 19-6 21 7 8 15-11 15-18-1-14-14zM374 80l25-2 17 9-4 13-23 4-17-9zM355 145l21-4 17 11-5 15-24 7-17-10z" />
       </g>
     </svg>
   );
@@ -236,7 +236,7 @@ function SpaceTalkDiscoveryScreen({ onOpenLiveRoom }) {
           <h2 style={{ margin: 0, fontSize: 20, lineHeight: 1.1, letterSpacing: -0.45, fontWeight: 800 }}>People Around the World</h2>
           <span style={{ display: "flex", alignItems: "center", gap: 5, color: "#85888C", fontSize: 14 }}>Live now <i style={{ width: 9, height: 9, borderRadius: "50%", background: "#35A64A", display: "block", animation: "spaceTalkPulse 2.4s ease-in-out infinite" }} /></span>
         </div>
-        <div style={{ height: 274, marginTop: 7, position: "relative" }}>
+        <div style={{ height: 238, marginTop: 7, position: "relative" }}>
           <WorldMap />
           {TALK_AVATARS.map((avatar, index) => (
             <span key={index} style={{ position: "absolute", left: avatar.left, top: avatar.top, animation: `spaceTalkBreathe ${3.8 + index * .18}s ease-in-out ${index * .12}s infinite` }}>
@@ -247,7 +247,7 @@ function SpaceTalkDiscoveryScreen({ onOpenLiveRoom }) {
           <span style={{ position: "absolute", left: "46%", top: "46%", animation: "spaceTalkBreathe 4.2s ease-in-out .3s infinite" }}>
             <span style={{ position: "absolute", inset: -13, borderRadius: "50%", border: "1px solid #F4D35E", animation: "spaceTalkPulse 3s ease-in-out infinite" }} />
             <span style={{ position: "absolute", inset: -7, borderRadius: "50%", border: "1px solid #F4D35E" }} />
-            <PlaceholderAvatar size={54} center />
+            <PlaceholderAvatar size={50} center />
           </span>
         </div>
       </section>
@@ -258,8 +258,8 @@ function SpaceTalkDiscoveryScreen({ onOpenLiveRoom }) {
           <button type="button" style={{ border: 0, background: "transparent", color: "#D4A711", fontFamily: FONT, fontSize: 15, fontWeight: 650, padding: 0 }}>See all</button>
         </div>
         {rooms.map(([title, host, viewers, color]) => (
-          <button key={title} type="button" onClick={onOpenLiveRoom} style={{ width: "100%", minHeight: 74, marginBottom: 8, padding: "10px 14px 10px 10px", display: "flex", alignItems: "center", gap: 12, border: "1px solid #E5E6E8", borderRadius: 17, background: "#FFFFFF", color: "#111418", fontFamily: FONT, textAlign: "left", boxSizing: "border-box" }}>
-            <PlaceholderAvatar size={48} />
+          <button key={title} type="button" onClick={onOpenLiveRoom} style={{ width: "calc(100% - 10px)", marginLeft: 5, minHeight: 72, marginBottom: 8, padding: "9px 12px 9px 9px", display: "flex", alignItems: "center", gap: 12, border: "1px solid #E5E6E8", borderRadius: 17, background: "#FFFFFF", color: "#111418", fontFamily: FONT, textAlign: "left", boxSizing: "border-box" }}>
+            <PlaceholderAvatar size={45} />
             <span style={{ flex: 1, minWidth: 0 }}>
               <strong style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 15, lineHeight: 1.2, fontWeight: 650 }}>{title}</strong>
               <span style={{ display: "block", marginTop: 5, color: "#62676D", fontSize: 13 }}>{host}</span>
