@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { motion, useMotionValue, useTransform } from "motion/react";
-import { ArrowLeft, ChevronRight, Gift, UsersRound, CircleDollarSign, Share2, Check, ShieldCheck, CircleHelp, ArrowUpRight } from "lucide-react";
+import { motion, useMotionValue, useTransform } from "framer-motion";
+import { ArrowLeft, AudioLines, Bell, ChevronRight, CircleDollarSign, CircleHelp, Check, Gift, MessageCircle, Mic, MicOff, MoreHorizontal, PhoneOff, Radio, Share2, ShieldCheck, UserRound, UsersRound, Video, VideoOff } from "lucide-react";
 import { ReferralRewardsScreen, MyReferralsScreen, ReferralPerformanceScreen } from "./RainxApp";
 import { supabase } from "./supabaseClient";
 
@@ -83,70 +83,178 @@ function GiftsRewardsScreen({ onBack, account, settingsOpen = false, onOpenSetti
   ];
   const pageStyle = { position: "fixed", inset: 0, zIndex: 20, background: "#FFFFFF", color: "#17191B", overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', sans-serif" };
   if (settings) return <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ ...pageStyle, ...(transitionStyle || {}) }}><main style={{maxWidth:480,minHeight:"100dvh",margin:"0 auto",background:"#FFF"}}><header style={{height:60,borderBottom:"1px solid #E5E5E5",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 20px"}}><button onClick={closeSettings} aria-label="Back" style={{border:0,background:"none",padding:0}}><ArrowLeft size={28}/></button><strong style={{fontSize:20}}>Gifts settings</strong><CircleHelp size={27} strokeWidth={2.3} /></header><section style={{padding:"20px 21px",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div><strong style={{fontSize:18}}>Gifts</strong><p style={{margin:"10px 0 0",color:"#92979B",fontSize:15,lineHeight:1.32,maxWidth:335}}>Viewers can send Gifts on your eligible videos when the feature is turned on</p></div><button aria-label={giftsOn?"Turn gifts off":"Turn gifts on"} onClick={()=>setGiftsOn(v=>!v)} style={{width:giftsOn?60:56,height:34,border:0,borderRadius:22,padding:3,background:giftsOn?"#F4D35E":"#D8DADC",transition:"all 520ms cubic-bezier(.22,1,.36,1)",cursor:"pointer",flexShrink:0}}><span style={{display:"block",width:28,height:28,borderRadius:"50%",background:"#FFF",boxShadow:"0 1px 3px #7775",transform:giftsOn?"translateX(23px) scaleX(1.1)":"translateX(0) scaleX(1)",transition:"transform 520ms cubic-bezier(.22,1,.36,1)"}} /></button></section></main></div>;
-  return <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ ...pageStyle, ...(transitionStyle || {}) }}><main style={{maxWidth:480,minHeight:"100dvh",margin:"0 auto",background:"#FFF",padding:"10px 22px 34px",boxSizing:"border-box"}}><header style={{height:48,display:"flex",alignItems:"center",justifyContent:"space-between"}}><button onClick={close} aria-label="Back" style={{width:42,height:42,marginLeft:-9,border:0,background:"transparent",display:"grid",placeItems:"center"}}><ArrowLeft size={28} strokeWidth={2.2}/></button><button onClick={()=>{try{navigator.share?.({title:"RainX Rewards Program",text:"Earn more with RainX"});}catch{}}} aria-label="Share rewards" style={{width:38,height:38,marginRight:-6,border:0,background:"transparent"}}><ArrowUpRight size={27} strokeWidth={2.1} /></button></header><h2 style={{textAlign:"center",color:"#BD8C05",fontSize:21,lineHeight:1.2,fontWeight:700,margin:"10px 0 10px"}}>RainX Rewards Program</h2><h1 style={{textAlign:"center",fontSize:35,lineHeight:1.06,letterSpacing:-1, fontWeight:750,margin:"0 auto 10px",maxWidth:390}}>Earn more with RainX</h1><p style={{textAlign:"center",color:"#596269",fontSize:17,lineHeight:1.43,margin:"0 auto 12px",maxWidth:385}}>RainX Rewards is now live! Earn gifts for your Posts and Profile. More activity, more rewards.</p><img src="/rewards-gifts-hero.webp" alt="Creator earning rewards" draggable="false" style={{display:"block",width:"calc(100% + 24px)",margin:"0 -12px 12px",height:"auto",objectFit:"contain"}}/><div style={{display:"flex",alignItems:"flex-start",gap:12,margin:"0 8px 16px"}}><span style={{flex:"0 0 21px",width:21,height:21,marginTop:2,borderRadius:"50%",background:"linear-gradient(90deg,#1555C9 0 50%,#F4D35E 50%)"}}/><p style={{margin:0,color:"#3F474D",fontSize:15,lineHeight:1.35}}>Stay active on RainX and unlock exciting gifts.<br/>Your activity powers your rewards.</p></div><div style={{borderTop:"2px dotted #E0E1E2",paddingTop:16}}><h3 style={{fontSize:21,lineHeight:1.2,fontWeight:750,margin:"0 0 15px 68px"}}>How to earn rewards</h3><div style={{display:"grid",gridTemplateColumns:"54px 1fr",columnGap:13,rowGap:16,alignItems:"center"}}><div style={{textAlign:"center",color:"#17191B"}}><Gift size={29} strokeWidth={1.9}/></div><div><strong style={{fontSize:18}}>Gifts for your <span style={{color:"#BD8C05"}}>Posts</span></strong><p style={{margin:"3px 0 0",color:"#596269",fontSize:15,lineHeight:1.3}}>Create and share quality posts to earn gifts from the RainX community.</p></div><div style={{textAlign:"center",color:"#17191B"}}><UsersRound size={29} strokeWidth={1.9}/></div><div><strong style={{fontSize:18}}>Gifts for your <span style={{color:"#BD8C05"}}>Profile</span></strong><p style={{margin:"3px 0 0",color:"#596269",fontSize:15,lineHeight:1.3}}>Keep your profile active and engaging to receive more profile gifts.</p></div></div></div><section style={{marginTop:22}}><p style={{textAlign:"center",color:"#3F474D",fontSize:15,lineHeight:1.4,margin:"0 0 18px"}}>Eligible accounts and videos must be in good standing, follow our Community Guidelines, agree to the Terms of Service, Privacy Policy and Rewards Policy, and meet and maintain certain eligibility criteria, which include:</p>{requirements.map(([met,label])=><div key={label} style={{display:"flex",alignItems:"flex-start",gap:16,margin:"0 4px 16px"}}><span style={{color:met?"#F4D35E":"#D9DCDE",display:"inline-flex",marginTop:1}}><Check size={28} strokeWidth={3}/></span><span style={{fontSize:17,lineHeight:1.3,fontWeight:650}}>{label}</span></div>)}<button onClick={onOpenSettings} style={{width:"78%",height:54,border:0,borderRadius:15,background:"#F4D35E",color:"#17191B",fontSize:18,fontWeight:750,display:"flex",alignItems:"center",justifyContent:"center",gap:12,margin:"4px auto 0"}}><Gift size={23} strokeWidth={2.1}/><span>Turn on Gifts</span></button></section><div style={{display:"flex",gap:14,alignItems:"center",background:"#FFF8E7",borderRadius:12,padding:"12px 14px",marginTop:18,color:"#30363B",fontSize:14,lineHeight:1.3}}><ShieldCheck size={27} strokeWidth={1.9} color="#BD8C05"/><span>Stay active, create meaningful content,<br/>and efunction SpaceTalkImageCard({ src, index, x, width }) {
+  return <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ ...pageStyle, ...(transitionStyle || {}) }}><main style={{maxWidth:480,minHeight:"100dvh",margin:"0 auto",background:"#FFF",padding:"10px 22px 34px",boxSizing:"border-box"}}><header style={{height:48,display:"flex",alignItems:"center",justifyContent:"space-between"}}><button onClick={close} aria-label="Back" style={{width:42,height:42,marginLeft:-9,border:0,background:"transparent",display:"grid",placeItems:"center"}}><ArrowLeft size={28} strokeWidth={2.2}/></button><button onClick={()=>{try{navigator.share?.({title:"RainX Rewards Program",text:"Earn more with RainX"});}catch{}}} aria-label="Share rewards" style={{width:38,height:38,marginRight:-6,border:0,background:"transparent"}}><ArrowUpRight size={27} strokeWidth={2.1} /></button></header><h2 style={{textAlign:"center",color:"#BD8C05",fontSize:21,lineHeight:1.2,fontWeight:700,margin:"10px 0 10px"}}>RainX Rewards Program</h2><h1 style={{textAlign:"center",fontSize:35,lineHeight:1.06,letterSpacing:-1, fontWeight:750,margin:"0 auto 10px",maxWidth:390}}>Earn more with RainX</h1><p style={{textAlign:"center",color:"#596269",fontSize:17,lineHeight:1.43,margin:"0 auto 12px",maxWidth:385}}>RainX Rewards is now live! Earn gifts for your Posts and Profile. More activity, more rewards.</p><img src="/rewards-gifts-hero.webp" alt="Creator earning rewards" draggable="false" style={{display:"block",width:"calc(100% + 24px)",margin:"0 -12px 12px",height:"auto",objectFit:"contain"}}/><div style={{display:"flex",alignItems:"flex-start",gap:12,margin:"0 8px 16px"}}><span style={{flex:"0 0 21px",width:21,height:21,marginTop:2,borderRadius:"50%",background:"linear-gradient(90deg,#1555C9 0 50%,#F4D35E 50%)"}}/><p style={{margin:0,color:"#3F474D",fontSize:15,lineHeight:1.35}}>Stay active on RainX and unlock exciting gifts.<br/>Your activity powers your rewards.</p></div><div style={{borderTop:"2px dotted #E0E1E2",paddingTop:16}}><h3 style={{fontSize:21,lineHeight:1.2,fontWeight:750,margin:"0 0 15px 68px"}}>How to earn rewards</h3><div style={{display:"grid",gridTemplateColumns:"54px 1fr",columnGap:13,rowGap:16,alignItems:"center"}}><div style={{textAlign:"center",color:"#17191B"}}><Gift size={29} strokeWidth={1.9}/></div><div><strong style={{fontSize:18}}>Gifts for your <span style={{color:"#BD8C05"}}>Posts</span></strong><p style={{margin:"3px 0 0",color:"#596269",fontSize:15,lineHeight:1.3}}>Create and share quality posts to earn gifts from the RainX community.</p></div><div style={{textAlign:"center",color:"#17191B"}}><UsersRound size={29} strokeWidth={1.9}/></div><div><strong style={{fontSize:18}}>Gifts for your <span style={{color:"#BD8C05"}}>Profile</span></strong><p style={{margin:"3px 0 0",color:"#596269",fontSize:15,lineHeight:1.3}}>Keep your profile active and engaging to receive more profile gifts.</p></div></div></div><section style={{marginTop:22}}><p style={{textAlign:"center",color:"#3F474D",fontSize:15,lineHeight:1.4,margin:"0 0 18px"}}>Eligible accounts and videos must be in good standing, follow our Community Guidelines, agree to the Terms of Service, Privacy Policy and Rewards Policy, and meet and maintain certain eligibility criteria, which include:</p>{requirements.map(([met,label])=><div key={label} style={{display:"flex",alignItems:"flex-start",gap:16,margin:"0 4px 16px"}}><span style={{color:met?"#F4D35E":"#D9DCDE",display:"inline-flex",marginTop:1}}><Check size={28} strokeWidth={3}/></span><span style={{fontSize:17,lineHeight:1.3,fontWeight:650}}>{label}</span></div>)}<button onClick={onOpenSettings} style={{width:"78%",height:54,border:0,borderRadius:15,background:"#F4D35E",color:"#17191B",fontSize:18,fontWeight:750,display:"flex",alignItems:"center",justifyContent:"center",gap:12,margin:"4px auto 0"}}><Gift size={23} strokeWidth={2.1}/><span>Turn on Gifts</span></button></section><div style={{display:"flex",gap:14,alignItems:"center",background:"#FFF8E7",borderRadius:12,padding:"12px 14px",marginTop:18,color:"#30363B",fontSize:14,lineHeight:1.3}}><ShieldCheck size={27} strokeWidth={1.9} color="#BD8C05"/><span>Stay active, create meaningful content,<br/>and enjoy exclusive rewards only on RainX.</span></div></main></div>;
   const range = [-(index + 1) * width, -index * width, -(index - 1) * width];
   const rotateY = useTransform(x, range, [90, 0, -90], { clamp: false });
   return <motion.div style={{ flex: "0 0 " + (100 / SPACE_TALK_IMAGES.length) + "%", height: "100%", rotateY, transformStyle: "preserve-3d", padding: "0 10px", boxSizing: "border-box" }}><img src={src} alt={index === 0 ? "RainX traders connecting" : index === 1 ? "RainX trader hosting Space Talk" : "RainX trader sharing market insights"} draggable="false" style={{ display: "block", width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", borderRadius: 22, userSelect: "none", pointerEvents: "none" }} /></motion.div>;
 }
 
-function SpaceTalkScreen() {
-  const [slide, setSlide] = useState(0);
-  const [carouselWidth, setCarouselWidth] = useState(0);
-  const carouselRef = React.useRef(null);
-  const x = useMotionValue(0);
+const TALK_AVATARS = [
+  { left: "4%", top: "21%", size: 36 },
+  { left: "20%", top: "34%", size: 36 },
+  { left: "23%", top: "57%", size: 36 },
+  { left: "48%", top: "12%", size: 36 },
+  { left: "51%", top: "75%", size: 36 },
+  { left: "77%", top: "25%", size: 36 },
+  { left: "87%", top: "45%", size: 36 },
+  { left: "88%", top: "68%", size: 36 },
+];
 
-  useEffect(() => {
-    const updateWidth = () => setCarouselWidth(carouselRef.current?.clientWidth || 0);
-    updateWidth();
-    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateWidth) : null;
-    if (observer && carouselRef.current) observer.observe(carouselRef.current);
-    window.addEventListener("resize", updateWidth);
-    return () => {
-      observer?.disconnect();
-      window.removeEventListener("resize", updateWidth);
-    };
-  }, []);
-
-  const handleDragEnd = (_event, info) => {
-    const offset = info.offset.x;
-    const velocity = info.velocity.x;
-    if (offset < -50 || velocity < -500) {
-      setSlide((current) => Math.min(current + 1, SPACE_TALK_IMAGES.length - 1));
-    } else if (offset > 50 || velocity > 500) {
-      setSlide((current) => Math.max(current - 1, 0));
-    }
-  };
-
-  const copy = SPACE_TALK_COPY[slide];
-  const width = carouselWidth || 1;
-
+function PlaceholderAvatar({ size = 36, center = false }) {
   return (
-    <div style={{ background: "#F5F6F7", minHeight: "100%", padding: "16px 6px 40px", boxSizing: "border-box" }}>
-      <section style={{ background: "#FFFFFF", borderRadius: 20, padding: "20px 14px 18px", boxShadow: "0 1px 8px rgba(17,20,24,0.045)" }}>
-        <div ref={carouselRef} onPointerDown={(event) => event.stopPropagation()} onPointerMove={(event) => event.stopPropagation()} onPointerUp={(event) => event.stopPropagation()} onPointerCancel={(event) => event.stopPropagation()} style={{ overflow: "hidden", width: "calc(100% + 20px)", marginLeft: -10, aspectRatio: "292 / 331", borderRadius: 22, background: "#FFFFFF", touchAction: "pan-y", perspective: 1000 }}>
-          <motion.div className="flex" drag="x" dragConstraints={{ left: -(width * (SPACE_TALK_IMAGES.length - 1)), right: 0 }} dragElastic={0.08} style={{ width: SPACE_TALK_IMAGES.length * 100 + "%", height: "100%", perspective: 1000, x }} animate={{ x: -(slide * carouselWidth) }} transition={{ type: "spring", stiffness: 330, damping: 30 }} onDragEnd={handleDragEnd}>
-            {SPACE_TALK_IMAGES.map((src, index) => <SpaceTalkImageCard key={src} src={src} index={index} x={x} width={width} />)}
-          </motion.div>
+    <span
+      aria-hidden="true"
+      style={{
+        width: size,
+        height: size,
+        display: "grid",
+        placeItems: "center",
+        borderRadius: "50%",
+        color: "#26313A",
+        background: center ? "linear-gradient(145deg,#FFF8DD,#F4D35E)" : "linear-gradient(145deg,#D9ECFF,#F1F3F5)",
+        border: center ? "2px solid #F4D35E" : "2px solid #FFFFFF",
+        boxShadow: center ? "0 0 0 1px #E8BD2B, 0 6px 16px #D9B72B33" : "0 2px 8px #6E7A8626",
+        boxSizing: "border-box",
+      }}
+    >
+      <UserRound size={size * 0.53} strokeWidth={1.8} />
+    </span>
+  );
+}
+
+function WorldMap() {
+  return (
+    <svg viewBox="0 0 440 230" aria-label="World map" role="img" style={{ width: "100%", height: "100%", display: "block" }}>
+      <g fill="#F0F1F2">
+        <path d="M28 58 45 45l28-4 18 13 25 4 15 18-12 14-25-3-16 15-18-5-4-18-20-5zM76 99l17-3 16 15-8 25-16 27-13-8 4-26-8-18z" />
+        <path d="m145 48 19-10 19 4 11 16-8 15-19 3-8 17-14-10 5-18-12-7zM177 79l19-5 13 17-7 21-11 24-8 30-13 23-9-9 7-32-8-23 10-17z" />
+        <path d="m218 48 25-10 31 6 19 12 31-2 26 14-7 13-29 1-15 12-25-4-16 8-23-13-5-16-21-5zM263 93l20-3 16 15 17 4 9 20-15 10-20-10-16 7-12-14z" />
+        <path d="m330 116 18-6 22 7 8 18-12 18-17-1-15-17zM373 92l26-2 16 10-4 15-24 4-17-10zM355 169l20-4 17 12-4 18-25 7-17-11z" />
+      </g>
+    </svg>
+  );
+}
+
+function SpaceTalkScreen({ onOpenLiveRoom }) {
+  const rooms = [
+    ["Market Outlook 2024", "John Carter", "1.2K", "#F4D35E"],
+    ["Web3 & The Future", "Crypto Lisa", "856", "#2F80ED"],
+  ];
+  return (
+    <div style={{ minHeight: "100%", background: "#FFFFFF", padding: "18px 22px 36px", boxSizing: "border-box", color: "#111418" }}>
+      <style>{`@keyframes spaceTalkBreathe{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.035)}}@keyframes spaceTalkPulse{0%,100%{opacity:.65;transform:scale(.96)}50%{opacity:1;transform:scale(1)}}`}</style>
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 42 }}>
+        <h1 style={{ margin: 0, fontSize: 29, lineHeight: 1, letterSpacing: -1.1, fontWeight: 800 }}>
+          Space <span style={{ color: "#D7A914" }}>Talk</span>
+        </h1>
+        <button type="button" aria-label="Space Talk notifications" style={{ border: 0, background: "transparent", padding: 6, color: "#111418" }}>
+          <Bell size={27} strokeWidth={2.1} />
+        </button>
+      </header>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", height: 58, alignItems: "end", borderBottom: "1px solid #EBECEE", marginBottom: 16 }}>
+        {["Talk", "Live Video", "Upcoming"].map((label, index) => (
+          <button key={label} type="button" style={{ height: 42, border: 0, borderBottom: index === 0 ? "3px solid #F4D35E" : "3px solid transparent", background: "transparent", color: index === 0 ? "#D2A20C" : "#34383D", fontFamily: FONT, fontSize: 15, fontWeight: index === 0 ? 750 : 500 }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <section style={{ minHeight: 158, borderRadius: 16, padding: "18px 16px 15px", boxSizing: "border-box", background: "radial-gradient(circle at 88% 5%,#FFF0A9 0 8%,transparent 33%), linear-gradient(135deg,#FFD944,#F4B914)", position: "relative", overflow: "hidden", boxShadow: "0 4px 13px #D9A91424" }}>
+        <div style={{ position: "absolute", right: -12, bottom: -34, width: 172, height: 110, borderRadius: "50%", border: "1px solid #FFF4B766", transform: "rotate(-20deg)" }} />
+        <strong style={{ display: "block", fontSize: 19, lineHeight: 1.1, letterSpacing: -0.3 }}>Weekly Crypto Talk</strong>
+        <p style={{ margin: "7px 0 0", maxWidth: 210, fontSize: 16, lineHeight: 1.35, fontWeight: 500 }}>Market insights &amp;<br />trend discussion</p>
+        <div style={{ position: "absolute", left: 16, bottom: 14, display: "flex", alignItems: "center" }}>
+          {[0, 1, 2].map((item) => <span key={item} style={{ marginLeft: item ? -7 : 0, borderRadius: "50%" }}><PlaceholderAvatar size={31} /></span>)}
+          <span style={{ marginLeft: -2, width: 35, height: 31, display: "grid", placeItems: "center", borderRadius: "50%", background: "#FFF2B9", color: "#53504A", fontSize: 14, fontWeight: 700 }}>+24</span>
         </div>
-        <motion.div key={slide} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}>
-          <h1 style={{ margin: "20px 0 6px", textAlign: "center", fontSize: 30, lineHeight: 1.12, letterSpacing: -0.8, fontWeight: 800 }}>{copy.title}</h1>
-          <p style={{ margin: "0 auto", maxWidth: 360, color: "#666B72", textAlign: "center", fontSize: 16, lineHeight: 1.4 }}>{copy.body}</p>
-        </motion.div>
-        <div style={{ display: "flex", justifyContent: "center", gap: 7, margin: "14px 0 20px" }}>
-          {SPACE_TALK_IMAGES.map((_, index) => <button key={index} type="button" aria-label={"Show Space Talk image " + (index + 1)} onClick={() => setSlide(index)} style={{ width: 8, height: 8, padding: 0, border: 0, borderRadius: "50%", background: slide === index ? "#111418" : "#D5D7D9" }} />)}
-        </div>
-        <button type="button" onClick={() => {}} style={{ width: "100%", height: 52, border: 0, borderRadius: 13, background: "#F4D35E", color: "#111418", fontFamily: FONT, fontSize: 17, fontWeight: 800 }}>Host Space Talk</button>
+        <button type="button" onClick={onOpenLiveRoom} style={{ position: "absolute", right: 14, bottom: 14, height: 44, minWidth: 142, padding: "0 13px 0 18px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: 0, borderRadius: 17, background: "#111418", color: "#FFFFFF", fontFamily: FONT, fontSize: 15, fontWeight: 750 }}>
+          Join Now <AudioLines size={21} strokeWidth={2.1} color="#F4D35E" />
+        </button>
       </section>
-      <button type="button" onClick={() => {}} style={{ width: "100%", height: 46, marginTop: 8, padding: "0 16px", border: 0, borderRadius: 14, background: "#FFFFFF", color: "#111418", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: FONT, fontSize: 15, fontWeight: 750, textAlign: "left" }}>Campaigns <ChevronRight size={20} color="#858A91" /></button>
-      <button type="button" onClick={() => {}} style={{ width: "100%", height: 46, marginTop: 8, padding: "0 16px", border: 0, borderRadius: 14, background: "#FFFFFF", color: "#111418", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: FONT, fontSize: 15, fontWeight: 750, textAlign: "left" }}>Suggested Traders <ChevronRight size={20} color="#858A91" /></button>
+
+      <section style={{ marginTop: 30 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h2 style={{ margin: 0, fontSize: 20, lineHeight: 1.1, letterSpacing: -0.45, fontWeight: 800 }}>People Around the World</h2>
+          <span style={{ display: "flex", alignItems: "center", gap: 5, color: "#85888C", fontSize: 14 }}>Live now <i style={{ width: 9, height: 9, borderRadius: "50%", background: "#35A64A", display: "block", animation: "spaceTalkPulse 2.4s ease-in-out infinite" }} /></span>
+        </div>
+        <div style={{ height: 274, marginTop: 7, position: "relative" }}>
+          <WorldMap />
+          {TALK_AVATARS.map((avatar, index) => (
+            <span key={index} style={{ position: "absolute", left: avatar.left, top: avatar.top, animation: `spaceTalkBreathe ${3.8 + index * .18}s ease-in-out ${index * .12}s infinite` }}>
+              <PlaceholderAvatar size={avatar.size} />
+              <span style={{ position: "absolute", right: -2, bottom: -2, width: 11, height: 11, borderRadius: "50%", background: "#F4D35E", border: "2px solid #FFFFFF", boxSizing: "border-box" }} />
+            </span>
+          ))}
+          <span style={{ position: "absolute", left: "46%", top: "46%", animation: "spaceTalkBreathe 4.2s ease-in-out .3s infinite" }}>
+            <span style={{ position: "absolute", inset: -13, borderRadius: "50%", border: "1px solid #F4D35E", animation: "spaceTalkPulse 3s ease-in-out infinite" }} />
+            <span style={{ position: "absolute", inset: -7, borderRadius: "50%", border: "1px solid #F4D35E" }} />
+            <PlaceholderAvatar size={54} center />
+          </span>
+        </div>
+      </section>
+
+      <section style={{ marginTop: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 13 }}>
+          <h2 style={{ margin: 0, fontSize: 20, lineHeight: 1.1, letterSpacing: -0.45, fontWeight: 800 }}>Popular Rooms</h2>
+          <button type="button" style={{ border: 0, background: "transparent", color: "#D4A711", fontFamily: FONT, fontSize: 15, fontWeight: 650, padding: 0 }}>See all</button>
+        </div>
+        {rooms.map(([title, host, viewers, color]) => (
+          <button key={title} type="button" onClick={onOpenLiveRoom} style={{ width: "100%", minHeight: 74, marginBottom: 8, padding: "10px 14px 10px 10px", display: "flex", alignItems: "center", gap: 12, border: "1px solid #E5E6E8", borderRadius: 17, background: "#FFFFFF", color: "#111418", fontFamily: FONT, textAlign: "left", boxSizing: "border-box" }}>
+            <PlaceholderAvatar size={48} />
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <strong style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 15, lineHeight: 1.2, fontWeight: 650 }}>{title}</strong>
+              <span style={{ display: "block", marginTop: 5, color: "#62676D", fontSize: 13 }}>{host}</span>
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 11, color: "#62676D", fontSize: 13, whiteSpace: "nowrap" }}>
+              <span style={{ padding: "5px 11px", borderRadius: 13, background: color, color: color === "#F4D35E" ? "#111418" : "#FFFFFF", fontWeight: 700 }}>Live</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><UsersRound size={16} />{viewers}</span>
+            </span>
+          </button>
+        ))}
+        <button type="button" onClick={onOpenLiveRoom} style={{ width: "100%", height: 52, marginTop: 13, border: 0, borderRadius: 14, background: "#F4D35E", color: "#111418", fontFamily: FONT, fontSize: 16, fontWeight: 800 }}>Host Space Talk</button>
+      </section>
     </div>
   );
-}x)}to{opacity:1;transform:translateY(0)}}"}</style>
+}
+
+function LiveRoomScreen({ onBack, activeSession = false, hostStream = null }) {
+  const [muted, setMuted] = useState(false);
+  const [cameraOff, setCameraOff] = useState(false);
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 30, background: "#101114", color: "#FFFFFF", fontFamily: FONT, display: "flex", flexDirection: "column" }}>
+      <header style={{ height: 72, padding: "0 18px", display: "flex", alignItems: "center", justifyContent: "space-between", boxSizing: "border-box" }}>
+        <button type="button" onClick={onBack} aria-label="Back to Space Talk" style={{ width: 42, height: 42, display: "grid", placeItems: "center", border: 0, borderRadius: 14, background: "#FFFFFF14", color: "#FFFFFF" }}><ArrowLeft size={23} /></button>
+        <div style={{ textAlign: "center" }}><strong style={{ display: "block", fontSize: 17 }}>Space Talk</strong><span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 3, color: "#B8BBC0", fontSize: 12 }}><Radio size={13} /> Live room</span></div>
+        <button type="button" aria-label="More live room options" style={{ width: 42, height: 42, display: "grid", placeItems: "center", border: 0, borderRadius: 14, background: "#FFFFFF14", color: "#FFFFFF" }}><MoreHorizontal size={23} /></button>
+      </header>
+      <main style={{ flex: 1, minHeight: 0, padding: "8px 18px 0", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
+        <section style={{ flex: 1, minHeight: 290, borderRadius: 24, background: activeSession && hostStream ? "#202329" : "linear-gradient(160deg,#25282E,#17191D)", border: "1px solid #FFFFFF12", display: "grid", placeItems: "center", position: "relative", overflow: "hidden" }}>
+          {activeSession && hostStream ? <video src={hostStream} autoPlay playsInline controls={false} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ textAlign: "center", padding: 24 }}><span style={{ width: 70, height: 70, margin: "0 auto 20px", display: "grid", placeItems: "center", borderRadius: "50%", background: "#F4D35E1A", color: "#F4D35E" }}><AudioLines size={34} /></span><h1 style={{ margin: 0, fontSize: 22, lineHeight: 1.2, letterSpacing: -0.4 }}>Space Talk isn’t live right now</h1><p style={{ margin: "10px auto 0", maxWidth: 250, color: "#AEB2B8", fontSize: 14, lineHeight: 1.45 }}>Check back soon for live market conversations.</p></div>}
+          {activeSession && hostStream && <span style={{ position: "absolute", top: 16, left: 16, display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 12, background: "#E44747", fontSize: 12, fontWeight: 700 }}><i style={{ width: 7, height: 7, borderRadius: "50%", background: "#FFFFFF" }} />LIVE</span>}
+        </section>
+        <section style={{ padding: "19px 2px 13px", display: "flex", alignItems: "center", gap: 12 }}>
+          <PlaceholderAvatar size={48} center />
+          <div style={{ flex: 1 }}><strong style={{ display: "block", fontSize: 16 }}>Space Talk host</strong><span style={{ display: "block", marginTop: 4, color: "#AEB2B8", fontSize: 13 }}>{activeSession ? "Live now" : "Waiting for the host to start"}</span></div>
+          <span style={{ display: "flex", alignItems: "center", gap: 5, color: "#AEB2B8", fontSize: 13 }}><UsersRound size={17} /> 0</span>
+        </section>
+        <section style={{ minHeight: 72, padding: "14px 15px", display: "flex", alignItems: "center", gap: 12, borderRadius: 16, background: "#FFFFFF0D", color: "#AEB2B8", boxSizing: "border-box" }}>
+          <span style={{ width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: "50%", background: "#FFFFFF12", color: "#F4D35E" }}><MessageCircle size={17} /></span>
+          <span style={{ fontSize: 13 }}>Join the conversation when the room goes live.</span>
+        </section>
+      </main>
+      <footer style={{ height: 86, padding: "12px 28px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", boxSizing: "border-box" }}>
+        <button type="button" onClick={() => setMuted((value) => !value)} aria-label={muted ? "Turn microphone on" : "Mute microphone"} style={{ width: 48, height: 48, display: "grid", placeItems: "center", border: 0, borderRadius: "50%", background: "#FFFFFF14", color: "#FFFFFF" }}>{muted ? <MicOff size={21} /> : <Mic size={21} />}</button>
+        <button type="button" onClick={() => setCameraOff((value) => !value)} aria-label={cameraOff ? "Turn camera on" : "Turn camera off"} style={{ width: 48, height: 48, display: "grid", placeItems: "center", border: 0, borderRadius: "50%", background: "#FFFFFF14", color: "#FFFFFF" }}>{cameraOff ? <VideoOff size={21} /> : <Video size={21} />}</button>
+        <button type="button" onClick={onBack} aria-label="Leave live room" style={{ width: 54, height: 48, display: "grid", placeItems: "center", border: 0, borderRadius: 18, background: "#E44747", color: "#FFFFFF" }}><PhoneOff size={21} /></button>
+        <button type="button" aria-label="Share Space Talk" style={{ width: 48, height: 48, display: "grid", placeItems: "center", border: 0, borderRadius: "50%", background: "#FFFFFF14", color: "#FFFFFF" }}><Share2 size={21} /></button>
+      </footer>
     </div>
   );
 }
 export default function MoreLandingOverride({ account }) {
   const [analytics, setAnalytics] = useState({ views: 0, followers: 0, likes: 0 });
+  const [spaceTalkRoom, setSpaceTalkRoom] = useState(false);
   const [pagerPosition, setPagerPosition] = useState(0);
   const [pagerDragging, setPagerDragging] = useState(false);
   const pagerViewportRef = React.useRef(null);
@@ -256,6 +364,10 @@ export default function MoreLandingOverride({ account }) {
       suppressPagerClick.current = false;
     }
   };
+
+  if (spaceTalkRoom) {
+    return <LiveRoomScreen onBack={() => setSpaceTalkRoom(false)} />;
+  }
 
   return (
     <div
@@ -596,7 +708,7 @@ export default function MoreLandingOverride({ account }) {
         </section>
             </div>
             <div style={{ flex: "0 0 50%", width: "50%", minWidth: 0 }}>
-              <SpaceTalkScreen />
+              <SpaceTalkScreen onOpenLiveRoom={() => setSpaceTalkRoom(true)} />
             </div>
           </div>
         </div>
