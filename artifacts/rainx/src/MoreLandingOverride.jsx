@@ -193,87 +193,51 @@ function SpaceTalkScreen({ onOpenDiscovery }) {
   );
 }
 
-function SpaceTalkDiscoveryScreen({ onOpenLiveRoom }) {
-  const rooms = [
-    ["Market Outlook 2024", "John Carter", "1.2K", "#F4D35E"],
-    ["Web3 & The Future", "Crypto Lisa", "856", "#2F80ED"],
-  ];
-  return (
-    <div style={{ minHeight: "100dvh", height: "100dvh", overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", background: "#FFFFFF", padding: "18px 22px 36px", boxSizing: "border-box", color: "#111418" }}>
-      <style>{`@keyframes spaceTalkBreathe{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.035)}}@keyframes spaceTalkPulse{0%,100%{opacity:.65;transform:scale(.96)}50%{opacity:1;transform:scale(1)}}`}</style>
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 42 }}>
-        <h1 style={{ margin: 0, fontSize: 29, lineHeight: 1, letterSpacing: -1.1, fontWeight: 800 }}>
-          Space <span style={{ color: "#D7A914" }}>Talk</span>
-        </h1>
-        <button type="button" aria-label="Space Talk notifications" style={{ border: 0, background: "transparent", padding: 6, color: "#111418" }}>
-          <Bell size={27} strokeWidth={2.1} />
-        </button>
-      </header>
+const LIVE_FILTERS = [
+  ["Natural", "none"], ["Smooth", "brightness(1.04) saturate(1.03) blur(.18px)"], ["Clear", "contrast(1.14) saturate(1.08)"], ["Sharp", "contrast(1.22) saturate(1.12)"], ["Glow", "brightness(1.12) saturate(1.1) contrast(1.03)"], ["Portrait", "contrast(1.08) saturate(.96) brightness(1.04)"], ["iPhone Style", "contrast(1.08) saturate(1.12) brightness(1.03)"], ["iPhone Portrait", "contrast(1.1) saturate(1.08) brightness(1.05) blur(.12px)"],
+];
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", height: 58, alignItems: "end", borderBottom: "1px solid #EBECEE", marginBottom: 16 }}>
-        {["Talk", "Live Video", "Upcoming"].map((label, index) => (
-          <button key={label} type="button" style={{ height: 42, border: 0, borderBottom: index === 0 ? "3px solid #F4D35E" : "3px solid transparent", background: "transparent", color: index === 0 ? "#D2A20C" : "#34383D", fontFamily: FONT, fontSize: 15, fontWeight: index === 0 ? 750 : 500 }}>
-            {label}
-          </button>
-        ))}
-      </div>
+function LiveVideoTab({ account }) {
+  const videoRef = React.useRef(null);
+  const streamRef = React.useRef(null);
+  const [streamReady, setStreamReady] = useState(false);
+  const [filter, setFilter] = useState(LIVE_FILTERS[0]);
+  const [isLive, setIsLive] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!navigator.mediaDevices?.getUserMedia) { setError("Camera access is not supported in this browser."); return; }
+      try { const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true }); if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return; } streamRef.current = stream; setStreamReady(true); if (videoRef.current) videoRef.current.srcObject = stream; }
+      catch { setError("Camera and microphone permissions are required for Live Video."); }
+    })();
+    return () => { cancelled = true; streamRef.current?.getTracks().forEach((track) => track.stop()); streamRef.current = null; };
+  }, []);
+  useEffect(() => { if (videoRef.current && streamRef.current) videoRef.current.srcObject = streamRef.current; }, [streamReady]);
+  const startTaking = async () => {
+    if (!streamRef.current) return;
+    let userId = account?.id || null;
+    if (!userId) { try { userId = (await supabase.auth.getUser()).data?.user?.id || null; } catch {} }
+    if (!userId) { setError("Sign in is required to go live."); return; }
+    const profile = talkProfileFromRow(account || {}, { name: "RainX trader", country: "Accra, Ghana", flag: "🇬🇭" });
+    const { error: syncError } = await supabase.from("space_talk_participants").upsert({ room_id: "weekly-crypto-talk", user_id: userId, role: "host", name: profile.name, country: profile.country, flag: profile.flag, avatar_url: profile.avatar_url, is_muted: false, is_live: true }, { onConflict: "room_id,user_id" });
+    if (syncError) setError("Could not publish your live status."); else setIsLive(true);
+  };
+  return <div style={{ minHeight: "100dvh", background: "#FFFFFF", padding: "18px 22px 34px", boxSizing: "border-box", color: "#111418" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><h2 style={{ margin: 0, fontSize: 24, letterSpacing: -0.7 }}>Live Video</h2><p style={{ margin: "7px 0 0", color: "#70757B", fontSize: 13 }}>Use your camera to take the stage.</p></div>{isLive && <span style={{ padding: "7px 10px", borderRadius: 14, background: "#E44747", color: "#FFFFFF", fontSize: 12, fontWeight: 800 }}>LIVE</span>}</div><div style={{ position: "relative", marginTop: 18, overflow: "hidden", aspectRatio: "3 / 4", borderRadius: 24, background: "#15171A" }}><video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", display: "block", objectFit: "cover", transform: "scaleX(-1)", filter: filter[1] }} />{!streamReady && <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: 30, color: "#FFFFFF", textAlign: "center" }}>{error || "Starting camera…"}</div>}<span style={{ position: "absolute", left: 14, top: 14, padding: "7px 10px", borderRadius: 14, background: "#11141899", color: "#FFFFFF", fontSize: 12 }}>Camera preview</span></div><div style={{ marginTop: 18 }}><strong style={{ fontSize: 16 }}>Live filters</strong><div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "12px 0 4px", scrollbarWidth: "none" }}>{LIVE_FILTERS.map((option) => <button key={option[0]} type="button" onClick={() => setFilter(option)} style={{ flex: "0 0 auto", border: option[0] === filter[0] ? "2px solid #E1B51A" : "1px solid #E2E4E6", borderRadius: 16, background: option[0] === filter[0] ? "#FFF7D8" : "#FFFFFF", padding: "9px 12px", color: "#111418", fontFamily: FONT, fontSize: 12, fontWeight: option[0] === filter[0] ? 750 : 500 }}>{option[0]}</button>)}</div></div><button type="button" onClick={startTaking} disabled={!streamReady || isLive} style={{ width: "100%", height: 52, marginTop: 20, border: 0, borderRadius: 15, background: isLive ? "#E9EAEC" : "#F4D35E", color: "#111418", fontFamily: FONT, fontSize: 16, fontWeight: 800 }}>{isLive ? "You are LIVE" : "Start Taking"}</button>{error && <p style={{ margin: "12px 0 0", color: "#A52222", fontSize: 13 }}>{error}</p>}</div>;
+}
 
-      <section style={{ minHeight: 158, borderRadius: 16, padding: "18px 16px 15px", boxSizing: "border-box", background: "radial-gradient(circle at 88% 5%,#FFF0A9 0 8%,transparent 33%), linear-gradient(135deg,#FFD944,#F4B914)", position: "relative", overflow: "hidden", boxShadow: "0 4px 13px #D9A91424" }}>
-        <div style={{ position: "absolute", right: -12, bottom: -34, width: 172, height: 110, borderRadius: "50%", border: "1px solid #FFF4B766", transform: "rotate(-20deg)" }} />
-        <strong style={{ display: "block", fontSize: 19, lineHeight: 1.1, letterSpacing: -0.3 }}>Weekly Crypto Talk</strong>
-        <p style={{ margin: "7px 0 0", maxWidth: 210, fontSize: 16, lineHeight: 1.35, fontWeight: 500 }}>Market insights &amp;<br />trend discussion</p>
-        <div style={{ position: "absolute", left: 16, bottom: 14, display: "flex", alignItems: "center" }}>
-          {[0, 1, 2].map((item) => <span key={item} style={{ marginLeft: item ? -7 : 0, borderRadius: "50%" }}><PlaceholderAvatar size={31} /></span>)}
-          <span style={{ marginLeft: -2, width: 35, height: 31, display: "grid", placeItems: "center", borderRadius: "50%", background: "#FFF2B9", color: "#53504A", fontSize: 14, fontWeight: 700 }}>+24</span>
-        </div>
-        <button type="button" onClick={onOpenLiveRoom} style={{ position: "absolute", right: 14, bottom: 14, height: 44, minWidth: 142, padding: "0 13px 0 18px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: 0, borderRadius: 17, background: "#111418", color: "#FFFFFF", fontFamily: FONT, fontSize: 15, fontWeight: 750 }}>
-          Join Now <AudioLines size={21} strokeWidth={2.1} color="#F4D35E" />
-        </button>
-      </section>
-
-      <section style={{ marginTop: 30 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ margin: 0, fontSize: 20, lineHeight: 1.1, letterSpacing: -0.45, fontWeight: 800 }}>People Around the World</h2>
-          <span style={{ display: "flex", alignItems: "center", gap: 5, color: "#85888C", fontSize: 14 }}>Live now <i style={{ width: 9, height: 9, borderRadius: "50%", background: "#35A64A", display: "block", animation: "spaceTalkPulse 2.4s ease-in-out infinite" }} /></span>
-        </div>
-        <div style={{ height: 238, marginTop: 7, position: "relative" }}>
-          <WorldMap />
-          {TALK_AVATARS.map((avatar, index) => (
-            <span key={index} style={{ position: "absolute", left: avatar.left, top: avatar.top, animation: `spaceTalkBreathe ${3.8 + index * .18}s ease-in-out ${index * .12}s infinite` }}>
-              <PlaceholderAvatar size={avatar.size} />
-              <span style={{ position: "absolute", right: -2, bottom: -2, width: 11, height: 11, borderRadius: "50%", background: "#F4D35E", border: "2px solid #FFFFFF", boxSizing: "border-box" }} />
-            </span>
-          ))}
-          <span style={{ position: "absolute", left: "46%", top: "46%", animation: "spaceTalkBreathe 4.2s ease-in-out .3s infinite" }}>
-            <span style={{ position: "absolute", inset: -13, borderRadius: "50%", border: "1px solid #F4D35E", animation: "spaceTalkPulse 3s ease-in-out infinite" }} />
-            <span style={{ position: "absolute", inset: -7, borderRadius: "50%", border: "1px solid #F4D35E" }} />
-            <PlaceholderAvatar size={50} center />
-          </span>
-        </div>
-      </section>
-
-      <section style={{ marginTop: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 13 }}>
-          <h2 style={{ margin: 0, fontSize: 20, lineHeight: 1.1, letterSpacing: -0.45, fontWeight: 800 }}>Popular Rooms</h2>
-          <button type="button" style={{ border: 0, background: "transparent", color: "#D4A711", fontFamily: FONT, fontSize: 15, fontWeight: 650, padding: 0 }}>See all</button>
-        </div>
-        {rooms.map(([title, host, viewers, color]) => (
-          <button key={title} type="button" onClick={onOpenLiveRoom} style={{ width: "calc(100% - 10px)", marginLeft: 5, minHeight: 72, marginBottom: 8, padding: "9px 12px 9px 9px", display: "flex", alignItems: "center", gap: 12, border: "1px solid #E5E6E8", borderRadius: 17, background: "#FFFFFF", color: "#111418", fontFamily: FONT, textAlign: "left", boxSizing: "border-box" }}>
-            <PlaceholderAvatar size={45} />
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <strong style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 15, lineHeight: 1.2, fontWeight: 650 }}>{title}</strong>
-              <span style={{ display: "block", marginTop: 5, color: "#62676D", fontSize: 13 }}>{host}</span>
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 11, color: "#62676D", fontSize: 13, whiteSpace: "nowrap" }}>
-              <span style={{ padding: "5px 11px", borderRadius: 13, background: color, color: color === "#F4D35E" ? "#111418" : "#FFFFFF", fontWeight: 700 }}>Live</span>
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><UsersRound size={16} />{viewers}</span>
-            </span>
-          </button>
-        ))}
-        <button type="button" onClick={onOpenLiveRoom} style={{ width: "100%", height: 52, marginTop: 13, border: 0, borderRadius: 14, background: "#F4D35E", color: "#111418", fontFamily: FONT, fontSize: 16, fontWeight: 800 }}>Host Space Talk</button>
-      </section>
-    </div>
-  );
+function SpaceTalkDiscoveryScreen({ onOpenLiveRoom, account }) {
+  const [activeTab, setActiveTab] = useState(0);
+  const [tabDragX, setTabDragX] = useState(0);
+  const tabTouchRef = React.useRef(null);
+  const rooms = [["Market Outlook 2024", "John Carter", "1.2K", "#F4D35E"], ["Web3 & The Future", "Crypto Lisa", "856", "#2F80ED"]];
+  const selectTab = (tab) => { setActiveTab(tab); setTabDragX(0); };
+  const onTabTouchStart = (event) => { tabTouchRef.current = event.touches[0].clientX; setTabDragX(0); };
+  const onTabTouchMove = (event) => { if (tabTouchRef.current == null) return; const dx = event.touches[0].clientX - tabTouchRef.current; if (Math.abs(dx) > 8) { event.preventDefault(); setTabDragX(Math.max(-120, Math.min(120, dx))); } };
+  const onTabTouchEnd = () => { if (tabTouchRef.current == null) return; const dx = tabDragX; if (dx < -50) selectTab(Math.min(2, activeTab + 1)); else if (dx > 50) selectTab(Math.max(0, activeTab - 1)); else setTabDragX(0); tabTouchRef.current = null; };
+  const talkPage = <div style={{ minWidth: 0, flex: "0 0 33.333%", padding: "18px 22px 36px", boxSizing: "border-box", color: "#111418" }}><section style={{ minHeight: 158, borderRadius: 16, padding: "18px 16px 15px", boxSizing: "border-box", background: "radial-gradient(circle at 88% 5%,#FFF0A9 0 8%,transparent 33%), linear-gradient(135deg,#FFD944,#F4B914)", position: "relative", overflow: "hidden", boxShadow: "0 4px 13px #D9A91424" }}><div style={{ position: "absolute", right: -12, bottom: -34, width: 172, height: 110, borderRadius: "50%", border: "1px solid #FFF4B766", transform: "rotate(-20deg)" }} /><strong style={{ display: "block", fontSize: 19, lineHeight: 1.1, letterSpacing: -0.3 }}>Weekly Crypto Talk</strong><p style={{ margin: "7px 0 0", maxWidth: 210, fontSize: 16, lineHeight: 1.35, fontWeight: 500 }}>Market insights &amp;<br />trend discussion</p><div style={{ position: "absolute", left: 16, bottom: 14, display: "flex", alignItems: "center" }}>{[0, 1, 2].map((item) => <span key={item} style={{ marginLeft: item ? -7 : 0, borderRadius: "50%" }}><PlaceholderAvatar size={31} /></span>)}<span style={{ marginLeft: -2, width: 35, height: 31, display: "grid", placeItems: "center", borderRadius: "50%", background: "#FFF2B9", color: "#53504A", fontSize: 14, fontWeight: 700 }}>+24</span></div><button type="button" onClick={() => onOpenLiveRoom(false)} style={{ position: "absolute", right: 14, bottom: 14, height: 44, minWidth: 142, padding: "0 13px 0 18px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, border: 0, borderRadius: 17, background: "#111418", color: "#FFFFFF", fontFamily: FONT, fontSize: 15, fontWeight: 750 }}>Join Now <AudioLines size={21} strokeWidth={2.1} color="#F4D35E" /></button></section><section style={{ marginTop: 30 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><h2 style={{ margin: 0, fontSize: 20, lineHeight: 1.1, letterSpacing: -0.45, fontWeight: 800 }}>People Around the World</h2><span style={{ display: "flex", alignItems: "center", gap: 5, color: "#85888C", fontSize: 14 }}>Live now <i style={{ width: 9, height: 9, borderRadius: "50%", background: "#35A64A", display: "block" }} /></span></div><div style={{ height: 238, marginTop: 7, position: "relative" }}><WorldMap />{TALK_AVATARS.map((avatar, index) => <span key={index} style={{ position: "absolute", left: avatar.left, top: avatar.top }}><PlaceholderAvatar size={avatar.size} /><span style={{ position: "absolute", right: -2, bottom: -2, width: 10, height: 10, borderRadius: "50%", background: "#F4D35E", border: "2px solid #FFFFFF", boxSizing: "border-box" }} /></span>)}<span style={{ position: "absolute", left: "46%", top: "46%" }}><span style={{ position: "absolute", inset: -13, borderRadius: "50%", border: "1px solid #F4D35E" }} /><span style={{ position: "absolute", inset: -7, borderRadius: "50%", border: "1px solid #F4D35E" }} /><PlaceholderAvatar size={50} center /></span></div></section><section style={{ marginTop: 8 }}><div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 13 }}><h2 style={{ margin: 0, fontSize: 20, lineHeight: 1.1, letterSpacing: -0.45, fontWeight: 800 }}>Popular Rooms</h2><button type="button" style={{ border: 0, background: "transparent", color: "#D4A711", fontFamily: FONT, fontSize: 15, fontWeight: 650, padding: 0 }}>See all</button></div>{rooms.map(([title, host, viewers, color]) => <button key={title} type="button" onClick={() => onOpenLiveRoom(false)} style={{ width: "calc(100% - 10px)", marginLeft: 5, minHeight: 72, marginBottom: 8, padding: "9px 12px 9px 9px", display: "flex", alignItems: "center", gap: 12, border: "1px solid #E5E6E8", borderRadius: 17, background: "#FFFFFF", color: "#111418", fontFamily: FONT, textAlign: "left", boxSizing: "border-box" }}><PlaceholderAvatar size={45} /><span style={{ flex: 1, minWidth: 0 }}><strong style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 15, lineHeight: 1.2, fontWeight: 650 }}>{title}</strong><span style={{ display: "block", marginTop: 5, color: "#62676D", fontSize: 13 }}>{host}</span></span><span style={{ display: "flex", alignItems: "center", gap: 11, color: "#62676D", fontSize: 13, whiteSpace: "nowrap" }}><span style={{ padding: "5px 11px", borderRadius: 13, background: color, color: color === "#F4D35E" ? "#111418" : "#FFFFFF", fontWeight: 700 }}>Live</span><span style={{ display: "flex", alignItems: "center", gap: 4 }}><UsersRound size={16} />{viewers}</span></span></button>)}</section><button type="button" onClick={() => onOpenLiveRoom(true)} style={{ width: "100%", height: 52, marginTop: 13, border: 0, borderRadius: 14, background: "#F4D35E", color: "#111418", fontFamily: FONT, fontSize: 16, fontWeight: 800 }}>Host Space Talk</button></div>;
+  const upcomingPage = <div style={{ minWidth: 0, flex: "0 0 33.333%", padding: "18px 22px 36px", boxSizing: "border-box", color: "#111418" }}><h2 style={{ margin: 0, fontSize: 24 }}>Upcoming</h2><p style={{ marginTop: 10, color: "#70757B" }}>No upcoming Space Talks yet.</p></div>;
+  return <div style={{ minHeight: "100dvh", height: "100dvh", overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", background: "#FFFFFF", color: "#111418" }}><style>{"@keyframes spaceTalkSlide{from{opacity:.3}to{opacity:1}}"}</style><header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 60, padding: "18px 22px 0", boxSizing: "border-box" }}><h1 style={{ margin: 0, fontSize: 29, lineHeight: 1, letterSpacing: -1.1, fontWeight: 800 }}>Space <span style={{ color: "#D7A914" }}>Talk</span></h1><button type="button" aria-label="Space Talk notifications" style={{ border: 0, background: "transparent", padding: 6, color: "#111418" }}><Bell size={27} strokeWidth={2.1} /></button></header><div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", height: 58, alignItems: "end", borderBottom: "1px solid #EBECEE", margin: "0 22px" }}>{["Talk", "Live Video", "Upcoming"].map((label, index) => <button key={label} type="button" onClick={() => selectTab(index)} style={{ height: 42, border: 0, borderBottom: index === activeTab ? "3px solid #F4D35E" : "3px solid transparent", background: "transparent", color: index === activeTab ? "#D2A20C" : "#34383D", fontFamily: FONT, fontSize: 15, fontWeight: index === activeTab ? 750 : 500 }}>{label}</button>)}</div><div onTouchStart={onTabTouchStart} onTouchMove={onTabTouchMove} onTouchEnd={onTabTouchEnd} onTouchCancel={onTabTouchEnd} style={{ overflow: "hidden", touchAction: "pan-y" }}><div style={{ display: "flex", width: "300%", transform: "translate3d(calc(-" + (activeTab * 33.333) + "% + " + tabDragX + "px),0,0)", transition: tabDragX ? "none" : "transform 360ms cubic-bezier(.22,1,.36,1)", alignItems: "flex-start" }}>{talkPage}{activeTab === 1 ? <div style={{ minWidth: 0, flex: "0 0 33.333%" }}><LiveVideoTab account={account} /></div> : <div style={{ minWidth: 0, flex: "0 0 33.333%" }} />}{upcomingPage}</div></div></div>;
 }
 
 function talkProfileFromRow(row, fallback = {}) {
@@ -543,7 +507,7 @@ export default function MoreLandingOverride({ account }) {
   }
 
   if (spaceTalkDiscovery) {
-    return <SpaceTalkDiscoveryScreen onOpenLiveRoom={(host) => { setSpaceTalkHost(Boolean(host)); setSpaceTalkRoom(true); }} />;
+    return <SpaceTalkDiscoveryScreen account={account} onOpenLiveRoom={(host) => { setSpaceTalkHost(Boolean(host)); setSpaceTalkRoom(true); }} />;
   }
 
   return (
