@@ -140,6 +140,41 @@ function SpaceTalkScreen({ onOpenLiveRoom }) {
     ["Market Outlook 2024", "John Carter", "1.2K", "#F4D35E"],
     ["Web3 & The Future", "Crypto Lisa", "856", "#2F80ED"],
   ];
+  const [slide, setSlide] = useState(0);
+  const touchStart = React.useRef(null);
+  const copy = SPACE_TALK_COPY[slide];
+  const onPointerDown = (event) => {
+    touchStart.current = event.clientX;
+  };
+  const onPointerUp = (event) => {
+    if (touchStart.current === null) return;
+    const distance = event.clientX - touchStart.current;
+    if (Math.abs(distance) > 50) {
+      setSlide((current) => Math.max(0, Math.min(SPACE_TALK_IMAGES.length - 1, current + (distance < 0 ? 1 : -1))));
+    }
+    touchStart.current = null;
+  };
+  return (
+    <div style={{ background: "#F5F6F7", minHeight: "100%", padding: "16px 6px 40px", boxSizing: "border-box" }}>
+      <section style={{ background: "#FFFFFF", borderRadius: 20, padding: "20px 14px 18px", boxShadow: "0 1px 8px rgba(17,20,24,0.045)" }}>
+        <div onPointerDown={onPointerDown} onPointerUp={onPointerUp} style={{ overflow: "hidden", width: "calc(100% + 20px)", marginLeft: -10, aspectRatio: "292 / 331", borderRadius: 22, background: "#FFFFFF", touchAction: "pan-y" }}>
+          <img src={SPACE_TALK_IMAGES[slide]} alt="RainX traders connecting" draggable="false" style={{ display: "block", width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", borderRadius: 22, userSelect: "none" }} />
+        </div>
+        <div key={slide} style={{ animation: "rainxSpaceTalkCopyUp .36s cubic-bezier(.22,1,.36,1) both" }}>
+          <h1 style={{ margin: "20px 0 6px", textAlign: "center", fontSize: 30, lineHeight: 1.12, letterSpacing: -0.8, fontWeight: 800 }}>{copy.title}</h1>
+          <p style={{ margin: "0 auto", maxWidth: 360, color: "#666B72", textAlign: "center", fontSize: 16, lineHeight: 1.4 }}>{copy.body}</p>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 7, margin: "14px 0 20px" }}>
+          {SPACE_TALK_IMAGES.map((_, index) => <button key={index} type="button" aria-label={"Show Space Talk image " + (index + 1)} onClick={() => setSlide(index)} style={{ width: 8, height: 8, padding: 0, border: 0, borderRadius: "50%", background: slide === index ? "#111418" : "#D5D7D9" }} />)}
+        </div>
+        <button type="button" onClick={onOpenLiveRoom} style={{ width: "100%", height: 52, border: 0, borderRadius: 13, background: "#F4D35E", color: "#111418", fontFamily: FONT, fontSize: 17, fontWeight: 800 }}>Host Space Talk</button>
+      </section>
+      <button type="button" style={{ width: "100%", height: 46, marginTop: 8, padding: "0 16px", border: 0, borderRadius: 14, background: "#FFFFFF", color: "#111418", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: FONT, fontSize: 15, fontWeight: 750, textAlign: "left" }}>Campaigns <ChevronRight size={20} color="#858A91" /></button>
+      <button type="button" style={{ width: "100%", height: 46, marginTop: 8, padding: "0 16px", border: 0, borderRadius: 14, background: "#FFFFFF", color: "#111418", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: FONT, fontSize: 15, fontWeight: 750, textAlign: "left" }}>Suggested creators <ChevronRight size={20} color="#858A91" /></button>
+      <style>{"@keyframes rainxSpaceTalkCopyUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}"}</style>
+    </div>
+  );
+
   return (
     <div style={{ minHeight: "100%", background: "#FFFFFF", padding: "18px 22px 36px", boxSizing: "border-box", color: "#111418" }}>
       <style>{`@keyframes spaceTalkBreathe{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.035)}}@keyframes spaceTalkPulse{0%,100%{opacity:.65;transform:scale(.96)}50%{opacity:1;transform:scale(1)}}`}</style>
