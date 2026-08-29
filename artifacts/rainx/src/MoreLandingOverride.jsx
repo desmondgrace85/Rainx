@@ -99,7 +99,7 @@ function SpaceTalkScreen() {
     if (event.pointerType === "mouse" && event.button !== 0) return;
     event.stopPropagation();
     if (settleTimer.current) window.clearTimeout(settleTimer.current);
-    gesture.current = { startX: event.clientX, startY: event.clientY, startSlide: slide, startOffset: dragOffset, lastX: event.clientX, lastTime: Date.now(), dragging: false };
+    gesture.current = { startX: event.clientX, startY: event.clientY, startSlide: slide, lastX: event.clientX, lastTime: Date.now(), dragging: false };
   };
   const onPointerMove = (event) => {
     const active = gesture.current;
@@ -115,7 +115,7 @@ function SpaceTalkScreen() {
     }
     event.preventDefault();
     const width = carouselRef.current?.clientWidth || 1;
-    let nextOffset = active.startOffset - dx / width;
+    let nextOffset = -dx / width;
     if (slide === 0 && nextOffset < 0) nextOffset *= 0.3;
     if (slide === SPACE_TALK_IMAGES.length - 1 && nextOffset > 0) nextOffset *= 0.3;
     active.lastX = event.clientX;
@@ -151,29 +151,26 @@ function SpaceTalkScreen() {
   };
 
   const copy = SPACE_TALK_COPY[slide];
-  const nextSlide = slide < SPACE_TALK_IMAGES.length - 1 ? slide + 1 : null;
-  const previousSlide = slide > 0 ? slide - 1 : null;
-  const imageTransform = (relativeIndex) => {
-    if (relativeIndex === 0) return -dragOffset * 100;
-    if (relativeIndex === 1) return (1 - dragOffset) * 100;
-    return (-1 - dragOffset) * 100;
-  };
+  const trackPosition = slide + dragOffset;
 
   return (
     <div style={{ background: "#F5F6F7", minHeight: "100%", padding: "16px 6px 40px", boxSizing: "border-box" }}>
       <section style={{ background: "#FFFFFF", borderRadius: 20, padding: "20px 14px 18px", boxShadow: "0 1px 8px rgba(17,20,24,0.045)" }}>
-        <div ref={carouselRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} style={{ position: "relative", overflow: "hidden", width: "calc(100% + 20px)", marginLeft: -10, aspectRatio: "292 / 331", borderRadius: 22, background: "#FFFFFF", touchAction: "pan-y", cursor: dragging ? "grabbing" : "grab" }}>
-          {[previousSlide, slide, nextSlide].filter((value) => value !== null).map((imageIndex) => {
-            const relativeIndex = imageIndex - slide;
-            return <img key={imageIndex} src={SPACE_TALK_IMAGES[imageIndex]} alt={imageIndex === 0 ? "RainX traders connecting" : imageIndex === 1 ? "RainX trader hosting Space Talk" : "RainX trader sharing market insights"} draggable="false" style={{ position: "absolute", inset: 0, display: "block", width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", borderRadius: 22, userSelect: "none", pointerEvents: "none", transform: "translate3d(0, " + imageTransform(relativeIndex) + "%, 0)", transition: dragging ? "none" : "transform 360ms cubic-bezier(.22,1,.36,1)", willChange: "transform" }} />;
-          })}
+        <div ref={carouselRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} style={{ overflow: "hidden", width: "calc(100% + 20px)", marginLeft: -10, aspectRatio: "292 / 331", borderRadius: 22, background: "#FFFFFF", touchAction: "pan-y", cursor: dragging ? "grabbing" : "grab", perspective: 1000 }}>
+          <div style={{ display: "flex", width: "300%", transform: "translate3d(" + (-(trackPosition * 33.333333)) + "%, 0, 0)", transition: dragging ? "none" : "transform 360ms cubic-bezier(.22,1,.36,1)", willChange: "transform" }}>
+            {SPACE_TALK_IMAGES.map((src, index) => {
+              const relativePosition = index - trackPosition;
+              const rotateY = Math.max(-12, Math.min(12, relativePosition * 10));
+              return <div key={src} style={{ flex: "0 0 33.333333%", padding: "0 10px", boxSizing: "border-box", perspective: 1000 }}><img src={src} alt={index === 0 ? "RainX traders connecting" : index === 1 ? "RainX trader hosting Space Talk" : "RainX trader sharing market insights"} draggable="false" style={{ display: "block", width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", borderRadius: 22, userSelect: "none", pointerEvents: "none", transform: "rotateY(" + rotateY + "deg)", transition: dragging ? "none" : "transform 360ms cubic-bezier(.22,1,.36,1)", willChange: "transform" }} /></div>;
+            })}
+          </div>
         </div>
         <div key={slide} style={{ animation: "rainxSpaceTalkCopy" + (copyDirection < 0 ? "Down" : "Up") + " .36s cubic-bezier(.22,1,.36,1) both" }}>
           <h1 style={{ margin: "20px 0 6px", textAlign: "center", fontSize: 30, lineHeight: 1.12, letterSpacing: -0.8, fontWeight: 800 }}>{copy.title}</h1>
           <p style={{ margin: "0 auto", maxWidth: 360, color: "#666B72", textAlign: "center", fontSize: 16, lineHeight: 1.4 }}>{copy.body}</p>
         </div>
         <div style={{ display: "flex", justifyContent: "center", gap: 7, margin: "14px 0 20px" }}>
-          {SPACE_TALK_IMAGES.map((_, index) => <button key={index} type="button" aria-label={"Show Space Talk image " + (index + 1)} onClick={() => setSlide(index)} style={{ width: 8, height: 8, padding: 0, border: 0, borderRadius: "50%", background: slide === index ? "#111418" : "#D5D7D9" }} />)}
+          {SPACE_TALK_IMAGES.map((_, index) => <button key={index} type="button" aria-label={"Show Space Talk image " + (index + 1)} onClick={() => { setCopyDirection(index >= slide ? 1 : -1); setSlide(index); }} style={{ width: 8, height: 8, padding: 0, border: 0, borderRadius: "50%", background: slide === index ? "#111418" : "#D5D7D9" }} />)}
         </div>
         <button type="button" onClick={() => {}} style={{ width: "100%", height: 52, border: 0, borderRadius: 13, background: "#F4D35E", color: "#111418", fontFamily: FONT, fontSize: 17, fontWeight: 800 }}>Host Space Talk</button>
       </section>
