@@ -205,7 +205,7 @@ function LiveVideoTab({ account, active = true }) {
     if (!active) return () => { cancelled = true; };
     (async () => {
       if (!navigator.mediaDevices?.getUserMedia) { setError("Camera access is not supported in this browser."); return; }
-      try { const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true }); if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return; } streamRef.current = stream; setStreamReady(true); if (videoRef.current) videoRef.current.srcObject = stream; }
+      try { const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true }); if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return; } streamRef.current = stream; setStreamReady(true); if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(() => {}); } }
       catch { setError("Camera and microphone permissions are required for Live Video."); }
     })();
     return () => { cancelled = true; streamRef.current?.getTracks().forEach((track) => track.stop()); streamRef.current = null; };
@@ -216,9 +216,15 @@ function LiveVideoTab({ account, active = true }) {
     let userId = account?.id || null;
     if (!userId) { try { userId = (await supabase.auth.getUser()).data?.user?.id || null; } catch {} }
     if (!userId) { setError("Sign in is required to go live."); return; }
-    const profile = talkProfileFromRow(account || {}, { name: "RainX trader", country: "Accra, Ghana", flag: "🇬🇭" });
-    const { error: syncError } = await supabase.from("space_talk_participants").upsert({ room_id: "weekly-crypto-talk", user_id: userId, role: "host", name: profile.name, country: profile.country, flag: profile.flag, avatar_url: profile.avatar_url, is_muted: false, is_live: true }, { onConflict: "room_id,user_id" });
-    if (syncError) setError("Could not publish your live status."); else setIsLive(true);
+    const existing = await supabase.from("space_talk_participants").select("id").eq("room_id", "weekly-crypto-talk").eq("user_id", userId).maybeSingle();
+    if (!existing.data) {
+      const { error: insertError } = await supabase.from("space_talk_participants").insert({ room_id: "weekly-crypto-talk", user_id: userId, role: "host" });
+      if (insertError) { setError("Could not publish your live status."); return; }
+    } else {
+      const { error: updateError } = await supabase.from("space_talk_participants").update({ role: "host" }).eq("room_id", "weekly-crypto-talk").eq("user_id", userId);
+      if (updateError) { setError("Could not publish your live status."); return; }
+    }
+    setError(""); setIsLive(true);
   };
   return <div style={{ minHeight: "100dvh", background: "#FFFFFF", padding: "18px 22px 34px", boxSizing: "border-box", color: "#111418" }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div><h2 style={{ margin: 0, fontSize: 24, letterSpacing: -0.7 }}>Live Video</h2><p style={{ margin: "7px 0 0", color: "#70757B", fontSize: 13 }}>Use your camera to take the stage.</p></div>{isLive && <span style={{ padding: "7px 10px", borderRadius: 14, background: "#E44747", color: "#FFFFFF", fontSize: 12, fontWeight: 800 }}>LIVE</span>}</div><div style={{ position: "relative", marginTop: 18, overflow: "hidden", aspectRatio: "3 / 4", borderRadius: 24, background: "#15171A" }}><video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", display: "block", objectFit: "cover", transform: "scaleX(-1)", filter: filter[1] }} />{!streamReady && <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", padding: 30, color: "#FFFFFF", textAlign: "center" }}>{error || "Starting camera…"}</div>}<span style={{ position: "absolute", left: 14, top: 14, padding: "7px 10px", borderRadius: 14, background: "#11141899", color: "#FFFFFF", fontSize: 12 }}>Camera preview</span></div><div style={{ marginTop: 18 }}><strong style={{ fontSize: 16 }}>Live filters</strong><div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "12px 0 4px", scrollbarWidth: "none" }}>{LIVE_FILTERS.map((option) => <button key={option[0]} type="button" onClick={() => setFilter(option)} style={{ flex: "0 0 auto", border: option[0] === filter[0] ? "2px solid #E1B51A" : "1px solid #E2E4E6", borderRadius: 16, background: option[0] === filter[0] ? "#FFF7D8" : "#FFFFFF", padding: "9px 12px", color: "#111418", fontFamily: FONT, fontSize: 12, fontWeight: option[0] === filter[0] ? 750 : 500 }}>{option[0]}</button>)}</div></div><button type="button" onClick={startTaking} disabled={!streamReady || isLive} style={{ width: "100%", height: 52, marginTop: 20, border: 0, borderRadius: 15, background: isLive ? "#E9EAEC" : "#F4D35E", color: "#111418", fontFamily: FONT, fontSize: 16, fontWeight: 800 }}>{isLive ? "You are LIVE" : "Start Taking"}</button>{error && <p style={{ margin: "12px 0 0", color: "#A52222", fontSize: 13 }}>{error}</p>}</div>;
 }
