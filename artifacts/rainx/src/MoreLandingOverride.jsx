@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+// Space Talk web build marker: keep the complete live-room bundle tied to this commit.
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import { ArrowLeft, ArrowUpRight, AudioLines, Bell, ChevronRight, CircleDollarSign, CircleHelp, Check, Gift, Hand, MessageCircle, Mic, MicOff, MoreHorizontal, PhoneOff, Radio, Share2, ShieldCheck, UserRound, UsersRound, Video, VideoOff } from "lucide-react";
 import { ReferralRewardsScreen, MyReferralsScreen, ReferralPerformanceScreen } from "./RainxApp";
