@@ -116,7 +116,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
   const tfKeyMap = { "1m": "15m", "5m": "15m", "15m": "15m", "30m": "15m", "1h": "1h", "4h": "4h", "1d": "4h" };
   const preferredKey = tfKeyMap[activeTf] || "15m";
   const rawSignal = symSignals[preferredKey] || symSignals["15m"] || symSignals["1h"] || symSignals["4h"] || null;
-  const sessionSetup = rawSignal && rawSignal.bias && rawSignal.bias !== "HOLD" ? {
+  const sessionSetup = rawSignal && rawSignal.bias && String(rawSignal.bias).toUpperCase() !== "HOLD" ? {
     bias: rawSignal.bias,
     entry: rawSignal.entry,
     stopLoss: rawSignal.stop_loss,
@@ -659,7 +659,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
     { label: "Trend Strength",   value: session?.steps?.find(s => s.id === "trend")?.status === "done" ? "Strong"  : "—", color: BULL },
     { label: "Key Level",        value: sessionSetup?.tp1 ? `${fmtPrice(sessionSetup.tp1)} (Target)` : "—", color: GOLD },
     { label: "Support Level",    value: sessionSetup?.stopLoss ? fmtPrice(sessionSetup.stopLoss) : "—", color: GOLD },
-    { label: "AI Bias",          value: sessionSetup?.bias ? (sessionSetup.bias === "BUY" ? "Looking for Buy Opportunity" : "Looking for Sell Opportunity") : "Analyzing…", color: BULL },
+    { label: "AI Bias",          value: sessionSetup?.bias ? (String(sessionSetup.bias).toUpperCase() === "BUY" ? "Looking for Buy Opportunity" : "Looking for Sell Opportunity") : "Analyzing…", color: BULL },
   ];
 
   return createPortal(
@@ -872,7 +872,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
               {sessionSetup && (
                 <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {[
-                    { label: "Bias", value: sessionSetup.bias, color: sessionSetup.bias === "BUY" ? BULL : RED },
+                    { label: "Bias", value: sessionSetup.bias, color: String(sessionSetup.bias).toUpperCase() === "BUY" ? BULL : RED },
                     { label: "Entry", value: fmtPrice(sessionSetup.entry), color: GOLD },
                     { label: "SL", value: fmtPrice(sessionSetup.stopLoss), color: RED },
                     { label: "TP1", value: fmtPrice(sessionSetup.tp1), color: GREEN },
