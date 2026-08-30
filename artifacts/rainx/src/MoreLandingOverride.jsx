@@ -256,7 +256,8 @@ function TalkProfileAvatar({ profile, size = 52, center = false }) {
 
 function LiveRoomScreen({ onBack, account, isHost = false }) {
   const ROOM_ID = "weekly-crypto-talk";
-  const localProfile = talkProfileFromRow(account || {}, { name: "Space Talk host", country: "Accra, Ghana", flag: "🇬🇭", role: isHost ? "host" : "listener" });
+  const [profileRow, setProfileRow] = useState(null);
+  const localProfile = talkProfileFromRow(profileRow || account || {}, { name: "Space Talk host", country: "Accra, Ghana", flag: "🇬🇭", role: isHost ? "host" : "listener" });
   const sessionIdRef = React.useRef(account?.id || "guest-" + Date.now());
   const channelRef = React.useRef(null);
   const localStreamRef = React.useRef(null);
@@ -300,7 +301,7 @@ function LiveRoomScreen({ onBack, account, isHost = false }) {
   const enableMicrophone = async () => {
     if (!navigator.mediaDevices?.getUserMedia) { setMediaError("Microphone access is not supported in this browser."); return false; }
     if (!localStreamRef.current) {
-      try { localStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); } catch { setMediaError("Microphone permission is required to speak."); return false; }
+      try { localStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); } catch { setMediaError("Microphone permission is required to speak."); return false; }
       for (const [remoteId, pc] of peerConnectionsRef.current.entries()) { localStreamRef.current.getTracks().forEach((track) => pc.addTrack(track, localStreamRef.current)); const offer = await pc.createOffer(); await pc.setLocalDescription(offer); await sendSignal({ kind: "offer", from: sessionIdRef.current, to: remoteId, description: pc.localDescription }); }
     }
     localStreamRef.current.getAudioTracks().forEach((track) => { track.enabled = true; }); setMuted(false);
@@ -318,25 +319,16 @@ function LiveRoomScreen({ onBack, account, isHost = false }) {
     return () => { cancelled = true; };
   }, [account?.id]);
   useEffect(() => {
-    let cancelled = false;
-    const channel = supabase.channel("space-talk-" + ROOM_ID); channelRef.current = channel;
-    channel.on("broadcast", { event: "webrtc" }, async ({ payload }) => {
-      if (!payload || payload.to !== sessionIdRef.current || payload.from === sessionIdRef.current) return;
-      if (payload.kind === "join") { if (String(sessionIdRef.current) < String(payload.from)) await createPeer(payload.from, true); }
-      else if (payload.kind === "offer") { const pc = await createPeer(payload.from, false); await pc.setRemoteDescription(payload.description); const answer = await pc.createAnswer(); await pc.setLocalDescription(answer); await sendSignal({ kind: "answer", from: sessionIdRef.current, to: payload.from, description: pc.localDescription }); }
-      else if (payload.kind === "answer") { const pc = peerConnectionsRef.current.get(payload.from); if (pc) await pc.setRemoteDescription(payload.description); }
-      else if (payload.kind === "ice") { const pc = peerConnectionsRef.current.get(payload.from); if (pc) await pc.addIceCandidate(payload.candidate).catch(() => {}); }
-      else if (payload.kind === "end") setNotice("The host ended this Space Talk.");
-    });
-    channel.on("postgres_changes", { event: "*", schema: "public", table: "space_talk_participants", filter: "room_id=eq." + ROOM_ID }, refreshParticipants);
-    channel.on("postgres_changes", { event: "INSERT", schema: "public", table: "space_talk_messages", filter: "room_id=eq." + ROOM_ID }, (payload) => { setMessages((current) => [...current, payload.new].slice(-80)); setMessageTick((value) => value + 1); });
-    channel.subscribe(async (status) => { if (status === "SUBSCRIBED") { await sendSignal({ kind: "join", from: sessionIdRef.current }); if (!cancelled) { await refreshParticipants(); await refreshMessages(); } } });
-    return () => { cancelled = true; channel.unsubscribe(); if (channelRef.current === channel) channelRef.current = null; peerConnectionsRef.current.forEach((pc) => pc.close()); peerConnectionsRef.current.clear(); remoteAudioRef.current.forEach((audio) => { audio.pause?.(); audio.srcObject = null; }); remoteAudioRef.current.clear(); localStreamRef.current?.getTracks().forEach((track) => track.stop()); localStreamRef.current = null; };
-  }, [participantId]);
-  useEffect(() => {
     if (!participantId) return undefined;
     let cancelled = false;
-    (async () => { const row = { room_id: ROOM_ID, user_id: participantId, role: isHost ? "host" : "listener", name: localProfile.name, country: localProfile.country, flag: localProfile.flag, avatar_url: localProfile.avatar_url, is_muted: true }; const { error } = await supabase.from("space_talk_participants").upsert(row, { onConflict: "room_id,user_id" }); if (error && !cancelled) setNotice("Unable to sync your participant status."); await refreshParticipants(); })();
+    (async () => {
+      const lookup = await supabase.from("space_talk_participants").select("id").eq("room_id", ROOM_ID).eq("user_id", participantId).maybeSingle();
+      if (!lookup.data) {
+        const { error } = await supabase.from("space_talk_participants").insert({ room_id: ROOM_ID, user_id: participantId, role: isHost ? "host" : "listener" });
+        if (error && !cancelled) setNotice("Unable to join this Space Talk.");
+      }
+      await refreshParticipants();
+    })();
     return () => { cancelled = true; };
   }, [participantId, isHost]);
   const hostRow = participants.find((row) => row.role === "host" || row.is_host === true) || (isHost ? localProfile : null);
