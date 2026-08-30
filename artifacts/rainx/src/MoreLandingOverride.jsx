@@ -326,13 +326,46 @@ function LiveRoomScreen({ onBack, account, isHost = false }) {
     return () => { cancelled = true; };
   }, [account?.id]);
   useEffect(() => {
+    let cancelled = false;
+    const channel = supabase.channel("space-talk-" + ROOM_ID);
+    channelRef.current = channel;
+    channel.on("broadcast", { event: "webrtc" }, async ({ payload }) => {
+      if (cancelled || !payload || payload.to !== sessionIdRef.current || !payload.from) return;
+      const remoteId = payload.from;
+      try {
+        if (payload.kind === "join") {
+          await createPeer(remoteId, true);
+        } else if (payload.kind === "offer") {
+          const pc = await createPeer(remoteId, false);
+          await pc.setRemoteDescription(payload.description);
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await sendSignal({ kind: "answer", from: sessionIdRef.current, to: remoteId, description: pc.localDescription });
+        } else if (payload.kind === "answer") {
+          const pc = peerConnectionsRef.current.get(remoteId);
+          if (pc && pc.signalingState !== "stable") await pc.setRemoteDescription(payload.description);
+        } else if (payload.kind === "ice") {
+          const pc = peerConnectionsRef.current.get(remoteId);
+          if (pc && payload.candidate) await pc.addIceCandidate(payload.candidate);
+        } else if (payload.kind === "end") {
+          setNotice("The host ended this Space Talk.");
+        }
+      } catch {}
+    }).on("postgres_changes", { event: "*", schema: "public", table: "space_talk_participants", filter: "room_id=eq." + ROOM_ID }, () => { refreshParticipants(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "space_talk_messages", filter: "room_id=eq." + ROOM_ID }, () => { refreshMessages(); setMessageTick((tick) => tick + 1); });
+    channel.subscribe((status) => { if (status === "SUBSCRIBED") sendSignal({ kind: "join", from: sessionIdRef.current }); });
+    refreshParticipants();
+    refreshMessages();
+    return () => { cancelled = true; peerConnectionsRef.current.forEach((pc) => pc.close()); peerConnectionsRef.current.clear(); localStreamRef.current?.getTracks().forEach((track) => track.stop()); remoteAudioRef.current.forEach((audio) => { audio.pause?.(); audio.srcObject = null; }); remoteAudioRef.current.clear(); supabase.removeChannel(channel); channelRef.current = null; };
+  }, []);
+  useEffect(() => {
     if (!participantId) return undefined;
     let cancelled = false;
     (async () => {
       const lookup = await supabase.from("space_talk_participants").select("id").eq("room_id", ROOM_ID).eq("user_id", participantId).maybeSingle();
       if (!lookup.data) {
         const { error } = await supabase.from("space_talk_participants").insert({ room_id: ROOM_ID, user_id: participantId, role: isHost ? "host" : "listener" });
-        if (error && !cancelled) setNotice("Unable to join this Space Talk.");
+        if (error && !cancelled) setParticipants((rows) => rows.length ? rows : [localProfile]);
       }
       await refreshParticipants();
     })();
@@ -359,8 +392,8 @@ function LiveRoomScreen({ onBack, account, isHost = false }) {
         <div style={{ position: "absolute", inset: "0 22px 0", pointerEvents: "none" }}>
           <span style={{ position: "absolute", top: 33, left: "calc(50% - 28px)", padding: "7px 15px", border: "1px solid #E5E6E8", borderRadius: 13, background: "#FFFFFF", color: "#D4A914", fontSize: 14, fontWeight: 650 }}>Host</span>
           <span style={{ position: "absolute", top: 95, left: "calc(50% - 94px)", width: 188, height: 188, border: "1px solid #E8EAEC", borderRadius: "50%", boxSizing: "border-box" }} /><span style={{ position: "absolute", top: 128, left: "calc(50% - 145px)", width: 290, height: 290, border: "1px solid #EEF0F1", borderRadius: "50%", boxSizing: "border-box" }} /><span style={{ position: "absolute", top: 190, left: "calc(50% - 185px)", width: 370, height: 370, border: "1px solid #F1F2F3", borderRadius: "50%", boxSizing: "border-box" }} />
-          <div style={{ position: "absolute", top: 150, left: "calc(50% - 67px)", width: 134, height: 134, display: "grid", placeItems: "center", border: "3px solid #F1C533", borderRadius: "50%", background: "#FFFFFF", boxSizing: "border-box", animation: muted ? "none" : "liveMicPulse 1.5s ease-in-out infinite" }}><TalkProfileAvatar profile={hostProfile} size={126} center /></div>
-          <div style={{ position: "absolute", top: 276, left: "calc(50% - 19px)", width: 38, height: 38, borderRadius: "50%", background: "#F5BC05", color: "#111418", display: "grid", placeItems: "center", boxShadow: "0 2px 5px #D8A90055" }}><Mic size={19} strokeWidth={2.2} /></div>
+          <div style={{ position: "absolute", top: 155, left: "calc(50% - 56px)", width: 112, height: 112, display: "grid", placeItems: "center", border: "3px solid #F1C533", borderRadius: "50%", background: "#FFFFFF", boxSizing: "border-box", animation: muted ? "none" : "liveMicPulse 1.5s ease-in-out infinite" }}><TalkProfileAvatar profile={hostProfile} size={104} center /></div>
+          <div style={{ position: "absolute", top: 260, left: "calc(50% - 18px)", width: 36, height: 36, borderRadius: "50%", background: "#F5BC05", color: "#111418", display: "grid", placeItems: "center", boxShadow: "0 2px 5px #D8A90055" }}><Mic size={19} strokeWidth={2.2} /></div>
           <div style={{ position: "absolute", top: 290, left: 0, right: 0, textAlign: "center" }}><strong style={{ display: "block", fontSize: 19, fontWeight: 700 }}>{hostProfile.name}</strong><span style={{ display: "block", marginTop: 7, fontSize: 15 }}>{hostProfile.flag} {hostProfile.country}</span></div>
           {audience.slice(0, 5).map((profile, index) => <div key={profile.id || profile.name + "-" + index} style={{ position: "absolute", ...positions[index], width: 100, textAlign: "center" }}><span style={{ display: "inline-grid", position: "relative", placeItems: "center", width: 72, height: 72, border: "1px solid #D8DADD", borderRadius: "50%", background: "#FFFFFF", boxSizing: "border-box" }}><TalkProfileAvatar profile={profile} size={66} /><span style={{ position: "absolute", right: -1, bottom: 0, width: 20, height: 20, borderRadius: "50%", background: "#2D82E9", border: "2px solid #FFFFFF", color: "#FFFFFF", display: "grid", placeItems: "center" }}><Mic size={10} strokeWidth={2.4} /></span></span><strong style={{ display: "block", marginTop: 7, fontSize: 15, lineHeight: 1.1 }}>{profile.name}</strong><span style={{ display: "block", marginTop: 7, fontSize: 13, whiteSpace: "nowrap" }}>{profile.flag} {profile.country}</span></div>)}
         </div>
