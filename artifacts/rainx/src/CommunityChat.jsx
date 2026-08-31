@@ -13,8 +13,7 @@ import {
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import chatWallpaper from "./assets/chat-wallpaper.jpg";
-const BASE_URL = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
-const API_BASE = "https://rainx-webapp.vercel.app";
+const API_BASE = "https://rainxapp.vercel.app";
 const PRESENCE_EVENT = "RAINX_PRESENCE";
 
 function postRainxPresence(presence) {

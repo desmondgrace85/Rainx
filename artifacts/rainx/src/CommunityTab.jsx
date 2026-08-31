@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import CommunityChat from "./CommunityChat";
 
 // Relative URLs fail in the Capacitor WebView (local origin) — must be absolute.
-const BASE_URL = "https://rainxapp.vercel.app";
+// Relative URLs fail in the Capacitor WebView (local origin) — must be absolute.
 const API_BASE = "https://rainxapp.vercel.app";
 import {
   Send, Trash2, Edit3, X, BadgeCheck, Heart, Eye, MessageCircle, Repeat2, MessageSquareDashed,
@@ -272,7 +272,7 @@ async function fetchProfilesMap(ids) {
   // created), so never return early with missing users.
   const map = {};
   try {
-    const r = await fetch(`${BASE_URL}/api/public-profiles?ids=${uniqueIds.join(",")}`);
+    const r = await fetch(`${API_BASE}/api/public-profiles?ids=${uniqueIds.join(",")}`);
     if (r.ok) {
       const apiRows = await r.json();
       (apiRows || []).forEach((p) => { if (p?.id) map[p.id] = { ...p }; });
@@ -641,7 +641,7 @@ function Composer({ account, onPosted, onClose, compact, themeTokens }) {
       (mentioned || []).forEach((m) => notify(m.id, account.id, "mention", post.id));
     }
     if (post && mentions.includes("rainaai")) {
-      fetch(`${BASE_URL}/api/community-ai`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ post_id: post.id, post_text: trimmed, author_name: account.email, user_id: account.id }) }).catch(() => {});
+      fetch(`${API_BASE}/api/community-ai`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ post_id: post.id, post_text: trimmed, author_name: account.email, user_id: account.id }) }).catch(() => {});
       setTimeout(() => onPosted(), 4000);
     }
     setText("");
@@ -919,7 +919,7 @@ function CommentsSection({ postId, postAuthorId, account, profilesMap, onProfile
     if (mentions.includes("rainaai")) {
       // Fetch the original post text for context
       supabase.from("community_posts").select("text").eq("id", postId).single().then(({ data: postRow }) => {
-        fetch(`${BASE_URL}/api/community-ai`, {
+        fetch(`${API_BASE}/api/community-ai`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -2007,7 +2007,7 @@ function ProfileView({ userId, account, onBack, onOpenProfile, onDmUser }) {
       // Single authoritative fetch via API (service key, bypasses RLS, returns all public-safe fields)
       try {
         const [apiResult, canonicalResult] = await Promise.all([
-          fetch(`${BASE_URL}/api/public-profile/${userId}`),
+          fetch(`${API_BASE}/api/public-profile/${userId}`),
           supabase.from("profiles").select("id,display_name,full_name,username,avatar_url,badge,is_admin,is_official,cover_url,location,date_of_birth,dob_privacy,bio").eq("id", userId).maybeSingle(),
         ]);
         if (!apiResult.ok) throw new Error(`Profile API returned ${apiResult.status}`);
