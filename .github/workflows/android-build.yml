@@ -56,6 +56,10 @@ jobs:
             pnpm exec cap add android
           fi
 
+      - name: Patch Android manifest for camera/microphone permissions
+        working-directory: artifacts/rainx
+        run: python3 ../../scripts/patch-android-permissions.py
+
       - name: Add Firebase Android configuration
         working-directory: artifacts/rainx
         run: |
