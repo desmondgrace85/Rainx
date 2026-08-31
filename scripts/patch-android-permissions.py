@@ -67,6 +67,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
+import android.webkit.JavascriptInterface;
 import androidx.core.content.ContextCompat;
 """
     marker = "import com.getcapacitor.BridgeActivity;"
@@ -77,10 +78,21 @@ import androidx.core.content.ContextCompat;
     class_body = """public class MainActivity extends BridgeActivity {
     private static final int MEDIA_PERMISSION_REQUEST = 8401;
     private PermissionRequest pendingPermissionRequest;
+    private WebView mediaWebView;
+    private boolean pendingJsMediaRequest;
+    private boolean pendingJsNeedsCamera;
+    private boolean pendingJsNeedsMicrophone;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mediaWebView = getBridge().getWebView();
+        mediaWebView.addJavascriptInterface(new Object() {
+            @JavascriptInterface
+            public void request(String mediaType) {
+                runOnUiThread(() -> requestNativeMediaPermissions(mediaType));
+            }
+        }, "RainxNativeMedia");
         getBridge().getWebView().setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
@@ -112,10 +124,52 @@ import androidx.core.content.ContextCompat;
         });
     }
 
+    private void requestNativeMediaPermissions(String mediaType) {
+        boolean needsCamera = mediaType != null && mediaType.contains("camera");
+        boolean needsMicrophone = mediaType != null && mediaType.contains("microphone");
+        if (!needsCamera && !needsMicrophone) {
+            notifyNativeMediaPermission(false);
+            return;
+        }
+        boolean cameraGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+        boolean microphoneGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+        if ((!needsCamera || cameraGranted) && (!needsMicrophone || microphoneGranted)) {
+            notifyNativeMediaPermission(true);
+            return;
+        }
+        pendingJsMediaRequest = true;
+        pendingJsNeedsCamera = needsCamera;
+        pendingJsNeedsMicrophone = needsMicrophone;
+        java.util.ArrayList<String> missing = new java.util.ArrayList<>();
+        if (needsCamera && !cameraGranted) missing.add(Manifest.permission.CAMERA);
+        if (needsMicrophone && !microphoneGranted) missing.add(Manifest.permission.RECORD_AUDIO);
+        requestPermissions(missing.toArray(new String[0]), MEDIA_PERMISSION_REQUEST);
+    }
+
+    private void notifyNativeMediaPermission(boolean granted) {
+        if (mediaWebView == null) return;
+        String result = granted ? "true" : "false";
+        mediaWebView.evaluateJavascript(
+            "window.dispatchEvent(new CustomEvent('rainxNativeMediaPermission',{detail:{granted:" + result + "}}));",
+            null
+        );
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode != MEDIA_PERMISSION_REQUEST) return;
+        boolean jsRequest = pendingJsMediaRequest;
+        boolean jsNeedsCamera = pendingJsNeedsCamera;
+        boolean jsNeedsMicrophone = pendingJsNeedsMicrophone;
+        pendingJsMediaRequest = false;
+        pendingJsNeedsCamera = false;
+        pendingJsNeedsMicrophone = false;
+        if (jsRequest) {
+            boolean cameraGranted = !jsNeedsCamera || ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+            boolean microphoneGranted = !jsNeedsMicrophone || ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+            notifyNativeMediaPermission(cameraGranted && microphoneGranted);
+        }
         PermissionRequest request = pendingPermissionRequest;
         pendingPermissionRequest = null;
         if (request == null) return;
