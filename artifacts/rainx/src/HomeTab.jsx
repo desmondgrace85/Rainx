@@ -720,7 +720,8 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
   }, [last]);
 
   // Real candles from Raina AI backend — keyed to selected timeframe
-  const BASE_URL_H = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
+  // Relative URLs fail in the Capacitor WebView (local origin) — must be absolute.
+  const BASE_URL_H = "https://rainxapp.vercel.app";
   const [realCandles, setRealCandles] = useState([]);
   useEffect(() => {
     let cancelled = false;

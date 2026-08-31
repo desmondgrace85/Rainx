@@ -2070,7 +2070,8 @@ function MainAppContent({ account, onLogout }) {
     };
     const entry = { id, read: false, time: new Date().toLocaleTimeString(), created_at: new Date().toISOString(), ...n, data: target };
     enqueueInAppNotification(entry);
-    const apiBase = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
+    // Relative URLs fail in the Capacitor WebView (local origin) — must be absolute.
+    const apiBase = "https://rainxapp.vercel.app";
     fetch(`${apiBase}/api/push/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

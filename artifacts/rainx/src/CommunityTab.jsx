@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import CommunityChat from "./CommunityChat";
 
-const BASE_URL = (import.meta.env.BASE_URL || "").replace(/\/$/, "");
-const API_BASE = "https://rainx-webapp.vercel.app";
+// Relative URLs fail in the Capacitor WebView (local origin) — must be absolute.
+const BASE_URL = "https://rainxapp.vercel.app";
+const API_BASE = "https://rainxapp.vercel.app";
 import {
   Send, Trash2, Edit3, X, BadgeCheck, Heart, Eye, MessageCircle, Repeat2, MessageSquareDashed,
   UserPlus, UserCheck, ArrowLeft, Bell, MoreHorizontal, Plus, Hash, AtSign, Flag, ChevronRight, ChevronDown, MessageSquare, Search, Bookmark, Share2,

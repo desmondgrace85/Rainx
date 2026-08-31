@@ -89,7 +89,9 @@ function visibleOhlcRange(bars, chart) {
   return { min: Math.min(...lows), max: Math.max(...highs) };
 }
 
-const BASE_URL = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
+// Relative `/api/...` fails in the Capacitor WebView (local origin — see
+// nativeNotifications.ts). Must be an absolute URL for native builds to work.
+const BASE_URL = "https://rainxapp.vercel.app";
 
 export default function FullChartView({ inst, session, signalsMap = {}, themeMode = "light", onClose, livePrice = null }) {
   const TK = THEME[themeMode] || THEME.light;
