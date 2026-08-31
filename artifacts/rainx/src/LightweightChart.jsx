@@ -23,7 +23,11 @@ function toChartBars(candles) {
   const seen = new Set();
   return candles
     .map(c => {
-      const time = Math.floor((c.t || c.time || 0) / 1000);
+      const rawTime = c.t ?? c.time ?? c.timestamp ?? c.datetime;
+      const parsedTime = typeof rawTime === "number"
+        ? rawTime
+        : (typeof rawTime === "string" && /^\d+$/.test(rawTime) ? Number(rawTime) : new Date(rawTime).getTime());
+      const time = Math.floor((parsedTime > 1e12 ? parsedTime : parsedTime * 1000) / 1000);
       return { time, open: +c.open, high: +c.high, low: +c.low, close: +c.close };
     })
     .filter(b => {
