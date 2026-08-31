@@ -16,7 +16,7 @@ const APP_ID = "com.rainx.app";
  * Relative `/api/...` fails in the Capacitor WebView (local origin), so
  * registration never reached Railway and registeredTokens stayed 0.
  */
-const API_BASE = "https://rainx-webapp.vercel.app";
+const API_BASE = "https://rainxapp.vercel.app";
 
 function getPlatform(): "android" | "ios" | null {
   const p = Capacitor.getPlatform();
