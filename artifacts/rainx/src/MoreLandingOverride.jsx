@@ -32,6 +32,23 @@ function formatCount(value) {
 }
 function go(route) { window.location.hash = route; }
 
+function requestNativeMediaPermissions(mediaType) {
+  if (typeof window === "undefined" || !window.RainxNativeMedia?.request) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (granted) => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener("rainxNativeMediaPermission", onResult);
+      resolve(granted);
+    };
+    const onResult = (event) => finish(event.detail?.granted !== false);
+    window.addEventListener("rainxNativeMediaPermission", onResult, { once: true });
+    try { window.RainxNativeMedia.request(mediaType); } catch { finish(true); }
+    window.setTimeout(() => finish(true), 8000);
+  });
+}
+
 async function loadCreatorAnalytics(accountId) {
   const since = new Date(Date.now() - 7 * 864e5).toISOString();
   const { data: posts = [] } = await supabase.from("community_posts")
@@ -205,7 +222,7 @@ function LiveVideoTab({ account, active = true }) {
     if (!active) return () => { cancelled = true; };
     (async () => {
       if (!navigator.mediaDevices?.getUserMedia) { setError("Camera access is not supported in this browser."); return; }
-      try { const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true }); if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return; } streamRef.current = stream; setStreamReady(true); if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(() => {}); } }
+      try { const nativeGranted = await requestNativeMediaPermissions("camera,microphone"); if (!nativeGranted || cancelled) { if (!nativeGranted) setError("Camera and microphone permissions are required for Live Video."); return; } const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }); if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return; } streamRef.current = stream; setStreamReady(true); if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play().catch(() => {}); } }
       catch { setError("Camera and microphone permissions are required for Live Video."); }
     })();
     return () => { cancelled = true; streamRef.current?.getTracks().forEach((track) => track.stop()); streamRef.current = null; };
@@ -308,7 +325,7 @@ function LiveRoomScreen({ onBack, account, isHost = false }) {
   const enableMicrophone = async () => {
     if (!navigator.mediaDevices?.getUserMedia) { setMediaError("Microphone access is not supported in this browser."); return false; }
     if (!localStreamRef.current) {
-      try { localStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false }); } catch { setMediaError("Microphone permission is required to speak."); return false; }
+      try { const nativeGranted = await requestNativeMediaPermissions("microphone"); if (!nativeGranted) { setMediaError("Microphone permission is required to speak."); return false; } localStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { setMediaError("Microphone permission is required to speak."); return false; }
       for (const [remoteId, pc] of peerConnectionsRef.current.entries()) { localStreamRef.current.getTracks().forEach((track) => pc.addTrack(track, localStreamRef.current)); const offer = await pc.createOffer(); await pc.setLocalDescription(offer); await sendSignal({ kind: "offer", from: sessionIdRef.current, to: remoteId, description: pc.localDescription }); }
     }
     localStreamRef.current.getAudioTracks().forEach((track) => { track.enabled = true; }); setMuted(false);
