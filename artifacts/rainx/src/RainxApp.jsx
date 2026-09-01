@@ -1680,9 +1680,15 @@ function MainAppContent({ account, onLogout }) {
       if (prev.length >= MAX_ACTIVE_MARKETS) return prev; // Replace flow handled in AddMarketSheet
       const next = [...prev, symbol];
       lsSet("rainx-active-markets", JSON.stringify(next));
+      void supabase.from("user_active_markets").upsert(
+        { user_id: account.id, symbol },
+        { onConflict: "user_id,symbol" },
+      ).then(({ error }) => {
+        if (error) console.error("[RainX] active market sync failed", error);
+      });
       return next;
     });
-  }, []);
+  }, [account?.id]);
   const replaceActiveMarket = useCallback((oldSymbol, newSymbol) => {
     setActiveMarkets(prev => { const index = prev.indexOf(oldSymbol); if (index < 0 || prev.includes(newSymbol)) return prev; const next = [...prev]; next[index] = newSymbol; lsSet("rainx-active-markets", JSON.stringify(next)); return next; });
     setSessions(prev => { const next = { ...prev }; delete next[oldSymbol]; return next; });
@@ -1697,13 +1703,19 @@ function MainAppContent({ account, onLogout }) {
       lsSet("rainx-active-markets", JSON.stringify(next));
       return next;
     });
+    void supabase.from("user_active_markets").delete()
+      .eq("user_id", account.id)
+      .eq("symbol", symbol)
+      .then(({ error }) => {
+        if (error) console.error("[RainX] active market removal sync failed", error);
+      });
     // Also drop the session for this market so analysis doesn't run in background
     setSessions(prev => {
       const next = { ...prev };
       delete next[symbol];
       return next;
     });
-  }, []);
+  }, [account?.id]);
   const resetMarkets = useCallback(() => {
     const today = new Date().toDateString();
     if (lastMarketReset !== today) {
@@ -1712,11 +1724,16 @@ function MainAppContent({ account, onLogout }) {
          lsSet("rainx-active-markets", JSON.stringify([]));
          setLastMarketReset(today);
          lsSet("rxMarketResetDate", today);
+         void supabase.from("user_active_markets").delete()
+           .eq("user_id", account.id)
+           .then(({ error }) => {
+             if (error) console.error("[RainX] active market reset sync failed", error);
+           });
        }
     } else {
        alert("You have already reset your market selections today. Try again tomorrow.");
     }
-  }, [lastMarketReset]);
+  }, [lastMarketReset, account?.id]);
 
   // Auto-restore removed: on page refresh, no market is auto-selected or auto-analyzed.
   // The user must manually select a market to begin analysis.
