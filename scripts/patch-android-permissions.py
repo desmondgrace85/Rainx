@@ -68,6 +68,7 @@ import android.os.Bundle;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebView;
 import androidx.core.content.ContextCompat;
 """
     marker = "import com.getcapacitor.BridgeActivity;"
