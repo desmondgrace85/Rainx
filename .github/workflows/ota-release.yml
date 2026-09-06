@@ -1,0 +1,103 @@
+name: Publish RainX OTA bundle
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rainx-ota-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.28.0
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build RainX web bundle
+        run: pnpm --filter @workspace/rainx run build:vercel
+
+      - name: Package OTA bundle
+        id: bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUNDLE_ID="${GITHUB_SHA}"
+          BUNDLE_NAME="rainx-web-${BUNDLE_ID}.zip"
+          test -s artifacts/rainx/dist/index.html
+          (cd artifacts/rainx/dist && zip -qr "../../../${BUNDLE_NAME}" .)
+          test -s "${BUNDLE_NAME}"
+          CHECKSUM="$(sha256sum "${BUNDLE_NAME}" | cut -d " " -f1)"
+          echo "bundle_id=${BUNDLE_ID}" >> "${GITHUB_OUTPUT}"
+          echo "bundle_name=${BUNDLE_NAME}" >> "${GITHUB_OUTPUT}"
+          echo "checksum=${CHECKSUM}" >> "${GITHUB_OUTPUT}"
+
+      - name: Publish GitHub release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUNDLE_ID: ${{ steps.bundle.outputs.bundle_id }}
+          BUNDLE_NAME: ${{ steps.bundle.outputs.bundle_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="ota-${BUNDLE_ID}"
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${TAG}" "${BUNDLE_NAME}" --repo "${GITHUB_REPOSITORY}" --clobber
+          else
+            gh release create "${TAG}" "${BUNDLE_NAME}" --repo "${GITHUB_REPOSITORY}" --title "RainX OTA ${BUNDLE_ID}" --notes "Automated web bundle for commit ${GITHUB_SHA}."
+          fi
+
+      - name: Publish OTA manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUNDLE_ID: ${{ steps.bundle.outputs.bundle_id }}
+          BUNDLE_NAME: ${{ steps.bundle.outputs.bundle_name }}
+          CHECKSUM: ${{ steps.bundle.outputs.checksum }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/ota-${BUNDLE_ID}/${BUNDLE_NAME}"
+          jq -n --arg bundleId "${BUNDLE_ID}" --arg url "${URL}" --arg checksum "${CHECKSUM}" \
+            '{bundleId: $bundleId, url: $url, checksum: $checksum}' > update.json
+          cat update.json
+
+          REF_ENDPOINT="repos/${GITHUB_REPOSITORY}/git/ref/heads/ota"
+          if ! gh api "${REF_ENDPOINT}" >/dev/null 2>&1; then
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f ref="refs/heads/ota" -f sha="${GITHUB_SHA}" >/dev/null
+          fi
+
+          FILE_ENDPOINT="repos/${GITHUB_REPOSITORY}/contents/ota/update.json"
+          FILE_SHA="$(gh api "${FILE_ENDPOINT}?ref=ota" --jq .sha 2>/dev/null || true)"
+          CONTENT="$(base64 -w0 update.json)"
+          if [ -n "${FILE_SHA}" ]; then
+            gh api --method PUT "${FILE_ENDPOINT}" \
+              -f message="Publish OTA manifest for ${BUNDLE_ID}" \
+              -f content="${CONTENT}" -f branch=ota -f sha="${FILE_SHA}" >/dev/null
+          else
+            gh api --method PUT "${FILE_ENDPOINT}" \
+              -f message="Publish OTA manifest for ${BUNDLE_ID}" \
+              -f content="${CONTENT}" -f branch=ota >/dev/null
+          fi
+          echo "Published ${URL}"
