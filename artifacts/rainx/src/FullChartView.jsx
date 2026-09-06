@@ -30,7 +30,7 @@ const TF_LIST = [
 const THEME = {
   light: {
     bg:         "#ffffff",
-    card:       "#f7f9f9",
+    card:       "#ffffff",
     border:     "#eff3f4",
     paper:      "#0f1419",
     muted:      "#536471",
@@ -42,7 +42,7 @@ const THEME = {
     bg:         "#131722",
     card:       "#1C1913",
     border:     "#332C1F",
-    paper:      "#F2EDE0",
+    paper:      "#FFFFFF",
     muted:      "#9C947F",
     textColor:  "rgba(220,225,235,0.55)",
     gridColor:  "rgba(255,255,255,0.045)",

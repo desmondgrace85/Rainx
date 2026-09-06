@@ -16,7 +16,7 @@ const T = {
   goldGradient: "linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)",
   goldShine: "linear-gradient(180deg, #F4D35E 0%, #F4D35E 48%, #F4D35E 100%)",
   sage: "#7A9E86", rust: "#B0604A",
-  paper: "#F2EDE0", muted: "#9C947F",
+  paper: "#FFFFFF", muted: "#9C947F",
 };
 const FONT_HEAD = "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif";
 const FONT_BODY = "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif";

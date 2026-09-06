@@ -183,7 +183,7 @@ export default function NativeLockOverride({ account, initialLocked = false }) {
   return (
     <div role="dialog" aria-modal="true" aria-label="Unlock RainX" style={{
       position: "fixed", inset: 0, zIndex: 1000000, overflow: "hidden",
-      background: "linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 57%, #FFFDF3 74%, #FFE681 100%)",
+      background: "linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 57%, #FFFFFF 74%, #FFE681 100%)",
       color: "#111418", fontFamily: FONT, overscrollBehavior: "none",
     }}>
       <div style={{
@@ -229,7 +229,7 @@ export default function NativeLockOverride({ account, initialLocked = false }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 18, flexShrink: 0, flexWrap: "wrap" }}>
           {bioAvailable && (
             <button type="button" onClick={unlockWithBiometric} disabled={biometricRunning} style={{
-              border: "1px solid #E6E1D0", background: "rgba(255,255,255,.82)", borderRadius: 999,
+              border: "1px solid #FFFFFF", background: "rgba(255,255,255,.82)", borderRadius: 999,
               padding: "10px 15px", display: "flex", alignItems: "center", gap: 8,
               color: "#111418", fontFamily: FONT, fontWeight: 800, fontSize: 11.5,
               cursor: "pointer", boxShadow: "0 2px 10px rgba(17,20,24,.04)", opacity: biometricRunning ? .65 : 1,

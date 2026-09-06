@@ -37,7 +37,7 @@ const T = {
   goldShine: "linear-gradient(180deg, #F4D35E 0%, #F4D35E 48%, #F4D35E 100%)",
   sage: "#7A9E86",
   rust: "#B0604A",
-  paper: "#F2EDE0",
+  paper: "#FFFFFF",
   muted: "#9C947F",
 };
 // Light and dark token palettes – applied by mutating T in-place inside MainAppContent
@@ -46,8 +46,8 @@ let _avatarRefreshTick = 0;
 const _avatarRefreshListeners = new Set();
 function notifyAvatarRefresh() { _avatarRefreshTick++; _avatarRefreshListeners.forEach(fn => fn(_avatarRefreshTick)); }
 
-const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#F4D35E", goldBright:"#F4D35E", goldGradient:"linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)", goldShine:"linear-gradient(180deg, #F4D35E 0%, #F4D35E 48%, #F4D35E 100%)", sage:"#7A9E86",  rust:"#B0604A", paper:"#F2EDE0", muted:"#9C947F" };
-const LIGHT_TOKENS = { ink:"#FFFFFF",  card:"#F7F9F9", cardBorder:"#EFF3F4", gold:"#F4D35E", goldBright:"#F4D35E", goldGradient:"linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)", goldShine:"linear-gradient(180deg, #F4D35E 0%, #F4D35E 48%, #F4D35E 100%)", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
+const DARK_TOKENS  = { ink:"#0F0E0B", card:"#1C1913", cardBorder:"#332C1F", gold:"#F4D35E", goldBright:"#F4D35E", goldGradient:"linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)", goldShine:"linear-gradient(180deg, #F4D35E 0%, #F4D35E 48%, #F4D35E 100%)", sage:"#7A9E86",  rust:"#B0604A", paper:"#FFFFFF", muted:"#9C947F" };
+const LIGHT_TOKENS = { ink:"#FFFFFF",  card: "#FFFFFF", cardBorder:"#EFF3F4", gold:"#F4D35E", goldBright:"#F4D35E", goldGradient:"linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)", goldShine:"linear-gradient(180deg, #F4D35E 0%, #F4D35E 48%, #F4D35E 100%)", sage:"#1A7A50",  rust:"#C0392B", paper:"#0F1419", muted:"#536471" };
 const FONT_HEAD = "'Montserrat', sans-serif";
 const FONT_BODY = "'Montserrat', sans-serif";
 
@@ -1916,6 +1916,55 @@ function MainAppContent({ account, onLogout }) {
     routeReplace("more", null, profileFromHeader ? "h" : null);
   };
 
+  // Native edge-swipe back: works consistently for tabs, More sub-pages, profile overlays, and Space Coins.
+  const handleNativeBack = useCallback(() => {
+    if (showSidebar) { setShowSidebar(false); return; }
+    if (showLogoutConfirm) { closeLogoutConfirm(); return; }
+    if (spaceCoinsScreen === "dashboard") { setSpaceCoinsScreen("intro"); return; }
+    if (spaceCoinsScreen === "intro") { setSpaceCoinsScreen(null); goTab("home", -1); return; }
+    if (profileFromHeader && morePage) {
+      if (morePage !== "profile-menu") { setMorePage("profile-menu"); return; }
+      setMorePage(null); setProfileFromHeader(false); routeReplace(tab, null, null); return;
+    }
+    if (tab === "more" && morePage) { setMorePage(null); routeReplace("more", null, null); return; }
+    if (tab !== "home") window.history.back();
+  }, [showSidebar, showLogoutConfirm, spaceCoinsScreen, profileFromHeader, morePage, tab]);
+
+  useEffect(() => {
+    let gesture = null;
+    const onTouchStart = (event) => {
+      if (event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      if (touch.clientX > 32) return;
+      const target = event.target;
+      if (target?.closest?.("input, textarea, select, [contenteditable=\"true\"]")) return;
+      gesture = { startX: touch.clientX, startY: touch.clientY, dx: 0, dy: 0 };
+    };
+    const onTouchMove = (event) => {
+      if (!gesture || event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      gesture.dx = touch.clientX - gesture.startX;
+      gesture.dy = touch.clientY - gesture.startY;
+      if (gesture.dx > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy)) event.preventDefault();
+    };
+    const onTouchEnd = () => {
+      if (!gesture) return;
+      const { dx, dy } = gesture;
+      gesture = null;
+      if (dx > 72 && dx > Math.abs(dy) * 1.2) handleNativeBack();
+    };
+    window.addEventListener("touchstart", onTouchStart, { passive: true, capture: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true, capture: true });
+    window.addEventListener("touchcancel", onTouchEnd, { passive: true, capture: true });
+    return () => {
+      window.removeEventListener("touchstart", onTouchStart, true);
+      window.removeEventListener("touchmove", onTouchMove, true);
+      window.removeEventListener("touchend", onTouchEnd, true);
+      window.removeEventListener("touchcancel", onTouchEnd, true);
+    };
+  }, [handleNativeBack]);
+
   // Sync browser Back/Forward to React state
   useEffect(() => {
     const onPop = () => {
@@ -2653,7 +2702,7 @@ function MainAppContent({ account, onLogout }) {
 
   return (
     <PullToRefresh>
-      <div className="rx-app-root" style={{ height: "100dvh", minHeight: "100dvh", overflowY: "auto", overflowX: "hidden", background: tab === "home" ? "#F8F9FA" : T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative", isolation: "isolate", overscrollBehaviorY: "none", touchAction: "pan-y", paddingBottom: "calc(96px + env(safe-area-inset-bottom))" }}>
+      <div className="rx-app-root" style={{ height: "100dvh", minHeight: "100dvh", overflowY: "auto", overflowX: "hidden", background: tab === "home" ? "#FFFFFF" : T.ink, color: T.paper, fontFamily: FONT_BODY, maxWidth: 480, margin: "0 auto", position: "relative", isolation: "isolate", overscrollBehaviorY: "none", touchAction: "pan-y", paddingBottom: "calc(96px + env(safe-area-inset-bottom))" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
@@ -3337,7 +3386,7 @@ function GamesTab() {
   }, []);
 
   return (
-    <div style={{ minHeight: "100dvh", background: "#050505", color: "#F2EDE0", fontFamily: FONT_BODY, overflow: "hidden" }}>
+    <div style={{ minHeight: "100dvh", background: "#050505", color: "#FFFFFF", fontFamily: FONT_BODY, overflow: "hidden" }}>
       <style>{`
         @keyframes games-fade-up { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
         @keyframes games-fade-in { from { opacity:0; } to { opacity:1; } }
@@ -3357,10 +3406,10 @@ function GamesTab() {
       <header style={{ position: "sticky", top: 0, zIndex: 20, background: "rgba(5,5,5,.82)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(244,211,94,.2)", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ color: T.gold, fontSize: 20 }}>✦</span>
-          <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: "#F2EDE0" }}>RainX</span>
+          <span style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: "#FFFFFF" }}>RainX</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 999, background: "#1C1913", border: `1px solid ${T.cardBorder}`, boxShadow: `0 0 15px ${T.gold}33` }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#F2EDE0" }}>GHS 4,320.00</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#FFFFFF" }}>GHS 4,320.00</span>
           <span style={{ width: 18, height: 18, borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", background: `${T.gold}22`, color: T.goldBright, fontSize: 16, lineHeight: 1 }}>+</span>
         </div>
       </header>
@@ -3373,7 +3422,7 @@ function GamesTab() {
           <div style={{ position: "absolute", inset: 0, zIndex: 2, opacity: .25, background: "radial-gradient(circle at 50% 50%, rgba(244,211,94,.15), transparent 45%)", animation: "games-shimmer 15s linear infinite" }} />
         </div>
         <div className={pageReady ? "games-fade" : ""} style={{ position: "relative", zIndex: 3, textAlign: "center" }}>
-          <h1 style={{ fontFamily: FONT_HEAD, fontSize: 38, lineHeight: 1.05, fontWeight: 800, color: "#F2EDE0", margin: "0 0 8px", textShadow: `0 0 14px ${T.gold}66` }}>Play Smart.<br />Win More.</h1>
+          <h1 style={{ fontFamily: FONT_HEAD, fontSize: 38, lineHeight: 1.05, fontWeight: 800, color: "#FFFFFF", margin: "0 0 8px", textShadow: `0 0 14px ${T.gold}66` }}>Play Smart.<br />Win More.</h1>
           <p style={{ color: `${T.goldBright}CC`, fontSize: 13, fontWeight: 600, margin: "0 auto 22px", maxWidth: 280 }}>The premium gaming platform for serious players</p>
           <button onClick={() => document.getElementById("games-trending")?.scrollIntoView({ behavior: "smooth", block: "start" })} style={{ border: "none", borderRadius: 999, padding: "14px 28px", background: T.goldGradient, color: "#050505", fontFamily: FONT_HEAD, fontSize: 12, fontWeight: 800, letterSpacing: 1, cursor: "pointer", boxShadow: `0 0 24px ${T.gold}55` }}>
             Enter Games <span style={{ marginLeft: 6 }}>▶</span>
@@ -3395,7 +3444,7 @@ function GamesTab() {
       </div>
 
       <section className="games-reveal" style={{ animationDelay: ".15s", padding: "12px 16px 4px" }}>
-        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: "#F2EDE0", marginBottom: 12 }}>Featured</div>
+        <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: "#FFFFFF", marginBottom: 12 }}>Featured</div>
         <div style={{ position: "relative", height: 200, borderRadius: 16, overflow: "hidden", border: `1px solid ${T.cardBorder}`, cursor: "pointer" }}>
           <img src={gamesMoonJet} alt="MoonJet" style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform .7s" }} />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(5,5,5,.94), rgba(5,5,5,.25) 65%, transparent)" }} />
@@ -3409,7 +3458,7 @@ function GamesTab() {
 
       <section id="games-trending" style={{ padding: "18px 16px 4px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: "#F2EDE0" }}>Trending Games</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 18, color: "#FFFFFF" }}>Trending Games</div>
           <span style={{ color: T.muted, fontSize: 11 }}>{visibleGames.length} games</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
@@ -3446,12 +3495,12 @@ function GamesTab() {
             </div>
             <div style={{ position: "absolute", bottom: -12, left: "50%", transform: "translateX(-50%)", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, background: "#1C1913", border: `1px solid ${T.gold}4D`, boxShadow: "0 4px 12px rgba(0,0,0,.5)" }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.gold, animation: "pulse 1.5s infinite" }} />
-              <span style={{ color: "#F2EDE0", fontSize: 10, fontWeight: 600 }}>{rainaStates[activeRainaState]}</span>
+              <span style={{ color: "#FFFFFF", fontSize: 10, fontWeight: 600 }}>{rainaStates[activeRainaState]}</span>
             </div>
           </div>
           <div className="games-reveal" style={{ animationDelay: ".4s", position: "relative", maxWidth: 280, marginBottom: 22, padding: 16, borderRadius: 18, background: "rgba(28,25,19,.82)", border: `1px solid ${T.cardBorder}`, backdropFilter: "blur(8px)" }}>
             <div style={{ position: "absolute", top: -8, left: "50%", width: 16, height: 16, background: "#1C1913", borderTop: `1px solid ${T.cardBorder}`, borderLeft: `1px solid ${T.cardBorder}`, transform: "translateX(-50%) rotate(45deg)" }} />
-            <div style={{ position: "relative", color: "#F2EDE0", textAlign: "center", fontSize: 14, lineHeight: 1.45, fontWeight: 600, fontStyle: "italic" }}>"I've studied 2.4M trades. Your move, human."</div>
+            <div style={{ position: "relative", color: "#FFFFFF", textAlign: "center", fontSize: 14, lineHeight: 1.45, fontWeight: 600, fontStyle: "italic" }}>"I've studied 2.4M trades. Your move, human."</div>
           </div>
           <div className="games-reveal" style={{ animationDelay: ".55s", width: "100%", maxWidth: 300, display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ padding: 12, borderRadius: 12, background: "rgba(15,14,11,.55)", border: `1px solid ${T.cardBorder}` }}>
@@ -3468,7 +3517,7 @@ function GamesTab() {
 
       <section style={{ padding: "28px 16px 14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 20, color: "#F2EDE0" }}>Live Leaderboard</div>
+          <div style={{ fontFamily: FONT_HEAD, fontWeight: 800, fontSize: 20, color: "#FFFFFF" }}>Live Leaderboard</div>
           <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#E05252", animation: "pulse 1.5s infinite" }} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
@@ -3479,7 +3528,7 @@ function GamesTab() {
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: rank === 1 ? T.gold : "#1C1913", border: rank > 1 ? `1px solid ${T.cardBorder}` : "none", color: rank === 1 ? "#050505" : T.muted, fontSize: 12, fontWeight: 800 }}>{rank}</div>
                   <img src={player.avatar} alt={player.name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", border: `1px solid ${T.cardBorder}` }} />
-                  <div><div style={{ color: "#F2EDE0", fontSize: 13, fontWeight: 700 }}>{player.name}{player.isMe && <span style={{ marginLeft: 6, padding: "2px 5px", borderRadius: 4, background: T.gold, color: "#050505", fontSize: 8, fontWeight: 800 }}>YOU</span>}</div><div style={{ color: T.muted, fontSize: 10, marginTop: 3 }}>Level {25 - rank * 2}</div></div>
+                  <div><div style={{ color: "#FFFFFF", fontSize: 13, fontWeight: 700 }}>{player.name}{player.isMe && <span style={{ marginLeft: 6, padding: "2px 5px", borderRadius: 4, background: T.gold, color: "#050505", fontSize: 8, fontWeight: 800 }}>YOU</span>}</div><div style={{ color: T.muted, fontSize: 10, marginTop: 3 }}>Level {25 - rank * 2}</div></div>
                 </div>
                 <div style={{ textAlign: "right" }}><div style={{ color: T.goldBright, fontFamily: "monospace", fontSize: 12, fontWeight: 800 }}><span style={{ color: T.muted, fontSize: 9, marginRight: 4 }}>GHS</span>{player.score}</div><div style={{ color: player.trend === "up" ? "#34D399" : "#F87171", fontSize: 10, marginTop: 4, fontWeight: 700 }}>{player.trend === "up" ? "↗ +2.4%" : "↘ -1.2%"}</div></div>
               </div>

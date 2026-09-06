@@ -153,7 +153,7 @@ export default function SpaceNewsSection() {
       {status === "loading" && (
         <div style={{ display: "grid" }}>
           {[0, 1].map(i => (
-            <div key={i} style={{ height: 96, margin: "0 10px", background: "linear-gradient(90deg,#fff,#f4f1e8,#fff)", borderBottom: i === 0 ? "1px solid #EEE9DD" : "none" }} />
+            <div key={i} style={{ height: 96, margin: "0 10px", background: "linear-gradient(90deg,#fff,#FFFFFF,#fff)", borderBottom: i === 0 ? "1px solid #FFFFFF" : "none" }} />
           ))}
         </div>
       )}
@@ -181,9 +181,9 @@ export default function SpaceNewsSection() {
               href={item.url}
               target="_blank"
               rel="noreferrer"
-              style={{ display: "flex", gap: 12, alignItems: "center", textDecoration: "none", background: "transparent", borderBottom: index < Math.min(items.length, 5) - 1 ? "1px solid #EEE9DD" : "none", padding: "10px 14px" }}
+              style={{ display: "flex", gap: 12, alignItems: "center", textDecoration: "none", background: "transparent", borderBottom: index < Math.min(items.length, 5) - 1 ? "1px solid #FFFFFF" : "none", padding: "10px 14px" }}
             >
-              <div style={{ width: 82, height: 76, flexShrink: 0, borderRadius: 14, overflow: "hidden", background: "linear-gradient(135deg,#F4D35E,#F5F0E4)", display: "grid", placeItems: "center" }}>
+              <div style={{ width: 82, height: 76, flexShrink: 0, borderRadius: 14, overflow: "hidden", background: "linear-gradient(135deg,#F4D35E,#FFFFFF)", display: "grid", placeItems: "center" }}>
                 <img
                   src={item.image || FALLBACK_NEWS_IMAGES[0]}
                   alt=""

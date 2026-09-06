@@ -42,7 +42,7 @@ function playSendTick() {
 
 const buildT = (tokens) => ({
   ink: "#0F0E0B", card: "#1C1913", cardBorder: "#332C1F",
-  gold: "#F4D35E", goldBright: "#F4D35E", paper: "#F2EDE0", muted: "#9C947F",
+  gold: "#F4D35E", goldBright: "#F4D35E", paper: "#FFFFFF", muted: "#9C947F",
   goldGradient: "linear-gradient(135deg, #F4D35E 0%, #F4D35E 50%, #F4D35E 100%)",
   goldShine: "linear-gradient(180deg, #F4D35E 0%, #F4D35E 48%, #F4D35E 100%)",
   ...(tokens || {}),
@@ -163,10 +163,10 @@ function ConfirmDialog({ title, body, confirmLabel, danger, onConfirm, onCancel,
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 20px" }} onClick={onCancel}>
       <div onClick={e => e.stopPropagation()} style={{ background: "#1C1913", border: "1px solid #332C1F", borderRadius: 18, padding: "26px 22px 22px", width: "100%", maxWidth: 360 }}>
-        <div style={{ fontWeight: 800, fontSize: 16, color: "#F2EDE0", marginBottom: 10 }}>{title}</div>
+        <div style={{ fontWeight: 800, fontSize: 16, color: "#FFFFFF", marginBottom: 10 }}>{title}</div>
         {body && <div style={{ fontSize: 13, color: "#9C947F", lineHeight: 1.65, marginBottom: 22 }}>{body}</div>}
         <div style={{ display: "flex", gap: 10 }}>
-          <button onClick={onCancel} style={{ flex: 1, background: "#332C1F", border: "none", borderRadius: 12, padding: "13px 0", color: "#F2EDE0", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+          <button onClick={onCancel} style={{ flex: 1, background: "#332C1F", border: "none", borderRadius: 12, padding: "13px 0", color: "#FFFFFF", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
           <button onClick={onConfirm} style={{ flex: 1, background: danger ? "#B0604A" : goldGrad, border: "none", borderRadius: 12, padding: "13px 0", color: danger ? "#fff" : "#0F0E0B", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{confirmLabel || "Confirm"}</button>
         </div>
       </div>
@@ -328,7 +328,7 @@ function PinnedBar({ pins, onViewPins, T }) {
         <div style={{ fontSize: 10, color: T.gold, fontWeight: 700, marginBottom: 1 }}>
           Pinned Message{pins.length > 1 ? "s (" + pins.length + ")" : ""}
         </div>
-        <div style={{ fontSize: 12, color: "#F2EDE0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ fontSize: 12, color: "#FFFFFF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {isDeleted(latest.content) ? "This message was deleted" : latest.content}
         </div>
       </div>
@@ -1083,7 +1083,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
       {/* Messages */}
       <div style={{
         flex: 1, overflowY: "auto", padding: "12px 10px 4px", display: "flex", flexDirection: "column", gap: 2,
-        backgroundColor: "#F4F0E8", backgroundImage: `linear-gradient(rgba(244,240,232,0.16), rgba(244,240,232,0.16)), url(${chatWallpaper})`, backgroundRepeat: "repeat",
+        backgroundColor: "#FFFFFF", backgroundImage: `linear-gradient(rgba(255,255,255,0.16), rgba(255,255,255,0.16)), url(${chatWallpaper})`, backgroundRepeat: "repeat",
         backgroundSize: "432px 768px", backgroundPosition: "top center",
       }}>
         {loading && <div style={{ textAlign: "center", color: T.muted, fontSize: 13, paddingTop: 40 }}>Loading messages…</div>}
