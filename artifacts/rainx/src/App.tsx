@@ -4,6 +4,7 @@ import MoreLandingOverride from "./MoreLandingOverride";
 import NativeLockOverride from "./NativeLockOverride";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
+import { consumeNativeBack } from "./nativeBackStack";
 import { supabase } from "./supabaseClient";
 import { clearNativeSessionUnlock, getNativeLockConfig, hasNativeUnlockedSession } from "./nativeSecurity";
 
@@ -19,6 +20,7 @@ function readHash() {
 }
 
 function dispatchNativeBack() {
+  if (consumeNativeBack()) return true;
   const detail = { handled: false };
   try { window.dispatchEvent(new CustomEvent(NATIVE_BACK_EVENT, { detail })); } catch {}
   if (detail.handled) return true;

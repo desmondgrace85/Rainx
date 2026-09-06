@@ -2778,9 +2778,9 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
     if (!chatOpen) pushCommunityOverlay("chat");
     setChatClosing(false); setChatInitUser(user); setChatOpen(true);
   },[chatOpen,pushCommunityOverlay]);
-  const closeChat=useCallback(()=>{
+  const closeChat=useCallback((fromHistory = false)=>{
     clearTimeout(chatCloseTimerRef.current);
-    if (window.history.state?.rainxCommunityOverlay === "chat") {
+    if (!fromHistory && window.history.state?.rainxCommunityOverlay === "chat") {
       communityHistoryActionRef.current = true; window.history.back(); return;
     }
     setChatClosing(true);
