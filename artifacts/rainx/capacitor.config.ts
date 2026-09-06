@@ -12,6 +12,11 @@ const config: CapacitorConfig = {
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'banner', 'list'],
     },
+    LiveUpdate: {
+      autoBlockRolledBackBundles: true,
+      autoDeleteBundles: true,
+      readyTimeout: 15000,
+    },
   },
 };
 
