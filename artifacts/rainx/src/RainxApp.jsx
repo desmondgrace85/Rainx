@@ -325,7 +325,7 @@ function routeReplace(tab, sub, flag) {
     if (sub)  h += "/" + encodeURIComponent(sub);
     if (flag) h += "/" + flag;
     const next = "#" + h;
-    if (window.location.hash !== next) history.replaceState(history.state || null, "", next);
+    if (window.location.hash !== next) history.pushState({ ...(history.state || {}), rainxRoute: true }, "", next);
   } catch {}
 }
 function buildRainxNotificationUrl(target = {}) {
@@ -1924,9 +1924,9 @@ function MainAppContent({ account, onLogout }) {
     if (spaceCoinsScreen === "intro") { setSpaceCoinsScreen(null); goTab("home", -1); return true; }
     if (profileFromHeader && morePage) {
       if (morePage !== "profile-menu") { setMorePage("profile-menu"); return true; }
-      setMorePage(null); setProfileFromHeader(false); routeReplace(tab, null, null); return true;
+      setMorePage(null); setProfileFromHeader(false); return true;
     }
-    if (tab === "more" && morePage) { setMorePage(null); routeReplace("more", null, null); return true; }
+    if (tab === "more" && morePage) { setMorePage(null); return true; }
     if (tab !== "home") {
       if (window.history.state?.rainxRoute) window.history.back();
       else { setTab("home"); setMorePage(null); setSpaceCoinsScreen(null); routeReplace("home", null, null); }

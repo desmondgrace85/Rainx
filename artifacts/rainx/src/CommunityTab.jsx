@@ -2744,9 +2744,17 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
   const [profilesMap, setProfilesMap] = useState({});
   const [likeData, setLikeData] = useState({});
   const [repostData, setRepostData] = useState({});
-  const [viewingUserId, setViewingUserId] = useState(() => {
+  const [viewingUserId, setViewingUserIdState] = useState(() => {
     try { return localStorage.getItem("community-viewing-user") || null; } catch { return null; }
   });
+  const communityHistoryActionRef = useRef(false);
+  const pushCommunityOverlay = useCallback((overlay) => {
+    try { window.history.pushState({ ...(window.history.state || {}), rainxRoute: true, rainxCommunityOverlay: overlay }, "", window.location.href); } catch {}
+  }, []);
+  const setViewingUserId = useCallback((userId) => {
+    if (userId && userId !== viewingUserId) pushCommunityOverlay("profile");
+    setViewingUserIdState(userId);
+  }, [viewingUserId, pushCommunityOverlay]);
   const [hashtags, setHashtags] = useState([]);
   const [activeHashtag, setActiveHashtag] = useState(null);
   const [onlineCount, setOnlineCount] = useState(null);
@@ -2765,8 +2773,19 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
   const [unreadDmCount, setUnreadDmCount] = useState(0);
   const [fabVisible, setFabVisible] = useState(true);
   const fabScrollRef = useRef(0);
-  const openChat=useCallback((user=null)=>{clearTimeout(chatCloseTimerRef.current);setChatClosing(false);setChatInitUser(user);setChatOpen(true);},[]);
-  const closeChat=useCallback(()=>{clearTimeout(chatCloseTimerRef.current);setChatClosing(true);chatCloseTimerRef.current=setTimeout(()=>{setChatOpen(false);setChatInitUser(null);setChatClosing(false);},280);},[]);
+  const openChat=useCallback((user=null)=>{
+    clearTimeout(chatCloseTimerRef.current);
+    if (!chatOpen) pushCommunityOverlay("chat");
+    setChatClosing(false); setChatInitUser(user); setChatOpen(true);
+  },[chatOpen,pushCommunityOverlay]);
+  const closeChat=useCallback(()=>{
+    clearTimeout(chatCloseTimerRef.current);
+    if (window.history.state?.rainxCommunityOverlay === "chat") {
+      communityHistoryActionRef.current = true; window.history.back(); return;
+    }
+    setChatClosing(true);
+    chatCloseTimerRef.current=setTimeout(()=>{setChatOpen(false);setChatInitUser(null);setChatClosing(false);},280);
+  },[]);
   useEffect(()=>()=>clearTimeout(chatCloseTimerRef.current),[]);
 
   // Load following IDs for the "Following" feed tab
@@ -2800,6 +2819,19 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
       .subscribe();
     return () => supabase.removeChannel(ch);
   }, [account?.id]);
+
+  useEffect(() => {
+    const onCommunityPop = () => {
+      const overlay = window.history.state?.rainxCommunityOverlay;
+      if (overlay !== "chat" && chatOpen) {
+        setChatClosing(true);
+        chatCloseTimerRef.current = setTimeout(() => { setChatOpen(false); setChatInitUser(null); setChatClosing(false); }, 280);
+      }
+      if (overlay !== "profile" && viewingUserId) setViewingUserIdState(null);
+    };
+    window.addEventListener("popstate", onCommunityPop);
+    return () => window.removeEventListener("popstate", onCommunityPop);
+  }, [chatOpen, viewingUserId]);
 
   // Persist viewingUserId so page refresh returns to the same profile
   useEffect(() => {
@@ -3093,7 +3125,7 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
            isClosing={chatClosing}
            onUnreadCleared={(count) => setUnreadDmCount((current) => Math.max(0, current - count))}
           onClose={closeChat}
-          onViewProfile={(userId) => { setChatOpen(false); setChatInitUser(null); setViewingUserId(userId); }}
+          onViewProfile={(userId) => { window.history.replaceState({ ...(window.history.state || {}), rainxRoute: true, rainxCommunityOverlay: "profile" }, "", window.location.href); setChatOpen(false); setChatInitUser(null); setViewingUserIdState(userId); }}
         />
       )}
 
