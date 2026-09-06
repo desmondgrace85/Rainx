@@ -63,6 +63,9 @@ function dispatchNativeBack() {
 }
 
 function installNativeEdgeBackGesture() {
+  // Android system edge-back is delivered through Capacitor's backButton event.
+  // Do not also listen to the WebView touch stream or one gesture can pop twice.
+  if (Capacitor.getPlatform() === "android") return () => {};
   let gesture = null;
   const onStart = (event) => {
     if (event.touches.length !== 1) return;
