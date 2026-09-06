@@ -19,8 +19,38 @@ function readHash() {
   return { tab: tab || null, sub: sub ? decodeURIComponent(sub) : null };
 }
 
+function isVisibleBackControl(element) {
+  if (!(element instanceof HTMLElement)) return false;
+  const style = window.getComputedStyle(element);
+  const rect = element.getBoundingClientRect();
+  return style.display !== "none" && style.visibility !== "hidden" && style.pointerEvents !== "none" && rect.width > 0 && rect.height > 0;
+}
+
+function clickVisibleBackControl() {
+  const selectors = [
+    "[data-native-back]",
+    "button[aria-label*='back' i]",
+    "[role='button'][aria-label*='back' i]",
+    "button[title*='back' i]",
+    ".rx-native-back",
+    ".rx-back",
+    "button[aria-label*='close' i]",
+    "[role='button'][aria-label*='close' i]"
+  ];
+  for (const selector of selectors) {
+    const controls = document.querySelectorAll(selector);
+    for (const control of controls) {
+      if (!isVisibleBackControl(control)) continue;
+      control.click();
+      return true;
+    }
+  }
+  return false;
+}
+
 function dispatchNativeBack() {
   if (consumeNativeBack()) return true;
+  if (clickVisibleBackControl()) return true;
   const detail = { handled: false };
   try { window.dispatchEvent(new CustomEvent(NATIVE_BACK_EVENT, { detail })); } catch {}
   if (detail.handled) return true;
