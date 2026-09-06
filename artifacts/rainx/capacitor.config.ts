@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
   androidScheme: 'https',
   iosScheme: 'https',
   plugins: {
-    App: { disableBackButtonHandler: true },
+    App: { disableBackButtonHandler: false },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'banner', 'list'],
     },
