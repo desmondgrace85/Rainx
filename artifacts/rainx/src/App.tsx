@@ -10,11 +10,59 @@ import { clearNativeSessionUnlock, getNativeLockConfig, hasNativeUnlockedSession
 const LOCK_EVENT = "rainx:native-lock-state";
 const LOCK_CONFIG_EVENT = "rainx:native-lock-config-changed";
 const ROUTE_EVENT = "rainx:route-change";
+const NATIVE_BACK_EVENT = "rainx:native-back";
 
 function readHash() {
   const raw = window.location.hash.replace(/^#/, "");
   const [tab, sub] = raw.split("/");
   return { tab: tab || null, sub: sub ? decodeURIComponent(sub) : null };
+}
+
+function dispatchNativeBack() {
+  const detail = { handled: false };
+  try { window.dispatchEvent(new CustomEvent(NATIVE_BACK_EVENT, { detail })); } catch {}
+  if (detail.handled) return true;
+  const current = readHash();
+  if (!current.tab || current.tab === "home") return false;
+  if (window.history.state?.rainxRoute) { window.history.back(); return true; }
+  window.history.replaceState(window.history.state || null, "", "#home");
+  try { window.dispatchEvent(new Event(ROUTE_EVENT)); } catch {}
+  return true;
+}
+
+function installNativeEdgeBackGesture() {
+  let gesture = null;
+  const onStart = (event) => {
+    if (event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    if (touch.clientX > 32) return;
+    const target = event.target;
+    if (target?.closest?.("input, textarea, select, [contenteditable=\"true\"]")) return;
+    gesture = { startX: touch.clientX, startY: touch.clientY, dx: 0, dy: 0 };
+  };
+  const onMove = (event) => {
+    if (!gesture || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    gesture.dx = touch.clientX - gesture.startX;
+    gesture.dy = touch.clientY - gesture.startY;
+    if (gesture.dx > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy)) event.preventDefault();
+  };
+  const onEnd = () => {
+    if (!gesture) return;
+    const { dx, dy } = gesture;
+    gesture = null;
+    if (dx > 72 && dx > Math.abs(dy) * 1.2) dispatchNativeBack();
+  };
+  window.addEventListener("touchstart", onStart, { passive: true, capture: true });
+  window.addEventListener("touchmove", onMove, { passive: false, capture: true });
+  window.addEventListener("touchend", onEnd, { passive: true, capture: true });
+  window.addEventListener("touchcancel", onEnd, { passive: true, capture: true });
+  return () => {
+    window.removeEventListener("touchstart", onStart, true);
+    window.removeEventListener("touchmove", onMove, true);
+    window.removeEventListener("touchend", onEnd, true);
+    window.removeEventListener("touchcancel", onEnd, true);
+  };
 }
 
 function installRouteBridge() {
@@ -63,6 +111,17 @@ export default function App() {
     update();
     return()=>{remove();window.removeEventListener("hashchange",update);window.removeEventListener("popstate",update);window.removeEventListener(ROUTE_EVENT,update)}
   },[]);
+
+  useEffect(() => {
+    const cleanupGesture = installNativeEdgeBackGesture();
+    let listener;
+    if (Capacitor.isNativePlatform()) {
+      CapacitorApp.addListener("backButton", () => { dispatchNativeBack(); })
+        .then(handle => { listener = handle; })
+        .catch(() => {});
+    }
+    return () => { cleanupGesture(); listener?.remove?.(); };
+  }, []);
 
   useEffect(()=>{
     let mounted=true;

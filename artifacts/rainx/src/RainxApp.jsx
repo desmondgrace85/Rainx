@@ -316,7 +316,7 @@ function routeWrite(tab, sub, flag) {
     if (sub)  h += "/" + encodeURIComponent(sub);
     if (flag) h += "/" + flag;
     const next = "#" + h;
-    if (window.location.hash !== next) history.pushState(null, "", next);
+    if (window.location.hash !== next) history.pushState({ ...(history.state || {}), rainxRoute: true }, "", next);
   } catch {}
 }
 function routeReplace(tab, sub, flag) {
@@ -325,7 +325,7 @@ function routeReplace(tab, sub, flag) {
     if (sub)  h += "/" + encodeURIComponent(sub);
     if (flag) h += "/" + flag;
     const next = "#" + h;
-    if (window.location.hash !== next) history.replaceState(null, "", next);
+    if (window.location.hash !== next) history.replaceState(history.state || null, "", next);
   } catch {}
 }
 function buildRainxNotificationUrl(target = {}) {
@@ -1916,53 +1916,31 @@ function MainAppContent({ account, onLogout }) {
     routeReplace("more", null, profileFromHeader ? "h" : null);
   };
 
-  // Native edge-swipe back: works consistently for tabs, More sub-pages, profile overlays, and Space Coins.
+  // Handle native shell back events without ever falling outside the app.
   const handleNativeBack = useCallback(() => {
-    if (showSidebar) { setShowSidebar(false); return; }
-    if (showLogoutConfirm) { closeLogoutConfirm(); return; }
-    if (spaceCoinsScreen === "dashboard") { setSpaceCoinsScreen("intro"); return; }
-    if (spaceCoinsScreen === "intro") { setSpaceCoinsScreen(null); goTab("home", -1); return; }
+    if (showSidebar) { setShowSidebar(false); return true; }
+    if (showLogoutConfirm) { closeLogoutConfirm(); return true; }
+    if (spaceCoinsScreen === "dashboard") { setSpaceCoinsScreen("intro"); return true; }
+    if (spaceCoinsScreen === "intro") { setSpaceCoinsScreen(null); goTab("home", -1); return true; }
     if (profileFromHeader && morePage) {
-      if (morePage !== "profile-menu") { setMorePage("profile-menu"); return; }
-      setMorePage(null); setProfileFromHeader(false); routeReplace(tab, null, null); return;
+      if (morePage !== "profile-menu") { setMorePage("profile-menu"); return true; }
+      setMorePage(null); setProfileFromHeader(false); routeReplace(tab, null, null); return true;
     }
-    if (tab === "more" && morePage) { setMorePage(null); routeReplace("more", null, null); return; }
-    if (tab !== "home") window.history.back();
+    if (tab === "more" && morePage) { setMorePage(null); routeReplace("more", null, null); return true; }
+    if (tab !== "home") {
+      if (window.history.state?.rainxRoute) window.history.back();
+      else { setTab("home"); setMorePage(null); setSpaceCoinsScreen(null); routeReplace("home", null, null); }
+      return true;
+    }
+    return false;
   }, [showSidebar, showLogoutConfirm, spaceCoinsScreen, profileFromHeader, morePage, tab]);
 
   useEffect(() => {
-    let gesture = null;
-    const onTouchStart = (event) => {
-      if (event.touches.length !== 1) return;
-      const touch = event.touches[0];
-      if (touch.clientX > 32) return;
-      const target = event.target;
-      if (target?.closest?.("input, textarea, select, [contenteditable=\"true\"]")) return;
-      gesture = { startX: touch.clientX, startY: touch.clientY, dx: 0, dy: 0 };
+    const onNativeBack = (event) => {
+      if (event?.detail) event.detail.handled = handleNativeBack();
     };
-    const onTouchMove = (event) => {
-      if (!gesture || event.touches.length !== 1) return;
-      const touch = event.touches[0];
-      gesture.dx = touch.clientX - gesture.startX;
-      gesture.dy = touch.clientY - gesture.startY;
-      if (gesture.dx > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy)) event.preventDefault();
-    };
-    const onTouchEnd = () => {
-      if (!gesture) return;
-      const { dx, dy } = gesture;
-      gesture = null;
-      if (dx > 72 && dx > Math.abs(dy) * 1.2) handleNativeBack();
-    };
-    window.addEventListener("touchstart", onTouchStart, { passive: true, capture: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
-    window.addEventListener("touchend", onTouchEnd, { passive: true, capture: true });
-    window.addEventListener("touchcancel", onTouchEnd, { passive: true, capture: true });
-    return () => {
-      window.removeEventListener("touchstart", onTouchStart, true);
-      window.removeEventListener("touchmove", onTouchMove, true);
-      window.removeEventListener("touchend", onTouchEnd, true);
-      window.removeEventListener("touchcancel", onTouchEnd, true);
-    };
+    window.addEventListener("rainx:native-back", onNativeBack);
+    return () => window.removeEventListener("rainx:native-back", onNativeBack);
   }, [handleNativeBack]);
 
   // Sync browser Back/Forward to React state
