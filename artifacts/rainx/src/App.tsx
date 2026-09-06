@@ -100,14 +100,23 @@ function installNativeEdgeBackGesture() {
 function installRouteBridge() {
   const h = window.history as any;
   if (h.__rainxRouteBridgeInstalled) return () => {};
-  const push = h.pushState.bind(h), replace = h.replaceState.bind(h);
+  const push = h.pushState.bind(h), replace = h.replaceState.bind(h), back = h.back;
+  let lastBackAt = 0;
   const notify = () => { try { window.dispatchEvent(new Event(ROUTE_EVENT)); } catch {} };
   h.pushState = function(...args) { const r = push(...args); notify(); return r; };
   h.replaceState = function(...args) { const r = replace(...args); notify(); return r; };
+  // A single edge gesture can reach both the global handler and a screen's local swipe handler. Collapse those into one history pop.
+  h.back = function(...args) {
+    const now = Date.now();
+    if (now - lastBackAt < 420) return;
+    lastBackAt = now;
+    return back.apply(h, args);
+  };
   h.__rainxRouteBridgeInstalled = true;
   return () => {
     if (h.pushState !== push) h.pushState = push;
     if (h.replaceState !== replace) h.replaceState = replace;
+    if (h.back !== back) h.back = back;
     delete h.__rainxRouteBridgeInstalled;
   };
 }
