@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import CommunityChat from "./CommunityChat";
 import { registerNativeBackHandler } from "./nativeBackStack";
 
@@ -3142,17 +3143,18 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
       <style>{`${pulse} ${slideIn}`}</style>
 
       {/* Chat overlay */}
-      {chatOpen && (
+      {chatOpen && createPortal(
         <CommunityChat
           account={account}
           themeTokens={T}
           initialUser={chatInitUser}
           isPro={isAccountPro}
-           isClosing={chatClosing}
-           onUnreadCleared={(count) => setUnreadDmCount((current) => Math.max(0, current - count))}
+          isClosing={chatClosing}
+          onUnreadCleared={(count) => setUnreadDmCount((current) => Math.max(0, current - count))}
           onClose={closeChat}
           onViewProfile={(userId) => { window.history.replaceState({ ...(window.history.state || {}), rainxRoute: true, rainxCommunityOverlay: "profile" }, "", window.location.href); setChatOpen(false); setChatInitUser(null); setViewingUserIdState(userId); }}
-        />
+        />,
+        document.body
       )}
 
       {/* Post Activity overlay */}
