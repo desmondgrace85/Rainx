@@ -26,6 +26,24 @@ class HomeChartErrorBoundary extends React.Component {
   }
 }
 
+function candleTimeMs(value) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (Number.isFinite(numeric)) return numeric > 1e11 ? numeric : numeric * 1000;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeApiCandles(data) {
+  const values = Array.isArray(data) ? data : (data?.values || []);
+  return values.slice().reverse().map((c) => ({
+    t: candleTimeMs(c.datetime ?? c.time ?? c.t),
+    open: Number(c.open),
+    high: Number(c.high),
+    low: Number(c.low),
+    close: Number(c.close),
+  })).filter((c) => c.t > 0 && [c.open, c.high, c.low, c.close].every(Number.isFinite));
+}
+
 function CandlestickChart({ candles, overlays, inst, containerHeight = 260 }) {
   const canvasRef = useRef(null);
   const rafRef    = useRef(null);
@@ -727,18 +745,14 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
     let cancelled = false;
     const sym = session?.symbol || activeSymbol;
     if (!sym) return;
+    setRealCandles([]);
     fetch(`${BASE_URL_H}/api/candles?symbol=${encodeURIComponent(sym)}&interval=${activeChartTf}&limit=500`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (!cancelled && data) {
-          // API returns { values: [{datetime, open, high, low, close}] } newest-first
-          const vals = Array.isArray(data) ? data : (data.values || []);
-          // Convert to LightweightChart tick format (t in ms) — oldest-first
-          const converted = vals.slice().reverse().map((c) => ({
-            t: new Date(c.datetime || c.time || 0).getTime(),
-            open: +c.open, high: +c.high, low: +c.low, close: +c.close,
-          })).filter((c) => c.t > 0 && isFinite(c.open));
-          setRealCandles(converted);
+          // API returns { values: [{datetime, open, high, low, close}] } newest-first.
+          // Keep the same real bars for the native full chart; do not synthesize a fallback.
+          setRealCandles(normalizeApiCandles(data));
         }
       })
       .catch(() => {});
@@ -754,11 +768,7 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if (!data) return;
-          const vals = Array.isArray(data) ? data : (data.values || []);
-          const converted = vals.slice().reverse().map(c => ({
-            t: new Date(c.datetime || c.time || 0).getTime(),
-            open: +c.open, high: +c.high, low: +c.low, close: +c.close,
-          })).filter(c => c.t > 0 && isFinite(c.open));
+          const converted = normalizeApiCandles(data);
           if (converted.length) setRealCandles(converted);
         }).catch(() => {});
     }, 30000);
@@ -926,7 +936,7 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
        </section>
        <SpaceNewsSection />
 
-      {showFullChart&&<HomeChartErrorBoundary><FullChartView inst={signalInst} session={sessions?.[signalSymbol]||session} signalsMap={signalsMap} themeMode={themeMode} onClose={()=>setShowFullChart(false)} livePrice={signalSymbol===activeSymbol?last:(seriesMap?.[signalSymbol]?.slice(-1)?.[0]?.price||null)} fallbackCandles={chartCandles}/></HomeChartErrorBoundary>}
+      {showFullChart&&<HomeChartErrorBoundary><FullChartView inst={signalInst} session={sessions?.[signalSymbol]||session} signalsMap={signalsMap} themeMode={themeMode} onClose={()=>setShowFullChart(false)} livePrice={signalSymbol===activeSymbol?last:(seriesMap?.[signalSymbol]?.slice(-1)?.[0]?.price||null)} fallbackCandles={realCandles}/></HomeChartErrorBoundary>}
 
       {showSubLock&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
         <div style={{background:T.card,border:`1px solid ${T.cardBorder}`,borderRadius:18,padding:28,width:"100%",maxWidth:340,textAlign:"center"}}>
