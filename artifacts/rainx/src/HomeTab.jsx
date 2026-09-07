@@ -926,7 +926,7 @@ function HomeTab({ account, inst, marketOpen, last, changePct, series, activeSym
        </section>
        <SpaceNewsSection />
 
-      {showFullChart&&<HomeChartErrorBoundary><FullChartView inst={signalInst} session={sessions?.[signalSymbol]||session} signalsMap={signalsMap} themeMode={themeMode} onClose={()=>setShowFullChart(false)} livePrice={signalSymbol===activeSymbol?last:(seriesMap?.[signalSymbol]?.slice(-1)?.[0]?.price||null)}/></HomeChartErrorBoundary>}
+      {showFullChart&&<HomeChartErrorBoundary><FullChartView inst={signalInst} session={sessions?.[signalSymbol]||session} signalsMap={signalsMap} themeMode={themeMode} onClose={()=>setShowFullChart(false)} livePrice={signalSymbol===activeSymbol?last:(seriesMap?.[signalSymbol]?.slice(-1)?.[0]?.price||null)} fallbackCandles={chartCandles}/></HomeChartErrorBoundary>}
 
       {showSubLock&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
         <div style={{background:T.card,border:`1px solid ${T.cardBorder}`,borderRadius:18,padding:28,width:"100%",maxWidth:340,textAlign:"center"}}>
