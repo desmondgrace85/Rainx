@@ -3,7 +3,7 @@ import { App } from '@capacitor/app';
 import { LiveUpdate } from '@capawesome/capacitor-live-update';
 
 const UPDATE_MANIFEST_URL =
-  'https://raw.githubusercontent.com/Buildrco/Rainx/ota/update.json';
+  'https://raw.githubusercontent.com/Buildrco/Rainx/ota/ota/update.json';
 const RELEASE_URL_PREFIX =
   'https://github.com/Buildrco/Rainx/releases/download/ota-';
 
