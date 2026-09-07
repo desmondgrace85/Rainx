@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { registerNativeBackHandler } from "./nativeBackStack";
 import {
   ArrowLeft,
   ArrowRight,
@@ -1434,6 +1435,32 @@ export default function SpaceCoinsDashboard({ onBack }) {
     try { return sessionStorage.getItem("rainx-space-screen") || "dashboard"; } catch { return "dashboard"; }
   });
   const [overlay, setOverlay] = useState(null);
+
+  const handleNativeBack = useCallback(() => {
+    if (overlay) {
+      setOverlay(null);
+      return true;
+    }
+    const previousScreen = {
+      create: "dashboard",
+      menu: "dashboard",
+      creator: "menu",
+      "liquidity-manage": "creator",
+      "liquidity-remove": "liquidity-manage",
+      "token-settings": "menu",
+      holders: "menu",
+      analytics: "menu",
+      transactions: "menu",
+      notifications: "menu",
+    }[screen];
+    if (previousScreen) {
+      setScreen(previousScreen);
+      return true;
+    }
+    return false;
+  }, [overlay, screen]);
+
+  useEffect(() => registerNativeBackHandler(handleNativeBack, "space-coins"), [handleNativeBack]);
 
   useEffect(() => {
     try { sessionStorage.setItem("rainx-space-screen", screen); } catch {}
