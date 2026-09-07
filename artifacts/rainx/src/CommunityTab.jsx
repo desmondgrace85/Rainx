@@ -3017,6 +3017,11 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
       supabase.rpc("increment_post_views", { post_id: id }).then(() => {}, () => {});
     });
 
+    // Render the primary feed immediately. Profile badges and engagement state
+    // are secondary enrichment and must not delay opening Community on mobile.
+    setPosts(rows);
+    setPostsLoading(false);
+
     // Load secondary data in parallel — persisted post counts are already available
     const [pMap, myLikesResult, repostsResult, subResult] = await Promise.all([
       fetchProfilesMap(userIds),
