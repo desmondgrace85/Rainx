@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { createChart, CrosshairMode, LineStyle } from "lightweight-charts";
 import { X, ChevronLeft, Activity, TrendingUp, TrendingDown, Minus, Maximize2, Minimize2 } from "lucide-react";
+import { registerNativeBackHandler } from "./nativeBackStack";
 
 const GOLD        = "#FFD24D";
 const GOLD_BRIGHT = "#FFD24D";
@@ -94,6 +95,13 @@ function visibleOhlcRange(bars, chart) {
 const BASE_URL = "https://rainxapp.vercel.app";
 
 export default function FullChartView({ inst, session, signalsMap = {}, themeMode = "light", onClose, livePrice = null }) {
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => registerNativeBackHandler(() => {
+    closeRef.current?.();
+    return true;
+  }, "full-chart"), []);
+
   const TK = THEME[themeMode] || THEME.light;
   const isDark = themeMode === "dark";
 
