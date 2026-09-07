@@ -1579,6 +1579,7 @@ function MainAppContent({ account, onLogout }) {
   const tabDirRef  = useRef(1);    // 1 = slide from right, −1 = from left
 
   const goTab = (key, forcedDir) => {
+    if (key === "community") setCommunityMounted(true);
     const ORDER = { home: 0, wallet: 1, community: 2, more: 3, history: 3, scalping: 3, subscribe: 3 };
     tabDirRef.current  = forcedDir ?? ((ORDER[key] ?? 0) >= (ORDER[prevTabRef.current] ?? 0) ? 1 : -1);
     prevTabRef.current = key;
