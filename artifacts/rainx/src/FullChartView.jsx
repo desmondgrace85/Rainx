@@ -67,7 +67,7 @@ function toChartBars(values) {
     .filter(b => {
       if (!b.time || seen.has(b.time)) return false;
       seen.add(b.time);
-      return isFinite(b.open) && isFinite(b.close);
+      return isFinite(b.open) && isFinite(b.high) && isFinite(b.low) && isFinite(b.close);
     })
     .sort((a, b) => a.time - b.time);
 }
@@ -160,6 +160,10 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
   const loadingMoreRef     = useRef(false); // guard: prevent duplicate load-more fetches
   const activeTfRef        = useRef("15m"); // always holds latest timeframe for callbacks
   const loadMoreHistoryRef = useRef(null);  // ref to latest loadMoreHistory fn (avoids stale closures)
+  const fallbackCandlesRef = useRef(fallbackCandles);
+  const fetchAbortRef      = useRef(null);
+  const fetchRequestRef    = useRef(0);
+  fallbackCandlesRef.current = fallbackCandles;
 
   // Keep activeTfRef in sync with activeTf state
   useEffect(() => { activeTfRef.current = activeTf; }, [activeTf]);
@@ -167,27 +171,33 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
   // ── Fetch candles ─────────────────────────────────────────────────────────
   const fetchCandles = useCallback(async (tf) => {
     if (!inst?.symbol) return;
+    const requestId = ++fetchRequestRef.current;
+    fetchAbortRef.current?.abort();
+    const controller = new AbortController();
+    fetchAbortRef.current = controller;
     setLoading(true);
     try {
       // Try 500 first; fall back to 300 if backend hasn't deployed new limit yet (returns 422)
-      let res = await fetch(`${BASE_URL}/api/candles?symbol=${encodeURIComponent(inst.symbol)}&interval=${tf}&limit=500`);
+      let res = await fetch(`${BASE_URL}/api/candles?symbol=${encodeURIComponent(inst.symbol)}&interval=${tf}&limit=500`, { signal: controller.signal });
       if (res.status === 422) {
-        res = await fetch(`${BASE_URL}/api/candles?symbol=${encodeURIComponent(inst.symbol)}&interval=${tf}&limit=300`);
+        res = await fetch(`${BASE_URL}/api/candles?symbol=${encodeURIComponent(inst.symbol)}&interval=${tf}&limit=300`, { signal: controller.signal });
       }
       if (!res.ok) throw new Error(`candles ${res.status}`);
       const data = await res.json();
       // API returns newest-first; reverse to oldest-first
       const rawValues = Array.isArray(data) ? data : (data.values || []);
       const values = rawValues.slice().reverse();
-      if (values.length) setCandles(values);
-      else if (fallbackCandles.length) setCandles(fallbackCandles);
+      if (requestId !== fetchRequestRef.current) return;
+      setCandles(values.length ? values : (fallbackCandlesRef.current || []));
     } catch (err) {
-      if (fallbackCandles.length) setCandles(fallbackCandles);
-      console.warn("[FullChartView] fetchCandles failed:", err?.message);
+      if (err?.name !== "AbortError" && requestId === fetchRequestRef.current) {
+        setCandles(fallbackCandlesRef.current || []);
+        console.warn("[FullChartView] fetchCandles failed:", err?.message);
+      }
     } finally {
-      setLoading(false);
+      if (requestId === fetchRequestRef.current) setLoading(false);
     }
-  }, [inst?.symbol, fallbackCandles]);
+  }, [inst?.symbol]);
 
   // ── Load more history when user scrolls past the left edge ───────────────
   const loadMoreHistory = useCallback(async () => {
@@ -329,17 +339,25 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
       }
     });
 
-    // Resize observer
-    const ro = new ResizeObserver(entries => {
-      const e = entries[0];
-      if (e && chartRef.current) {
-        chartRef.current.resize(e.contentRect.width, e.contentRect.height);
-      }
-    });
-    ro.observe(containerRef.current);
+    const resizeChart = () => {
+      const el = containerRef.current;
+      if (!el || !chartRef.current) return;
+      const width = el.clientWidth;
+      const height = el.clientHeight;
+      if (width > 0 && height > 0) chartRef.current.resize(width, height);
+    };
+    const initialFrame = requestAnimationFrame(resizeChart);
+    const ro = typeof ResizeObserver === "function"
+      ? new ResizeObserver(resizeChart)
+      : null;
+    ro?.observe(containerRef.current);
+    window.addEventListener("resize", resizeChart);
 
     return () => {
-      ro.disconnect();
+      cancelAnimationFrame(initialFrame);
+      ro?.disconnect();
+      window.removeEventListener("resize", resizeChart);
+      fetchAbortRef.current?.abort();
       clearInterval(pollTimer.current);
       chart.remove();
       chartRef.current  = null;
@@ -426,10 +444,7 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
     try {
       candleRef.current.setData(bars);
       chartRef.current.timeScale().fitContent();
-      // Small delay then scroll to realtime so latest candle is visible at the right edge
-      setTimeout(() => {
-        try { if (chartRef.current) chartRef.current.timeScale().scrollToRealTime(); } catch {}
-      }, 80);
+      chartRef.current.timeScale().scrollToRealTime();
       setPrice(bars[bars.length - 1].close);
     } catch {}
   }, [candles]);
@@ -444,18 +459,9 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
         if (!res.ok || !candleRef.current) return;
         const data = await res.json();
         // API returns newest-first; index 0 is the current (possibly forming) candle
-        const latest = (data.values || [])[0];
-        if (!latest || !candleRef.current || !latest.datetime) return;
-        const barTime = Math.floor(new Date(latest.datetime).getTime() / 1000);
-        if (!barTime || isNaN(barTime)) return;
-        const bar = {
-          time:  barTime,
-          open:  +latest.open,
-          high:  +latest.high,
-          low:   +latest.low,
-          close: +latest.close,
-        };
-        if (isNaN(bar.open) || isNaN(bar.close)) return;
+        const latest = (Array.isArray(data) ? data : (data.values || []))[0];
+        const bar = latest ? toChartBars([latest])[0] : null;
+        if (!bar || !candleRef.current) return;
         // Wait for initial data to be loaded before live-updating
         if (!barsCache.current.length) return;
         if (ohlcRangeRef.current) {
