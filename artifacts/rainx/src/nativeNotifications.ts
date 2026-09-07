@@ -117,11 +117,6 @@ export async function initNativeNotifications(): Promise<() => Promise<void>> {
   localStorage.setItem(TRANSPORT_KEY, "native");
 
   const listeners = await Promise.all([
-    App.addListener("backButton", ({ canGoBack }) => {
-      if (canGoBack && window.history.length > 1) window.history.back();
-      else void App.exitApp();
-    }),
-
     App.addListener("appUrlOpen", ({ url }) => {
       try {
         const u = new URL(url);
