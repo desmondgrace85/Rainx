@@ -160,6 +160,9 @@ export default function App() {
     const cleanupGesture = installNativeEdgeBackGesture();
     let listener;
     if (Capacitor.isNativePlatform()) {
+      // Re-enable the Capacitor callback at runtime so an older shell built with
+      // disableBackButtonHandler:true can be repaired by OTA.
+      CapacitorApp.toggleBackButtonHandler({ enabled: true }).catch(() => {});
       CapacitorApp.addListener("backButton", () => { dispatchNativeBack(); })
         .then(handle => { listener = handle; })
         .catch(() => {});
