@@ -56,7 +56,12 @@ function toChartBars(values) {
   const seen = new Set();
   return values
     .map(c => {
-      const t = Math.floor(new Date(c.datetime || c.time).getTime() / 1000);
+      const rawTime = c.datetime ?? c.time ?? c.t;
+      const numericTime = typeof rawTime === "number" ? rawTime : Number(rawTime);
+      const millis = Number.isFinite(numericTime)
+        ? (numericTime > 1e11 ? numericTime : numericTime * 1000)
+        : new Date(rawTime).getTime();
+      const t = Math.floor(millis / 1000);
       return { time: t, open: +c.open, high: +c.high, low: +c.low, close: +c.close };
     })
     .filter(b => {
@@ -94,7 +99,7 @@ function visibleOhlcRange(bars, chart) {
 // nativeNotifications.ts). Must be an absolute URL for native builds to work.
 const BASE_URL = "https://rainxapp.vercel.app";
 
-export default function FullChartView({ inst, session, signalsMap = {}, themeMode = "light", onClose, livePrice = null }) {
+export default function FullChartView({ inst, session, signalsMap = {}, themeMode = "light", onClose, livePrice = null, fallbackCandles = [] }) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   useEffect(() => registerNativeBackHandler(() => {
@@ -172,14 +177,17 @@ export default function FullChartView({ inst, session, signalsMap = {}, themeMod
       if (!res.ok) throw new Error(`candles ${res.status}`);
       const data = await res.json();
       // API returns newest-first; reverse to oldest-first
-      const values = (data.values || []).slice().reverse();
-      setCandles(values);
+      const rawValues = Array.isArray(data) ? data : (data.values || []);
+      const values = rawValues.slice().reverse();
+      if (values.length) setCandles(values);
+      else if (fallbackCandles.length) setCandles(fallbackCandles);
     } catch (err) {
+      if (fallbackCandles.length) setCandles(fallbackCandles);
       console.warn("[FullChartView] fetchCandles failed:", err?.message);
     } finally {
       setLoading(false);
     }
-  }, [inst?.symbol]);
+  }, [inst?.symbol, fallbackCandles]);
 
   // ── Load more history when user scrolls past the left edge ───────────────
   const loadMoreHistory = useCallback(async () => {
