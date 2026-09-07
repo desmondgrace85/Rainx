@@ -49,16 +49,34 @@ function clickVisibleBackControl() {
 }
 
 function dispatchNativeBack() {
-  if (consumeNativeBack()) return true;
-  if (clickVisibleBackControl()) return true;
+  console.info("[RainX][native-back] dispatchNativeBack");
+  if (consumeNativeBack()) {
+    console.info("[RainX][native-back] selected registry handler");
+    return true;
+  }
+  if (clickVisibleBackControl()) {
+    console.info("[RainX][native-back] selected visible DOM control");
+    return true;
+  }
   const detail = { handled: false };
   try { window.dispatchEvent(new CustomEvent(NATIVE_BACK_EVENT, { detail })); } catch {}
-  if (detail.handled) return true;
+  if (detail.handled) {
+    console.info("[RainX][native-back] selected app route handler");
+    return true;
+  }
   const current = readHash();
-  if (!current.tab || current.tab === "home") return false;
-  if (window.history.state?.rainxRoute) { window.history.back(); return true; }
+  if (!current.tab || current.tab === "home") {
+    console.info("[RainX][native-back] root/no-op", current);
+    return false;
+  }
+  if (window.history.state?.rainxRoute) {
+    console.info("[RainX][native-back] selected previous route", current);
+    window.history.back();
+    return true;
+  }
   window.history.replaceState(window.history.state || null, "", "#home");
   try { window.dispatchEvent(new Event(ROUTE_EVENT)); } catch {}
+  console.info("[RainX][native-back] selected route reset", current);
   return true;
 }
 
@@ -157,15 +175,28 @@ export default function App() {
   },[]);
 
   useEffect(() => {
+    console.info("[RainX][native-back] App mounted", {
+      native: Capacitor.isNativePlatform(),
+      platform: Capacitor.getPlatform(),
+    });
     const cleanupGesture = installNativeEdgeBackGesture();
     let listener;
     if (Capacitor.isNativePlatform()) {
       // Re-enable the Capacitor callback at runtime so an older shell built with
       // disableBackButtonHandler:true can be repaired by OTA.
       CapacitorApp.toggleBackButtonHandler({ enabled: true }).catch(() => {});
-      CapacitorApp.addListener("backButton", () => { dispatchNativeBack(); })
-        .then(handle => { listener = handle; })
-        .catch(() => {});
+      console.info("[RainX][native-back] registering CapacitorApp.addListener(backButton)");
+      CapacitorApp.addListener("backButton", () => {
+        console.info("[RainX][native-back] Capacitor backButton callback");
+        dispatchNativeBack();
+      })
+        .then(handle => {
+          listener = handle;
+          console.info("[RainX][native-back] backButton listener registered");
+        })
+        .catch((error) => {
+          console.error("[RainX][native-back] backButton listener registration failed", error);
+        });
     }
     return () => { cleanupGesture(); listener?.remove?.(); };
   }, []);
