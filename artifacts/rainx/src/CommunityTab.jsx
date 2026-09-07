@@ -2938,6 +2938,12 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
     const excludedPosts = new Set((notInterested || []).map(n => n.post_id));
     let rows = (data || []).filter(p => !excludedUsers.has(p.user_id) && !excludedPosts.has(p.id));
 
+    // The base post query is the primary Community shell. Repost originals,
+    // profile badges, and engagement state are enrichment and must not block
+    // the first real feed render on Android.
+    setPosts(rows);
+    setPostsLoading(false);
+
     // Reposts are real community_posts. Never duplicate the original post into
     // the feed from post_reposts; the wrapper post owns its own engagement.
     const repostWrappers = rows.filter(p => p.repost_of_post_id);
