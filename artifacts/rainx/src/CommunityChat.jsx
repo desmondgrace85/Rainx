@@ -1484,13 +1484,18 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
   const openChatAfterPress = (profile,rowKey) => { clearTimeout(chatOpenTimerRef.current); setChatRipple({key:rowKey,fading:false}); setChatRipple(null); onOpenDM(profile); };
 
   return (
-    <div className={isClosing ? "rx-chat rx-chat-screen-exit" : "rx-chat rx-chat-screen-enter"}>
+    <div
+      className={isClosing ? "rx-chat rx-chat-screen-exit" : "rx-chat rx-chat-screen-enter"}
+      style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", flexDirection: "column", minHeight: "100dvh", height: "100dvh", background: "#f7f7f8", color: "#171717" }}
+    >
       <main
         ref={pagesRef}
         className="rx-pages native-swipe-track"
         style={{
           width: "100%",
           height: "calc(100% - 72px)",
+          flex: "1 1 auto",
+          minHeight: 0,
           display: "flex",
           overflowX: "auto",
           overflowY: "hidden",
