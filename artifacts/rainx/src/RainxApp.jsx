@@ -1562,8 +1562,9 @@ function MainAppContent({ account, onLogout }) {
   });
   const [profileFromHeader, setProfileFromHeader] = useState(() => routeRead().flag === "h");
   const [communityProfileOpen, setCommunityProfileOpen] = useState(false);
-  // Lazy keep-alive: set to true on first visit, stays true so the tab never unmounts again
-  const [communityMounted, setCommunityMounted] = useState(false);
+  // Keep Community mounted behind the active tab so its shell and first feed
+  // query are ready before Android receives the tab tap.
+  const [communityMounted, setCommunityMounted] = useState(true);
   const [spaceCoinsScreen, setSpaceCoinsScreen] = useState(() => {
     const { tab: urlTab, sub } = routeRead();
     return urlTab === "space-coins" && (sub === "intro" || sub === "dashboard") ? sub : null;
