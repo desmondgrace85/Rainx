@@ -1278,7 +1278,7 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
 
 // ── ChatList ───────────────────────────────────────────────────────────────
 function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) {
-  const [convos, setConvos]               = useState(null);
+  const [convos, setConvos]               = useState(() => (account?.id ? null : []));
 
   const [pinnedChats, setPinnedChatsState] = useState(() => getPinnedChats());
   const [typingUsers, setTypingUsers]     = useState({});
@@ -1288,11 +1288,14 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
   const refreshPins = () => setPinnedChatsState(getPinnedChats());
 
   useEffect(() => {
-    if (!aid) return;
+    if (!aid) {
+      setConvos([]);
+      return;
+    }
     let ch;
     const load = async () => {
       try {
-        const { data, error } = await supabase.from("direct_messages").select("*")
+        const { data, error } = await supabase.from("direct_messages").select("id,sender_id,receiver_id,is_read,created_at,content")
           .or(`sender_id.eq.${aid},receiver_id.eq.${aid}`)
           .order("created_at", { ascending: false }).limit(500);
         if (error || !data) { setConvos([]); return; }
@@ -1478,7 +1481,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
 
   const startChatRipple = (event, rowKey) => { if (event.pointerType === "mouse" && event.button !== 0) return; clearTimeout(rippleTimerRef.current); clearTimeout(chatOpenTimerRef.current); setChatRipple({key:rowKey,fading:false}); };
   const cancelChatRipple = () => { setChatRipple(current => current ? {...current,fading:true} : current); clearTimeout(rippleTimerRef.current); rippleTimerRef.current=setTimeout(()=>setChatRipple(null),180); };
-  const openChatAfterPress = (profile,rowKey) => { clearTimeout(chatOpenTimerRef.current); setChatRipple({key:rowKey,fading:false}); chatOpenTimerRef.current=setTimeout(()=>{setChatRipple(null);onOpenDM(profile);},140); };
+  const openChatAfterPress = (profile,rowKey) => { clearTimeout(chatOpenTimerRef.current); setChatRipple({key:rowKey,fading:false}); setChatRipple(null); onOpenDM(profile); };
 
   return (
     <div className={isClosing ? "rx-chat rx-chat-screen-exit" : "rx-chat rx-chat-screen-enter"}>
