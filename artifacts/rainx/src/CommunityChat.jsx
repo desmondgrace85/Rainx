@@ -1279,10 +1279,12 @@ function DMScreen({ account, otherUser, T, onBack, onViewProfile, onUnreadCleare
 // ── ChatList ───────────────────────────────────────────────────────────────
 function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) {
   const [convos, setConvos]               = useState(() => (account?.id ? null : []));
+  const [conversationError, setConversationError] = useState(null);
 
   const [pinnedChats, setPinnedChatsState] = useState(() => getPinnedChats());
   const [typingUsers, setTypingUsers]     = useState({});
   const conversationsLoadRef              = useRef(null);
+  const conversationLoadInFlightRef       = useRef(false);
   const aid = account && account.id;
 
   const refreshPins = () => setPinnedChatsState(getPinnedChats());
@@ -1290,15 +1292,24 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
   useEffect(() => {
     if (!aid) {
       setConvos([]);
+      setConversationError("Your account is not available yet.");
       return;
     }
     let ch;
     const load = async () => {
+      if (conversationLoadInFlightRef.current) return;
+      conversationLoadInFlightRef.current = true;
+      setConversationError(null);
       try {
         const { data, error } = await supabase.from("direct_messages").select("id,sender_id,receiver_id,is_read,created_at,content")
           .or(`sender_id.eq.${aid},receiver_id.eq.${aid}`)
           .order("created_at", { ascending: false }).limit(500);
-        if (error || !data) { setConvos([]); return; }
+        if (error || !data) {
+          console.error("[CommunityChat] conversation query failed", error);
+          setConvos([]);
+          setConversationError("We couldn't load your conversations.");
+          return;
+        }
         const seen = new Map(), uc = new Map();
         data.forEach(m => {
           const pid = m.sender_id === aid ? m.receiver_id : m.sender_id;
@@ -1321,7 +1332,13 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
           return 0;
         });
         setConvos(all);
-      } catch (_) { setConvos([]); }
+      } catch (error) {
+        console.error("[CommunityChat] conversation load failed", error);
+        setConvos([]);
+        setConversationError("We couldn't load your conversations.");
+      } finally {
+        conversationLoadInFlightRef.current = false;
+      }
     };
     conversationsLoadRef.current = load;
     load();
@@ -1561,7 +1578,13 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
                </div>
             </>}
             {p === 0 && convos === null && <div className="rx-empty"><strong>Loading…</strong><span>Loading your chats.</span></div>}
-            {p === 0 && convos !== null && filteredConvos.map(({ profile, lastMsg, unread }) => {
+            {p === 0 && convos !== null && conversationError && (
+              <div className="rx-empty">
+                <strong>Chats unavailable</strong>
+                <span>{conversationError}</span>
+              </div>
+            )}
+            {p === 0 && convos !== null && !conversationError && filteredConvos.map(({ profile, lastMsg, unread }) => {
               const name = (profile && (profile.display_name || profile.username)) || "User";
               const avatar = name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
               const lastContent = isDeleted(lastMsg && lastMsg.content) ? "This message was deleted" : ((lastMsg && lastMsg.content) || "");
@@ -1583,7 +1606,7 @@ function ChatList({ account, T, onClose, onOpenDM, isPro , isClosing = false }) 
                 </button>
               );
             })}
-            {p === 0 && convos !== null && filteredConvos.length === 0 && <div className="rx-empty"><strong>{topTab === "Groups" ? "Groups" : "No chats yet"}</strong><span>{topTab === "Groups" ? "Your groups appear here." : "Your chats appear here."}</span></div>}
+            {p === 0 && convos !== null && !conversationError && filteredConvos.length === 0 && <div className="rx-empty"><strong>{topTab === "Groups" ? "Groups" : "No chats yet"}</strong><span>{topTab === "Groups" ? "Your groups appear here." : "Your chats appear here."}</span></div>}
             {p === 1 && <div className="rx-empty"><strong>Channels</strong><span>Your channels appear here.</span></div>}
             {p === 2 && (
               <GeneralChatSettings
