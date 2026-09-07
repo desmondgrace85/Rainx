@@ -1644,8 +1644,23 @@ export default function CommunityChat({ account, themeTokens, onClose, onViewPro
   initialUser = initialUser || null; const T = buildT(themeTokens);
   const [screen,setScreen] = useState(initialUser ? "dm" : "list"); const [dmUser,setDmUser] = useState(initialUser); const [dmLeaving,setDmLeaving] = useState(false);
   const screenRef=useRef(screen), closeRef=useRef(onClose); screenRef.current=screen; closeRef.current=onClose;
-  useEffect(() => { window.history.pushState({...window.history.state,rainxChatScreen:initialUser?"dm":"list"},"",window.location.href); const onPop=e=>{ if(e.state?.rainxChatScreen==="list"&&screenRef.current==="dm"){setDmLeaving(true);setTimeout(()=>{setDmLeaving(false);setDmUser(null);setScreen("list");},280);return;} if(!e.state?.rainxChatScreen)closeRef.current?.(true); }; window.addEventListener("popstate",onPop); return ()=>window.removeEventListener("popstate",onPop); }, []);
-  const openDM=user=>{window.history.pushState({...window.history.state,rainxChatScreen:"dm"},"",window.location.href);setDmUser(user);setScreen("dm");};
+  useEffect(() => {
+    const listState = { ...(window.history.state || {}), rainxChatScreen: "list" };
+    window.history.replaceState(listState, "", window.location.href);
+    if (initialUser) {
+      window.history.pushState({ ...listState, rainxChatScreen: "dm" }, "", window.location.href);
+    }
+    const onPop = e => {
+      if (e.state?.rainxChatScreen === "list" && screenRef.current === "dm") {
+        setDmLeaving(true);
+        setTimeout(() => { setDmLeaving(false); setDmUser(null); setScreen("list"); }, 280);
+        return;
+      }
+      if (!e.state?.rainxChatScreen) closeRef.current?.(true);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
   const back=()=>{if(window.history.state?.rainxChatScreen)window.history.back();else closeRef.current?.();};
   const backRef = useRef(back);
   backRef.current = back;
@@ -1655,7 +1670,7 @@ export default function CommunityChat({ account, themeTokens, onClose, onViewPro
       return true;
     }
     return false;
-  }), []);
+  }, "community-chat"), []);
   if(screen==="dm"&&dmUser)return <DMScreen account={account} otherUser={dmUser} T={T} isPro={isPro||false} isLeaving={dmLeaving} isClosing={isClosing} onUnreadCleared={onUnreadCleared} onBack={back} onViewProfile={uid=>{closeRef.current?.();onViewProfile(uid);}} />;
   return <ChatList account={account} T={T} onClose={back} onOpenDM={openDM} isPro={isPro||false} isClosing={isClosing} />;
 }

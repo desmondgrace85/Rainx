@@ -11,7 +11,6 @@ import { clearNativeSessionUnlock, getNativeLockConfig, hasNativeUnlockedSession
 const LOCK_EVENT = "rainx:native-lock-state";
 const LOCK_CONFIG_EVENT = "rainx:native-lock-config-changed";
 const ROUTE_EVENT = "rainx:route-change";
-const NATIVE_BACK_EVENT = "rainx:native-back";
 
 function readHash() {
   const raw = window.location.hash.replace(/^#/, "");
@@ -19,49 +18,10 @@ function readHash() {
   return { tab: tab || null, sub: sub ? decodeURIComponent(sub) : null };
 }
 
-function isVisibleBackControl(element) {
-  if (!(element instanceof HTMLElement)) return false;
-  const style = window.getComputedStyle(element);
-  const rect = element.getBoundingClientRect();
-  return style.display !== "none" && style.visibility !== "hidden" && style.pointerEvents !== "none" && rect.width > 0 && rect.height > 0;
-}
-
-function clickVisibleBackControl() {
-  const selectors = [
-    "[data-native-back]",
-    "button[aria-label*='back' i]",
-    "[role='button'][aria-label*='back' i]",
-    "button[title*='back' i]",
-    ".rx-native-back",
-    ".rx-back",
-    "button[aria-label*='close' i]",
-    "[role='button'][aria-label*='close' i]"
-  ];
-  for (const selector of selectors) {
-    const controls = document.querySelectorAll(selector);
-    for (const control of controls) {
-      if (!isVisibleBackControl(control)) continue;
-      control.click();
-      return true;
-    }
-  }
-  return false;
-}
-
 function dispatchNativeBack() {
   console.info("[RainX][native-back] dispatchNativeBack");
   if (consumeNativeBack()) {
     console.info("[RainX][native-back] selected registry handler");
-    return true;
-  }
-  if (clickVisibleBackControl()) {
-    console.info("[RainX][native-back] selected visible DOM control");
-    return true;
-  }
-  const detail = { handled: false };
-  try { window.dispatchEvent(new CustomEvent(NATIVE_BACK_EVENT, { detail })); } catch {}
-  if (detail.handled) {
-    console.info("[RainX][native-back] selected app route handler");
     return true;
   }
   const current = readHash();
@@ -74,10 +34,8 @@ function dispatchNativeBack() {
     window.history.back();
     return true;
   }
-  window.history.replaceState(window.history.state || null, "", "#home");
-  try { window.dispatchEvent(new Event(ROUTE_EVENT)); } catch {}
-  console.info("[RainX][native-back] selected route reset", current);
-  return true;
+  console.info("[RainX][native-back] no handler/no route history", current);
+  return false;
 }
 
 function installNativeEdgeBackGesture() {
@@ -121,23 +79,14 @@ function installNativeEdgeBackGesture() {
 function installRouteBridge() {
   const h = window.history as any;
   if (h.__rainxRouteBridgeInstalled) return () => {};
-  const push = h.pushState.bind(h), replace = h.replaceState.bind(h), back = h.back;
-  let lastBackAt = 0;
+  const push = h.pushState.bind(h), replace = h.replaceState.bind(h);
   const notify = () => { try { window.dispatchEvent(new Event(ROUTE_EVENT)); } catch {} };
   h.pushState = function(...args) { const r = push(...args); notify(); return r; };
   h.replaceState = function(...args) { const r = replace(...args); notify(); return r; };
-  // A single edge gesture can reach both the global handler and a screen's local swipe handler. Collapse those into one history pop.
-  h.back = function(...args) {
-    const now = Date.now();
-    if (now - lastBackAt < 420) return;
-    lastBackAt = now;
-    return back.apply(h, args);
-  };
   h.__rainxRouteBridgeInstalled = true;
   return () => {
     if (h.pushState !== push) h.pushState = push;
     if (h.replaceState !== replace) h.replaceState = replace;
-    if (h.back !== back) h.back = back;
     delete h.__rainxRouteBridgeInstalled;
   };
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { registerNativeBackHandler } from "./nativeBackStack";
 // Space Talk web build marker: keep the complete live-room bundle tied to this commit.
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import { ArrowLeft, ArrowUpRight, AudioLines, Bell, ChevronRight, CircleDollarSign, CircleHelp, Check, Gift, Hand, MessageCircle, Mic, MicOff, MoreHorizontal, PhoneOff, Radio, Share2, ShieldCheck, UserRound, UsersRound, Video, VideoOff } from "lucide-react";
@@ -462,6 +463,22 @@ export default function MoreLandingOverride({ account }) {
     if (window.history.state?.rainxMoreOverlay) { window.history.back(); return; }
     setMoreOverlay(null);
   };
+  const handleNativeBack = React.useCallback(() => {
+    if (spaceTalkRoom) {
+      setSpaceTalkRoom(false);
+      return true;
+    }
+    if (spaceTalkDiscovery) {
+      setSpaceTalkDiscovery(false);
+      return true;
+    }
+    if (moreOverlay) {
+      backOverlay();
+      return true;
+    }
+    return false;
+  }, [spaceTalkRoom, spaceTalkDiscovery, moreOverlay]);
+  useEffect(() => registerNativeBackHandler(handleNativeBack, "more-overlay"), [handleNativeBack]);
 
   const overlayDepth = (overlay) => ({ gifts: 1, "gifts-settings": 2, referrals: 1, "referral-activity": 2, "referral-performance": 3 }[overlay] || 0);
   const [renderedOverlay, setRenderedOverlay] = useState(moreOverlay);

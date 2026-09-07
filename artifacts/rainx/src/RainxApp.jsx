@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { supabase } from "./supabaseClient";
 import CommunityTab, { ProfileFeed as CommunityProfileFeed, Composer as CommunityComposer, FollowListModal, Badge as CommunityBadge, formatCount } from "./CommunityTab";
+import { registerNativeBackHandler } from "./nativeBackStack";
 import FullChartView from "./FullChartView";
 import LightweightChart from "./LightweightChart";
 import SpaceCoinsIntro from "./SpaceCoinsIntro";
@@ -325,7 +326,7 @@ function routeReplace(tab, sub, flag) {
     if (sub)  h += "/" + encodeURIComponent(sub);
     if (flag) h += "/" + flag;
     const next = "#" + h;
-    if (window.location.hash !== next) history.pushState({ ...(history.state || {}), rainxRoute: true }, "", next);
+    if (window.location.hash !== next) history.replaceState({ ...(history.state || {}), rainxRoute: true }, "", next);
   } catch {}
 }
 function buildRainxNotificationUrl(target = {}) {
@@ -1935,13 +1936,7 @@ function MainAppContent({ account, onLogout }) {
     return false;
   }, [showSidebar, showLogoutConfirm, spaceCoinsScreen, profileFromHeader, morePage, tab]);
 
-  useEffect(() => {
-    const onNativeBack = (event) => {
-      if (event?.detail) event.detail.handled = handleNativeBack();
-    };
-    window.addEventListener("rainx:native-back", onNativeBack);
-    return () => window.removeEventListener("rainx:native-back", onNativeBack);
-  }, [handleNativeBack]);
+  useEffect(() => registerNativeBackHandler(handleNativeBack, "app-route"), [handleNativeBack]);
 
   // Sync browser Back/Forward to React state
   useEffect(() => {

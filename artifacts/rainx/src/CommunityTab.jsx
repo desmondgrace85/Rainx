@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import CommunityChat from "./CommunityChat";
+import { registerNativeBackHandler } from "./nativeBackStack";
 
 // Relative URLs fail in the Capacitor WebView (local origin) — must be absolute.
 // Relative URLs fail in the Capacitor WebView (local origin) — must be absolute.
@@ -2747,7 +2748,6 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
   const [viewingUserId, setViewingUserIdState] = useState(() => {
     try { return localStorage.getItem("community-viewing-user") || null; } catch { return null; }
   });
-  const communityHistoryActionRef = useRef(false);
   const pushCommunityOverlay = useCallback((overlay) => {
     try { window.history.pushState({ ...(window.history.state || {}), rainxRoute: true, rainxCommunityOverlay: overlay }, "", window.location.href); } catch {}
   }, []);
@@ -2781,11 +2781,32 @@ export default function CommunityTab({ account, entitlement, themeTokens, onView
   const closeChat=useCallback((fromHistory = false)=>{
     clearTimeout(chatCloseTimerRef.current);
     if (!fromHistory && window.history.state?.rainxCommunityOverlay === "chat") {
-      communityHistoryActionRef.current = true; window.history.back(); return;
+      window.history.back(); return;
     }
     setChatClosing(true);
     chatCloseTimerRef.current=setTimeout(()=>{setChatOpen(false);setChatInitUser(null);setChatClosing(false);},280);
   },[]);
+  const handleNativeBack = useCallback(() => {
+    if (postActivity) {
+      setPostActivity(null);
+      return true;
+    }
+    if (showFabModal) {
+      setShowFabModal(false);
+      return true;
+    }
+    if (viewingUserId) {
+      if (window.history.state?.rainxCommunityOverlay === "profile") window.history.back();
+      else setViewingUserIdState(null);
+      return true;
+    }
+    if (chatOpen) {
+      closeChat();
+      return true;
+    }
+    return false;
+  }, [postActivity, showFabModal, viewingUserId, chatOpen, closeChat]);
+  useEffect(() => registerNativeBackHandler(handleNativeBack, "community-overlay"), [handleNativeBack]);
   useEffect(()=>()=>clearTimeout(chatCloseTimerRef.current),[]);
 
   // Load following IDs for the "Following" feed tab
